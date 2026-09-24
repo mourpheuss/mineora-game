@@ -1135,6 +1135,37 @@
       if (hasChanges) saveUserWorld();
     }
 
+    function linkWorkerToMineOwner(workerUsername, refCode) {
+      if (!refCode || !refCode.trim()) return;
+      const cleanRef = refCode.trim().toUpperCase();
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('mineora_user_')) {
+          try {
+            const u = JSON.parse(localStorage.getItem(key));
+            if (u && (u.refCode === cleanRef || u.companyRefCode === cleanRef)) {
+              if (!u.workers) u.workers = [];
+              const alreadyLinked = u.workers.some(w => w.username.toLowerCase() === workerUsername.toLowerCase());
+              if (!alreadyLinked) {
+                u.workers.unshift({
+                  username: workerUsername,
+                  workedToday: true,
+                  oraMined: 0.00,
+                  lastSeen: "Yeni Katıldı"
+                });
+                localStorage.setItem(key, JSON.stringify(u));
+                if (CurrentUser && CurrentUser.username.toLowerCase() === u.username.toLowerCase()) {
+                  CurrentUser.workers = u.workers;
+                }
+              }
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
     function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "") {
       const isMourpheus = username.toLowerCase() === "mourpheus";
       const storageKey = `mineora_user_${username.toLowerCase()}`;
@@ -1196,6 +1227,10 @@
           ] : []
         };
         saveUserWorld();
+
+        if (refCodeUsed) {
+          linkWorkerToMineOwner(username, refCodeUsed);
+        }
       }
       CurrentUser = CurrentUserWorld;
       checkMinesCooldown();
@@ -1971,7 +2006,7 @@
     }
 
     // ============================================================================
-    // 3. MINING.JS (SİNEMATİK KAZI MOTORU - mining_5.txt)
+    // 3. MINING.JS (SİNEMATİK KAZI MOTORU - mining kazı sahnesi_5.txt)
     // ============================================================================
     let activeMineIdx = 0;
     let wagonFill = 0;
