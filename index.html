@@ -195,9 +195,7 @@
       </div>
     </header>
 
-    <!-- NAVİGASYON SEKME ÇUBUĞU (PATRON MASASI DÖNÜŞ BUTONU DAHİL) -->
     <div class="bg-mineora-bg border-b border-mineora-border px-4 sm:px-6 py-2 flex gap-2 overflow-x-auto scrollbar-none">
-      <!-- SADECE PATRON GİRİŞ YAPTIĞINDA GÖRÜNEN BUTON -->
       <button type="button" onclick="switchTab('boss')" id="tab-btn-boss" class="hidden px-4 py-2 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition whitespace-nowrap cursor-pointer">
         <i class="fa-solid fa-crown mr-1"></i> Kurucu Masası
       </button>
@@ -292,16 +290,28 @@
               </div>
               <div class="p-3 bg-mineora-card rounded-xl border border-mineora-green/30 space-y-1">
                 <label class="text-slate-400 text-[10px] block font-bold">30+ Gün Çekim (%)</label>
-                <input type="number" step="0.1" id="admin-set-tax-t3" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-white font-mono text-xs outline-none">
+                <input type="number" step="0.1" id="admin-set-tax-t3" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-mineora-green font-mono text-xs outline-none">
               </div>
             </div>
           </div>
 
-          <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 space-y-3">
-            <h3 class="text-sm font-black text-white flex items-center gap-2">
-              <i class="fa-solid fa-hourglass-half text-amber-400"></i> Oyuncu USDT Çekim Onay Masası (Escrow Queue)
-            </h3>
-            <div id="admin-withdrawal-queue-list" class="space-y-2"></div>
+          <!-- YATIRMA VE ÇEKİM KUYRUKLARI -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- 1. BORSADAN YATIRILAN USDT ONAY MASASI -->
+            <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 space-y-3">
+              <h3 class="text-sm font-black text-white flex items-center gap-2">
+                <i class="fa-solid fa-arrow-down text-emerald-400"></i> Borsadan USDT Yatırma Onay Masası (Deposit Queue)
+              </h3>
+              <div id="admin-deposit-queue-list" class="space-y-2"></div>
+            </div>
+
+            <!-- 2. OYUNCU USDT ÇEKİM ONAY MASASI -->
+            <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 space-y-3">
+              <h3 class="text-sm font-black text-white flex items-center gap-2">
+                <i class="fa-solid fa-arrow-up text-amber-400"></i> Oyuncu USDT Çekim Onay Masası (Withdraw Queue)
+              </h3>
+              <div id="admin-withdrawal-queue-list" class="space-y-2"></div>
+            </div>
           </div>
 
           <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3">
@@ -648,7 +658,7 @@
 
   <!-- ================= 3. BÖLÜM: MODALLAR ================= -->
 
-  <!-- TRC20 CÜZDAN MERKEZİ -->
+  <!-- TRC20 CÜZDAN MERKEZİ (ONAYLI YATIRMA VE ÇEKİM MASASI) -->
   <div id="modal-wallet" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -684,24 +694,46 @@
         </button>
       </div>
 
+      <!-- YATIRMA BÖLÜMÜ (QR KOD + ADRES + BİLDİRİM FORMU) -->
       <div id="wallet-view-deposit" class="space-y-4">
         <div class="flex flex-col items-center justify-center p-3.5 bg-white rounded-2xl max-w-[160px] mx-auto shadow-inner">
           <div id="qrcode-container"></div>
         </div>
         <div class="p-3.5 bg-mineora-bg rounded-2xl border border-mineora-border space-y-2">
           <div class="flex justify-between items-center">
-            <span class="text-[10px] text-cyan-400 font-bold">Size Özel Atanmış USDT (TRC20) Yatırma Adresi:</span>
+            <span class="text-[10px] text-cyan-400 font-bold">Resmi Şirket USDT (TRC20) Yatırma Adresi:</span>
             <button type="button" onclick="copyWalletAddress()" class="text-[10px] text-mineora-gold hover:underline flex items-center gap-1 font-bold cursor-pointer">
               <i class="fa-solid fa-copy"></i> Kopyala
             </button>
           </div>
           <input type="text" id="wallet-trc20-box" readonly onclick="copyWalletAddress()" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-mineora-gold font-mono text-xs outline-none cursor-pointer">
           <span class="text-[10px] text-slate-400 block leading-relaxed">
-            ⚠️ <strong>Önemli:</strong> Bu adresi kopyalayıp harici cüzdanınızdan yalnızca <strong>TRON (TRC20)</strong> ağında USDT gönderiniz.
+            ⚠️ <strong>Önemli:</strong> Bu adrese harici borsadan (Binance vb.) yalnızca <strong>TRON (TRC20)</strong> ağında USDT gönderiniz.
           </span>
+        </div>
+
+        <!-- BORSADAN GÖNDERİLEN TRANSFERİN BİLDİRİM ALANI -->
+        <div class="p-3.5 bg-mineora-bg rounded-2xl border border-emerald-500/30 space-y-3">
+          <span class="text-[11px] font-bold text-emerald-400 block flex items-center gap-1.5">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Gönderimi Tamamladıktan Sonra Bildirin
+          </span>
+          <div class="space-y-2">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5">Gönderilen USDT Miktarı</label>
+              <input type="number" step="any" id="deposit-amount-input" placeholder="Örn: 100" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-mineora-green">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5">Borsanın Verdiği İşlem Kodu (TXID / Hash)</label>
+              <input type="text" id="deposit-txid-input" placeholder="Transfer hash kodunu yapıştırın" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-cyan-300 font-mono text-[11px] outline-none focus:border-mineora-green">
+            </div>
+          </div>
+          <button type="button" onclick="submitDepositReceipt()" class="w-full py-2.5 rounded-xl bg-mineora-green hover:opacity-90 text-white font-bold text-xs transition cursor-pointer">
+            <i class="fa-solid fa-paper-plane mr-1"></i> Yatırımı Bildir & Onaya Gönder
+          </button>
         </div>
       </div>
 
+      <!-- ÇEKİM BÖLÜMÜ -->
       <div id="wallet-view-withdraw" class="hidden space-y-3.5">
         <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-[11px] text-amber-300 leading-relaxed">
           <i class="fa-solid fa-shield-halved mr-1"></i> Çekim talebiniz patron onayından sonra TRON ağına sevk edilir. Şifrenizi eksiksiz giriniz.
@@ -954,7 +986,7 @@
             <i class="fa-solid fa-coins"></i> 1. Sabit Değer Çapası (Peg)
           </h4>
           <p class="text-[11px] text-slate-400">
-            Protokolde tüm maliyet ve ödüller sabit <strong>1 ORA = 0.10 USDT ($0.10)</strong> çapasına bağlıdır[cite: 34]. Üretilen ORA tokenlar P2P masasında anında USDT likiditesine çevrilebilir[cite: 34].
+            Protokolde tüm maliyet ve ödüller sabit <strong>1 ORA = 0.10 USDT ($0.10)</strong> çapasına bağlıdır[cite: 26]. Üretilen ORA tokenlar P2P masasında anında USDT likiditesine çevrilebilir[cite: 26].
           </p>
         </div>
 
@@ -963,7 +995,7 @@
             <i class="fa-solid fa-gears"></i> 2. Hiyerarşik Rol & Görev Dağılımı
           </h4>
           <p class="text-[11px] text-slate-400">
-            İşçi Madenci, Maden Sahibi veya Şirket Sahibi (Holding) olarak Alp Dağları sahalarında kendi operasyonlarınızı yönetirsiniz[cite: 34].
+            İşçi Madenci, Maden Sahibi veya Şirket Sahibi (Holding) olarak Alp Dağları sahalarında kendi operasyonlarınızı yönetirsiniz[cite: 26].
           </p>
         </div>
 
@@ -972,7 +1004,7 @@
             <i class="fa-solid fa-vault"></i> 3. ORA Bankası: Vadeli Kasa (Stake) Sistemi
           </h4>
           <p class="text-[11px] text-slate-400">
-            Aktif kazı yapmadan varlıklarını değerlendirmek isteyen oyuncular ORA bakiyelerini banka kasalarına kilitleyerek dönemsel ek hammadde elde eder[cite: 34].
+            Aktif kazı yapmadan varlıklarını değerlendirmek isteyen oyuncular ORA bakiyelerini banka kasalarına kilitleyerek dönemsel ek hammadde elde eder[cite: 26].
           </p>
         </div>
 
@@ -981,7 +1013,7 @@
             <i class="fa-solid fa-screwdriver-wrench"></i> 4. 90 Günlük Ekipman & Maden Ömrü
           </h4>
           <p class="text-[11px] text-slate-400">
-            Her madenin ve kazmanın işletim ömrü <strong>90 gündür</strong>[cite: 34]. 90. gün sonunda döngüyü yenilemek için sisteme yeniden ORA kilitlenir; bu sayede enflasyon sıfırlanır ve ekosistem kalıcı kalır[cite: 34].
+            Her madenin ve kazmanın işletim ömrü <strong>90 gündür</strong>[cite: 26]. 90. gün sonunda döngüyü yenilemek için sisteme yeniden ORA kilitlenir; bu sayede enflasyon sıfırlanır ve ekosistem kalıcı kalır[cite: 26].
           </p>
         </div>
       </div>
@@ -993,8 +1025,10 @@
   <!-- ================= BİRLEŞİK JAVASCRIPT MOTORU ================= -->
   <script>
     // ============================================================================
-    // 1. STATE.JS (SOY AĞACI, HİYERARŞİ VE GÜVENLİK MOTORU - state js_5.txt)
+    // 1. STATE.JS (SOY AĞACI, HİYERARŞİ VE RESMİ CÜZDAN MOTORU - state js_5.txt)
     // ============================================================================
+    const OFFICIAL_TRC20_DEPOSIT_ADDRESS = "THjMogQnVXScpehPXqy39dfmhttrqjfXg9";
+
     let audioCtx = null;
     function initAudioContext() {
       if (!audioCtx) {
@@ -1214,18 +1248,15 @@
           CurrentUserWorld.role = "Şirket Sahibi";
           CurrentUserWorld.isRootAdmin = true;
         }
+        CurrentUserWorld.trc20Address = OFFICIAL_TRC20_DEPOSIT_ADDRESS;
         if (!CurrentUserWorld.minesOwned) CurrentUserWorld.minesOwned = [];
         if (!CurrentUserWorld.stakes) CurrentUserWorld.stakes = [];
       } else {
-        const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-        let randAddr = "T";
-        for (let i = 0; i < 33; i++) randAddr += chars.charAt(Math.floor(Math.random() * chars.length));
-
         CurrentUserWorld = {
           username: username,
           pass: isMourpheus ? "4834754" : defaultPass,
           email: isMourpheus ? "patron@mineora.io" : `${username}@mineora.io`,
-          trc20Address: randAddr,
+          trc20Address: OFFICIAL_TRC20_DEPOSIT_ADDRESS,
           usdt: isMourpheus ? 10000.00 : 0.00,
           ora: isMourpheus ? 100000.00 : 0.00,
           role: isMourpheus ? "Şirket Sahibi" : "Aday",
@@ -1453,7 +1484,6 @@
       showToast("🔒 Oturum kapatıldı.", "info");
     }
 
-    // ROL BAZLI SEKME YÖNETİMİ
     function configureUserTabs() {
       if (!CurrentUser) return;
       const isBoss = CurrentUser.username.toLowerCase() === "mourpheus";
@@ -1479,7 +1509,6 @@
           : `<i class="fa-solid fa-sitemap mr-1 text-mineora-gold"></i> Maden Soy Ağacı & İşçi Masası`;
       }
 
-      // Maden Sahibi ve Şirket Sahibi Kazı Yapamaz, Doğrudan Soy Ağacı Masasını Açar
       if (isBoss) {
         switchTab('boss');
       } else if (isCompanyOwner || isMineOwner) {
@@ -1497,7 +1526,7 @@
       document.getElementById('hud-ora-balance').innerText = CurrentUser.ora.toLocaleString('en-US', { minimumFractionDigits: 2 });
       document.getElementById('wallet-modal-usdt').innerText = `$${CurrentUser.usdt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
       document.getElementById('wallet-modal-ora').innerText = CurrentUser.ora.toLocaleString('en-US', { minimumFractionDigits: 2 });
-      document.getElementById('wallet-trc20-box').value = CurrentUser.trc20Address;
+      document.getElementById('wallet-trc20-box').value = OFFICIAL_TRC20_DEPOSIT_ADDRESS;
       document.getElementById('player-username-display').innerText = CurrentUser.username;
       document.getElementById('player-role-badge').innerText = CurrentUser.username.toLowerCase() === "mourpheus" ? "Kurucu Patron" : CurrentUser.role;
 
@@ -1512,7 +1541,6 @@
         t = 'home';
       }
 
-      // Maden Sahibi ve Şirket Sahibinin Kazı Sahnesine girmesi engellenir
       if (t === 'cave' && CurrentUser && (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi")) {
         showToast("⛔ Maden Sahipleri ve Şirket Sahipleri kazı yapamaz! Lütfen masanızdan alt kadrolarınızı yönetin.", "warning");
         t = 'owner';
@@ -1631,7 +1659,6 @@
       showToast("✅ Şifre güncellendi!", "success");
     }
 
-    // GÖRSEL SOY AĞACI (HIERARCHY TREE) RENDER MOTORU
     function renderHierarchyUI() {
       if (!CurrentUser) return;
       const isCompany = CurrentUser.role === "Şirket Sahibi";
@@ -1677,7 +1704,6 @@
           return;
         }
 
-        // ŞİRKET SOY AĞACI GÖRÜNÜMÜ
         mines.forEach((mine) => {
           const mineCard = document.createElement('div');
           mineCard.className = "p-5 rounded-3xl bg-mineora-bg border border-purple-500/40 space-y-4 shadow-xl";
@@ -1732,7 +1758,6 @@
         });
 
       } else {
-        // MADEN SAHİBİ SOY AĞACI GÖRÜNÜMÜ
         titleEl.innerHTML = `<span class="text-mineora-gold">${CurrentUser.username}</span> Maden Ocağı • İşçi Soy Ağacı Masası`;
         descEl.innerText = "Yönetici Statüsü: Kazı yapamazsınız. Ocağınıza bağlı 50 işçinin kullanıcı adını ve anlık vardiya durumlarını buradan takip edersiniz.";
         refDisplay.innerText = CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;
@@ -1806,6 +1831,7 @@
         masterVaultUsdt: 0.00,
         totalBurnedOra: 0.00,
         pendingWithdrawals: [],
+        pendingDeposits: [],
         feeP2pUsdtPercent: 1.0,
         feeP2pOraPercent: 1.0,
         taxWithdrawTier1: 5.0,
@@ -1995,15 +2021,11 @@
         return;
       }
 
-      const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-      let randAddr = "T";
-      for (let i = 0; i < 33; i++) randAddr += chars.charAt(Math.floor(Math.random() * chars.length));
-
       const newUserObj = {
         username: username,
         pass: password,
         email: email || `${username.toLowerCase()}@mineora.io`,
-        trc20Address: randAddr,
+        trc20Address: OFFICIAL_TRC20_DEPOSIT_ADDRESS,
         usdt: parseFloat(initialUsdt) || 0.00,
         ora: parseFloat(initialOra) || 0.00,
         role: role,
@@ -2115,6 +2137,91 @@
       renderAdminUserTable();
       renderAdminGlobalHierarchyTree();
       showToast(`✅ ${selectedTargetUser.username} kullanıcısının verileri güncellendi!`, "success");
+    }
+
+    function queueDepositForAdminApproval(username, amountUsdt, txid) {
+      if (!AdminState.pendingDeposits) AdminState.pendingDeposits = [];
+      AdminState.pendingDeposits.push({
+        id: Date.now(),
+        username: username,
+        amount: amountUsdt,
+        txid: txid,
+        createdAt: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+      });
+      saveAdminProtocolState(AdminState);
+      renderAdminDepositQueue();
+    }
+
+    function renderAdminDepositQueue() {
+      const container = document.getElementById('admin-deposit-queue-list');
+      if (!container) return;
+      container.innerHTML = "";
+
+      const queue = AdminState.pendingDeposits || [];
+      if (queue.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Onay bekleyen borsadan USDT yatırım bildirimi bulunmuyor.</div>`;
+        return;
+      }
+
+      queue.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "p-4 rounded-2xl bg-mineora-card border border-emerald-500/40 flex flex-wrap items-center justify-between gap-3 text-xs shadow-lg";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <strong class="text-white font-mono text-sm">${item.username}</strong>
+              <span class="text-[10px] text-slate-500 font-mono">${item.createdAt}</span>
+            </div>
+            <span class="text-[10px] text-cyan-300 block font-mono mt-0.5 break-all">TXID: ${item.txid}</span>
+            <strong class="text-base font-black font-mono text-mineora-green">+$${item.amount.toFixed(2)} USDT</strong>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="approveDeposit(${item.id})" class="px-3.5 py-2 rounded-xl bg-mineora-green hover:opacity-90 text-white font-bold text-xs cursor-pointer">
+              <i class="fa-solid fa-check mr-1"></i> Onayla & Bakiyeyi Yükle
+            </button>
+            <button onclick="rejectDeposit(${item.id})" class="px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-400 font-bold text-xs cursor-pointer">
+              <i class="fa-solid fa-xmark mr-1"></i> Reddet
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function approveDeposit(id) {
+      const idx = (AdminState.pendingDeposits || []).findIndex(i => i.id === id);
+      if (idx === -1) return;
+      const item = AdminState.pendingDeposits[idx];
+
+      const key = `mineora_user_${item.username.toLowerCase()}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const u = JSON.parse(raw);
+        u.usdt = (u.usdt || 0) + item.amount;
+        localStorage.setItem(key, JSON.stringify(u));
+        if (CurrentUser && CurrentUser.username.toLowerCase() === item.username.toLowerCase()) {
+          CurrentUser.usdt = u.usdt;
+          updateHUD();
+        }
+      }
+
+      AdminState.pendingDeposits.splice(idx, 1);
+      saveAdminProtocolState(AdminState);
+      renderAdminDepositQueue();
+      renderAdminUserTable();
+      showToast(`✅ ${item.username} kullanıcısının $${item.amount} USDT yatırımı onaylandı ve hesabına yüklendi!`, "success");
+    }
+
+    function rejectDeposit(id) {
+      const idx = (AdminState.pendingDeposits || []).findIndex(i => i.id === id);
+      if (idx === -1) return;
+      const item = AdminState.pendingDeposits[idx];
+
+      AdminState.pendingDeposits.splice(idx, 1);
+      saveAdminProtocolState(AdminState);
+      renderAdminDepositQueue();
+      showToast(`❌ ${item.username} kullanıcısının yatırım bildirimi reddedildi.`, "warning");
     }
 
     function queueWithdrawalForAdminApproval(username, amountUsdt, targetAddress) {
@@ -2269,6 +2376,7 @@
       renderAdminHUD();
       renderAdminCommissionInputs();
       renderAdminUserTable();
+      renderAdminDepositQueue();
       renderAdminWithdrawalQueue();
       renderAdminGlobalHierarchyTree();
     }
@@ -2356,7 +2464,6 @@
     function selectMine(idx) {
       if (!CurrentUser) return;
 
-      // MADEN SAHİBİ VE ŞİRKET SAHİBİ OCAK SEÇİP KAZIYA GİREMEZ
       if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi") {
         showToast("⛔ Siz yönetici statüsündesiniz! Kazı yapamazsınız, yönetim masanızdan işçilerinizi takip edebilirsiniz.", "warning");
         switchTab('owner');
@@ -2398,7 +2505,6 @@
     function strikePickaxe() {
       if (!CurrentUser || isTransitLocked) return;
 
-      // KESİN KURAL: YALNIZCA İŞÇİ MADENCİ KAZMA VURABİLİR
       if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi") {
         showToast("⛔ Siz yönetici statüsündesiniz! Kazma vuramazsınız. Kazancınız bağlı işçilerden otomatik akar.", "warning");
         switchTab('owner');
@@ -2683,7 +2789,7 @@
       mCtx.fillStyle = wagonGrad;
       mCtx.beginPath();
       mCtx.moveTo(wagonX, wagonY);
-      mCtx.lineTo(wagonX + wagonW, wagonY);
+      mCtx.lineTo(wagonX + wagonW);
       mCtx.lineTo(wagonX + wagonW - 14, wagonY + wagonH);
       mCtx.lineTo(wagonX + 14, wagonY + wagonH);
       mCtx.closePath();
@@ -3341,16 +3447,18 @@
     }
 
     // ============================================================================
-    // 6. WALLET.JS (TRC20 & ONAYLI ÇEKİM - wallet js_5.txt)
+    // 6. WALLET.JS (GERÇEK TRC20 EMANET VE YATIRMA/ÇEKİM MOTORU - wallet js_5.txt)
     // ============================================================================
-    const OFFICIAL_TRC20_DEPOSIT_ADDRESS = "TLj3hK8Kz7gD9qE2wP8yZ7X1mV5nR4bQ9T";
-
     function setWalletTab(tab) {
       const isDep = tab === 'deposit';
       document.getElementById('wallet-view-deposit').classList.toggle('hidden', !isDep);
       document.getElementById('wallet-view-withdraw').classList.toggle('hidden', isDep);
-      document.getElementById('wallet-tab-btn-deposit').className = isDep ? "py-2.5 rounded-xl font-bold bg-mineora-gold text-black transition cursor-pointer" : "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition cursor-pointer";
-      document.getElementById('wallet-tab-btn-withdraw').className = !isDep ? "py-2.5 rounded-xl font-bold bg-mineora-gold text-black transition cursor-pointer" : "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition cursor-pointer";
+      document.getElementById('wallet-tab-btn-deposit').className = isDep 
+        ? "py-2.5 rounded-xl font-bold bg-mineora-gold text-black transition cursor-pointer" 
+        : "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition cursor-pointer";
+      document.getElementById('wallet-tab-btn-withdraw').className = !isDep 
+        ? "py-2.5 rounded-xl font-bold bg-mineora-gold text-black transition cursor-pointer" 
+        : "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition cursor-pointer";
     }
 
     function renderQrCode() {
@@ -3358,28 +3466,52 @@
       if (!box) return;
       box.innerHTML = "";
       
-      const depositTarget = (CurrentUser && CurrentUser.trc20Address) ? CurrentUser.trc20Address : OFFICIAL_TRC20_DEPOSIT_ADDRESS;
-      
       new QRCode(box, {
-        text: depositTarget,
+        text: OFFICIAL_TRC20_DEPOSIT_ADDRESS,
         width: 130,
         height: 130,
         colorDark : "#0b0e11",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
       });
+
+      const addrBox = document.getElementById('wallet-trc20-box');
+      if (addrBox) addrBox.value = OFFICIAL_TRC20_DEPOSIT_ADDRESS;
     }
 
     function copyWalletAddress() {
-      const target = document.getElementById('wallet-trc20-box')?.value || OFFICIAL_TRC20_DEPOSIT_ADDRESS;
-      navigator.clipboard.writeText(target).then(() => {
-        showToast("📋 TRC20 yatırma adresi panoya kopyalandı!", "success");
+      navigator.clipboard.writeText(OFFICIAL_TRC20_DEPOSIT_ADDRESS).then(() => {
+        showToast("📋 Resmi TRC20 yatırma adresi panoya kopyalandı!", "success");
       });
     }
 
     function fillMaxWithdraw() {
       if (!CurrentUser) return;
       document.getElementById('withdraw-amount-usdt').value = CurrentUser.usdt.toFixed(2);
+    }
+
+    function submitDepositReceipt() {
+      if (!CurrentUser) return;
+      const amt = parseFloat(document.getElementById('deposit-amount-input')?.value) || 0;
+      const txid = document.getElementById('deposit-txid-input')?.value.trim();
+
+      if (amt < 10) {
+        showToast("⚠️ Minimum yatırma bildirimi 10 USDT'dir!", "warning");
+        return;
+      }
+      if (!txid || txid.length < 15) {
+        showToast("⚠️ Lütfen borsanın verdiği geçerli İşlem Kodunu (TXID / Hash) girin!", "warning");
+        return;
+      }
+
+      if (typeof queueDepositForAdminApproval === 'function') {
+        queueDepositForAdminApproval(CurrentUser.username, amt, txid);
+      }
+
+      document.getElementById('deposit-amount-input').value = "";
+      document.getElementById('deposit-txid-input').value = "";
+      closeModal('modal-wallet');
+      showToast(`⏳ $${amt.toFixed(2)} USDT yatırım bildiriminiz alındı. Patron onayından sonra bakiyenize eklenecektir.`, "info");
     }
 
     function executeWithdrawal() {
