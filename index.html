@@ -86,7 +86,7 @@
 
   <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- ================= 1. BÖLÜM: KARŞILAMA / ANA SAYFA ================= -->
+  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA -->
   <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden p-6">
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -103,6 +103,10 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
+        <button type="button" onclick="openModal('modal-info')" class="px-3 sm:px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-gold/40 text-mineora-gold text-xs sm:text-sm font-bold flex items-center gap-2 transition cursor-pointer">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>Rehber</span>
+        </button>
         <button type="button" onclick="openModal('modal-auth-login')" class="px-3 sm:px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs sm:text-sm font-bold flex items-center gap-2 transition cursor-pointer">
           <i class="fa-solid fa-right-to-bracket text-slate-400"></i>
           <span>Giriş Yap</span>
@@ -125,7 +129,7 @@
       </h1>
 
       <p class="mt-6 text-sm sm:text-base md:text-lg text-slate-400 max-w-2xl leading-relaxed">
-        Güç barı refleksiyle kayaları kırın, vagonunuzu doldurup asansöre sevk edin, ikinci derin damarı da açtıktan sonra son tahliye ile madeni tamamlayın.
+        Güç barı refleksiyle kayaları kırın, vagonunuzu doldurup asansöre sevk edin, ikinci derin damarı da açtıktan sonra son tahliye ile madeni tamamlayın[cite: 15].
       </p>
 
       <div class="mt-8 flex flex-wrap gap-4 justify-center">
@@ -141,7 +145,7 @@
     </footer>
   </div>
 
-  <!-- ================= 2. BÖLÜM: OYUNCU & YÖNETİM TERMİNALİ ================= -->
+  <!-- 2. BÖLÜM: OYUNCU & YÖNETİM TERMİNALİ -->
   <div id="screen-game" class="hidden min-h-screen flex flex-col justify-between">
     <header class="bg-mineora-card border-b border-mineora-border sticky top-0 z-40 px-3 sm:px-6 py-2.5">
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
@@ -193,9 +197,10 @@
 
       <button type="button" onclick="switchTab('owner')" id="tab-btn-owner" class="hidden px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer"><i class="fa-solid fa-sitemap mr-1 text-mineora-gold"></i> Maden Sahibi Masası</button>
       <button type="button" onclick="switchTab('cave')" id="tab-btn-cave" class="px-4 py-2 rounded-xl text-xs font-bold bg-mineora-gold text-black transition whitespace-nowrap shadow-md cursor-pointer"><i class="fa-solid fa-person-digging mr-1 text-black"></i> Kazı Sahnesi</button>
-      <button type="button" onclick="switchTab('map')" id="tab-btn-map" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer"><i class="fa-solid fa-map mr-1"></i> Saha Haritası</button>
+      <button type="button" onclick="switchTab('map')" id="tab-btn-map" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer"><i class="fa-solid fa-map mr-1"></i> Saha Haritası (5 Bölge)</button>
       <button type="button" onclick="switchTab('p2p')" id="tab-btn-p2p" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-pointer"><i class="fa-solid fa-handshake mr-1"></i> BORSA TAKAS (P2P)</button>
       <button type="button" onclick="switchTab('stake')" id="tab-btn-stake" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap bg-amber-500/10 text-amber-300 border border-amber-500/30 cursor-pointer"><i class="fa-solid fa-vault mr-1 text-amber-400"></i> ORA BANKASI (STAKE)</button>
+      <button type="button" onclick="switchTab('career')" id="tab-btn-career" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap bg-purple-500/10 text-purple-300 border border-purple-500/30 cursor-pointer"><i class="fa-solid fa-ranking-star mr-1"></i> Kariyer Seç</button>
       <button type="button" onclick="switchTab('settings')" id="tab-btn-settings" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer"><i class="fa-solid fa-key mr-1 text-cyan-400"></i> Şifre Değiştir</button>
     </div>
 
@@ -211,7 +216,7 @@
               </div>
               <div>
                 <h2 class="text-xl font-black text-white">Kurucu Patron Master Komuta Masası</h2>
-                <span class="text-xs text-slate-400">Tek Yetkili: <strong class="text-rose-400">mourpheus</strong> | 1 Milyar Genesis ORA & Sistem Denetimi</span>
+                <span class="text-xs text-slate-400">Tek Yetkili: <strong class="text-rose-400">mourpheus</strong> | 1 Milyar Genesis ORA & Sistem Denetimi[cite: 14]</span>
               </div>
             </div>
           </div>
@@ -220,14 +225,28 @@
             <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/40 space-y-2">
               <span class="text-slate-400 text-xs font-bold block uppercase">Kalan Master Genesis ORA Rezervi</span>
               <strong id="admin-master-ora-reserve" class="text-2xl font-black text-mineora-gold font-mono block">1,000,000,000 ORA</strong>
+              <p class="text-[10px] text-slate-500">Madenlerden üretildikçe piyasaya buradan salınır[cite: 15].</p>
             </div>
+
             <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-green/40 space-y-2">
               <span class="text-slate-400 text-xs font-bold block uppercase">Kurucu USDT Ana Kasası</span>
               <strong id="admin-master-usdt-vault" class="text-2xl font-black text-mineora-green font-mono block">$0.00 USDT</strong>
+              <div class="flex gap-2 pt-1">
+                <input type="text" id="admin-vault-withdraw-addr" placeholder="Hedef TRC20 Adresi" class="w-2/3 bg-mineora-input border border-mineora-border rounded-xl px-2 py-1 text-[11px] text-white font-mono">
+                <input type="number" id="admin-vault-withdraw-amt" placeholder="USDT" class="w-1/3 bg-mineora-input border border-mineora-border rounded-xl px-2 py-1 text-[11px] text-white font-mono">
+              </div>
+              <button type="button" onclick="executeAdminVaultWithdraw()" class="w-full py-1.5 rounded-xl bg-mineora-green/20 hover:bg-mineora-green/30 text-mineora-green font-bold text-xs border border-mineora-green/30 cursor-pointer">
+                Soğuk Cüzdana Çek
+              </button>
             </div>
+
             <div class="p-4 bg-mineora-bg rounded-2xl border border-rose-500/40 space-y-2">
-              <span class="text-slate-400 text-xs font-bold block uppercase">Yakılan Toplam ORA</span>
-              <strong id="admin-total-burned-display" class="text-2xl font-black text-rose-500 font-mono block">0 ORA</strong>
+              <span class="text-slate-400 text-xs font-bold block uppercase">Manuel ORA Yakım Fırını (dEaD)</span>
+              <strong id="admin-total-burned-display" class="text-2xl font-black text-rose-500 font-mono fire-pulse block">0 ORA</strong>
+              <div class="flex gap-2 pt-1">
+                <input type="number" id="admin-burn-ora-amount" placeholder="Yakılacak ORA" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2 py-1 text-[11px] text-white font-mono">
+                <button type="button" onclick="executeAdminBurnOra()" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs whitespace-nowrap cursor-pointer">Yak (Burn)</button>
+              </div>
             </div>
           </div>
 
@@ -277,7 +296,32 @@
         </div>
       </section>
 
-      <!-- 1) SİNEMATİK KAZI SAHNESİ -->
+      <!-- 1) HİYERARŞİ AĞACI: MADEN SAHİBİ & ŞİRKET SAHİBİ -->
+      <section id="sec-owner" class="hidden space-y-6">
+        <div class="bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-4">
+            <div>
+              <h2 id="hierarchy-panel-title" class="text-lg font-black text-white flex items-center gap-2">
+                <span id="owner-name-tag">mourpheus</span> Maden Ocağı İşletmesi
+              </h2>
+              <p id="hierarchy-panel-desc" class="text-xs text-slate-400">Ocağınıza bağlı çalışan işçilerinizi takip edin[cite: 15].</p>
+            </div>
+            <div class="flex items-center gap-2 bg-mineora-bg p-2 rounded-2xl border border-mineora-border">
+              <span id="owner-ref-code-display" class="text-sm font-black font-mono text-cyan-400 px-2">MINE-MOURPHEUS-777</span>
+              <button type="button" onclick="copyRefCode()" class="px-3 py-1.5 rounded-xl bg-cyan-600 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-copy"></i> Kopyala</button>
+            </div>
+          </div>
+          <div id="hierarchy-stats-bar" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+          <div class="pt-4 border-t border-mineora-border">
+            <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-network-wired text-cyan-400"></i> Hiyerarşik Organizasyon & Vardiya Şeması
+            </h3>
+            <div id="hierarchy-workers-container" class="space-y-4"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2) SİNEMATİK KAZI SAHNESİ -->
       <section id="sec-cave" class="space-y-4">
         <div class="flex justify-between items-center bg-mineora-card px-5 py-3.5 rounded-2xl border border-mineora-border text-xs">
           <div>
@@ -313,7 +357,7 @@
             </div>
             <div class="space-y-1 max-w-md">
               <h3 id="transit-title" class="text-lg font-black text-white">1. Vagon Tamamen Doldu!</h3>
-              <p id="transit-desc" class="text-xs text-slate-300">Vagonu asansöre gönderin. 15 saniye içinde cevher yukarı çekilecek, boş vagon tünele dönecek ve 2. aşama derin damar kazısına devam edeceksiniz.</p>
+              <p id="transit-desc" class="text-xs text-slate-300">Vagonu asansöre gönderin. 15 saniye içinde cevher yukarı çekilecek, boş vagon tünele dönecek ve 2. aşama derin damar kazısına devam edeceksiniz[cite: 15, 16].</p>
             </div>
             <div id="transit-timer-box" class="hidden text-center space-y-2">
               <div class="text-3xl font-black font-mono text-cyan-400" id="transit-countdown">15</div>
@@ -354,14 +398,14 @@
         </div>
       </section>
 
-      <!-- 2) SAHA HARİTASI -->
+      <!-- 3) SAHA HARİTASI (5 BÖLGE) -->
       <section id="sec-map" class="hidden space-y-4">
         <div class="p-4 rounded-2xl bg-mineora-card border border-mineora-border flex justify-between items-center">
           <div>
             <h2 class="text-base font-black text-white flex items-center gap-2">
               <i class="fa-solid fa-mountain-sun text-mineora-gold"></i> Alp Dağları Jeolojik Saha Haritası (5 Saha)
             </h2>
-            <p class="text-xs text-slate-400 mt-1">Tamamlanan maden ocakları 24 saatlik yenilenme sürecine girer ve süre bitiminde tekrar aktifleşir.</p>
+            <p class="text-xs text-slate-400 mt-1">Tamamlanan maden ocakları 24 saatlik yenilenme sürecine girer ve süre bitiminde tekrar aktifleşir[cite: 15, 16].</p>
           </div>
         </div>
         <div id="alp-map-container" class="relative w-full h-[520px] rounded-3xl overflow-hidden border border-mineora-border shadow-2xl bg-mineora-bg">
@@ -370,7 +414,7 @@
         </div>
       </section>
 
-      <!-- 3) BORSA TAKAS (P2P) PAZARI -->
+      <!-- 4) BORSA TAKAS (P2P) PAZARI -->
       <section id="sec-p2p" class="hidden space-y-4">
         <div class="bg-mineora-card border border-mineora-border rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-lg">
           <div>
@@ -378,9 +422,9 @@
               <h2 class="text-lg font-black text-white flex items-center gap-2">
                 <i class="fa-solid fa-handshake text-mineora-green"></i> BORSA TAKAS (P2P)
               </h2>
-              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-mineora-green/15 text-mineora-green border border-mineora-green/30">Emanet (Escrow) Aktif</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-mineora-green/15 text-mineora-green border border-mineora-green/30">Emanet (Escrow) Aktif[cite: 15]</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Kullanıcılar arası doğrudan USDT ile ORA Alış ve ORA Satış karşılığı USDT masası.</p>
+            <p class="text-xs text-slate-400 mt-1">Kullanıcılar arası doğrudan USDT ile ORA Alış ve ORA Satış karşılığı USDT masası[cite: 15].</p>
           </div>
           <button type="button" onclick="openModal('modal-p2p-create')" class="px-4 py-2.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition shadow-lg flex items-center gap-2 cursor-pointer">
             <i class="fa-solid fa-plus"></i> Çift Taraflı İlan Oluştur
@@ -412,7 +456,7 @@
         </div>
       </section>
 
-      <!-- 4) ORA BANKASI: VADELİ STAKE KASASI -->
+      <!-- 5) ORA BANKASI: VADELİ STAKE KASASI -->
       <section id="sec-stake" class="hidden space-y-6 max-w-4xl mx-auto">
         <div class="bg-mineora-card border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-6">
           <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-4">
@@ -422,29 +466,34 @@
               </div>
               <div>
                 <h2 class="text-xl font-black text-white">MINEORA Bankası & Vadeli Kasa</h2>
-                <span class="text-xs text-slate-400">ORA varlıklarınızı kilitleyin, vade bitiminde net kâr elde edin.</span>
+                <span class="text-xs text-slate-400">ORA varlıklarınızı kilitleyin, vade bitiminde yüksek net kâr elde edin[cite: 15].</span>
               </div>
             </div>
-            <span class="px-3 py-1 rounded-xl bg-mineora-gold/10 border border-mineora-gold/30 text-mineora-gold font-mono text-xs font-bold">Kilitli Kasa</span>
+            <span class="px-3 py-1 rounded-xl bg-mineora-gold/10 border border-mineora-gold/30 text-mineora-gold font-mono text-xs font-bold">Kırılmaz Kilitli Kasa</span>
           </div>
 
           <div class="space-y-2">
-            <label class="text-xs font-bold text-slate-300 block">Vade Süresini Seçin:</label>
+            <label class="text-xs font-bold text-slate-300 block">1. Vade Süresini Seçin:</label>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button type="button" onclick="setStakePlan(60)" id="stake-plan-btn-60" class="p-4 rounded-2xl bg-mineora-gold text-black font-black border-2 border-yellow-300 shadow-xl cursor-pointer transition transform scale-102 text-left">
                 <span class="text-xs uppercase opacity-80 block">Standart Kasa</span>
                 <strong class="text-lg block font-mono">60 Gün</strong>
                 <span class="text-xs mt-1 block font-bold">+%45 Net Getiri</span>
+                <span class="text-[10px] opacity-75 block font-mono mt-0.5">~%0.75 Günlük</span>
               </button>
+
               <button type="button" onclick="setStakePlan(120)" id="stake-plan-btn-120" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer transition text-left">
                 <span class="text-xs uppercase text-slate-400 block">Gümüş Kasa</span>
                 <strong class="text-lg block font-mono text-white">120 Gün</strong>
                 <span class="text-xs text-cyan-300 mt-1 block font-bold">+%110 Net Getiri</span>
+                <span class="text-[10px] text-slate-400 block font-mono mt-0.5">2 Katından Fazla</span>
               </button>
+
               <button type="button" onclick="setStakePlan(180)" id="stake-plan-btn-180" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer transition text-left">
                 <span class="text-xs uppercase text-slate-400 block">Altın VIP Kasa</span>
                 <strong class="text-lg block font-mono text-white">180 Gün</strong>
                 <span class="text-xs text-mineora-gold mt-1 block font-bold">+%200 Net Getiri</span>
+                <span class="text-[10px] text-slate-400 block font-mono mt-0.5">Parayı 3'e Katlar</span>
               </button>
             </div>
           </div>
@@ -452,7 +501,7 @@
           <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-4">
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="text-xs font-bold text-slate-300">Kilitlenecek ORA Miktarı:</label>
+                <label class="text-xs font-bold text-slate-300">2. Kilitlenecek ORA Miktarı:</label>
                 <button type="button" onclick="fillMaxStake()" class="text-[10px] text-mineora-gold font-bold hover:underline cursor-pointer">TÜMÜ (MAX)</button>
               </div>
               <input type="number" id="stake-deposit-amount" placeholder="Min: 100 ORA" oninput="calculateStakePreview()" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-sm outline-none focus:border-mineora-gold">
@@ -484,7 +533,49 @@
         </div>
       </section>
 
-      <!-- 5) ŞİFRE DEĞİŞTİR -->
+      <!-- 6) KARİYER SEÇİMİ -->
+      <section id="sec-career" class="hidden space-y-6 max-w-5xl mx-auto">
+        <div class="p-6 rounded-3xl bg-mineora-card border border-purple-500/30 space-y-2">
+          <h3 class="text-lg font-black text-white flex items-center gap-2">
+            <i class="fa-solid fa-ranking-star text-purple-400"></i> Kariyer Seçimi & Rütbe Masası
+          </h3>
+          <p class="text-xs text-slate-400">Rolünüzü seçerek maden dünyanızı aktive edin veya üst hiyerarşik kademelere yükselin[cite: 15].</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-6 rounded-3xl bg-mineora-card border border-cyan-500/40 space-y-4 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center text-xl"><i class="fa-solid fa-person-digging"></i></div>
+              <h4 class="text-base font-black text-white">İşçi Madenci</h4>
+              <p class="text-xs text-slate-400">Maden sahasına doğrudan giriş hakkı kazanır. Kendi tünelinde kazı yaparak ORA üretir[cite: 15].</p>
+              <div class="p-3 rounded-xl bg-mineora-bg border border-mineora-border text-xs font-mono text-cyan-400 font-black">Gereksinim: 100 USDT karşılığı ORA</div>
+            </div>
+            <button type="button" onclick="upgradeRole('İşçi Madenci', 100)" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Bu Rolü Seç & Madeni Aç</button>
+          </div>
+
+          <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-gold/40 space-y-4 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-mineora-gold/15 text-mineora-gold flex items-center justify-center text-xl"><i class="fa-solid fa-mountain"></i></div>
+              <h4 class="text-base font-black text-white">Maden Sahibi</h4>
+              <p class="text-xs text-slate-400">Kendi ocağını açar, referans koduyla işçiler kaydeder ve hiyerarşi ağacını yönetir[cite: 15].</p>
+              <div class="p-3 rounded-xl bg-mineora-bg border border-mineora-border text-xs font-mono text-mineora-gold font-black">Maliyet: 1,000 USDT karşılığı ORA</div>
+            </div>
+            <button type="button" onclick="upgradeRole('Maden Sahibi', 1000)" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer">Maden Sahibi Ol</button>
+          </div>
+
+          <div class="p-6 rounded-3xl bg-mineora-card border border-purple-500/50 space-y-4 flex flex-col justify-between shadow-xl shadow-purple-500/5">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-400 flex items-center justify-center text-xl"><i class="fa-solid fa-building-wheat"></i></div>
+              <h4 class="text-base font-black text-white">Şirket Sahibi (Holding)</h4>
+              <p class="text-xs text-slate-400">Altındaki birden fazla madeni konsolide eder. Madenlerin toplam gelirinden temettü payı kazanır[cite: 15].</p>
+              <div class="p-3 rounded-xl bg-mineora-bg border border-purple-500/30 text-xs font-mono text-purple-300 font-black">Maliyet: 5,000 USDT karşılığı ORA</div>
+            </div>
+            <button type="button" onclick="upgradeRole('Şirket Sahibi', 5000)" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs cursor-pointer shadow-lg shadow-purple-600/30">Şirket Sahibi Ol</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7) ŞİFRE DEĞİŞTİR -->
       <section id="sec-settings" class="hidden space-y-4 max-w-xl mx-auto">
         <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-border space-y-4 text-xs shadow-xl">
           <h3 class="text-sm font-black text-white flex items-center gap-2"><i class="fa-solid fa-key text-cyan-400"></i> Güvenli Şifre Değiştir</h3>
@@ -499,9 +590,9 @@
     </main>
   </div>
 
-  <!-- ================= 3. BÖLÜM: MODALLAR ================= -->
+  <!-- 3. BÖLÜM: MODALLAR -->
 
-  <!-- TRC20 CÜZDAN MERKEZİ -->
+  <!-- CÜZDAN MODALI -->
   <div id="modal-wallet" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -511,7 +602,7 @@
           </div>
           <div>
             <h3 class="text-base font-black text-white">TRC20 USDT Cüzdan Merkezi</h3>
-            <span class="text-[10px] text-slate-400">TRON Ağı Yatırma & Güvenli Çekim Masası</span>
+            <span class="text-[10px] text-slate-400">TRON Ağı Yatırma & Güvenli Çekim Masası[cite: 15]</span>
           </div>
         </div>
         <button type="button" onclick="closeModal('modal-wallet')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -537,22 +628,24 @@
         </button>
       </div>
 
-      <!-- YATIRMA BÖLÜMÜ -->
+      <!-- YATIRMA VE TXID BİLDİRİMİ -->
       <div id="wallet-view-deposit" class="space-y-4">
         <div class="flex flex-col items-center justify-center p-3.5 bg-white rounded-2xl max-w-[160px] mx-auto shadow-inner">
           <div id="qrcode-container"></div>
         </div>
         <div class="p-3.5 bg-mineora-bg rounded-2xl border border-mineora-border space-y-2">
           <div class="flex justify-between items-center">
-            <span class="text-[10px] text-cyan-400 font-bold">Resmi TRC20 Yatırma Adresi:</span>
+            <span class="text-[10px] text-cyan-400 font-bold">Resmi Şirket USDT (TRC20) Yatırma Adresi:</span>
             <button type="button" onclick="copyWalletAddress()" class="text-[10px] text-mineora-gold hover:underline flex items-center gap-1 font-bold cursor-pointer">
               <i class="fa-solid fa-copy"></i> Kopyala
             </button>
           </div>
           <input type="text" id="wallet-trc20-box" readonly onclick="copyWalletAddress()" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-mineora-gold font-mono text-xs outline-none cursor-pointer">
+          <span class="text-[10px] text-slate-400 block leading-relaxed">
+            ⚠️ <strong>Önemli:</strong> Bu adrese harici borsadan (Binance vb.) yalnızca <strong>TRON (TRC20)</strong> ağında USDT gönderiniz[cite: 15].
+          </span>
         </div>
 
-        <!-- BİLDİRİM ALANI -->
         <div class="p-3.5 bg-mineora-bg rounded-2xl border border-emerald-500/30 space-y-3">
           <span class="text-[11px] font-bold text-emerald-400 block flex items-center gap-1.5">
             <i class="fa-solid fa-file-invoice-dollar"></i> Gönderimi Tamamladıktan Sonra Bildirin
@@ -573,7 +666,7 @@
         </div>
       </div>
 
-      <!-- ÇEKİM BÖLÜMÜ -->
+      <!-- ÇEKİM -->
       <div id="wallet-view-withdraw" class="hidden space-y-3.5">
         <div>
           <label class="font-bold text-slate-400 block mb-1">Göndermek İstediğiniz Hedef TRC20 Adresi</label>
@@ -617,7 +710,7 @@
           <input type="number" step="0.0001" id="p2p-create-price" value="0.1000" oninput="calculateP2pCreatePreview()" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
         </div>
         <div>
-          <label class="font-bold text-slate-400 block mb-1" id="p2p-create-amount-label">İşlem Yapılacak ORA Miktarı</label>
+          <label class="font-bold text-slate-400 block mb-1">İşlem Yapılacak ORA Miktarı</label>
           <input type="number" step="any" id="p2p-create-amount" placeholder="Örn: 1000" oninput="calculateP2pCreatePreview()" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
         </div>
         <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-border flex justify-between text-slate-300 font-mono text-[11px]">
@@ -649,56 +742,66 @@
     </div>
   </div>
 
-  <!-- GİRİŞ MODALI -->
+  <!-- AUTH MODALLARI -->
   <div id="modal-auth-login" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
-      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
-        <h3 class="text-base font-black text-white">Sisteme Giriş Yap</h3>
-        <button type="button" onclick="closeModal('modal-auth-login')" class="text-slate-400 hover:text-white text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="space-y-3">
-        <input type="text" id="login-user" placeholder="Kullanıcı adınızı girin" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
-        <input type="password" id="login-pwd" placeholder="••••••••" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
-        <button type="button" onclick="handleLogin()" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition cursor-pointer">Giriş Yap ve Başla</button>
-      </div>
+    <div class="w-full max-w-sm bg-mineora-card border border-mineora-border rounded-3xl p-6 space-y-3 text-xs">
+      <h3 class="font-bold text-white text-base">Giriş Yap</h3>
+      <input type="text" id="login-user" placeholder="Kullanıcı Adı" class="w-full p-2.5 bg-mineora-bg rounded-xl border border-mineora-border text-white outline-none">
+      <input type="password" id="login-pwd" placeholder="Şifre" class="w-full p-2.5 bg-mineora-bg rounded-xl border border-mineora-border text-white outline-none">
+      <button onclick="handleLogin()" class="w-full py-2.5 bg-mineora-gold text-black rounded-xl font-bold cursor-pointer">Giriş</button>
     </div>
   </div>
 
-  <!-- KAYIT MODALI -->
   <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+    <div class="w-full max-w-sm bg-mineora-card border border-mineora-border rounded-3xl p-6 space-y-3 text-xs">
+      <h3 class="font-bold text-white text-base">Kayıt Ol</h3>
+      <input type="email" id="reg-email" placeholder="E-Posta" class="w-full p-2.5 bg-mineora-bg rounded-xl border border-mineora-border text-white outline-none">
+      <input type="text" id="reg-username" placeholder="Kullanıcı Adı" class="w-full p-2.5 bg-mineora-bg rounded-xl border border-mineora-border text-white outline-none">
+      <input type="password" id="reg-pwd" placeholder="Şifre" class="w-full p-2.5 bg-mineora-bg rounded-xl border border-mineora-border text-white outline-none">
+      <input type="text" id="reg-ref-code" placeholder="Referans Kodu (İsteğe Bağlı)" class="w-full p-2.5 bg-mineora-bg rounded-xl border border-mineora-border text-white outline-none">
+      <button onclick="handleRegister()" class="w-full py-2.5 bg-mineora-gold text-black rounded-xl font-bold cursor-pointer">Kaydı Tamamla</button>
+    </div>
+  </div>
+
+  <!-- REHBER MODALI -->
+  <div id="modal-info" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-2xl bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
-        <h3 class="text-base font-black text-white">Yeni Madenci Hesabı Aç</h3>
-        <button type="button" onclick="closeModal('modal-auth-register')" class="text-slate-400 hover:text-white text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <i class="fa-solid fa-book-open text-mineora-gold"></i> MINEORA Protokol Simülasyon Kılavuzu
+        </h3>
+        <button type="button" onclick="closeModal('modal-info')" class="text-slate-400 hover:text-white text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="space-y-3">
-        <div>
-          <label class="font-bold text-slate-400 block mb-1">Geçerli E-posta Adresi</label>
-          <input type="email" id="reg-email" placeholder="ornek@domain.com" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-mineora-gold">
+
+      <div class="space-y-4 text-slate-300 leading-relaxed">
+        <div class="p-3.5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-1">
+          <h4 class="text-sm font-black text-mineora-gold flex items-center gap-1.5">
+            <i class="fa-solid fa-coins"></i> 1. Sabit Değer Çapası (Peg)
+          </h4>
+          <p class="text-[11px] text-slate-400">
+            Protokolde tüm maliyet ve ödüller sabit <strong>1 ORA = 0.10 USDT ($0.10)</strong> çapasına bağlıdır[cite: 15]. Üretilen ORA tokenlar P2P masasında anında USDT likiditesine çevrilebilir[cite: 15].
+          </p>
         </div>
-        <div>
-          <label class="font-bold text-slate-400 block mb-1">Kullanıcı Adı Belirle</label>
-          <input type="text" id="reg-username" placeholder="kullanici_adiniz" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-mineora-gold">
+
+        <div class="p-3.5 rounded-2xl bg-mineora-bg border border-cyan-500/30 space-y-2">
+          <h4 class="text-sm font-black text-cyan-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-gears"></i> 2. Hiyerarşik Rol & Görev Dağılımı
+          </h4>
+          <p class="text-[11px] text-slate-400">
+            İşçi Madenci, Maden Sahibi veya Şirket Sahibi (Holding) olarak Alp Dağları sahalarında kendi operasyonlarınızı yönetirsiniz[cite: 15].
+          </p>
         </div>
-        <div>
-          <label class="font-bold text-slate-400 block mb-1">Şifre Belirle</label>
-          <input type="password" id="reg-pwd" placeholder="••••••••" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-mineora-gold">
-        </div>
-        <div>
-          <label class="font-bold text-cyan-400 block mb-1">Referans Kodu (İsteğe Bağlı)</label>
-          <input type="text" id="reg-ref-code" placeholder="Örn: MINE-MOURPHEUS-777" class="w-full bg-mineora-bg border border-cyan-500/40 rounded-xl px-3 py-2 text-cyan-300 font-mono outline-none focus:border-cyan-400 uppercase">
-        </div>
-        <button type="button" onclick="handleRegister()" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition shadow-lg cursor-pointer">Kayıt Ol ve Sisteme Başla</button>
       </div>
+      <button type="button" onclick="closeModal('modal-info')" class="w-full py-2.5 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer">Anladım, Kapat</button>
     </div>
   </div>
 
   <!-- ================= TÜM JAVASCRIPT MOTORLARI ================= -->
   <script>
     // ============================================================================
-    // 1. STATE.JS MOTORU
+    // 1. STATE.JS MOTORU (OTURUM, REZERV, HUD)
     // ============================================================================
-    const OFFICIAL_TRC20_DEPOSIT_ADDRESS = "THjMogQnVXScpehPXqy39dfmhttrqjfXg9"; //
+    const OFFICIAL_TRC20_DEPOSIT_ADDRESS = "THjMogQnVXScpehPXqy39dfmhttrqjfXg9";[cite: 19]
 
     let audioCtx = null;
     function initAudioContext() {
@@ -729,9 +832,9 @@
     function getGlobalProtocolState() {
       const saved = localStorage.getItem('mineora_global_protocol');
       if (saved) return JSON.parse(saved);
-      return { adminVaultUsdt: 0.00, totalBurnedOra: 0.00, feeUsdtPercent: 1.0, feeOraPercent: 1.0 }; //
+      return { adminVaultUsdt: 0.00, totalBurnedOra: 0.00, feeUsdtPercent: 1.0, feeOraPercent: 1.0 };[cite: 19]
     }
-    function saveGlobalProtocolState(s) { localStorage.setItem('mineora_global_protocol', JSON.stringify(s)); } //
+    function saveGlobalProtocolState(s) { localStorage.setItem('mineora_global_protocol', JSON.stringify(s)); }[cite: 19]
     let ProtocolState = getGlobalProtocolState();
 
     function getDefaultMines() {
@@ -741,12 +844,12 @@
         { id: 2, name: "Karanlık Vadi Obsidyen Tüneli", mineral: "Saf Obsidyen Damarı", hp: 100, depleted: false, rewardPool: 10.00, sealedAt: null },
         { id: 3, name: "Sıkçam Zümrüt Havzası", mineral: "Zümrüt Yatağı", hp: 100, depleted: false, rewardPool: 10.00, sealedAt: null },
         { id: 4, name: "Altındoruk Zirve Damarı", mineral: "Külçe Altın Damarı", hp: 100, depleted: false, rewardPool: 10.00, sealedAt: null }
-      ]; //
+      ];[cite: 19]
     }
 
     let CurrentUser = null;
     let CurrentUserWorld = null;
-    const COOLDOWN_24H_MS = 24 * 60 * 60 * 1000; //
+    const COOLDOWN_24H_MS = 24 * 60 * 60 * 1000;[cite: 19]
 
     function checkMinesCooldown() {
       if (!CurrentUser || !CurrentUser.mines) return;
@@ -808,14 +911,14 @@
         saveUserWorld();
       }
       CurrentUser = CurrentUserWorld;
-      sessionStorage.setItem('mineora_active_session', CurrentUser.username); // F5 Koruması
+      sessionStorage.setItem('mineora_active_session', CurrentUser.username); // F5 Koruması[cite: 19]
       checkMinesCooldown();
     }
 
     function saveUserWorld() {
       if (!CurrentUserWorld) return;
       const storageKey = `mineora_user_${CurrentUserWorld.username.toLowerCase()}`;
-      localStorage.setItem(storageKey, JSON.stringify(CurrentUserWorld)); //
+      localStorage.setItem(storageKey, JSON.stringify(CurrentUserWorld));[cite: 19]
     }
 
     function showToast(msg, type = "info") {
@@ -854,29 +957,29 @@
     function handleLogin() {
       const u = document.getElementById('login-user').value.trim();
       const p = document.getElementById('login-pwd').value.trim();
-      if (!u) { showToast("⚠️ Kullanıcı adı girin!", "warning"); return; } //
+      if (!u) { showToast("⚠️ Kullanıcı adı girin!", "warning"); return; }[cite: 19]
 
       const storageKey = `mineora_user_${u.toLowerCase()}`;
       const isMourpheus = u.toLowerCase() === "mourpheus";
       const userRecord = localStorage.getItem(storageKey);
 
       if (!userRecord && !isMourpheus) {
-        showToast("⛔ Bu kullanıcı adı sistemde kayıtlı değil!", "warning"); //
+        showToast("⛔ Bu kullanıcı adı sistemde kayıtlı değil!", "warning");[cite: 19]
         return;
       }
 
       loadUserWorld(u, p || "123456");
       if (p && CurrentUser.pass !== p) { 
-        showToast("⚠️ Şifre hatalı!", "warning"); //
+        showToast("⚠️ Şifre hatalı!", "warning");[cite: 19]
         CurrentUser = null;
         CurrentUserWorld = null;
-        sessionStorage.removeItem('mineora_active_session'); //
+        sessionStorage.removeItem('mineora_active_session');[cite: 19]
         return; 
       }
       
       closeModal('modal-auth-login');
       enterGame();
-      showToast(`👋 Hoş geldin ${CurrentUser.username}!`, "success"); //
+      showToast(`👋 Hoş geldin ${CurrentUser.username}!`, "success");[cite: 19]
     }
 
     function handleRegister() {
@@ -884,11 +987,11 @@
       const u = document.getElementById('reg-username').value.trim();
       const p = document.getElementById('reg-pwd').value.trim();
       const ref = document.getElementById('reg-ref-code').value.trim();
-      if (!em || !u || !p) { showToast("⚠️ Alanları doldurun!", "warning"); return; } //
+      if (!em || !u || !p) { showToast("⚠️ Alanları doldurun!", "warning"); return; }[cite: 19]
 
       const storageKey = `mineora_user_${u.toLowerCase()}`;
       if (localStorage.getItem(storageKey)) {
-        showToast("⚠️ Bu kullanıcı adı zaten alınmış!", "warning"); //
+        showToast("⚠️ Bu kullanıcı adı zaten alınmış!", "warning");[cite: 19]
         return;
       }
       
@@ -899,8 +1002,8 @@
       closeModal('modal-auth-register');
       enterGame();
 
-      if (typeof renderAdminUserTable === 'function') renderAdminUserTable(); //
-      showToast(`🎉 Tebrikler ${CurrentUser.username}, hesabınız açıldı!`, "success"); //
+      if (typeof renderAdminUserTable === 'function') renderAdminUserTable();[cite: 19]
+      showToast(`🎉 Tebrikler ${CurrentUser.username}, hesabınız açıldı!`, "success");[cite: 19]
     }
 
     function enterGame() {
@@ -911,21 +1014,21 @@
       if (typeof startTimingPointer === 'function') startTimingPointer();
       
       if (CurrentUser && CurrentUser.username.toLowerCase() === "mourpheus") {
-        if (typeof initAdminMasterPanel === 'function') initAdminMasterPanel(); //
+        if (typeof initAdminMasterPanel === 'function') initAdminMasterPanel();[cite: 19]
       }
     }
 
     function logoutSession() {
-      sessionStorage.removeItem('mineora_active_session'); //
+      sessionStorage.removeItem('mineora_active_session'); //[cite: 19]
       saveUserWorld();
       CurrentUser = null;
       CurrentUserWorld = null;
-      if (typeof pointerLoopReq !== 'undefined' && pointerLoopReq) cancelAnimationFrame(pointerLoopReq); //
+      if (typeof pointerLoopReq !== 'undefined' && pointerLoopReq) cancelAnimationFrame(pointerLoopReq);[cite: 19]
       
       document.getElementById('screen-game').classList.add('hidden');
       document.getElementById('screen-landing').classList.remove('hidden');
       document.getElementById('sec-boss')?.classList.add('hidden');
-      showToast("🔒 Güvenli çıkış yapıldı.", "info"); //
+      showToast("🔒 Güvenli çıkış yapıldı.", "info");[cite: 19]
     }
 
     function configureUserTabs() {
@@ -935,49 +1038,49 @@
       const isMineOwner = CurrentUser.role === "Maden Sahibi";
 
       const btnBoss = document.getElementById('tab-btn-boss');
-      if (btnBoss) btnBoss.classList.toggle('hidden', !isBoss); //
+      if (btnBoss) btnBoss.classList.toggle('hidden', !isBoss);[cite: 19]
 
       const bossSec = document.getElementById('sec-boss');
-      if (bossSec) bossSec.classList.toggle('hidden', !isBoss); //
+      if (bossSec) bossSec.classList.toggle('hidden', !isBoss);[cite: 19]
 
       const btnOwner = document.getElementById('tab-btn-owner');
       if (btnOwner) {
-        btnOwner.classList.toggle('hidden', !(isMineOwner || isCompanyOwner)); //
+        btnOwner.classList.toggle('hidden', !(isMineOwner || isCompanyOwner));[cite: 19]
         btnOwner.innerHTML = isCompanyOwner 
           ? `<i class="fa-solid fa-building-wheat mr-1 text-purple-400"></i> Şirket Masası` 
-          : `<i class="fa-solid fa-sitemap mr-1 text-mineora-gold"></i> Maden Masası`; //
+          : `<i class="fa-solid fa-sitemap mr-1 text-mineora-gold"></i> Maden Masası`;[cite: 19]
       }
 
       if (isBoss) switchTab('boss');
-      else switchTab('cave'); //
+      else switchTab('cave');[cite: 19]
     }
 
     function updateHUD() {
       if (!CurrentUser) return;
-      document.getElementById('hud-usdt-balance').innerText = (CurrentUser.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }); //
-      document.getElementById('hud-ora-balance').innerText = (CurrentUser.ora || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }); //
-      document.getElementById('wallet-modal-usdt').innerText = `$${(CurrentUser.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`; //
-      document.getElementById('wallet-modal-ora').innerText = (CurrentUser.ora || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }); //
-      document.getElementById('wallet-trc20-box').value = OFFICIAL_TRC20_DEPOSIT_ADDRESS; //
-      document.getElementById('player-username-display').innerText = CurrentUser.username; //
-      document.getElementById('player-role-badge').innerText = CurrentUser.username.toLowerCase() === "mourpheus" ? "Kurucu Patron" : CurrentUser.role; //
+      document.getElementById('hud-usdt-balance').innerText = (CurrentUser.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });[cite: 19]
+      document.getElementById('hud-ora-balance').innerText = (CurrentUser.ora || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });[cite: 19]
+      document.getElementById('wallet-modal-usdt').innerText = `$${(CurrentUser.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;[cite: 19]
+      document.getElementById('wallet-modal-ora').innerText = (CurrentUser.ora || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });[cite: 19]
+      document.getElementById('wallet-trc20-box').value = OFFICIAL_TRC20_DEPOSIT_ADDRESS;[cite: 19]
+      document.getElementById('player-username-display').innerText = CurrentUser.username;[cite: 19]
+      document.getElementById('player-role-badge').innerText = CurrentUser.username.toLowerCase() === "mourpheus" ? "Kurucu Patron" : CurrentUser.role;[cite: 19]
 
-      if (typeof renderAdminHUD === 'function') renderAdminHUD(); //
+      if (typeof renderAdminHUD === 'function') renderAdminHUD();[cite: 19]
     }
 
     function switchTab(t) {
       const isBoss = CurrentUser && CurrentUser.username.toLowerCase() === "mourpheus";
 
       if (t === 'boss' && !isBoss) {
-        showToast("⛔ Bu bölüme yalnızca Kurucu Patron erişebilir!", "warning"); //
+        showToast("⛔ Bu bölüme yalnızca Kurucu Patron erişebilir!", "warning");[cite: 19]
         t = 'cave';
       }
 
-      ['boss', 'owner', 'cave', 'map', 'p2p', 'stake', 'settings'].forEach(tab => {
+      ['boss', 'owner', 'cave', 'map', 'p2p', 'stake', 'career', 'settings'].forEach(tab => {
         const secEl = document.getElementById(`sec-${tab}`);
         if (secEl) {
           if (tab === 'boss' && !isBoss) secEl.classList.add('hidden');
-          else secEl.classList.toggle('hidden', tab !== t); //
+          else secEl.classList.toggle('hidden', tab !== t);[cite: 19]
         }
 
         const b = document.getElementById(`tab-btn-${tab}`);
@@ -985,38 +1088,61 @@
           if (tab === 'boss') {
             b.className = tab === t 
               ? "px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 shadow-lg shadow-rose-600/30 transition whitespace-nowrap cursor-pointer"
-              : "px-4 py-2 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition whitespace-nowrap cursor-pointer"; //
+              : "px-4 py-2 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition whitespace-nowrap cursor-pointer";[cite: 19]
           } else {
             b.className = tab === t 
               ? "px-4 py-2 rounded-xl text-xs font-bold bg-mineora-gold text-black transition whitespace-nowrap shadow-md cursor-pointer"
-              : "px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer"; //
+              : "px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer";[cite: 19]
           }
         }
       });
 
-      if (t === 'cave' && typeof initMineCanvas === 'function') initMineCanvas(); //
-      if (t === 'map' && typeof renderAlpMapPins === 'function') renderAlpMapPins(); //
-      if (t === 'p2p' && typeof renderP2pOrders === 'function') renderP2pOrders(); //
-      if (t === 'stake' && typeof renderActiveStakes === 'function') renderActiveStakes(); //
-      if (t === 'boss' && isBoss && typeof initAdminMasterPanel === 'function') initAdminMasterPanel(); //
+      if (t === 'cave' && typeof initMineCanvas === 'function') initMineCanvas();[cite: 19]
+      if (t === 'map' && typeof renderAlpMapPins === 'function') renderAlpMapPins();[cite: 19]
+      if (t === 'p2p' && typeof renderP2pOrders === 'function') renderP2pOrders();[cite: 19]
+      if (t === 'stake' && typeof renderActiveStakes === 'function') renderActiveStakes();[cite: 19]
+      if (t === 'boss' && isBoss && typeof initAdminMasterPanel === 'function') initAdminMasterPanel();[cite: 19]
+    }
+
+    function copyRefCode() {
+      if (!CurrentUser) return;
+      const code = CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;[cite: 19]
+      navigator.clipboard.writeText(code).then(() => {
+        showToast(`📋 Referans kodunuz kopyalandı: ${code}`, "success");[cite: 19]
+      });
+    }
+
+    function upgradeRole(role, costUsdt) {
+      if (!CurrentUser) return;
+      const costOra = costUsdt * 10;
+      if (CurrentUser.ora < costOra) {
+        showToast(`⚠️ Yetersiz ORA! '${role}' rolü için ${costUsdt.toLocaleString()} USDT karşılığı ORA gereklidir.`, "warning");
+        return;
+      }
+      CurrentUser.ora -= costOra;
+      CurrentUser.role = role;
+      saveUserWorld();
+      updateHUD();
+      configureUserTabs();
+      showToast(`🎉 '${role}' statüsüne yükseldiniz!`, "success");
     }
 
     function handlePasswordChange() {
       const oldP = document.getElementById('pwd-old').value;
       const newP = document.getElementById('pwd-new').value;
       const repP = document.getElementById('pwd-repeat').value;
-      if (!oldP || !newP || !repP) { showToast("⚠️ Alanları doldurun!", "warning"); return; } //
-      if (oldP !== CurrentUser.pass) { showToast("⚠️ Eski şifre hatalı!", "warning"); return; } //
-      if (newP !== repP) { showToast("⚠️ Şifreler eşleşmiyor!", "warning"); return; } //
+      if (!oldP || !newP || !repP) { showToast("⚠️ Alanları doldurun!", "warning"); return; }[cite: 19]
+      if (oldP !== CurrentUser.pass) { showToast("⚠️ Eski şifre hatalı!", "warning"); return; }[cite: 19]
+      if (newP !== repP) { showToast("⚠️ Şifreler eşleşmiyor!", "warning"); return; }[cite: 19]
       CurrentUser.pass = newP;
       saveUserWorld();
-      showToast("✅ Şifre güncellendi!", "success"); //
+      showToast("✅ Şifre güncellendi!", "success");[cite: 19]
     }
 
     // ============================================================================
-    // 2. ADMIN.JS MOTORU
+    // 2. ADMIN.JS MOTORU (PATRON MASASI & ONAYLAR)
     // ============================================================================
-    const GENESIS_TOTAL_ORA_SUPPLY = 1000000000.00; //
+    const GENESIS_TOTAL_ORA_SUPPLY = 1000000000.00;[cite: 14]
 
     function getAdminProtocolState() {
       const saved = localStorage.getItem('mineora_admin_root_state');
@@ -1024,7 +1150,7 @@
         const parsed = JSON.parse(saved);
         if (!parsed.pendingDeposits) parsed.pendingDeposits = [];
         if (!parsed.pendingWithdrawals) parsed.pendingWithdrawals = [];
-        return parsed; //
+        return parsed;[cite: 14]
       }
       return {
         masterOraReserve: GENESIS_TOTAL_ORA_SUPPLY,
@@ -1037,11 +1163,11 @@
         taxWithdrawTier1: 5.0,
         taxWithdrawTier2: 3.0,
         taxWithdrawTier3: 1.5
-      }; //
+      };[cite: 14]
     }
 
     function saveAdminProtocolState(state) {
-      localStorage.setItem('mineora_admin_root_state', JSON.stringify(state)); //
+      localStorage.setItem('mineora_admin_root_state', JSON.stringify(state));[cite: 14]
     }
 
     let AdminState = getAdminProtocolState();
@@ -1053,7 +1179,33 @@
         AdminState.masterOraReserve = 0;
       }
       saveAdminProtocolState(AdminState);
-      renderAdminHUD(); //
+      renderAdminHUD();[cite: 14]
+    }
+
+    function executeAdminBurnOra() {
+      const amt = parseFloat(document.getElementById('admin-burn-ora-amount')?.value) || 0;
+      if (amt <= 0 || amt > AdminState.masterOraReserve) {
+        showToast("⚠️ Geçersiz yakım miktarı!", "warning");
+        return;
+      }
+      AdminState.masterOraReserve -= amt;
+      AdminState.totalBurnedOra += amt;
+      saveAdminProtocolState(AdminState);
+      renderAdminHUD();
+      showToast(`🔥 ${amt.toLocaleString()} ORA başarıyla yakıldı!`, "success");
+    }
+
+    function executeAdminVaultWithdraw() {
+      const addr = document.getElementById('admin-vault-withdraw-addr')?.value.trim();
+      const amt = parseFloat(document.getElementById('admin-vault-withdraw-amt')?.value) || 0;
+      if (!addr || amt <= 0 || amt > AdminState.masterVaultUsdt) {
+        showToast("⚠️ Çekim tutarı veya adres hatalı!", "warning");
+        return;
+      }
+      AdminState.masterVaultUsdt -= amt;
+      saveAdminProtocolState(AdminState);
+      renderAdminHUD();
+      showToast(`💰 $${amt.toFixed(2)} USDT cüzdana aktarıldı!`, "success");
     }
 
     function getAllRegisteredUsers() {
@@ -1063,11 +1215,11 @@
         if (key.startsWith('mineora_user_')) {
           try {
             const u = JSON.parse(localStorage.getItem(key));
-            if (u && u.username) userList.push(u); //
+            if (u && u.username) userList.push(u);[cite: 14]
           } catch (e) {}
         }
       }
-      return userList; //
+      return userList;[cite: 14]
     }
 
     function renderAdminUserTable() {
@@ -1077,7 +1229,7 @@
 
       const users = getAllRegisteredUsers();
       if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">Sistemde henüz kayıtlı kullanıcı yok.</td></tr>`; //
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">Sistemde henüz kayıtlı kullanıcı yok.</td></tr>`;[cite: 14]
         return;
       }
 
@@ -1094,10 +1246,10 @@
           <td class="py-3 px-4 font-mono font-bold text-mineora-gold">${(u.ora || 0).toFixed(2)} ORA</td>
           <td class="py-3 px-4 text-right">
             ${!isMourpheus ? `
-              <button onclick="adminDeleteUser('${u.username}')" class="px-2 py-1 rounded bg-rose-600/20 text-rose-400 border border-rose-500/40 text-[10px] font-bold">Sil</button>
+              <button onclick="adminDeleteUser('${u.username}')" class="px-2.5 py-1 rounded bg-rose-600/20 text-rose-400 border border-rose-500/40 text-[11px] font-bold cursor-pointer">Sil</button>
             ` : ''}
           </td>
-        `; //
+        `;[cite: 14]
         tbody.appendChild(tr);
       });
     }
@@ -1118,9 +1270,9 @@
         amount: amountUsdt,
         txid: txid,
         createdAt: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-      }); //
+      });[cite: 14]
       saveAdminProtocolState(AdminState);
-      renderAdminDepositQueue(); //
+      renderAdminDepositQueue();[cite: 14]
     }
 
     function renderAdminDepositQueue() {
@@ -1130,7 +1282,7 @@
 
       const queue = AdminState.pendingDeposits || [];
       if (queue.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Onay bekleyen USDT yatırım bildirimi yok.</div>`; //
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Onay bekleyen USDT yatırım bildirimi yok.</div>`;[cite: 14]
         return;
       }
 
@@ -1144,10 +1296,10 @@
             <strong class="text-mineora-green font-mono">+$${item.amount.toFixed(2)} USDT</strong>
           </div>
           <div class="flex gap-2">
-            <button onclick="approveDeposit(${item.id})" class="px-3 py-1.5 rounded-xl bg-mineora-green text-white font-bold text-xs">Onayla</button>
-            <button onclick="rejectDeposit(${item.id})" class="px-3 py-1.5 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/40 text-xs font-bold">Reddet</button>
+            <button onclick="approveDeposit(${item.id})" class="px-3 py-1.5 rounded-xl bg-mineora-green text-white font-bold text-xs cursor-pointer">Onayla</button>
+            <button onclick="rejectDeposit(${item.id})" class="px-3 py-1.5 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/40 text-xs font-bold cursor-pointer">Reddet</button>
           </div>
-        `; //
+        `;[cite: 14]
         container.appendChild(card);
       });
     }
@@ -1162,7 +1314,7 @@
       if (raw) {
         const u = JSON.parse(raw);
         u.usdt = (u.usdt || 0) + item.amount;
-        localStorage.setItem(key, JSON.stringify(u)); //
+        localStorage.setItem(key, JSON.stringify(u));[cite: 14]
         if (CurrentUser && CurrentUser.username.toLowerCase() === item.username.toLowerCase()) {
           CurrentUser.usdt = u.usdt;
           updateHUD();
@@ -1173,7 +1325,7 @@
       saveAdminProtocolState(AdminState);
       renderAdminDepositQueue();
       renderAdminUserTable();
-      showToast(`✅ ${item.username} hesabına $${item.amount} USDT yüklendi!`, "success"); //
+      showToast(`✅ ${item.username} hesabına $${item.amount} USDT yüklendi!`, "success");[cite: 14]
     }
 
     function rejectDeposit(id) {
@@ -1182,7 +1334,7 @@
       AdminState.pendingDeposits.splice(idx, 1);
       saveAdminProtocolState(AdminState);
       renderAdminDepositQueue();
-      showToast("❌ Yatırım talebi reddedildi.", "warning"); //
+      showToast("❌ Yatırım talebi reddedildi.", "warning");[cite: 14]
     }
 
     function queueWithdrawalForAdminApproval(username, amountUsdt, targetAddress) {
@@ -1193,9 +1345,9 @@
         amount: amountUsdt,
         address: targetAddress,
         createdAt: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-      }); //
+      });[cite: 14]
       saveAdminProtocolState(AdminState);
-      renderAdminWithdrawalQueue(); //
+      renderAdminWithdrawalQueue();[cite: 14]
     }
 
     function renderAdminWithdrawalQueue() {
@@ -1205,7 +1357,7 @@
 
       const queue = AdminState.pendingWithdrawals || [];
       if (queue.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Onay bekleyen USDT çekim talebi bulunmuyor.</div>`; //
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Onay bekleyen USDT çekim talebi bulunmuyor.</div>`;[cite: 14]
         return;
       }
 
@@ -1219,10 +1371,10 @@
             <strong class="text-mineora-green font-mono">$${item.amount.toFixed(2)} USDT</strong>
           </div>
           <div class="flex gap-2">
-            <button onclick="approveWithdrawal(${item.id})" class="px-3 py-1.5 rounded-xl bg-mineora-green text-white font-bold text-xs">Onayla</button>
-            <button onclick="rejectWithdrawal(${item.id})" class="px-3 py-1.5 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/40 text-xs font-bold">Reddet</button>
+            <button onclick="approveWithdrawal(${item.id})" class="px-3 py-1.5 rounded-xl bg-mineora-green text-white font-bold text-xs cursor-pointer">Onayla</button>
+            <button onclick="rejectWithdrawal(${item.id})" class="px-3 py-1.5 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/40 text-xs font-bold cursor-pointer">Reddet</button>
           </div>
-        `; //
+        `;[cite: 14]
         container.appendChild(card);
       });
     }
@@ -1233,7 +1385,7 @@
       AdminState.pendingWithdrawals.splice(idx, 1);
       saveAdminProtocolState(AdminState);
       renderAdminWithdrawalQueue();
-      showToast("🚀 Çekim talebi onaylandı!", "success"); //
+      showToast("🚀 Çekim talebi onaylandı!", "success");[cite: 14]
     }
 
     function rejectWithdrawal(id) {
@@ -1246,13 +1398,13 @@
       if (raw) {
         const u = JSON.parse(raw);
         u.usdt = (u.usdt || 0) + item.amount;
-        localStorage.setItem(key, JSON.stringify(u)); //
+        localStorage.setItem(key, JSON.stringify(u));[cite: 14]
       }
 
       AdminState.pendingWithdrawals.splice(idx, 1);
       saveAdminProtocolState(AdminState);
       renderAdminWithdrawalQueue();
-      showToast("❌ Çekim reddedildi, bakiye iade edildi.", "warning"); //
+      showToast("❌ Çekim reddedildi, bakiye iade edildi.", "warning");[cite: 14]
     }
 
     function renderAdminHUD() {
@@ -1260,9 +1412,9 @@
       const reserveEl = document.getElementById('admin-master-ora-reserve');
       const vaultEl = document.getElementById('admin-master-usdt-vault');
       const burnedEl = document.getElementById('admin-total-burned-display');
-      if (reserveEl) reserveEl.innerText = `${AdminState.masterOraReserve.toLocaleString()} ORA`; //
-      if (vaultEl) vaultEl.innerText = `$${AdminState.masterVaultUsdt.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT`; //
-      if (burnedEl) burnedEl.innerText = `${AdminState.totalBurnedOra.toLocaleString()} ORA`; //
+      if (reserveEl) reserveEl.innerText = `${AdminState.masterOraReserve.toLocaleString()} ORA`;[cite: 14]
+      if (vaultEl) vaultEl.innerText = `$${AdminState.masterVaultUsdt.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT`;[cite: 14]
+      if (burnedEl) burnedEl.innerText = `${AdminState.totalBurnedOra.toLocaleString()} ORA`;[cite: 14]
     }
 
     function initAdminMasterPanel() {
@@ -1270,28 +1422,28 @@
       renderAdminHUD();
       renderAdminUserTable();
       renderAdminDepositQueue();
-      renderAdminWithdrawalQueue(); //
+      renderAdminWithdrawalQueue();[cite: 14]
     }
 
     // ============================================================================
-    // 3. MINING.JS MOTORU
+    // 3. MINING.JS MOTORU (KAZI REFLEKSİ, CANVAS, ASANSÖR)
     // ============================================================================
-    let activeMineIdx = 0; //
-    let wagonFill = 0; //
-    let currentWagonStage = 1; //
-    let isTransitLocked = false; //
-    let pointerPos = 50; //
-    let pointerDir = 2.4; //
-    let pointerLoopReq = null; //
+    let activeMineIdx = 0;[cite: 16]
+    let wagonFill = 0;[cite: 16]
+    let currentWagonStage = 1;[cite: 16]
+    let isTransitLocked = false;[cite: 16]
+    let pointerPos = 50;[cite: 16]
+    let pointerDir = 2.4;[cite: 16]
+    let pointerLoopReq = null;[cite: 16]
 
     function startTimingPointer() {
       cancelAnimationFrame(pointerLoopReq);
       function loop() {
         pointerPos += pointerDir;
-        if (pointerPos >= 96) pointerDir = -2.4; //
-        if (pointerPos <= 4) pointerDir = 2.4; //
+        if (pointerPos >= 96) pointerDir = -2.4;[cite: 16]
+        if (pointerPos <= 4) pointerDir = 2.4;[cite: 16]
         const cur = document.getElementById('timing-pointer');
-        if (cur) cur.style.left = `${pointerPos}%`; //
+        if (cur) cur.style.left = `${pointerPos}%`;[cite: 16]
         pointerLoopReq = requestAnimationFrame(loop);
       }
       pointerLoopReq = requestAnimationFrame(loop);
@@ -1300,7 +1452,7 @@
     function renderAlpMapPins() {
       const c = document.getElementById('alp-map-container');
       if (!c || !CurrentUser) return;
-      c.querySelectorAll('.mine-pin').forEach(p => p.remove()); //
+      c.querySelectorAll('.mine-pin').forEach(p => p.remove());[cite: 16]
 
       const coords = [
         { top: '55%', left: '15%' },
@@ -1308,17 +1460,33 @@
         { top: '28%', left: '55%' },
         { top: '60%', left: '75%' },
         { top: '20%', left: '85%' }
-      ]; //
+      ];[cite: 16]
+
+      const now = Date.now();
 
       CurrentUser.mines.forEach((mine, idx) => {
         const p = coords[idx];
         const isDep = mine.depleted;
+        let timeRemainingText = "";
+
+        if (isDep && mine.sealedAt) {
+          const leftMs = Math.max(0, COOLDOWN_24H_MS - (now - mine.sealedAt));
+          const leftHours = Math.floor(leftMs / (1000 * 60 * 60));
+          const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
+          timeRemainingText = `${leftHours}s ${leftMins}d`;
+        }
+
         const btn = document.createElement('button');
-        btn.className = `mine-pin absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition transform z-20`;
+        btn.className = `mine-pin absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition transform z-20 cursor-pointer`;
         btn.style.top = p.top;
         btn.style.left = p.left;
         btn.onclick = () => selectMine(idx);
-        btn.innerHTML = `<div class="w-12 h-12 rounded-2xl ${isDep ? 'bg-mineora-card text-rose-500' : 'bg-mineora-gold text-black'} flex items-center justify-center font-black text-lg shadow-xl"><i class="fa-solid ${isDep ? 'fa-lock' : 'fa-gem'}"></i></div><span class="text-[10px] text-white mt-1 font-bold">${mine.name}</span>`; //
+        btn.innerHTML = `
+          <div class="w-12 h-12 rounded-2xl ${isDep ? 'bg-mineora-card text-rose-500 border border-rose-500/40' : 'bg-mineora-gold text-black'} flex items-center justify-center font-black text-lg shadow-xl">
+            <i class="fa-solid ${isDep ? 'fa-lock' : 'fa-gem'}"></i>
+          </div>
+          <span class="text-[10px] text-white mt-1 font-bold bg-black/60 px-2 py-0.5 rounded">${mine.name} ${isDep ? `(${timeRemainingText})` : ''}</span>
+        `;
         c.appendChild(btn);
       });
     }
@@ -1328,7 +1496,7 @@
       checkMinesCooldown();
       const m = CurrentUser.mines[idx];
       if (m.depleted) {
-        showToast("⏳ Bu maden mühürlüdür!", "warning");
+        showToast("⏳ Bu maden 24 saatliğine mühürlüdür!", "warning");
         return;
       }
       activeMineIdx = idx;
@@ -1337,10 +1505,12 @@
       isTransitLocked = false;
       document.getElementById('transit-overlay').classList.add('hidden');
       document.getElementById('active-mine-title').innerText = m.name;
+      document.getElementById('active-mine-mineral').innerText = `Damar: ${m.mineral}`;
+      document.getElementById('mine-mineral-name').innerText = m.mineral;
       document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
       document.getElementById('rock-hp-text').innerText = `${m.hp}%`;
       switchTab('cave');
-      showToast(`⛏️ ${m.name} ocağına giriş yapıldı.`, "info"); //
+      showToast(`⛏️ ${m.name} ocağına giriş yapıldı.`, "info");[cite: 16]
     }
 
     function strikePickaxe() {
@@ -1348,50 +1518,74 @@
       const m = CurrentUser.mines[activeMineIdx];
       if (m.depleted) return;
 
-      const isSweetSpot = (pointerPos >= 40 && pointerPos <= 60); //
-      let hitDmg = isSweetSpot ? 12 : 8; //
-      let fillStep = isSweetSpot ? 25 : 20; //
-      let reward = isSweetSpot ? 1.25 : 0.75; //
+      const isSweetSpot = (pointerPos >= 40 && pointerPos <= 60);[cite: 16]
+      let hitDmg = isSweetSpot ? 12 : 8;[cite: 16]
+      let fillStep = isSweetSpot ? 25 : 20;[cite: 16]
+      let reward = isSweetSpot ? 1.25 : 0.75;[cite: 16]
 
-      m.hp = Math.max(0, m.hp - hitDmg); //
-      wagonFill = Math.min(100, wagonFill + fillStep); //
-      CurrentUser.ora += reward; //
+      m.hp = Math.max(0, m.hp - hitDmg);[cite: 16]
+      wagonFill = Math.min(100, wagonFill + fillStep);[cite: 16]
+      CurrentUser.ora += reward;[cite: 16]
 
-      deductMinedOraFromMasterReserve(reward); //
-      playPickaxeSound(isSweetSpot); //
+      deductMinedOraFromMasterReserve(reward);[cite: 16]
+      playPickaxeSound(isSweetSpot);[cite: 16]
 
-      document.getElementById('rock-hp-text').innerText = `${m.hp}%`; //
-      document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`; //
+      document.getElementById('rock-hp-text').innerText = `${m.hp}%`;[cite: 16]
+      document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;[cite: 16]
       updateHUD();
       saveUserWorld();
 
       if (wagonFill >= 100) {
         isTransitLocked = true;
-        document.getElementById('transit-overlay').classList.remove('hidden'); //
+        const overlay = document.getElementById('transit-overlay');
+        overlay.classList.remove('hidden');[cite: 16]
+        document.getElementById('transit-timer-box').classList.add('hidden');
+        document.getElementById('btn-dispatch-wagon').classList.remove('hidden');
+
+        if (currentWagonStage === 1) {
+          document.getElementById('transit-title').innerText = "1. Vagon Tamamen Doldu!";[cite: 16]
+          document.getElementById('btn-dispatch-text').innerText = "1. Vagonu Asansöre Gönder (15s)";
+        } else {
+          document.getElementById('transit-title').innerText = "2. Son Vagon Doldu!";
+          document.getElementById('btn-dispatch-text').innerText = "Son Vagonu Yüzeye Gönder (5s)";
+        }
       }
     }
 
     function startElevatorDispatch() {
-      const overlay = document.getElementById('transit-overlay');
-      overlay.classList.add('hidden');
-      if (currentWagonStage === 1) {
-        currentWagonStage = 2;
-        wagonFill = 0;
-        isTransitLocked = false;
-        document.getElementById('wagon-fill-text').innerText = "0%";
-        document.getElementById('wagon-round-indicator').innerText = "Vagon Aşaması: 2 / 2 (Derin Damar)"; //
-        showToast("✅ 1. Vagon tahliye edildi!", "success"); //
-      } else {
-        const m = CurrentUser.mines[activeMineIdx];
-        m.depleted = true;
-        m.sealedAt = Date.now(); //
-        m.hp = 0; //
-        wagonFill = 0; //
-        saveUserWorld();
-        switchTab('map');
-        renderAlpMapPins();
-        showToast("🏆 Maden tamamlandı ve mühürlendi!", "success"); //
-      }
+      document.getElementById('btn-dispatch-wagon').classList.add('hidden');
+      const timerBox = document.getElementById('transit-timer-box');
+      timerBox.classList.remove('hidden');
+      let countdown = (currentWagonStage === 1) ? 15 : 5;
+      timerBox.innerText = countdown;
+
+      const iv = setInterval(() => {
+        countdown--;
+        timerBox.innerText = countdown;
+        if (countdown <= 0) {
+          clearInterval(iv);
+          if (currentWagonStage === 1) {
+            currentWagonStage = 2;
+            wagonFill = 0;
+            isTransitLocked = false;
+            document.getElementById('transit-overlay').classList.add('hidden');
+            document.getElementById('wagon-fill-text').innerText = "0%";
+            document.getElementById('wagon-round-indicator').innerText = "Vagon Aşaması: 2 / 2 (Derin Damar)";[cite: 16]
+            showToast("✅ 1. Vagon tahliye edildi!", "success");[cite: 16]
+          } else {
+            const m = CurrentUser.mines[activeMineIdx];
+            m.depleted = true;
+            m.sealedAt = Date.now();[cite: 16]
+            m.hp = 0;[cite: 16]
+            wagonFill = 0;[cite: 16]
+            saveUserWorld();
+            document.getElementById('transit-overlay').classList.add('hidden');
+            switchTab('map');
+            renderAlpMapPins();
+            showToast("🏆 Maden tamamlandı ve 24 saatliğine mühürlendi!", "success");
+          }
+        }
+      }, 1000);
     }
 
     let mCanvas, mCtx, mFrame;
@@ -1407,63 +1601,79 @@
 
     function renderMineCanvasLoop() {
       if (!mCtx || document.getElementById('sec-cave').classList.contains('hidden')) return;
-      mCtx.fillStyle = '#0b0e14';
+      mCtx.fillStyle = '#06080b';
       mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
-      mCtx.fillStyle = '#f0b90b';
+
+      // Kaya Çizimi
+      const rx = mCanvas.width * 0.72;
+      const ry = mCanvas.height * 0.54;
+      mCtx.fillStyle = '#1e293b';
       mCtx.beginPath();
-      mCtx.arc(mCanvas.width * 0.5, mCanvas.height * 0.5, 50, 0, Math.PI * 2);
+      mCtx.arc(rx, ry, 75, 0, Math.PI * 2);
       mCtx.fill();
+      mCtx.strokeStyle = '#475569';
+      mCtx.lineWidth = 4;
+      mCtx.stroke();
+
+      // Damar Kristali
+      mCtx.fillStyle = currentWagonStage === 2 ? '#c084fc' : '#f59e0b';
+      mCtx.beginPath();
+      mCtx.arc(rx - 10, ry - 10, 20, 0, Math.PI * 2);
+      mCtx.fill();
+
       mFrame = requestAnimationFrame(renderMineCanvasLoop);
     }
 
     // ============================================================================
-    // 4. P2P.JS MOTORU
+    // 4. P2P.JS MOTORU (BORSA VE EMANET TAKAS)
     // ============================================================================
     function getP2pOrders() {
       const saved = localStorage.getItem('mineora_global_p2p_orders');
       if (saved) return JSON.parse(saved);
-      return []; //
+      return [];[cite: 17]
     }
-    function saveP2pOrders(o) { localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(o)); } //
+    function saveP2pOrders(o) { localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(o)); }[cite: 17]
     let globalP2pOrders = getP2pOrders();
-    let p2pFilter = 'buy'; //
-    let p2pCreateSide = 'buy'; //
-    let activeP2pOrder = null; //
+    let p2pFilter = 'buy';[cite: 17]
+    let p2pCreateSide = 'buy';[cite: 17]
+    let activeP2pOrder = null;[cite: 17]
 
     function setP2pFilter(f) {
       p2pFilter = f;
+      document.getElementById('p2p-tab-buy').className = f === 'buy' ? "px-5 py-2 rounded-xl text-xs font-black bg-mineora-green text-white transition cursor-pointer" : "px-5 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition cursor-pointer";
+      document.getElementById('p2p-tab-sell').className = f === 'sell' ? "px-5 py-2 rounded-xl text-xs font-black bg-mineora-red text-white transition cursor-pointer" : "px-5 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition cursor-pointer";
       renderP2pOrders();
     }
 
     function setP2pCreateSide(s) {
       p2pCreateSide = s;
-      document.getElementById('p2p-side-buy-btn').className = s === 'buy' ? "py-2.5 rounded-xl font-bold bg-mineora-green text-white cursor-pointer" : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer"; //
-      document.getElementById('p2p-side-sell-btn').className = s === 'sell' ? "py-2.5 rounded-xl font-bold bg-mineora-red text-white cursor-pointer" : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer"; //
+      document.getElementById('p2p-side-buy-btn').className = s === 'buy' ? "py-2.5 rounded-xl font-bold bg-mineora-green text-white cursor-pointer" : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer";[cite: 17]
+      document.getElementById('p2p-side-sell-btn').className = s === 'sell' ? "py-2.5 rounded-xl font-bold bg-mineora-red text-white cursor-pointer" : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer";[cite: 17]
       calculateP2pCreatePreview();
     }
 
     function calculateP2pCreatePreview() {
-      const price = parseFloat(document.getElementById('p2p-create-price').value) || 0; //
-      const amt = parseFloat(document.getElementById('p2p-create-amount').value) || 0; //
-      document.getElementById('p2p-preview-usdt').innerText = `$${(price * amt).toFixed(2)} USDT`; //
+      const price = parseFloat(document.getElementById('p2p-create-price').value) || 0;[cite: 17]
+      const amt = parseFloat(document.getElementById('p2p-create-amount').value) || 0;[cite: 17]
+      document.getElementById('p2p-preview-usdt').innerText = `$${(price * amt).toFixed(2)} USDT`;[cite: 17]
     }
 
     function submitP2pOrder() {
       if (!CurrentUser) return;
-      const price = parseFloat(document.getElementById('p2p-create-price').value) || 0; //
-      const oraAmt = parseFloat(document.getElementById('p2p-create-amount').value) || 0; //
+      const price = parseFloat(document.getElementById('p2p-create-price').value) || 0;[cite: 17]
+      const oraAmt = parseFloat(document.getElementById('p2p-create-amount').value) || 0;[cite: 17]
       if (price <= 0 || oraAmt <= 0) {
-        showToast("⚠️ Değerleri doğru girin!", "warning"); //
+        showToast("⚠️ Fiyat ve miktar alanlarını doğru doldurun!", "warning");
         return;
       }
-      const totalUsdt = price * oraAmt; //
+      const totalUsdt = price * oraAmt;[cite: 17]
 
       if (p2pCreateSide === 'sell') {
-        if (CurrentUser.ora < oraAmt) { showToast("⚠️ Yetersiz ORA!", "warning"); return; } //
-        CurrentUser.ora -= oraAmt; //
+        if (CurrentUser.ora < oraAmt) { showToast("⚠️ Yetersiz ORA bakiyesi!", "warning"); return; }
+        CurrentUser.ora -= oraAmt;[cite: 17]
       } else {
-        if (CurrentUser.usdt < totalUsdt) { showToast("⚠️ Yetersiz USDT!", "warning"); return; } //
-        CurrentUser.usdt -= totalUsdt; //
+        if (CurrentUser.usdt < totalUsdt) { showToast("⚠️ Yetersiz USDT likiditesi!", "warning"); return; }
+        CurrentUser.usdt -= totalUsdt;[cite: 17]
       }
 
       globalP2pOrders.unshift({
@@ -1473,14 +1683,14 @@
         price: price,
         oraAmount: oraAmt,
         usdtAmount: totalUsdt
-      }); //
+      });[cite: 17]
 
       saveP2pOrders(globalP2pOrders);
       saveUserWorld();
       updateHUD();
       closeModal('modal-p2p-create');
       renderP2pOrders();
-      showToast("📋 İlan masaya yerleştirildi!", "success"); //
+      showToast("📋 İlanınız P2P masasına yerleştirildi!", "success");
     }
 
     function cancelP2pOrder(orderId) {
@@ -1489,26 +1699,26 @@
       const order = globalP2pOrders[idx];
       if (order.merchant.toLowerCase() !== CurrentUser.username.toLowerCase()) return;
 
-      if (order.side === 'sell') CurrentUser.ora += order.oraAmount; //
-      else CurrentUser.usdt += order.usdtAmount; //
+      if (order.side === 'sell') CurrentUser.ora += order.oraAmount;[cite: 17]
+      else CurrentUser.usdt += order.usdtAmount;[cite: 17]
 
       globalP2pOrders.splice(idx, 1);
       saveP2pOrders(globalP2pOrders);
       saveUserWorld();
       updateHUD();
       renderP2pOrders();
-      showToast("↩️ İlan iptal edildi.", "info"); //
+      showToast("↩️ İlan iptal edildi, bakiye iade edildi.", "info");
     }
 
     function renderP2pOrders() {
       const tbody = document.getElementById('p2p-order-list');
       if (!tbody) return;
       tbody.innerHTML = "";
-      const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy'; //
-      const filtered = globalP2pOrders.filter(o => o.side === targetSide && o.oraAmount > 0); //
+      const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';[cite: 17]
+      const filtered = globalP2pOrders.filter(o => o.side === targetSide && o.oraAmount > 0);[cite: 17]
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">Canlı borsa ilanı bulunmuyor.</td></tr>`; //
+        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500">Bu yönde aktif borsa ilanı bulunmuyor.</td></tr>`;
         return;
       }
 
@@ -1517,17 +1727,17 @@
         const tr = document.createElement('tr');
         tr.className = "hover:bg-mineora-bg/50 transition text-xs border-b border-mineora-border";
         tr.innerHTML = `
-          <td class="p-3 font-bold text-white">${order.merchant} ${isMine ? '<span class="text-amber-400 font-normal">(Senin İlanın)</span>' : ''}</td>
-          <td class="p-3 font-mono text-white">$${order.price.toFixed(4)} USDT</td>
-          <td class="p-3 font-mono">${order.oraAmount.toLocaleString()} ORA</td>
-          <td class="p-3 text-right">
+          <td class="p-3.5 font-bold text-white">${order.merchant} ${isMine ? '<span class="text-amber-400 font-normal ml-1">(Senin İlanın)</span>' : ''}</td>
+          <td class="p-3.5 font-mono text-white">$${order.price.toFixed(4)} USDT</td>
+          <td class="p-3.5 font-mono">${order.oraAmount.toLocaleString()} ORA</td>
+          <td class="p-3.5 text-right">
             ${isMine ? `
-              <button onclick="cancelP2pOrder(${order.id})" class="px-3 py-1 bg-rose-600/20 text-rose-400 border border-rose-500/40 rounded-lg">İptal</button>
+              <button onclick="cancelP2pOrder(${order.id})" class="px-3 py-1 bg-rose-600/20 text-rose-400 border border-rose-500/40 rounded-lg cursor-pointer">İptal</button>
             ` : `
-              <button onclick="openP2pTradeModal(${order.id})" class="px-3 py-1 bg-mineora-green text-white rounded-lg font-bold">İşlem Yap</button>
+              <button onclick="openP2pTradeModal(${order.id})" class="px-3.5 py-1.5 bg-mineora-green text-white rounded-lg font-bold cursor-pointer">İşlem Yap</button>
             `}
           </td>
-        `; //
+        `;[cite: 17]
         tbody.appendChild(tr);
       });
     }
@@ -1536,63 +1746,71 @@
       const order = globalP2pOrders.find(o => o.id === orderId);
       if (!order) return;
       activeP2pOrder = order;
-      document.getElementById('p2p-trade-merchant').innerText = order.merchant; //
-      document.getElementById('p2p-trade-price').innerText = `$${order.price.toFixed(4)} USDT`; //
-      document.getElementById('p2p-trade-input-ora').value = order.oraAmount; //
+      document.getElementById('p2p-trade-merchant').innerText = order.merchant;[cite: 17]
+      document.getElementById('p2p-trade-price').innerText = `$${order.price.toFixed(4)} USDT`;[cite: 17]
+      document.getElementById('p2p-trade-input-ora').value = order.oraAmount;[cite: 17]
       openModal('modal-p2p-trade');
     }
 
     function confirmP2pTrade() {
       if (!CurrentUser || !activeP2pOrder) return;
-      const amtOra = parseFloat(document.getElementById('p2p-trade-input-ora').value) || 0; //
+      const amtOra = parseFloat(document.getElementById('p2p-trade-input-ora').value) || 0;[cite: 17]
       if (amtOra <= 0 || amtOra > activeP2pOrder.oraAmount) return;
 
-      const rawUsdt = amtOra * activeP2pOrder.price; //
-      const merchantKey = `mineora_user_${activeP2pOrder.merchant.toLowerCase()}`; //
-      let merchantObj = JSON.parse(localStorage.getItem(merchantKey)); //
+      const rawUsdt = amtOra * activeP2pOrder.price;[cite: 17]
+      const merchantKey = `mineora_user_${activeP2pOrder.merchant.toLowerCase()}`;[cite: 17]
+      let merchantObj = JSON.parse(localStorage.getItem(merchantKey));[cite: 17]
 
       if (p2pFilter === 'buy') {
-        if (CurrentUser.usdt < rawUsdt) { showToast("⚠️ Yetersiz USDT!", "warning"); return; } //
-        CurrentUser.usdt -= rawUsdt; //
-        CurrentUser.ora += amtOra; //
+        if (CurrentUser.usdt < rawUsdt) { showToast("⚠️ Yetersiz USDT!", "warning"); return; }[cite: 17]
+        CurrentUser.usdt -= rawUsdt;[cite: 17]
+        CurrentUser.ora += amtOra;[cite: 17]
         if (merchantObj) {
-          merchantObj.usdt = (merchantObj.usdt || 0) + rawUsdt; //
-          localStorage.setItem(merchantKey, JSON.stringify(merchantObj)); //
+          merchantObj.usdt = (merchantObj.usdt || 0) + rawUsdt;[cite: 17]
+          localStorage.setItem(merchantKey, JSON.stringify(merchantObj));[cite: 17]
         }
       } else {
-        if (CurrentUser.ora < amtOra) { showToast("⚠️ Yetersiz ORA!", "warning"); return; } //
-        CurrentUser.ora -= amtOra; //
-        CurrentUser.usdt += rawUsdt; //
+        if (CurrentUser.ora < amtOra) { showToast("⚠️ Yetersiz ORA!", "warning"); return; }[cite: 17]
+        CurrentUser.ora -= amtOra;[cite: 17]
+        CurrentUser.usdt += rawUsdt;[cite: 17]
         if (merchantObj) {
-          merchantObj.ora = (merchantObj.ora || 0) + amtOra; //
-          localStorage.setItem(merchantKey, JSON.stringify(merchantObj)); //
+          merchantObj.ora = (merchantObj.ora || 0) + amtOra;[cite: 17]
+          localStorage.setItem(merchantKey, JSON.stringify(merchantObj));[cite: 17]
         }
       }
 
-      activeP2pOrder.oraAmount -= amtOra; //
+      activeP2pOrder.oraAmount -= amtOra;[cite: 17]
       if (activeP2pOrder.oraAmount <= 0.001) {
-        globalP2pOrders = globalP2pOrders.filter(o => o.id !== activeP2pOrder.id); //
+        globalP2pOrders = globalP2pOrders.filter(o => o.id !== activeP2pOrder.id);[cite: 17]
       }
       saveP2pOrders(globalP2pOrders);
       saveUserWorld();
       updateHUD();
       closeModal('modal-p2p-trade');
       renderP2pOrders();
-      showToast("✅ P2P Takas Başarıyla Tamamlandı!", "success"); //
+      showToast("✅ P2P Takas Başarıyla Tamamlandı!", "success");[cite: 17]
     }
 
     // ============================================================================
-    // 5. STAKE.JS MOTORU
+    // 5. STAKE.JS MOTORU (VADELİ KASA)
     // ============================================================================
     const STAKE_PLANS = {
       60: { days: 60, profit: 45.0 },
       120: { days: 120, profit: 110.0 },
       180: { days: 180, profit: 200.0 }
-    }; //
-    let selectedStakeDays = 60; //
+    };[cite: 18]
+    let selectedStakeDays = 60;[cite: 18]
 
     function setStakePlan(days) {
       selectedStakeDays = days;
+      [60, 120, 180].forEach(d => {
+        const btn = document.getElementById(`stake-plan-btn-${d}`);
+        if (btn) {
+          btn.className = d === days 
+            ? "p-4 rounded-2xl bg-mineora-gold text-black font-black border-2 border-yellow-300 shadow-xl cursor-pointer transition transform scale-102 text-left"
+            : "p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer transition text-left";
+        }
+      });
       calculateStakePreview();
     }
 
@@ -1600,24 +1818,24 @@
       const amt = parseFloat(document.getElementById('stake-deposit-amount')?.value) || 0;
       const plan = STAKE_PLANS[selectedStakeDays];
       const profit = (amt * plan.profit) / 100;
-      document.getElementById('stake-preview-profit').innerText = `+${profit.toFixed(2)} ORA (%${plan.profit})`; //
-      document.getElementById('stake-preview-total').innerText = `${(amt + profit).toFixed(2)} ORA`; //
+      document.getElementById('stake-preview-profit').innerText = `+${profit.toFixed(2)} ORA (%${plan.profit})`;[cite: 18]
+      document.getElementById('stake-preview-total').innerText = `${(amt + profit).toFixed(2)} ORA`;[cite: 18]
     }
 
     function fillMaxStake() {
       if (!CurrentUser) return;
-      document.getElementById('stake-deposit-amount').value = Math.floor(CurrentUser.ora || 0); //
+      document.getElementById('stake-deposit-amount').value = Math.floor(CurrentUser.ora || 0);[cite: 18]
       calculateStakePreview();
     }
 
     function executeDepositStake() {
       if (!CurrentUser) return;
-      const amt = parseFloat(document.getElementById('stake-deposit-amount')?.value) || 0; //
-      if (amt < 100) { showToast("⚠️ Minimum 100 ORA!", "warning"); return; } //
-      if (amt > CurrentUser.ora) { showToast("⚠️ Yetersiz bakiye!", "warning"); return; } //
+      const amt = parseFloat(document.getElementById('stake-deposit-amount')?.value) || 0;[cite: 18]
+      if (amt < 100) { showToast("⚠️ Minimum stake tutarı 100 ORA'dır!", "warning"); return; }
+      if (amt > CurrentUser.ora) { showToast("⚠️ Yetersiz ORA bakiyesi!", "warning"); return; }
 
-      CurrentUser.ora -= amt; //
-      if (!CurrentUser.stakes) CurrentUser.stakes = []; //
+      CurrentUser.ora -= amt;[cite: 18]
+      if (!CurrentUser.stakes) CurrentUser.stakes = [];[cite: 18]
       CurrentUser.stakes.unshift({
         id: Date.now(),
         amount: amt,
@@ -1625,21 +1843,21 @@
         profitPercent: STAKE_PLANS[selectedStakeDays].profit,
         totalReturn: amt + ((amt * STAKE_PLANS[selectedStakeDays].profit) / 100),
         claimed: false
-      }); //
+      });[cite: 18]
 
       saveUserWorld();
       updateHUD();
       renderActiveStakes();
-      showToast("🔒 ORA başarıyla kasaya kilitlendi!", "success"); //
+      showToast("🔒 Varlıklarınız vadeli kasaya kilitlendi!", "success");
     }
 
     function renderActiveStakes() {
       const container = document.getElementById('active-stakes-list');
       if (!container || !CurrentUser) return;
       container.innerHTML = "";
-      const stakes = CurrentUser.stakes || []; //
+      const stakes = CurrentUser.stakes || [];[cite: 18]
       if (stakes.length === 0) {
-        container.innerHTML = `<div class="text-slate-500 text-xs text-center p-3">Kilitli kasa bulunmuyor.</div>`;
+        container.innerHTML = `<div class="text-slate-500 text-xs text-center p-4">Aktif kilitli kasa bulunmuyor.</div>`;
         return;
       }
       stakes.forEach(s => {
@@ -1647,24 +1865,24 @@
         d.className = "p-3 bg-mineora-bg rounded-xl border border-mineora-border flex justify-between items-center text-xs";
         d.innerHTML = `
           <div>
-            <strong class="text-white">${s.amount} ORA</strong>
+            <strong class="text-white">${s.amount.toLocaleString()} ORA</strong>
             <span class="text-cyan-400 block text-[10px]">${s.planDays} Gün (+%${s.profitPercent})</span>
           </div>
-          <strong class="text-mineora-gold">${s.totalReturn.toFixed(2)} ORA</strong>
-        `; //
+          <strong class="text-mineora-gold font-mono">${s.totalReturn.toFixed(2)} ORA</strong>
+        `;[cite: 18]
         container.appendChild(d);
       });
     }
 
     // ============================================================================
-    // 6. WALLET.JS MOTORU
+    // 6. WALLET.JS MOTORU (GERÇEK TRC20, QR, DEPOSIT BİLDİRİMİ)
     // ============================================================================
     function setWalletTab(t) {
       const isDep = t === 'deposit';
-      document.getElementById('wallet-view-deposit').classList.toggle('hidden', !isDep); //
-      document.getElementById('wallet-view-withdraw').classList.toggle('hidden', isDep); //
-      document.getElementById('wallet-tab-btn-deposit').className = isDep ? "py-2 bg-mineora-gold text-black rounded-xl font-bold" : "py-2 text-slate-400 rounded-xl font-bold";
-      document.getElementById('wallet-tab-btn-withdraw').className = !isDep ? "py-2 bg-mineora-gold text-black rounded-xl font-bold" : "py-2 text-slate-400 rounded-xl font-bold";
+      document.getElementById('wallet-view-deposit').classList.toggle('hidden', !isDep);[cite: 21]
+      document.getElementById('wallet-view-withdraw').classList.toggle('hidden', isDep);[cite: 21]
+      document.getElementById('wallet-tab-btn-deposit').className = isDep ? "py-2.5 rounded-xl font-bold bg-mineora-gold text-black transition cursor-pointer" : "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition cursor-pointer";
+      document.getElementById('wallet-tab-btn-withdraw').className = !isDep ? "py-2.5 rounded-xl font-bold bg-mineora-gold text-black transition cursor-pointer" : "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition cursor-pointer";
     }
 
     function renderQrCode() {
@@ -1673,71 +1891,71 @@
       box.innerHTML = "";
       new QRCode(box, {
         text: OFFICIAL_TRC20_DEPOSIT_ADDRESS,
-        width: 120,
-        height: 120,
+        width: 130,
+        height: 130,
         correctLevel: QRCode.CorrectLevel.H
-      }); //
-      document.getElementById('wallet-trc20-box').value = OFFICIAL_TRC20_DEPOSIT_ADDRESS; //
+      });[cite: 21]
+      document.getElementById('wallet-trc20-box').value = OFFICIAL_TRC20_DEPOSIT_ADDRESS;[cite: 21]
     }
 
     function copyWalletAddress() {
       navigator.clipboard.writeText(OFFICIAL_TRC20_DEPOSIT_ADDRESS).then(() => {
-        showToast("📋 Resmi TRC20 yatırma adresi kopyalandı!", "success"); //
+        showToast("📋 Resmi TRC20 yatırma adresi panoya kopyalandı!", "success");[cite: 21]
       });
     }
 
     function fillMaxWithdraw() {
       if (!CurrentUser) return;
-      document.getElementById('withdraw-amount-usdt').value = (CurrentUser.usdt || 0).toFixed(2); //
+      document.getElementById('withdraw-amount-usdt').value = (CurrentUser.usdt || 0).toFixed(2);[cite: 21]
     }
 
     function submitDepositReceipt() {
       if (!CurrentUser) return;
-      const amt = parseFloat(document.getElementById('deposit-amount-input')?.value) || 0; //
-      const txid = document.getElementById('deposit-txid-input')?.value.trim(); //
+      const amt = parseFloat(document.getElementById('deposit-amount-input')?.value) || 0;[cite: 21]
+      const txid = document.getElementById('deposit-txid-input')?.value.trim();[cite: 21]
 
-      if (amt < 10) { showToast("⚠️ Minimum 10 USDT yatırılabilir!", "warning"); return; } //
-      if (!txid || txid.length < 15) { showToast("⚠️ Geçerli bir TXID girin!", "warning"); return; } //
+      if (amt < 10) { showToast("⚠️ Minimum yatırım bildirimi 10 USDT'dir!", "warning"); return; }
+      if (!txid || txid.length < 15) { showToast("⚠️ Lütfen borsanın verdiği geçerli TXID kodunu girin!", "warning"); return; }
 
-      queueDepositForAdminApproval(CurrentUser.username, amt, txid); //
-      document.getElementById('deposit-amount-input').value = ""; //
-      document.getElementById('deposit-txid-input').value = ""; //
-      closeModal('modal-wallet'); //
-      showToast(`⏳ $${amt.toFixed(2)} USDT bildiriminiz patron onayına gönderildi!`, "info"); //
+      queueDepositForAdminApproval(CurrentUser.username, amt, txid);[cite: 21]
+      document.getElementById('deposit-amount-input').value = "";[cite: 21]
+      document.getElementById('deposit-txid-input').value = "";[cite: 21]
+      closeModal('modal-wallet');[cite: 21]
+      showToast(`⏳ $${amt.toFixed(2)} USDT yatırım bildiriminiz patron onay masasına iletildi!`, "info");
     }
 
     function executeWithdrawal() {
       if (!CurrentUser) return;
-      const targetAddr = document.getElementById('withdraw-target-address').value.trim(); //
-      const amt = parseFloat(document.getElementById('withdraw-amount-usdt').value) || 0; //
-      const pwd = document.getElementById('withdraw-auth-password').value.trim(); //
+      const targetAddr = document.getElementById('withdraw-target-address').value.trim();[cite: 21]
+      const amt = parseFloat(document.getElementById('withdraw-amount-usdt').value) || 0;[cite: 21]
+      const pwd = document.getElementById('withdraw-auth-password').value.trim();[cite: 21]
 
       if (!targetAddr || !targetAddr.startsWith('T') || targetAddr.length < 30) {
-        showToast("⚠️ Geçerli bir TRC20 adresi girin!", "warning"); //
+        showToast("⚠️ Geçerli bir TRC20 adresi girin!", "warning");[cite: 21]
         return;
       }
-      if (amt < 10) { showToast("⚠️ Minimum çekim 10 USDT!", "warning"); return; } //
-      if (amt > CurrentUser.usdt) { showToast("⚠️ Yetersiz bakiye!", "warning"); return; } //
-      if (pwd !== CurrentUser.pass) { showToast("❌ Şifre hatalı!", "warning"); return; } //
+      if (amt < 10) { showToast("⚠️ Minimum çekim tutarı 10 USDT'dir!", "warning"); return; }
+      if (amt > CurrentUser.usdt) { showToast("⚠️ Yetersiz bakiye!", "warning"); return; }[cite: 21]
+      if (pwd !== CurrentUser.pass) { showToast("❌ Hatalı şifre!", "warning"); return; }
 
-      CurrentUser.usdt -= amt; //
+      CurrentUser.usdt -= amt;[cite: 21]
       saveUserWorld();
       updateHUD();
-      queueWithdrawalForAdminApproval(CurrentUser.username, amt, targetAddr); //
+      queueWithdrawalForAdminApproval(CurrentUser.username, amt, targetAddr);[cite: 21]
 
-      document.getElementById('withdraw-target-address').value = ""; //
-      document.getElementById('withdraw-amount-usdt').value = ""; //
-      document.getElementById('withdraw-auth-password').value = ""; //
-      closeModal('modal-wallet'); //
-      showToast("⏳ Çekim talebi patron onayına iletildi!", "info"); //
+      document.getElementById('withdraw-target-address').value = "";[cite: 21]
+      document.getElementById('withdraw-amount-usdt').value = "";[cite: 21]
+      document.getElementById('withdraw-auth-password').value = "";[cite: 21]
+      closeModal('modal-wallet');[cite: 21]
+      showToast("⏳ Çekim talebiniz patron onay masasına iletildi!", "info");
     }
 
-    // OTURUM KURTARICI (F5 KORUMASI)
+    // SAYFA YENİLENDİĞİNDE OTURUMU KURTARAN KOD (F5 KORUMASI)
     window.addEventListener('DOMContentLoaded', () => {
-      const savedUser = sessionStorage.getItem('mineora_active_session'); //
+      const savedUser = sessionStorage.getItem('mineora_active_session');[cite: 19]
       if (savedUser) {
-        loadUserWorld(savedUser); //
-        enterGame(); //
+        loadUserWorld(savedUser);[cite: 19]
+        enterGame();[cite: 19]
       }
     });
   </script>
