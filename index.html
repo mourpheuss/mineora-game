@@ -121,7 +121,7 @@
       </h1>
 
       <p class="mt-6 text-sm sm:text-base md:text-lg text-slate-400 max-w-2xl leading-relaxed">
-        Kazmanızı hazırlayın, sarp dağların altına inin ve zengin damarları günyüzüne çıkarın. İster kendi ocağınızı işletin, ister filonuzu büyütüp zirvedeki holdinglerin arasına adınızı yazdırın!
+        Kazmanızı bileyin, katman katman sarp dağların altına inin ve zengin damarları günyüzüne çıkarın. Vagonunuzu doldurun, yüzeye gönderin ve holdinglerin arasına adınızı yazdırın!
       </p>
 
       <div class="mt-8 flex flex-wrap gap-4 justify-center">
@@ -136,19 +136,19 @@
 
       <div class="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl w-full">
         <div class="p-5 rounded-2xl bg-mineora-card border border-mineora-border flex flex-col items-center gap-2.5">
-          <div class="w-12 h-12 rounded-xl bg-mineora-gold/10 text-mineora-gold flex items-center justify-center text-xl"><i class="fa-solid fa-person-digging"></i></div>
-          <span class="text-xs font-bold text-slate-200">Kişisel Maden Alanı</span>
-          <span class="text-[10px] text-slate-500">Sadece Size Özel Tünel</span>
+          <div class="w-12 h-12 rounded-xl bg-mineora-gold/10 text-mineora-gold flex items-center justify-center text-xl"><i class="fa-solid fa-layer-group"></i></div>
+          <span class="text-xs font-bold text-slate-200">3 Jeolojik Katman</span>
+          <span class="text-[10px] text-slate-500">Kireçtaşı, Granit, Kristal</span>
         </div>
         <div class="p-5 rounded-2xl bg-mineora-card border border-mineora-border flex flex-col items-center gap-2.5">
-          <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-          <span class="text-xs font-bold text-slate-200">Kritik & Şanslı Vuruş</span>
-          <span class="text-[10px] text-slate-500">Zengin Damar Patlamaları</span>
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-bullseye"></i></div>
+          <span class="text-xs font-bold text-slate-200">Zamanlama İbresi</span>
+          <span class="text-[10px] text-slate-500">Zayıf Çatlağa Kritik Vuruş</span>
         </div>
         <div class="p-5 rounded-2xl bg-mineora-card border border-mineora-border flex flex-col items-center gap-2.5">
-          <div class="w-12 h-12 rounded-xl bg-mineora-green/10 text-mineora-green flex items-center justify-center text-xl"><i class="fa-solid fa-handshake"></i></div>
-          <span class="text-xs font-bold text-slate-200">Özgür Takas Masası</span>
-          <span class="text-[10px] text-slate-500">Oyuncular Arası Değişim</span>
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-xl"><i class="fa-solid fa-train-subway"></i></div>
+          <span class="text-xs font-bold text-slate-200">Vagon Lojistiği</span>
+          <span class="text-[10px] text-slate-500">Yüzey Rafinerisi Sevkıyatı</span>
         </div>
         <div class="p-5 rounded-2xl bg-mineora-card border border-mineora-border flex flex-col items-center gap-2.5">
           <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl"><i class="fa-solid fa-ranking-star"></i></div>
@@ -234,7 +234,7 @@
             <h2 class="text-base font-black text-white flex items-center gap-2">
               <i class="fa-solid fa-mountain-sun text-mineora-gold"></i> Alp Dağları Jeolojik Saha Haritası
             </h2>
-            <p class="text-xs text-slate-400 mt-1">Bu saha haritası tamamen hesabınıza özeldir. Bitirdiğiniz ocaklar sadece sizin için mühürlenir.</p>
+            <p class="text-xs text-slate-400 mt-1">Bu saha haritası tamamen hesabınıza özeldir. 3 katmanı tamamlanan ocaklar mühürlenir.</p>
           </div>
         </div>
 
@@ -244,32 +244,116 @@
         </div>
       </section>
 
-      <!-- 2) Canlı Madenci Kazı Sahnesi -->
+      <!-- 2) Canlı Madenci Kazı Sahnesi (Katmanlı, Zamanlama İbreli, Vagon Lojistikli) -->
       <section id="sec-cave" class="hidden space-y-4">
-        <div class="flex justify-between items-center bg-mineora-card px-4 py-3 rounded-2xl border border-mineora-border text-xs">
+        <!-- Tünel Durum & Bilgi Paneli -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-mineora-card p-3.5 rounded-2xl border border-mineora-border text-xs">
           <div>
-            <span id="active-mine-title" class="font-black text-mineora-gold text-sm">Gümüşdere Alpin Ocağı</span>
-            <span class="text-slate-400 block text-[10px]">Tünel Tahkimatı & Cevher Ray Hattı</span>
+            <span id="active-mine-title" class="font-black text-mineora-gold text-sm block">Gümüşdere Alpin Ocağı</span>
+            <span id="stratum-name-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">1. Katman: Kireçtaşı (0-30m)</span>
           </div>
-          <div class="flex gap-4">
-            <span>Vagon Doluluk: <strong id="wagon-fill-text" class="text-mineora-gold font-mono">0%</strong></span>
-            <span>Kaya Canı (HP): <strong id="rock-hp-text" class="text-mineora-red font-mono">100%</strong></span>
+          <div class="flex flex-col justify-center">
+            <div class="flex justify-between text-[11px] mb-1">
+              <span class="text-slate-400">Katman Canı (HP):</span>
+              <strong id="rock-hp-text" class="text-mineora-red font-mono">100%</strong>
+            </div>
+            <div class="w-full bg-mineora-bg h-2 rounded-full overflow-hidden border border-mineora-border">
+              <div id="rock-hp-bar" class="h-full bg-mineora-red transition-all duration-150" style="width: 100%;"></div>
+            </div>
+          </div>
+          <div class="flex flex-col justify-center">
+            <div class="flex justify-between text-[11px] mb-1">
+              <span class="text-slate-400">Vagon Kapasitesi:</span>
+              <strong id="wagon-fill-text" class="text-mineora-gold font-mono">0%</strong>
+            </div>
+            <div class="w-full bg-mineora-bg h-2 rounded-full overflow-hidden border border-mineora-border">
+              <div id="wagon-fill-bar" class="h-full bg-mineora-gold transition-all duration-150" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="flex flex-col justify-center">
+            <div class="flex justify-between text-[11px] mb-1">
+              <span class="text-slate-400">Kazma Keskinliği:</span>
+              <strong id="pickaxe-sharp-text" class="text-cyan-400 font-mono">100%</strong>
+            </div>
+            <div class="w-full bg-mineora-bg h-2 rounded-full overflow-hidden border border-mineora-border">
+              <div id="pickaxe-sharp-bar" class="h-full bg-cyan-400 transition-all duration-150" style="width: 100%;"></div>
+            </div>
           </div>
         </div>
 
+        <!-- Tünel Görüntüleme Alanı -->
         <div id="mine-viewport" class="relative w-full h-[540px] rounded-3xl border border-mineora-border overflow-hidden shadow-2xl bg-black">
           <canvas id="mine-canvas" class="absolute inset-0 w-full h-full block cursor-pointer"></canvas>
 
-          <div class="absolute top-6 left-6 z-20 pointer-events-none bg-mineora-card/90 backdrop-blur-md px-4 py-2 rounded-xl border border-mineora-border text-xs text-slate-300">
-            <i class="fa-solid fa-gem text-mineora-gold mr-1.5"></i> Damar: <span id="mine-mineral-name" class="text-white font-bold">Bakır & Gümüş Kristali</span>
+          <!-- Sol Üst Rozet -->
+          <div class="absolute top-6 left-6 z-20 pointer-events-none bg-mineora-card/90 backdrop-blur-md px-4 py-2.5 rounded-xl border border-mineora-border text-xs text-slate-300 space-y-0.5">
+            <div><i class="fa-solid fa-gem text-mineora-gold mr-1.5"></i> Damar: <span id="mine-mineral-name" class="text-white font-bold">Bakır & Gümüş Kristali</span></div>
+            <div class="text-[10px] text-slate-400">Derinlik Katmanı: <span id="stratum-indicator" class="text-cyan-400 font-bold">1 / 3</span></div>
+          </div>
+
+          <!-- Vagon Yüzeyde Lojistik Bildirimi Overlay -->
+          <div id="wagon-transit-overlay" class="hidden absolute inset-0 z-30 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 space-y-3">
+            <div class="w-16 h-16 rounded-2xl bg-mineora-gold/20 text-mineora-gold border border-mineora-gold/40 flex items-center justify-center text-2xl animate-pulse">
+              <i class="fa-solid fa-train-subway"></i>
+            </div>
+            <h3 class="text-base font-black text-white">Vagon Doldu! Yüzey Rafinerisine Sevk Ediliyor...</h3>
+            <p class="text-xs text-slate-400 max-w-sm">Cevherler döküm asansörüne aktarılıyor. Vagon boşaltılıp tünele dönene kadar bekleyin.</p>
+            <div class="w-64 bg-mineora-bg h-3 rounded-full overflow-hidden border border-mineora-border mt-2">
+              <div id="wagon-transit-bar" class="h-full bg-gradient-to-r from-amber-500 to-mineora-gold transition-all duration-300" style="width: 0%;"></div>
+            </div>
+            <span id="wagon-transit-timer" class="font-mono text-xs text-mineora-gold font-bold">Kalan Süre: 12 sn</span>
+          </div>
+
+          <!-- Kazma Bileme Overlay -->
+          <div id="pickaxe-sharpen-overlay" class="hidden absolute inset-0 z-30 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 space-y-3">
+            <div class="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center text-2xl animate-spin">
+              <i class="fa-solid fa-gear"></i>
+            </div>
+            <h3 class="text-base font-black text-white">Bileme Çarkında Kazma Ağzı Açılıyor...</h3>
+            <p class="text-xs text-slate-400 max-w-sm">Su dökülerek çelik kazma ucu sivriltiliyor.</p>
+            <div class="w-56 bg-mineora-bg h-2.5 rounded-full overflow-hidden border border-mineora-border">
+              <div id="pickaxe-sharpen-bar" class="h-full bg-cyan-400 transition-all duration-200" style="width: 0%;"></div>
+            </div>
           </div>
 
           <div id="floating-text-container" class="absolute inset-0 pointer-events-none z-30"></div>
 
-          <div class="absolute bottom-6 right-6 z-20 flex flex-col items-end gap-2.5 pointer-events-none">
-            <button onclick="strikePickaxe()" class="pointer-events-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 hover:from-amber-400 text-black font-black text-sm shadow-2xl shadow-mineora-gold/30 transition btn-tactile border border-yellow-200">
-              <i class="fa-solid fa-hammer mr-2"></i> KAZMAYI VUR
-            </button>
+          <!-- Alt Kontrol Masası: Zamanlama İbresi, Kazma Vur & Bileme & Vagon Boşalt -->
+          <div class="absolute bottom-5 inset-x-5 z-20 flex flex-col sm:flex-row items-center justify-between gap-3 bg-mineora-card/95 backdrop-blur-md p-3.5 rounded-2xl border border-mineora-border shadow-2xl">
+            
+            <!-- Zamanlama İbresi (Sweet Spot Mini-Game) -->
+            <div class="w-full sm:w-72 space-y-1.5">
+              <div class="flex justify-between text-[11px]">
+                <span class="text-slate-400 font-bold"><i class="fa-solid fa-bullseye text-amber-400 mr-1"></i> Zayıf Çatlak Hattı:</span>
+                <span id="timing-feedback" class="font-bold text-slate-400 font-mono text-[10px]">İbreyi Yeşile Denk Getir</span>
+              </div>
+              <div class="relative w-full h-5 bg-mineora-bg rounded-xl overflow-hidden border border-mineora-border flex items-center">
+                <!-- Sol Kırmızı Alan -->
+                <div class="w-2/5 h-full bg-mineora-red/25 border-r border-mineora-border"></div>
+                <!-- Yeşil Sweet Spot (%20 Genişlik) -->
+                <div id="meter-sweet-spot" class="w-1/5 h-full bg-mineora-green/45 border-x border-mineora-green flex items-center justify-center">
+                  <span class="text-[9px] font-black text-mineora-green tracking-wider uppercase">KRİTİK</span>
+                </div>
+                <!-- Sağ Kırmızı Alan -->
+                <div class="w-2/5 h-full bg-mineora-red/25 border-l border-mineora-border"></div>
+                <!-- Hareketli İğne/İbre -->
+                <div id="meter-needle" class="absolute top-0 bottom-0 w-1.5 bg-yellow-300 shadow-[0_0_8px_#fde047] -translate-x-1/2" style="left: 50%;"></div>
+              </div>
+            </div>
+
+            <!-- Aksiyon Butonları -->
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button onclick="sharpenPickaxe()" id="btn-sharpen" class="px-4 py-3.5 rounded-xl bg-cyan-600/25 hover:bg-cyan-600/40 border border-cyan-500/40 text-cyan-300 text-xs font-bold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-gear"></i> Bile
+              </button>
+              <button onclick="dispatchWagonToSurface()" id="btn-dispatch-wagon" class="hidden px-4 py-3.5 rounded-xl bg-amber-500/25 hover:bg-amber-500/40 border border-amber-500/50 text-amber-300 text-xs font-black transition flex items-center gap-1.5 animate-bounce">
+                <i class="fa-solid fa-train-subway"></i> Yüzeye Yolla
+              </button>
+              <button onclick="strikePickaxe()" id="btn-strike-pickaxe" class="flex-1 sm:flex-none px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 hover:from-amber-400 text-black font-black text-xs shadow-xl shadow-mineora-gold/30 transition btn-tactile border border-yellow-200 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-hammer"></i> KAZMAYI VUR
+              </button>
+            </div>
+
           </div>
         </div>
       </section>
@@ -609,15 +693,15 @@
       <div class="space-y-4 text-slate-300 leading-relaxed">
         <div>
           <h4 class="font-black text-mineora-gold text-base mb-1">🏔️ Alpin Madencilik Dünyası</h4>
-          <p>Her oyuncu Alp Dağları haritasındaki 5 zengin jeolojik sahada kendi tüneline girer. Kazma sallayarak cevherleri vagonuna doldurur, maden rezervini tamamlayarak ödüller kazanır.</p>
+          <p>Her oyuncu Alp Dağları haritasındaki 5 zengin jeolojik sahada kendi tüneline girer. Madenler 3 ayrı jeolojik katmandan (Kireçtaşı, Granit, Saf Kristal) oluşur. Kazı yaparak cevherleri vagonunuza doldurursunuz.</p>
         </div>
         <div>
-          <h4 class="font-black text-amber-400 text-base mb-1">⚡ Kritik Vuruş & Şanslı Damarlar</h4>
-          <p>Madenlerde kazı yaparken şansınız yaver gittiğinde kritik vuruşlar gerçekleşir. Hem ekstra cevher çıkarırsınız hem de kayanın canı hızla eriyerek vagonunuz anında dolar!</p>
+          <h4 class="font-black text-amber-400 text-base mb-1">⚡ Zamanlama İbresi (Zayıf Çatlak)</h4>
+          <p>Kazmayı vururken hareket eden ibreyi tam yeşil alana denk getirdiğinizde kayaya mükemmel kritik hasar verirsiniz. Iskalarsanız kazma taştan seker!</p>
         </div>
         <div>
-          <h4 class="font-black text-mineora-green text-base mb-1">🤝 BORSA TAKAS (P2P)</h4>
-          <p>Çıkardığınız madenleri ve ORA varlıklarınızı diğer oyuncularla güvenli takas masasında dilediğiniz gibi değerlendirebilirsiniz.</p>
+          <h4 class="font-black text-cyan-400 text-base mb-1">🚂 Vagon Lojistiği & Kazma Bileme</h4>
+          <p>Vagonunuz %100 dolduğunda kazı durur; vagonu yüzey döküm asansörüne gönderirsiniz. Kazmanız köreldiğinde ise bileme çarkında aletinizi bileyerek keskinleştirirsiniz.</p>
         </div>
       </div>
 
@@ -648,7 +732,7 @@
     </div>
   </div>
 
-  <!-- Eksiksiz Kayıt Modalı (E-posta, Kullanıcı Adı, Şifre, KYC) -->
+  <!-- Eksiksiz Kayıt Modalı -->
   <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
@@ -694,7 +778,7 @@
 
   <!-- ================= 4. BÖLÜM: JAVASCRIPT MOTORU ================= -->
   <script>
-    // --- GERÇEKÇİ KAZI SAHNE SESLERİ (WEB AUDIO API - SIFIR UĞULTU) ---
+    // --- SES MOTORU (WEB AUDIO API) ---
     let audioCtx = null;
 
     function initAudioContext() {
@@ -712,7 +796,6 @@
       if (!audioCtx) return;
       const now = audioCtx.currentTime;
 
-      // 1. Metalik Kazma Tınlaması (Pickaxe Clink)
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'triangle';
@@ -727,7 +810,6 @@
       osc.start(now);
       osc.stop(now + 0.09);
 
-      // 2. Kaya Parçalanma Çıtırtısı
       const bufferSize = audioCtx.sampleRate * 0.06;
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const output = buffer.getChannelData(0);
@@ -771,6 +853,26 @@
       osc.stop(now + 0.36);
     }
 
+    function playGlanceSound() {
+      initAudioContext();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(1400, now + 0.06);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.07);
+    }
+
     // --- GLOBAL PROTOKOL VERİLERİ ---
     function getGlobalProtocolState() {
       const saved = localStorage.getItem('mineora_global_protocol');
@@ -789,13 +891,69 @@
 
     let ProtocolState = getGlobalProtocolState();
 
+    // 3 Katmanlı Jeolojik Maden Şablonu
     function getDefaultMines() {
       return [
-        { id: 0, name: "Gümüşdere Alpin Ocağı", mineral: "Bakır & Gümüş Kristali", hp: 100, depleted: false, rewardPool: 10.00 },
-        { id: 1, name: "Ateşyolu Magmatik Yarığı", mineral: "Yakut Kristali", hp: 100, depleted: false, rewardPool: 10.00 },
-        { id: 2, name: "Karanlık Vadi Obsidyen Tüneli", mineral: "Saf Obsidyen Damarı", hp: 100, depleted: false, rewardPool: 10.00 },
-        { id: 3, name: "Sıkçam Zümrüt Havzası", mineral: "Zümrüt Yatağı", hp: 100, depleted: false, rewardPool: 10.00 },
-        { id: 4, name: "Altındoruk Zirve Damarı", mineral: "Külçe Altın Damarı", hp: 100, depleted: false, rewardPool: 10.00 }
+        {
+          id: 0,
+          name: "Gümüşdere Alpin Ocağı",
+          mineral: "Bakır & Gümüş Kristali",
+          currentStratum: 1, // 1, 2 veya 3
+          strata: [
+            { id: 1, name: "1. Katman: Kireçtaşı Kabuğu (0-30m)", hp: 100, maxHp: 100, rewardPool: 2.50, color: '#4a5568' },
+            { id: 2, name: "2. Katman: Granit & Damar (30-70m)", hp: 100, maxHp: 100, rewardPool: 3.50, color: '#2d3748' },
+            { id: 3, name: "3. Katman: Saf Kristal Çekirdek (70-100m)", hp: 100, maxHp: 100, rewardPool: 4.00, color: '#1e293b' }
+          ],
+          depleted: false
+        },
+        {
+          id: 1,
+          name: "Ateşyolu Magmatik Yarığı",
+          mineral: "Yakut Kristali",
+          currentStratum: 1,
+          strata: [
+            { id: 1, name: "1. Katman: Bazalt Kabuğu (0-30m)", hp: 100, maxHp: 100, rewardPool: 2.50, color: '#573322' },
+            { id: 2, name: "2. Katman: Lav Tüneli Graniti (30-70m)", hp: 100, maxHp: 100, rewardPool: 3.50, color: '#3f1f14' },
+            { id: 3, name: "3. Katman: Yakut Magma Çekirdeği (70-100m)", hp: 100, maxHp: 100, rewardPool: 4.00, color: '#28110b' }
+          ],
+          depleted: false
+        },
+        {
+          id: 2,
+          name: "Karanlık Vadi Obsidyen Tüneli",
+          mineral: "Saf Obsidyen Damarı",
+          currentStratum: 1,
+          strata: [
+            { id: 1, name: "1. Katman: Killi Tabaka (0-30m)", hp: 100, maxHp: 100, rewardPool: 2.50, color: '#334155' },
+            { id: 2, name: "2. Katman: Sert Mika Şist (30-70m)", hp: 100, maxHp: 100, rewardPool: 3.50, color: '#1e293b' },
+            { id: 3, name: "3. Katman: Aynamsı Obsidyen Çekirdeği (70-100m)", hp: 100, maxHp: 100, rewardPool: 4.00, color: '#0f172a' }
+          ],
+          depleted: false
+        },
+        {
+          id: 3,
+          name: "Sıkçam Zümrüt Havzası",
+          mineral: "Zümrüt Yatağı",
+          currentStratum: 1,
+          strata: [
+            { id: 1, name: "1. Katman: Kumtaşı Örtüsü (0-30m)", hp: 100, maxHp: 100, rewardPool: 2.50, color: '#2d3e35' },
+            { id: 2, name: "2. Katman: Klorit Şist (30-70m)", hp: 100, maxHp: 100, rewardPool: 3.50, color: '#1c2822' },
+            { id: 3, name: "3. Katman: Zümrüt Kristal Bloğu (70-100m)", hp: 100, maxHp: 100, rewardPool: 4.00, color: '#0c1611' }
+          ],
+          depleted: false
+        },
+        {
+          id: 4,
+          name: "Altındoruk Zirve Damarı",
+          mineral: "Külçe Altın Damarı",
+          currentStratum: 1,
+          strata: [
+            { id: 1, name: "1. Katman: Alpin Buzul Taşı (0-30m)", hp: 100, maxHp: 100, rewardPool: 2.50, color: '#44403c' },
+            { id: 2, name: "2. Katman: Kuvars Damarı (30-70m)", hp: 100, maxHp: 100, rewardPool: 3.50, color: '#292524' },
+            { id: 3, name: "3. Katman: Altın Damar Çekirdeği (70-100m)", hp: 100, maxHp: 100, rewardPool: 4.00, color: '#1c1917' }
+          ],
+          depleted: false
+        }
       ];
     }
 
@@ -819,11 +977,33 @@
     let CurrentUserWorld = null;
 
     let activeMineIdx = 0;
-    let wagonFill = 0;
+    let wagonFill = 0; // 0 - 100
+    let wagonInTransit = false;
+    let pickaxeSharpness = 100; // 0 - 100
+    let isSharpening = false;
+
     let p2pFilter = 'buy';
     let p2pCreateType = 'sell';
     let activeP2pOrder = null;
 
+    // --- ZAMANLAMA İBRESİ (SWEET SPOT METER) DEĞİŞKENLERİ ---
+    let needlePos = 50; // 0 - 100 (%)
+    let needleSpeed = 1.6; // İğne hızı
+    let needleDir = 1;
+    let meterAnimFrame = null;
+
+    function runMeterLoop() {
+      needlePos += needleSpeed * needleDir;
+      if (needlePos >= 98) { needlePos = 98; needleDir = -1; }
+      else if (needlePos <= 2) { needlePos = 2; needleDir = 1; }
+
+      const needleEl = document.getElementById('meter-needle');
+      if (needleEl) needleEl.style.left = `${needlePos}%`;
+
+      meterAnimFrame = requestAnimationFrame(runMeterLoop);
+    }
+
+    // --- KULLANICI DÜNYASI YÜKLEME ---
     function loadUserWorld(username, defaultPass = "123456", email = "") {
       const storageKey = `mineora_user_${username.toLowerCase()}`;
       let data = localStorage.getItem(storageKey);
@@ -882,7 +1062,7 @@
     }
     function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
 
-    // --- GİRİŞ & DÜZELTİLMİŞ EKSİKSİZ KAYIT ---
+    // --- GİRİŞ & KAYIT ---
     function handleLogin() {
       const u = document.getElementById('login-user').value.trim();
       const p = document.getElementById('login-pwd').value.trim();
@@ -945,6 +1125,7 @@
       saveUserWorld();
       CurrentUser = null;
       CurrentUserWorld = null;
+      cancelAnimationFrame(meterAnimFrame);
       document.getElementById('screen-game').classList.add('hidden');
       document.getElementById('screen-landing').classList.remove('hidden');
       showToast("🔒 Oturum kapatıldı, verileriniz güvenle saklandı.", "info");
@@ -1072,7 +1253,15 @@
         }
       });
 
-      if (t === 'cave') initMineCanvas();
+      if (t === 'cave') {
+        initMineCanvas();
+        cancelAnimationFrame(meterAnimFrame);
+        runMeterLoop();
+        updateCaveUI();
+      } else {
+        cancelAnimationFrame(meterAnimFrame);
+      }
+
       if (t === 'map') renderAlpMapPins();
       if (t === 'p2p') renderP2pOrders();
     }
@@ -1098,8 +1287,8 @@
         let icon = isDep ? 'fa-lock' : 'fa-gem';
         let bg = isDep ? 'bg-mineora-card text-slate-500 border-mineora-border cursor-not-allowed opacity-60' : 'bg-mineora-gold text-black border-yellow-200 hover:scale-110 shadow-xl cursor-pointer';
         let badge = isDep 
-          ? '<span class="mt-1 px-2 py-0.5 rounded bg-mineora-red text-white text-[9px] font-bold">KAPANDI (TÜKENDİ)</span>'
-          : `<span class="mt-1 px-2.5 py-1 rounded-xl bg-mineora-card/90 border border-mineora-gold/40 text-[11px] font-black text-mineora-gold shadow-lg">${idx+1}. ${mine.name.split(' ')[0]}</span>`;
+          ? '<span class="mt-1 px-2 py-0.5 rounded bg-mineora-red text-white text-[9px] font-bold">KAPANDI (3 KATMAN BİTTİ)</span>'
+          : `<span class="mt-1 px-2.5 py-1 rounded-xl bg-mineora-card/90 border border-mineora-gold/40 text-[11px] font-black text-mineora-gold shadow-lg">${idx+1}. ${mine.name.split(' ')[0]} (K${mine.currentStratum}/3)</span>`;
 
         const btn = document.createElement('button');
         btn.className = `mine-pin absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition transform z-20`;
@@ -1115,20 +1304,112 @@
       if (!CurrentUser) return;
       const m = CurrentUser.mines[idx];
       if (m.depleted) {
-        showToast("⚠️ Bu maden ocağının tüm cevheri tükenmiş ve sizin için mühürlenmiştir!", "warning");
+        showToast("⚠️ Bu maden ocağının 3 katmanı da tamamen kazılmış ve mühürlenmiştir!", "warning");
         return;
       }
       activeMineIdx = idx;
-      wagonFill = 0;
-      document.getElementById('active-mine-title').innerText = m.name;
-      document.getElementById('mine-mineral-name').innerText = m.mineral;
-      document.getElementById('rock-hp-text').innerText = `${m.hp}%`;
-      document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
       switchTab('cave');
       showToast(`⛏️ ${m.name} ocağına giriş yapıldı.`, "info");
     }
 
-    // --- MADEN SAHNESİ & KAZMA HAREKETİ ---
+    function updateCaveUI() {
+      if (!CurrentUser) return;
+      const m = CurrentUser.mines[activeMineIdx];
+      const curStratum = m.strata[m.currentStratum - 1];
+
+      document.getElementById('active-mine-title').innerText = m.name;
+      document.getElementById('mine-mineral-name').innerText = m.mineral;
+      document.getElementById('stratum-name-badge').innerText = curStratum.name;
+      document.getElementById('stratum-indicator').innerText = `${m.currentStratum} / 3`;
+
+      // HP Barı
+      const hpPct = Math.max(0, Math.round((curStratum.hp / curStratum.maxHp) * 100));
+      document.getElementById('rock-hp-text').innerText = `${hpPct}%`;
+      document.getElementById('rock-hp-bar').style.width = `${hpPct}%`;
+
+      // Vagon Barı
+      document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
+      document.getElementById('wagon-fill-bar').style.width = `${wagonFill}%`;
+
+      // Keskinlik Barı
+      document.getElementById('pickaxe-sharp-text').innerText = `${pickaxeSharpness}%`;
+      document.getElementById('pickaxe-sharp-bar').style.width = `${pickaxeSharpness}%`;
+
+      // Vagon Dolu mu?
+      const btnStrike = document.getElementById('btn-strike-pickaxe');
+      const btnDispatch = document.getElementById('btn-dispatch-wagon');
+
+      if (wagonFill >= 100 && !wagonInTransit) {
+        btnStrike.disabled = true;
+        btnStrike.classList.add('opacity-50', 'cursor-not-allowed');
+        btnDispatch.classList.remove('hidden');
+      } else {
+        btnStrike.disabled = wagonInTransit || isSharpening;
+        btnStrike.classList.toggle('opacity-50', wagonInTransit || isSharpening);
+        btnStrike.classList.toggle('cursor-not-allowed', wagonInTransit || isSharpening);
+        btnDispatch.classList.add('hidden');
+      }
+    }
+
+    // --- VAGON LOJİSTİĞİ (YÜZEYE GÖNDERME DÖNGÜSÜ) ---
+    function dispatchWagonToSurface() {
+      if (wagonInTransit) return;
+      wagonInTransit = true;
+
+      const overlay = document.getElementById('wagon-transit-overlay');
+      const bar = document.getElementById('wagon-transit-bar');
+      const timer = document.getElementById('wagon-transit-timer');
+      overlay.classList.remove('hidden');
+
+      let duration = 12; // 12 saniyelik yüzeye sevk döngüsü
+      let elapsed = 0;
+      bar.style.width = "0%";
+
+      const transitInterval = setInterval(() => {
+        elapsed++;
+        const pct = Math.round((elapsed / duration) * 100);
+        bar.style.width = `${pct}%`;
+        timer.innerText = `Kalan Süre: ${duration - elapsed} sn`;
+
+        if (elapsed >= duration) {
+          clearInterval(transitInterval);
+          wagonFill = 0;
+          wagonInTransit = false;
+          overlay.classList.add('hidden');
+          updateCaveUI();
+          showToast("🚂 Vagon yüzey döküm asansöründe boşaltıldı ve tünele geri döndü!", "success");
+        }
+      }, 1000);
+    }
+
+    // --- KAZMA BİLEME DÖNGÜSÜ ---
+    function sharpenPickaxe() {
+      if (isSharpening || wagonInTransit) return;
+      if (pickaxeSharpness >= 100) {
+        showToast("ℹ️ Kazmanız zaten jilet gibi keskin durumda!", "info");
+        return;
+      }
+      isSharpening = true;
+      const overlay = document.getElementById('pickaxe-sharpen-overlay');
+      const bar = document.getElementById('pickaxe-sharpen-bar');
+      overlay.classList.remove('hidden');
+
+      let progress = 0;
+      const sharpenInt = setInterval(() => {
+        progress += 25;
+        bar.style.width = `${progress}%`;
+        if (progress >= 100) {
+          clearInterval(sharpenInt);
+          pickaxeSharpness = 100;
+          isSharpening = false;
+          overlay.classList.add('hidden');
+          updateCaveUI();
+          showToast("✨ Kazmanız bileme çarkında mükemmel keskinliğe ulaştı!", "success");
+        }
+      }, 600);
+    }
+
+    // --- CANVAS SAHNE ÇİZİMİ ---
     let mCanvas, mCtx, mFrame, particles = [];
     let minerAnim = { swingProgress: 0, isSwinging: false, idleTimer: 0 };
 
@@ -1148,6 +1429,11 @@
       const w = mCanvas.width;
       const h = mCanvas.height;
 
+      // Katman derinliği rengine göre dinamik mağara arka planı
+      const m = CurrentUser ? CurrentUser.mines[activeMineIdx] : null;
+      const curStratum = m ? m.strata[m.currentStratum - 1] : null;
+      const caveBaseColor = curStratum ? curStratum.color : '#2d3748';
+
       const grad = mCtx.createRadialGradient(w * 0.45, h * 0.5, 30, w * 0.5, h * 0.5, w * 0.7);
       grad.addColorStop(0, '#1c1f26');
       grad.addColorStop(0.5, '#12151c');
@@ -1155,12 +1441,14 @@
       mCtx.fillStyle = grad;
       mCtx.fillRect(0, 0, w, h);
 
+      // Kirişler
       mCtx.fillStyle = '#221a14';
       for (let x = 60; x < w; x += 220) {
         mCtx.fillRect(x, 0, 22, h - 40);
         mCtx.fillRect(x - 6, 30, 34, 14);
       }
 
+      // Zemin ve Raylar
       mCtx.fillStyle = '#101318';
       mCtx.fillRect(0, h - 70, w, 70);
 
@@ -1176,6 +1464,7 @@
         mCtx.fillRect(rx, h - 54, 18, 22);
       }
 
+      // Vagon (Rayların solunda)
       const wagonX = w * 0.15;
       const wagonY = h - 90;
       mCtx.fillStyle = '#374151';
@@ -1188,28 +1477,32 @@
       mCtx.arc(wagonX + 60, wagonY + 42, 10, 0, Math.PI * 2);
       mCtx.fill();
 
+      // Vagon içi cevher seviyesi
       const oreHeight = (wagonFill / 100) * 25;
       if (oreHeight > 0) {
         mCtx.fillStyle = '#f0b90b';
         mCtx.fillRect(wagonX + 5, wagonY + 35 - oreHeight, 70, oreHeight);
       }
 
+      // Maden Kayası (Katman Rengiyle Çizilir)
       const rockX = w * 0.72;
       const rockY = h * 0.52;
       const rockRadius = 55;
 
-      mCtx.fillStyle = '#2d3748';
+      mCtx.fillStyle = caveBaseColor;
       mCtx.beginPath();
       mCtx.arc(rockX, rockY, rockRadius, 0, Math.PI * 2);
       mCtx.fill();
 
-      mCtx.fillStyle = '#f59e0b';
+      // Kaya üstündeki kristal damarları
+      mCtx.fillStyle = m && m.currentStratum === 3 ? '#ec4899' : (m && m.currentStratum === 2 ? '#38bdf8' : '#f59e0b');
       mCtx.beginPath();
       mCtx.arc(rockX - 10, rockY - 15, 14, 0, Math.PI * 2);
       mCtx.arc(rockX + 15, rockY + 10, 18, 0, Math.PI * 2);
       mCtx.arc(rockX - 5, rockY + 20, 10, 0, Math.PI * 2);
       mCtx.fill();
 
+      // Madenci Karakteri
       const minerX = w * 0.52;
       const minerBaseY = h - 70;
       minerAnim.idleTimer += 0.04;
@@ -1249,6 +1542,7 @@
       mCtx.fill();
       mCtx.fillRect(minerX - 17, headY - 5, 34, 5);
 
+      // Baret Fener Işığı
       const lightGrad = mCtx.createRadialGradient(minerX + 14, headY - 6, 5, rockX, rockY, 160);
       lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
       lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
@@ -1260,6 +1554,7 @@
       mCtx.closePath();
       mCtx.fill();
 
+      // Kol & Kazma
       mCtx.save();
       mCtx.translate(minerX + 6, bodyY + 12);
       mCtx.rotate(armAngle);
@@ -1274,6 +1569,7 @@
       mCtx.fill();
       mCtx.restore();
 
+      // Parçacıklar
       for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.x += p.vx; p.y += p.vy; p.vy += 0.38; p.alpha -= 0.028;
@@ -1289,92 +1585,111 @@
       mFrame = requestAnimationFrame(renderMineLoop);
     }
 
+    // --- KAZMA VURUŞ AKSİYONU (ZAMANLAMA VE KATMAN MOTORU) ---
     function strikePickaxe() {
       if (!CurrentUser) return;
       const m = CurrentUser.mines[activeMineIdx];
       if (m.depleted) return;
+      if (wagonFill >= 100) {
+        showToast("⚠️ Vagon tamamen doldu! Devam etmek için yüzeye gönderin.", "warning");
+        return;
+      }
+      if (wagonInTransit || isSharpening) return;
 
       minerAnim.isSwinging = true;
       minerAnim.swingProgress = 0;
 
-      const roll = Math.random();
-      let isCritical = false;
-      let isLucky = false;
-      let reward = 0.12;
-      let hpDmg = 15;
+      // Zamanlama İbresi Kontrolü (40% - 60% arası Sweet Spot)
+      const isSweetSpot = needlePos >= 40 && needlePos <= 60;
+      const isGlance = needlePos < 20 || needlePos > 80;
 
-      if (roll < 0.06) {
-        isCritical = true;
-        reward = 1.10;
-        hpDmg = 35;
-      } else if (roll < 0.18) {
-        isLucky = true;
-        reward = 0.35;
-        hpDmg = 20;
+      const curStratum = m.strata[m.currentStratum - 1];
+
+      // Keskinlik Çarpanı
+      const sharpMultiplier = Math.max(0.4, pickaxeSharpness / 100);
+
+      let hpDmg = 0;
+      let reward = 0;
+      let feedbackMsg = "";
+
+      if (isSweetSpot) {
+        // MÜKEMMEL ÇATLAK DARBESİ
+        playCriticalBoomSound();
+        hpDmg = Math.round(18 * sharpMultiplier);
+        reward = 0.32;
+        feedbackMsg = "🎯 MÜKEMMEL ZAYIF ÇATLAK!";
+        showFloatingReward("+0.32 ORA (KRİTİK)", "#0ecb81");
+      } else if (isGlance) {
+        // TAŞTAN SEKME (ISKALAMA)
+        playGlanceSound();
+        hpDmg = Math.round(5 * sharpMultiplier);
+        reward = 0.05;
+        feedbackMsg = "⚠️ Sekti! (Zayıf Darbe)";
+        showFloatingReward("+0.05 ORA", "#94a3b8");
+      } else {
+        // STANDART DARBE
+        playPickaxeSound();
+        hpDmg = Math.round(10 * sharpMultiplier);
+        reward = 0.15;
+        feedbackMsg = "İyi Vuruş";
+        showFloatingReward("+0.15 ORA", "#f0b90b");
       }
 
-      if (m.rewardPool !== undefined) {
-        reward = Math.min(reward, m.rewardPool);
-        m.rewardPool = Math.max(0, m.rewardPool - reward);
-      }
+      document.getElementById('timing-feedback').innerText = feedbackMsg;
 
-      m.hp = Math.max(0, m.hp - hpDmg);
-      wagonFill = Math.min(100, wagonFill + (isCritical ? 35 : 15));
+      // Matematiksel Koruma: Katman havuzundan fazlası verilmez
+      reward = Math.min(reward, curStratum.rewardPool);
+      curStratum.rewardPool = Math.max(0, curStratum.rewardPool - reward);
+
+      curStratum.hp = Math.max(0, curStratum.hp - hpDmg);
+      wagonFill = Math.min(100, wagonFill + (isSweetSpot ? 12 : 6));
+      pickaxeSharpness = Math.max(0, pickaxeSharpness - (isGlance ? 4 : 2));
       CurrentUser.ora += reward;
 
-      document.getElementById('rock-hp-text').innerText = `${m.hp}%`;
-      document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
       updateHUD();
+      updateCaveUI();
       saveUserWorld();
 
-      if (isCritical) {
-        playCriticalBoomSound();
-      } else {
-        playPickaxeSound();
-      }
-
+      // Ekran Sarsıntısı
       const v = document.getElementById('mine-viewport');
       if (v) {
         v.classList.add('screen-shake');
-        setTimeout(() => v.classList.remove('screen-shake'), isCritical ? 350 : 220);
+        setTimeout(() => v.classList.remove('screen-shake'), isSweetSpot ? 300 : 180);
       }
 
+      // Parçacık Patlaması
       if (mCanvas) {
         const rockImpactX = mCanvas.width * 0.70;
         const rockImpactY = mCanvas.height * 0.52;
-        const count = isCritical ? 45 : 20;
+        const count = isSweetSpot ? 35 : 15;
         for (let i = 0; i < count; i++) {
           particles.push({
             x: rockImpactX,
             y: rockImpactY,
-            vx: (Math.random() - 0.7) * (isCritical ? 22 : 16),
-            vy: (Math.random() - 0.9) * (isCritical ? 18 : 14),
-            size: Math.random() * (isCritical ? 7 : 4) + 2,
-            color: isCritical ? '#ef4444' : (isLucky ? '#38bdf8' : '#f0b90b'),
+            vx: (Math.random() - 0.7) * (isSweetSpot ? 20 : 14),
+            vy: (Math.random() - 0.9) * (isSweetSpot ? 16 : 12),
+            size: Math.random() * (isSweetSpot ? 6 : 4) + 2,
+            color: isSweetSpot ? '#0ecb81' : (isGlance ? '#94a3b8' : '#f0b90b'),
             alpha: 1.0
           });
         }
       }
 
-      if (isCritical) {
-        showFloatingReward(`🔥 KRİTİK DARBE! +${reward.toFixed(2)} ORA`, '#ef4444');
-        showToast(`💥 KRİTİK VURUŞ! +${reward.toFixed(2)} ORA çıkarıldı!`, "warning");
-      } else if (isLucky) {
-        showFloatingReward(`✨ ZENGİN DAMAR! +${reward.toFixed(2)} ORA`, '#38bdf8');
-        showToast(`✨ Zengin damara denk geldiniz! +${reward.toFixed(2)} ORA`, "info");
-      } else {
-        showFloatingReward(`+${reward.toFixed(2)} ORA`, '#f0b90b');
-      }
-
-      if (m.hp <= 0 || (m.rewardPool !== undefined && m.rewardPool <= 0)) {
-        m.depleted = true;
+      // Katman Bitti mi? (1 ➔ 2 ➔ 3 ➔ Mühürleme)
+      if (curStratum.hp <= 0 || curStratum.rewardPool <= 0) {
+        if (m.currentStratum < 3) {
+          m.currentStratum++;
+          showToast(`🏆 ${curStratum.name} yarıldı! Daha derin olan ${m.currentStratum}. Katmana geçildi!`, "success");
+        } else {
+          m.depleted = true;
+          showToast(`🎉 ${m.name} ocağının 3 katmanı da tamamen kazıldı ve mühürlendi!`, "success");
+          setTimeout(() => {
+            switchTab('map');
+            renderAlpMapPins();
+          }, 1500);
+        }
         saveUserWorld();
-        showToast(`🎉 ${m.name} tamamen kazıldı ve dünyanızda mühürlendi!`, "success");
-        setTimeout(() => {
-          wagonFill = 0;
-          switchTab('map');
-          renderAlpMapPins();
-        }, 1200);
+        updateCaveUI();
       }
     }
 
