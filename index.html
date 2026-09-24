@@ -95,15 +95,15 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
-        <button onclick="openModal('modal-info')" class="px-3 sm:px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-gold/40 text-mineora-gold text-xs sm:text-sm font-bold flex items-center gap-2 transition">
+        <button type="button" onclick="openModal('modal-info')" class="px-3 sm:px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-gold/40 text-mineora-gold text-xs sm:text-sm font-bold flex items-center gap-2 transition cursor-pointer">
           <i class="fa-solid fa-circle-info"></i>
           <span>Rehber</span>
         </button>
-        <button onclick="openModal('modal-auth-login')" class="px-3 sm:px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs sm:text-sm font-bold flex items-center gap-2 transition">
+        <button type="button" onclick="openModal('modal-auth-login')" class="px-3 sm:px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs sm:text-sm font-bold flex items-center gap-2 transition cursor-pointer">
           <i class="fa-solid fa-right-to-bracket text-slate-400"></i>
           <span>Giriş Yap</span>
         </button>
-        <button onclick="openModal('modal-auth-register')" class="px-3.5 sm:px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-xs sm:text-sm font-black flex items-center gap-2 transition shadow-lg shadow-mineora-gold/20">
+        <button type="button" onclick="openModal('modal-auth-register')" class="px-3.5 sm:px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-xs sm:text-sm font-black flex items-center gap-2 transition shadow-lg shadow-mineora-gold/20 cursor-pointer">
           <i class="fa-solid fa-user-plus"></i>
           <span>Kayıt Ol</span>
         </button>
@@ -125,9 +125,13 @@
       </p>
 
       <div class="mt-8 flex flex-wrap gap-4 justify-center">
-        <button onclick="openModal('modal-auth-login')" class="px-8 py-4 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm transition shadow-xl shadow-mineora-gold/20 btn-tactile flex items-center gap-2">
+        <button type="button" onclick="openModal('modal-auth-login')" class="px-8 py-4 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm transition shadow-xl shadow-mineora-gold/20 btn-tactile flex items-center gap-2 cursor-pointer">
           <i class="fa-solid fa-play"></i>
           <span>Giriş Yaparak Başla</span>
+        </button>
+        <button type="button" onclick="openModal('modal-info')" class="px-8 py-4 rounded-2xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 font-black text-sm transition flex items-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-book-open text-mineora-gold"></i>
+          <span>Rehberi İncele</span>
         </button>
       </div>
     </main>
@@ -268,7 +272,7 @@
         </div>
       </section>
 
-      <!-- 4) ÇİFT SEVKİYATLI KAZI SAHNESİ (1. Vagon: 15s -> Tekrar Kazı -> 2. Vagon: 5s Mühürleme) -->
+      <!-- 4) ÇİFT SEVKİYATLI KAZI SAHNESİ -->
       <section id="sec-cave" class="space-y-4">
         <div class="flex justify-between items-center bg-mineora-card px-5 py-3.5 rounded-2xl border border-mineora-border text-xs">
           <div>
@@ -298,14 +302,14 @@
             <i class="fa-solid fa-gem text-mineora-gold mr-1.5"></i> <span id="mine-mineral-name" class="text-white font-bold">Bakır & Gümüş Kristali</span>
           </div>
 
-          <!-- ASANSÖR SEVKİYATI PENCERESİ (1. Sevk: 15s | 2. Sevk: 5s Mühürleme) -->
+          <!-- ASANSÖR SEVKİYATI PENCERESİ -->
           <div id="transit-overlay" class="absolute inset-0 z-40 hidden bg-black/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 space-y-4">
             <div class="w-16 h-16 rounded-2xl bg-mineora-gold/20 text-mineora-gold flex items-center justify-center text-3xl border border-mineora-gold/40 animate-bounce">
               <i class="fa-solid fa-train-subway"></i>
             </div>
             <div class="space-y-1 max-w-md">
               <h3 id="transit-title" class="text-lg font-black text-white">1. Vagon Tamamen Doldu!</h3>
-              <p id="transit-desc" class="text-xs text-slate-300">Vagonu asansöre gönderin. 15 saniyelik tahliye sürecinden sonra boş vagon geri inecek ve derin damar kazısına devam edeceksiniz.</p>
+              <p id="transit-desc" class="text-xs text-slate-300">Vagonu asansöre gönderin. 15 saniye içinde cevher yukarı çekilecek, boş vagon tünele dönecek ve 2. aşama derin damar kazısına devam edeceksiniz.</p>
             </div>
             <div id="transit-timer-box" class="hidden text-center space-y-2">
               <div class="text-3xl font-black font-mono text-cyan-400" id="transit-countdown">15</div>
@@ -319,7 +323,7 @@
 
           <div id="floating-text-container" class="absolute inset-0 pointer-events-none z-30"></div>
 
-          <!-- ALT BÖLÜM: VURUŞ ŞİDDET BARI VE KAZMAYI VUR BUTONU (AYNEN KORUNDU) -->
+          <!-- ALT BÖLÜM: VURUŞ ŞİDDET BARI VE KAZMAYI VUR BUTONU -->
           <div class="absolute bottom-6 inset-x-6 z-20 flex flex-col sm:flex-row items-center justify-between gap-4 pointer-events-none">
             
             <!-- Vuruş Şiddeti & Zamanlama Barı -->
@@ -343,7 +347,7 @@
             </div>
 
             <!-- Vur Butonu -->
-            <button id="btn-strike" onclick="strikePickaxe()" class="pointer-events-auto w-full sm:w-auto px-12 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 hover:from-amber-400 text-black font-black text-sm shadow-2xl shadow-mineora-gold/30 transition btn-tactile border border-yellow-200 flex items-center justify-center gap-2">
+            <button id="btn-strike" onclick="strikePickaxe()" class="pointer-events-auto w-full sm:w-auto px-12 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 hover:from-amber-400 text-black font-black text-sm shadow-2xl shadow-mineora-gold/30 transition btn-tactile border border-yellow-200 flex items-center justify-center gap-2 cursor-pointer">
               <i class="fa-solid fa-hammer text-base"></i>
               <span>KAZMAYI VUR</span>
             </button>
@@ -363,7 +367,7 @@
             </div>
             <p class="text-xs text-slate-400 mt-1">Kullanıcılar arası doğrudan ORA ve USDT takas masası.</p>
           </div>
-          <button onclick="openModal('modal-p2p-create')" class="px-4 py-2.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition shadow-lg flex items-center gap-2">
+          <button onclick="openModal('modal-p2p-create')" class="px-4 py-2.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition shadow-lg flex items-center gap-2 cursor-pointer">
             <i class="fa-solid fa-plus"></i> İlan Oluştur
           </button>
         </div>
@@ -393,22 +397,22 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-border hover:border-cyan-500/50 transition space-y-4 flex flex-col justify-between">
+          <div class="p-6 rounded-3xl bg-mineora-card border border-cyan-500/40 space-y-4 flex flex-col justify-between">
             <div class="space-y-3">
               <h4 class="text-base font-black text-white">İşçi Madenci</h4>
               <p class="text-xs text-slate-400">Maden sahasına doğrudan giriş hakkı kazanır. Kendi tünelinde kazı yaparak ORA üretir.</p>
-              <div class="p-3 rounded-xl bg-mineora-bg border border-mineora-border text-xs font-mono text-cyan-400 font-black">Gereksinim: 100 ORA Varlık</div>
+              <div class="p-3 rounded-xl bg-mineora-bg border border-mineora-border text-xs font-mono text-cyan-400 font-black">Gereksinim: 100 USDT karşılığı ORA</div>
             </div>
-            <button onclick="upgradeRole('İşçi Madenci', 100)" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs">Bu Rolü Seç & Madeni Aç</button>
+            <button onclick="upgradeRole('İşçi Madenci', 100)" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Bu Rolü Seç & Madeni Aç</button>
           </div>
 
-          <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-border hover:border-mineora-gold/50 transition space-y-4 flex flex-col justify-between">
+          <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-gold/40 space-y-4 flex flex-col justify-between">
             <div class="space-y-3">
               <h4 class="text-base font-black text-white">Maden Sahibi</h4>
               <p class="text-xs text-slate-400">Kendi ocağını açar, referans koduyla işçiler kaydeder ve hiyerarşi ağacını yönetir.</p>
-              <div class="p-3 rounded-xl bg-mineora-bg border border-mineora-border text-xs font-mono text-mineora-gold font-black">Maliyet: 1,000 ORA</div>
+              <div class="p-3 rounded-xl bg-mineora-bg border border-mineora-border text-xs font-mono text-mineora-gold font-black">Maliyet: 1,000 USDT karşılığı ORA</div>
             </div>
-            <button onclick="upgradeRole('Maden Sahibi', 1000)" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs">Maden Sahibi Ol</button>
+            <button onclick="upgradeRole('Maden Sahibi', 1000)" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer">Maden Sahibi Ol</button>
           </div>
         </div>
       </section>
@@ -422,7 +426,7 @@
             <input type="password" id="pwd-new" placeholder="Yeni şifreniz" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
             <input type="password" id="pwd-repeat" placeholder="Yeni şifreniz (tekrar)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
           </div>
-          <button onclick="handlePasswordChange()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs transition shadow-lg">Şifreyi Güncelle</button>
+          <button onclick="handlePasswordChange()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs transition shadow-lg cursor-pointer">Şifreyi Güncelle</button>
         </div>
       </section>
     </main>
@@ -435,7 +439,7 @@
     <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
         <h3 class="text-base font-black text-white">TRC20 Varlık & Cüzdan Merkezi</h3>
-        <button onclick="closeModal('modal-wallet')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <button type="button" onclick="closeModal('modal-wallet')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div class="p-3.5 bg-mineora-bg rounded-2xl border border-mineora-border">
@@ -451,7 +455,7 @@
         <span class="text-[10px] text-cyan-400 font-bold block">Size Özel Atanmış USDT (TRC20) Adresi:</span>
         <input type="text" id="wallet-trc20-box" readonly class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-mineora-gold font-mono text-xs outline-none">
       </div>
-      <button onclick="simulateDepositTest(500)" class="w-full py-2.5 rounded-xl bg-cyan-600/20 text-cyan-300 font-bold border border-cyan-500/30">
+      <button type="button" onclick="simulateDepositTest(500)" class="w-full py-2.5 rounded-xl bg-cyan-600/20 text-cyan-300 font-bold border border-cyan-500/30 cursor-pointer">
         Test: Hesaba +500 USDT Yatırımı Simüle Et
       </button>
     </div>
@@ -462,12 +466,12 @@
     <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
         <h3 class="text-base font-black text-white">Yeni P2P İlanı Aç</h3>
-        <button onclick="closeModal('modal-p2p-create')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <button type="button" onclick="closeModal('modal-p2p-create')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
       <div class="space-y-3">
         <input type="number" step="0.0001" id="p2p-create-price" value="0.1000" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
         <input type="number" step="any" id="p2p-create-amount" placeholder="Toplam ORA Miktarı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
-        <button onclick="submitP2pOrder()" class="w-full py-3 rounded-xl bg-mineora-gold text-black font-black hover:bg-yellow-400 transition">İlanı Listele</button>
+        <button type="button" onclick="submitP2pOrder()" class="w-full py-3 rounded-xl bg-mineora-gold text-black font-black hover:bg-yellow-400 transition cursor-pointer">İlanı Listele</button>
       </div>
     </div>
   </div>
@@ -477,50 +481,127 @@
     <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
         <h3 class="text-base font-black text-white">Sisteme Giriş Yap</h3>
-        <button onclick="closeModal('modal-auth-login')" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" onclick="closeModal('modal-auth-login')" class="text-slate-400 hover:text-white text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="space-y-3">
         <input type="text" id="login-user" placeholder="Kullanıcı adınızı girin" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
         <input type="password" id="login-pwd" placeholder="••••••••" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
-        <button onclick="handleLogin()" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition">Giriş Yap ve Başla</button>
+        <button type="button" onclick="handleLogin()" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition cursor-pointer">Giriş Yap ve Başla</button>
       </div>
     </div>
   </div>
 
-  <!-- KAYIT MODALI -->
+  <!-- KAYIT MODALI (DÜZELTİLDİ VE AKTİF EDİLDİ) -->
   <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
-        <h3 class="text-base font-black text-white">Yeni Madenci Hesabı Aç</h3>
-        <button onclick="closeModal('modal-auth-register')" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-mineora-gold"></i>
+          <h3 class="text-base font-black text-white">Yeni Madenci Hesabı Aç</h3>
+        </div>
+        <button type="button" onclick="closeModal('modal-auth-register')" class="text-slate-400 hover:text-white text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="space-y-3">
-        <input type="email" id="reg-email" placeholder="Geçerli e-posta" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
-        <input type="text" id="reg-username" placeholder="Kullanıcı adı belirle" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
-        <input type="password" id="reg-pwd" placeholder="Şifre belirle" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
-        <input type="text" id="reg-ref-code" placeholder="Maden Sahibi Referans Kodu (İsteğe bağlı)" class="w-full bg-mineora-bg border border-cyan-500/40 rounded-xl px-3 py-2 text-cyan-300 font-mono">
-        <button onclick="handleRegister()" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition">Kayıt Ol</button>
+        <div>
+          <label class="font-bold text-slate-400 block mb-1">Geçerli E-posta Adresi</label>
+          <input type="email" id="reg-email" placeholder="ornek@domain.com" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-mineora-gold">
+        </div>
+        <div>
+          <label class="font-bold text-slate-400 block mb-1">Kullanıcı Adı Belirle</label>
+          <input type="text" id="reg-username" placeholder="kullanici_adiniz" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-mineora-gold">
+        </div>
+        <div>
+          <label class="font-bold text-slate-400 block mb-1">Şifre Belirle</label>
+          <input type="password" id="reg-pwd" placeholder="••••••••" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-mineora-gold">
+        </div>
+
+        <div>
+          <label class="font-bold text-cyan-400 block mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-sitemap"></i> Maden Sahibi Referans Kodu (İsteğe Bağlı)
+          </label>
+          <input type="text" id="reg-ref-code" placeholder="Örn: MINE-MOURPHEUS-777" class="w-full bg-mineora-bg border border-cyan-500/40 rounded-xl px-3 py-2 text-cyan-300 font-mono outline-none focus:border-cyan-400 uppercase">
+        </div>
+
+        <!-- KYC KİMLİK TARAMASI -->
+        <div class="p-3.5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
+          <span class="font-bold text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-robot text-cyan-400"></i> KYC Kimlik Taraması
+          </span>
+          <input type="file" id="reg-kyc-input" class="w-full text-[10px] text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-mineora-input file:text-cyan-300 cursor-pointer">
+          <button type="button" onclick="simulateAiKyc()" id="btn-kyc-scan" class="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition cursor-pointer">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Kimliği Tara & Onayla
+          </button>
+        </div>
+
+        <button type="button" onclick="handleRegister()" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition shadow-lg cursor-pointer">Kayıt Ol ve Sisteme Başla</button>
       </div>
     </div>
   </div>
 
-  <!-- REHBER MODALI -->
+  <!-- REHBER MODALI (DÜZELTİLDİ VE AKTİF EDİLDİ) -->
   <div id="modal-info" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="relative w-full max-w-2xl bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+    <div class="relative w-full max-w-2xl bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
-        <h3 class="text-base font-black text-white">MINEORA Protokol Rehberi</h3>
-        <button onclick="closeModal('modal-info')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <i class="fa-solid fa-book-open text-mineora-gold"></i> MINEORA Protokol Rehberi
+        </h3>
+        <button type="button" onclick="closeModal('modal-info')" class="text-slate-400 hover:text-white text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="space-y-3 text-slate-300 leading-relaxed">
-        <p><strong>1. Vuruş Şiddeti:</strong> İbre merkezdeki yeşil hatta geldiğinde tıklayarak en yüksek hasarı ve ödülü kazanın.</p>
-        <p><strong>2. Çift Vagon Döngüsü:</strong> İlk vagon dolunca 15 saniyelik asansör tahliyesi yapılır ve derin damar açılır. İkinci vagon dolunca 5 saniyelik son tahliye ile maden tamamen mühürlenir.</p>
+
+      <div class="space-y-4 text-slate-300 leading-relaxed">
+        <!-- 1. Oyunun Amacı Nedir? -->
+        <div class="p-3.5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-1">
+          <h4 class="text-sm font-black text-mineora-gold flex items-center gap-1.5">
+            <i class="fa-solid fa-bullseye"></i> Oyunun Amacı Nedir?
+          </h4>
+          <p class="text-[11px] text-slate-400">
+            Alp Dağları jeolojik sahalarında cevher damarlarını kazarak <strong>ORA token</strong> üretmek, üretilen varlıkları BORSA TAKAS (P2P) pazarında değerlendirmek ve kendi madenci filonuzu kurarak dijital madencilik imparatorluğu oluşturmaktır.
+          </p>
+        </div>
+
+        <!-- 2. Kullanıcı Rolleri Nedir? -->
+        <div class="p-3.5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
+          <h4 class="text-sm font-black text-cyan-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-users-gear"></i> Kullanıcı Rolleri Nedir?
+          </h4>
+          <div class="space-y-1.5 text-[11px]">
+            <div>
+              <strong class="text-white block">• İşçi Madenci (100 USDT karşılığı ORA):</strong>
+              <span class="text-slate-400">Doğrudan maden ocaklarına erişir. Vuruş şiddet barını kullanarak cevher kazar ve vagon sevkiyatı yapar.</span>
+            </div>
+            <div>
+              <strong class="text-white block">• Maden Sahibi (1,000 USDT karşılığı ORA):</strong>
+              <span class="text-slate-400">Kendi ocağını açar, referans koduyla yeni işçiler davet eder ve hiyerarşi ağacında işçilerinin günlük vardiyalarını denetler.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Kazanç Oranları ve Ekonomi Nedir? -->
+        <div class="p-3.5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
+          <h4 class="text-sm font-black text-emerald-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-coins"></i> Kazanç Oranları & P2P Ekonomisi Nedir?
+          </h4>
+          <div class="space-y-1.5 text-[11px] text-slate-400">
+            <div>
+              <strong class="text-white">• Kazanç Oranı:</strong> Maden damarına göre ORA kazanç oranları günlük <strong>%1 ila %1.5</strong> arasında değişir.
+            </div>
+            <div>
+              <strong class="text-white">• Çift Vagon Sevkiyatı:</strong> 1. Vagon dolumunda 15 saniyelik asansör sevkiyatı yapılır. 2. derin damar dolumunda ise 5 saniyelik son tahliye ile ocak tamamen mühürlenir.
+            </div>
+            <div>
+              <strong class="text-white">• P2P Borsa Komisyonu (%1 USDT / %1 ORA):</strong> Yapılan takaslardan %1 USDT toplanırken, %1 ORA doğrudan <code>0x000...dEaD</code> adresine yakılarak dolaşımdan silinir.
+            </div>
+          </div>
+        </div>
       </div>
-      <button onclick="closeModal('modal-info')" class="w-full py-2.5 rounded-xl bg-mineora-gold text-black font-bold">Anladım, Kapat</button>
+
+      <button type="button" onclick="closeModal('modal-info')" class="w-full py-2.5 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer">Anladım, Kapat</button>
     </div>
   </div>
 
   <!-- ================= JAVASCRIPT: MOTOR ================= -->
   <script>
+    // --- SES MOTORU ---
     let audioCtx = null;
     function initAudioContext() {
       if (!audioCtx) {
@@ -570,10 +651,10 @@
 
     let activeMineIdx = 0;
     let wagonFill = 0;
-    let currentWagonStage = 1; // 1: İlk Vagon (15s bekletir), 2: İkinci Vagon (5s bekletip madeni mühürler)
+    let currentWagonStage = 1;
     let isTransitLocked = false;
 
-    // VURUŞ ŞİDDET İBRESİ MOTORU (Kayan İbre - AYNEN KORUNDU)
+    // VURUŞ ŞİDDET İBRESİ MOTORU
     let pointerPos = 50;
     let pointerDir = 2.4;
     let pointerLoopReq = null;
@@ -649,8 +730,20 @@
       setTimeout(() => t.remove(), 3200);
     }
 
-    function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+    // MODAL AÇ / KAPAT (GARANTİLİ DÜZELTME)
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if (!m) return;
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      if (!m) return;
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
 
     function handleLogin() {
       const u = document.getElementById('login-user').value.trim();
@@ -661,6 +754,21 @@
       closeModal('modal-auth-login');
       enterGame();
       showToast(`👋 Hoş geldin ${CurrentUser.username}!`, "success");
+    }
+
+    function simulateAiKyc() {
+      const fileInput = document.getElementById('reg-kyc-input');
+      const btn = document.getElementById('btn-kyc-scan');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showToast("⚠️ Lütfen taranacak kimlik dosyasını seçin!", "warning");
+        return;
+      }
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Taranıyor...`;
+      setTimeout(() => {
+        btn.className = "w-full py-2 rounded-xl bg-mineora-green text-white font-bold text-[11px]";
+        btn.innerHTML = `<i class="fa-solid fa-check mr-1"></i> Kimlik Yapay Zeka Tarafından Onaylandı!`;
+        showToast("🤖 Yapay zeka kimliğinizi başarıyla onayladı!", "success");
+      }, 1200);
     }
 
     function handleRegister() {
@@ -732,8 +840,8 @@
         const b = document.getElementById(`tab-btn-${tab}`);
         if (b) {
           b.className = tab === t 
-            ? (tab === 'boss' ? "px-4 py-2 rounded-xl text-xs font-black bg-rose-600 text-white transition whitespace-nowrap shadow-md shadow-rose-600/30" : "px-4 py-2 rounded-xl text-xs font-bold bg-mineora-gold text-black transition whitespace-nowrap shadow-md")
-            : "px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap";
+            ? (tab === 'boss' ? "px-4 py-2 rounded-xl text-xs font-black bg-rose-600 text-white transition whitespace-nowrap shadow-md shadow-rose-600/30 cursor-pointer" : "px-4 py-2 rounded-xl text-xs font-bold bg-mineora-gold text-black transition whitespace-nowrap shadow-md cursor-pointer")
+            : "px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer";
         }
       });
 
@@ -808,13 +916,11 @@
         return;
       }
 
-      // Vuruş Şiddeti: Yeşil Alan (%40 - %60)
       const isSweetSpot = (pointerPos >= 40 && pointerPos <= 60);
-      let hitDmg = isSweetSpot ? 12 : 8; // 2 vagon aşaması için dengeli toplam kaya erimesi
-      let fillStep = isSweetSpot ? 25 : 20; // 4-5 vuruşta vagon %100 dolar!
+      let hitDmg = isSweetSpot ? 12 : 8;
+      let fillStep = isSweetSpot ? 25 : 20;
       let reward = isSweetSpot ? 1.25 : 0.75;
 
-      // Havuz Emniyeti (10 ORA tavanı)
       if (m.rewardPool !== undefined) {
         reward = Math.min(reward, m.rewardPool);
         m.rewardPool = Math.max(0, m.rewardPool - reward);
@@ -833,7 +939,6 @@
       updateHUD();
       saveUserWorld();
 
-      // Sarsıntı & Parçacık
       const v = document.getElementById('mine-viewport');
       if (v) {
         v.classList.add('screen-shake');
@@ -860,7 +965,6 @@
         showFloatingReward(`+${reward.toFixed(2)} ORA`, '#f0b90b');
       }
 
-      // Vagon Doldu Mu? (%100) -> Asansör Gönderme Ekranı
       if (wagonFill >= 100) {
         isTransitLocked = true;
         const overlay = document.getElementById('transit-overlay');
@@ -880,7 +984,6 @@
       }
     }
 
-    // ASANSÖR SEVKİYATI: 1. AŞAMADA 15 SN, 2. AŞAMADA 5 SN VE MÜHÜRLEME
     function startElevatorDispatch() {
       const btn = document.getElementById('btn-dispatch-wagon');
       btn.classList.add('hidden');
@@ -891,7 +994,6 @@
       const timerText = document.getElementById('transit-countdown');
       const subText = document.getElementById('transit-subtext');
 
-      // 1. Aşamada 15 saniye, 2. Aşamada 5 saniye
       let countdown = (currentWagonStage === 1) ? 15 : 5;
       timerText.innerText = countdown;
 
@@ -911,7 +1013,6 @@
           clearInterval(iv);
 
           if (currentWagonStage === 1) {
-            // 1. Vagon tamamlandı -> 2. Vagon aşamasına geçiş!
             currentWagonStage = 2;
             wagonFill = 0;
             isTransitLocked = false;
@@ -920,7 +1021,6 @@
             document.getElementById('wagon-round-indicator').innerText = "Vagon Aşaması: 2 / 2 (Derin Damar)";
             showToast("✅ 1. Vagon boşaltıldı ve tünele indi! Derin damarı kazmaya devam edin.", "success");
           } else {
-            // 2. Vagon da bitti -> 5 saniyelik süreç bitti ve MADEN KİLİTLENİR!
             const m = CurrentUser.mines[activeMineIdx];
             m.depleted = true;
             m.hp = 0;
@@ -952,7 +1052,7 @@
       setTimeout(() => el.remove(), 1000);
     }
 
-    // --- CANVAS ÇİZİM MOTORU (BÜYÜK MADENCİ & KAYA) ---
+    // --- CANVAS ÇİZİM MOTORU ---
     let mCanvas, mCtx, mFrame, particles = [];
     let minerAnim = { swingProgress: 0, isSwinging: false, idleTimer: 0 };
 
@@ -972,7 +1072,6 @@
       const w = mCanvas.width;
       const h = mCanvas.height;
 
-      // 1. Tünel Duvarı
       const tunnelGrad = mCtx.createRadialGradient(w * 0.45, h * 0.5, 40, w * 0.5, h * 0.5, w * 0.75);
       tunnelGrad.addColorStop(0, '#1a1d24');
       tunnelGrad.addColorStop(0.5, '#0e1117');
@@ -980,14 +1079,12 @@
       mCtx.fillStyle = tunnelGrad;
       mCtx.fillRect(0, 0, w, h);
 
-      // 2. Kirişler
       mCtx.fillStyle = '#271c14';
       for (let x = 80; x < w; x += 260) {
         mCtx.fillRect(x, 0, 32, h - 50);
         mCtx.fillRect(x - 10, 40, 52, 18);
       }
 
-      // 3. Sağ Duvara Dayalı Devasa Kaya
       const rockX = w * 0.72;
       const rockY = h * 0.55;
       const rockW = w * 0.32;
@@ -1003,7 +1100,6 @@
       mCtx.ellipse(rockX, rockY, rockW * 0.5, rockH * 0.5, -0.1, 0, Math.PI * 2);
       mCtx.fill();
 
-      // Kristal Damarları
       mCtx.fillStyle = (currentWagonStage === 2) ? '#a855f7' : '#f59e0b';
       mCtx.beginPath();
       mCtx.arc(rockX - 30, rockY - 40, 24, 0, Math.PI * 2);
@@ -1011,7 +1107,6 @@
       mCtx.arc(rockX - 10, rockY + 60, 20, 0, Math.PI * 2);
       mCtx.fill();
 
-      // 4. Raylar & Zemin
       mCtx.fillStyle = '#0a0d12';
       mCtx.fillRect(0, h - 65, w, 65);
       mCtx.strokeStyle = '#64748b';
@@ -1026,7 +1121,6 @@
         mCtx.fillRect(rx, h - 48, 22, 24);
       }
 
-      // 5. Cevher Vagonu
       const wagonX = w * 0.14;
       const wagonY = h - 95;
       mCtx.fillStyle = '#475569';
@@ -1041,14 +1135,12 @@
       mCtx.arc(wagonX + 73, wagonY + 48, 11, 0, Math.PI * 2);
       mCtx.fill();
 
-      // Vagon İçindeki Cevher
       const oreHeight = (wagonFill / 100) * 30;
       if (oreHeight > 0) {
         mCtx.fillStyle = (currentWagonStage === 2) ? '#c084fc' : '#f0b90b';
         mCtx.fillRect(wagonX + 6, wagonY + 40 - oreHeight, 83, oreHeight);
       }
 
-      // 6. BÜYÜK MADENCİ
       const minerX = w * 0.48;
       const minerBaseY = h - 65;
       minerAnim.idleTimer += 0.04;
@@ -1062,19 +1154,16 @@
         else { minerAnim.isSwinging = false; minerAnim.swingProgress = 0; armAngle = -0.4; }
       }
 
-      // Bacaklar
       mCtx.fillStyle = '#1e293b';
       mCtx.fillRect(minerX - 16, minerBaseY - 42, 14, 42);
       mCtx.fillRect(minerX + 6, minerBaseY - 42, 14, 42);
 
-      // Gövde
       const bodyY = minerBaseY - 96 + idleBob;
       mCtx.fillStyle = '#d97706';
       mCtx.fillRect(minerX - 20, bodyY, 40, 56);
       mCtx.fillStyle = '#facc15';
       mCtx.fillRect(minerX - 20, bodyY + 22, 40, 7);
 
-      // Baş & Baret
       const headY = bodyY - 32;
       mCtx.fillStyle = '#fed7aa';
       mCtx.beginPath();
@@ -1087,7 +1176,6 @@
       mCtx.fill();
       mCtx.fillRect(minerX - 24, headY - 7, 48, 7);
 
-      // Baret Işığı
       const lampGrad = mCtx.createRadialGradient(minerX + 22, headY - 8, 8, rockX, rockY, 240);
       lampGrad.addColorStop(0, 'rgba(254, 240, 138, 0.5)');
       lampGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
@@ -1099,7 +1187,6 @@
       mCtx.closePath();
       mCtx.fill();
 
-      // Kol & Kazma
       mCtx.save();
       mCtx.translate(minerX + 8, bodyY + 16);
       mCtx.rotate(armAngle);
@@ -1114,7 +1201,6 @@
       mCtx.fill();
       mCtx.restore();
 
-      // Parçacıklar
       for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.x += p.vx; p.y += p.vy; p.vy += 0.42; p.alpha -= 0.026;
@@ -1149,7 +1235,7 @@
     function upgradeRole(role, cost) {
       if (!CurrentUser) return;
       if (CurrentUser.ora < cost) {
-        showToast(`⚠️ Yetersiz ORA! Bu rol için ${cost} ORA gerekiyor.`, "warning");
+        showToast(`⚠️ Yetersiz ORA! Bu rol için ${cost} USDT karşılığı ORA gerekiyor.`, "warning");
         return;
       }
       CurrentUser.ora -= cost;
