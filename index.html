@@ -292,7 +292,7 @@
               </div>
               <div class="p-3 bg-mineora-card rounded-xl border border-mineora-green/30 space-y-1">
                 <label class="text-slate-400 text-[10px] block font-bold">30+ Gün Çekim (%)</label>
-                <input type="number" step="0.1" id="admin-set-tax-t3" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-mineora-green font-mono text-xs outline-none">
+                <input type="number" step="0.1" id="admin-set-tax-t3" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-white font-mono text-xs outline-none">
               </div>
             </div>
           </div>
@@ -954,7 +954,7 @@
             <i class="fa-solid fa-coins"></i> 1. Sabit Değer Çapası (Peg)
           </h4>
           <p class="text-[11px] text-slate-400">
-            Protokolde tüm maliyet ve ödüller sabit <strong>1 ORA = 0.10 USDT ($0.10)</strong> çapasına bağlıdır. Üretilen ORA tokenlar P2P masasında anında USDT likiditesine çevrilebilir.
+            Protokolde tüm maliyet ve ödüller sabit <strong>1 ORA = 0.10 USDT ($0.10)</strong> çapasına bağlıdır[cite: 34]. Üretilen ORA tokenlar P2P masasında anında USDT likiditesine çevrilebilir[cite: 34].
           </p>
         </div>
 
@@ -963,7 +963,7 @@
             <i class="fa-solid fa-gears"></i> 2. Hiyerarşik Rol & Görev Dağılımı
           </h4>
           <p class="text-[11px] text-slate-400">
-            İşçi Madenci, Maden Sahibi veya Şirket Sahibi (Holding) olarak Alp Dağları sahalarında kendi operasyonlarınızı yönetirsiniz.
+            İşçi Madenci, Maden Sahibi veya Şirket Sahibi (Holding) olarak Alp Dağları sahalarında kendi operasyonlarınızı yönetirsiniz[cite: 34].
           </p>
         </div>
 
@@ -972,7 +972,7 @@
             <i class="fa-solid fa-vault"></i> 3. ORA Bankası: Vadeli Kasa (Stake) Sistemi
           </h4>
           <p class="text-[11px] text-slate-400">
-            Aktif kazı yapmadan varlıklarını değerlendirmek isteyen oyuncular ORA bakiyelerini banka kasalarına kilitleyerek dönemsel ek hammadde elde eder.
+            Aktif kazı yapmadan varlıklarını değerlendirmek isteyen oyuncular ORA bakiyelerini banka kasalarına kilitleyerek dönemsel ek hammadde elde eder[cite: 34].
           </p>
         </div>
 
@@ -981,7 +981,7 @@
             <i class="fa-solid fa-screwdriver-wrench"></i> 4. 90 Günlük Ekipman & Maden Ömrü
           </h4>
           <p class="text-[11px] text-slate-400">
-            Her madenin ve kazmanın işletim ömrü <strong>90 gündür</strong>. 90. gün sonunda döngüyü yenilemek için sisteme yeniden ORA kilitlenir; bu sayede enflasyon sıfırlanır ve ekosistem kalıcı kalır.
+            Her madenin ve kazmanın işletim ömrü <strong>90 gündür</strong>[cite: 34]. 90. gün sonunda döngüyü yenilemek için sisteme yeniden ORA kilitlenir; bu sayede enflasyon sıfırlanır ve ekosistem kalıcı kalır[cite: 34].
           </p>
         </div>
       </div>
@@ -993,7 +993,7 @@
   <!-- ================= BİRLEŞİK JAVASCRIPT MOTORU ================= -->
   <script>
     // ============================================================================
-    // 1. STATE.JS (KURUCU PATRON TAM YETKİLİ VE GÜVENLİ SÜRÜM - state js_4.txt)
+    // 1. STATE.JS (SOY AĞACI, HİYERARŞİ VE GÜVENLİK MOTORU - state js_5.txt)
     // ============================================================================
     let audioCtx = null;
     function initAudioContext() {
@@ -1364,8 +1364,24 @@
       const u = document.getElementById('login-user').value.trim();
       const p = document.getElementById('login-pwd').value.trim();
       if (!u) { showToast("⚠️ Kullanıcı adı girin!", "warning"); return; }
+
+      const storageKey = `mineora_user_${u.toLowerCase()}`;
+      const isMourpheus = u.toLowerCase() === "mourpheus";
+      const userRecord = localStorage.getItem(storageKey);
+
+      if (!userRecord && !isMourpheus) {
+        showToast("⛔ Bu kullanıcı adı sistemde kayıtlı değil! Lütfen önce 'Kayıt Ol' butonundan hesabınızı açın.", "warning");
+        return;
+      }
+
       loadUserWorld(u, p || "123456");
-      if (p && CurrentUser.pass !== p) { showToast("⚠️ Şifre hatalı!", "warning"); return; }
+      if (p && CurrentUser.pass !== p) { 
+        showToast("⚠️ Şifre hatalı!", "warning"); 
+        CurrentUser = null;
+        CurrentUserWorld = null;
+        return; 
+      }
+      
       closeModal('modal-auth-login');
       enterGame();
       showToast(`👋 Hoş geldin ${CurrentUser.username}!`, "success");
@@ -1392,6 +1408,12 @@
       const p = document.getElementById('reg-pwd').value.trim();
       const ref = document.getElementById('reg-ref-code').value.trim();
       if (!em || !u || !p) { showToast("⚠️ Alanları doldurun!", "warning"); return; }
+
+      const storageKey = `mineora_user_${u.toLowerCase()}`;
+      if (localStorage.getItem(storageKey)) {
+        showToast("⚠️ Bu kullanıcı adı zaten alınmış, lütfen farklı bir ad seçin!", "warning");
+        return;
+      }
       
       loadUserWorld(u, p, ref);
       CurrentUserWorld.email = em;
@@ -1403,7 +1425,7 @@
       if (ref) {
         showToast(`🎉 ${CurrentUser.username}, ${ref} referansıyla kaydınız açıldı!`, "success");
       } else {
-        showToast(`🎉 Tebrikler ${CurrentUser.username}, hesabınız açıldı!`, "success");
+        showToast(`🎉 Tebrikler ${CurrentUser.username}, hesabınız açıldı! Madende çalışmak için İşçi Madenci lisansı almalısınız.`, "success");
       }
     }
 
@@ -1431,11 +1453,13 @@
       showToast("🔒 Oturum kapatıldı.", "info");
     }
 
+    // ROL BAZLI SEKME YÖNETİMİ
     function configureUserTabs() {
       if (!CurrentUser) return;
       const isBoss = CurrentUser.username.toLowerCase() === "mourpheus";
       const isCompanyOwner = CurrentUser.role === "Şirket Sahibi";
       const isMineOwner = CurrentUser.role === "Maden Sahibi";
+      const isWorker = CurrentUser.role === "İşçi Madenci";
 
       const btnBoss = document.getElementById('tab-btn-boss');
       if (btnBoss) {
@@ -1451,15 +1475,16 @@
       if (btnOwner) {
         btnOwner.classList.toggle('hidden', !(isMineOwner || isCompanyOwner));
         btnOwner.innerHTML = isCompanyOwner 
-          ? `<i class="fa-solid fa-building-wheat mr-1 text-purple-400"></i> Şirket & Holding Masası` 
-          : `<i class="fa-solid fa-sitemap mr-1 text-mineora-gold"></i> Maden Sahibi Masası`;
+          ? `<i class="fa-solid fa-building-wheat mr-1 text-purple-400"></i> Şirket Soy Ağacı & Filo Masası` 
+          : `<i class="fa-solid fa-sitemap mr-1 text-mineora-gold"></i> Maden Soy Ağacı & İşçi Masası`;
       }
 
+      // Maden Sahibi ve Şirket Sahibi Kazı Yapamaz, Doğrudan Soy Ağacı Masasını Açar
       if (isBoss) {
         switchTab('boss');
       } else if (isCompanyOwner || isMineOwner) {
         switchTab('owner');
-      } else if (CurrentUser.role === "İşçi Madenci") {
+      } else if (isWorker) {
         switchTab('cave');
       } else {
         switchTab('home');
@@ -1485,6 +1510,12 @@
       if (t === 'boss' && !isBoss) {
         showToast("⛔ Bu bölüme yalnızca Kurucu Patron erişebilir!", "warning");
         t = 'home';
+      }
+
+      // Maden Sahibi ve Şirket Sahibinin Kazı Sahnesine girmesi engellenir
+      if (t === 'cave' && CurrentUser && (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi")) {
+        showToast("⛔ Maden Sahipleri ve Şirket Sahipleri kazı yapamaz! Lütfen masanızdan alt kadrolarınızı yönetin.", "warning");
+        t = 'owner';
       }
 
       ['boss', 'owner', 'home', 'map', 'cave', 'p2p', 'stake', 'career', 'settings'].forEach(tab => {
@@ -1527,7 +1558,7 @@
         if (typeof calculateStakePreview === 'function') calculateStakePreview();
       }
       if (t === 'owner') {
-        if (typeof renderHierarchyUI === 'function') renderHierarchyUI();
+        renderHierarchyUI();
       }
       if (t === 'boss' && isBoss) {
         if (typeof initAdminMasterPanel === 'function') initAdminMasterPanel();
@@ -1550,7 +1581,7 @@
       const costOra = costUsdt * 10;
 
       if (CurrentUser.ora < costOra) {
-        showToast(`⚠️ Yetersiz ORA! '${role}' rolü için ${costUsdt.toLocaleString()} USDT karşılığı (${costOra.toLocaleString()} ORA) gereklidir.`, "warning");
+        showToast(`⚠️ Yetersiz ORA! '${role}' rolü için ${costUsdt.toLocaleString()} USDT karşılığı (${costOra.toLocaleString()} ORA) gereklidir. P2P pazarından ORA temin edebilirsiniz.`, "warning");
         return;
       }
 
@@ -1560,12 +1591,12 @@
       if (role === "Şirket Sahibi") {
         CurrentUser.companyRefCode = `HOLD-${CurrentUser.username.toUpperCase()}-999`;
         if (!CurrentUser.minesOwned) CurrentUser.minesOwned = [];
-        showToast(`👑 'Şirket Sahibi' unvanına yükseldiniz. Holding masanız açıldı!`, "success");
+        showToast(`👑 'Şirket Sahibi' unvanına yükseldiniz. Holding Soy Ağacı Masanız açıldı!`, "success");
       } else if (role === "Maden Sahibi") {
         CurrentUser.refCode = `MINE-${CurrentUser.username.toUpperCase()}-777`;
-        showToast(`🎉 'Maden Sahibi' oldunuz. Ocağınız açıldı!`, "success");
+        showToast(`🎉 'Maden Sahibi' oldunuz. Ocak Soy Ağacı Masanız açıldı!`, "success");
       } else {
-        showToast(`🎉 Rolünüz '${role}' olarak güncellendi!`, "success");
+        showToast(`🎉 Lisansınız aktifleşti! Artık madenlerde kazı yapabilirsiniz.`, "success");
       }
 
       if (CurrentUser.referredBy) {
@@ -1600,6 +1631,7 @@
       showToast("✅ Şifre güncellendi!", "success");
     }
 
+    // GÖRSEL SOY AĞACI (HIERARCHY TREE) RENDER MOTORU
     function renderHierarchyUI() {
       if (!CurrentUser) return;
       const isCompany = CurrentUser.role === "Şirket Sahibi";
@@ -1612,8 +1644,8 @@
       if (!container || !statsBar) return;
 
       if (isCompany) {
-        titleEl.innerHTML = `<span class="text-purple-400">${CurrentUser.username}</span> Holding & Maden Filosu Yönetimi`;
-        descEl.innerText = "Şirketinize bağlı maden ocaklarını (Max: 5), işçi vardiyalarını ve toplanan temettü paylarını yönetin.";
+        titleEl.innerHTML = `<span class="text-purple-400">${CurrentUser.username}</span> Holding • Soy Ağacı & Filo Masası`;
+        descEl.innerText = "Yönetici Statüsü: Kazı yapamazsınız. Bağlı maden sahiplerini, işçileri ve anlık vardiya durumlarını soy ağacı olarak izlersiniz.";
         refDisplay.innerText = CurrentUser.companyRefCode || `HOLD-${CurrentUser.username.toUpperCase()}-999`;
 
         const stats = getCompanyStats() || { totalMines: 0, totalWorkers: 0, activeWorkersToday: 0, idleWorkersToday: 0, totalCompanyDividends: 0 };
@@ -1628,10 +1660,10 @@
             <strong class="text-white font-mono text-sm">${stats.totalWorkers} Madenci</strong>
           </div>
           <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-green/30">
-            <span class="text-slate-400 text-[10px] block">Bugün Vardiyada</span>
+            <span class="text-slate-400 text-[10px] block">Vardiyada (Çalışan)</span>
             <strong class="text-mineora-green font-mono text-sm">${stats.activeWorkersToday} Aktif</strong>
           </div>
-          <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-gold/30">
+          <div class="p-3 bg-mineora-gold rounded-xl border border-mineora-gold/30">
             <span class="text-slate-400 text-[10px] block">Şirket Temettü Havuzu</span>
             <strong class="text-mineora-gold font-mono text-sm">${stats.totalCompanyDividends.toFixed(2)} ORA</strong>
           </div>
@@ -1641,26 +1673,30 @@
         const mines = CurrentUser.minesOwned || [];
 
         if (mines.length === 0) {
-          container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Henüz şirketinize bağlı bir maden ocağı bulunmuyor. Holding referans kodunuzu (${CurrentUser.companyRefCode}) paylaşarak maden sahiplerini ağacınıza ekleyebilirsiniz (Maksimum 5 ocak).</div>`;
+          container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs bg-mineora-bg rounded-2xl border border-mineora-border">Holding soy ağacınızda henüz bağlı bir maden ocağı bulunmuyor. Holding referans kodunuzu (${CurrentUser.companyRefCode}) paylaşarak maden sahiplerini ağacınıza ekleyebilirsiniz (Maksimum 5 ocak).</div>`;
           return;
         }
 
+        // ŞİRKET SOY AĞACI GÖRÜNÜMÜ
         mines.forEach((mine) => {
           const mineCard = document.createElement('div');
-          mineCard.className = "p-5 rounded-2xl bg-mineora-bg border border-purple-500/40 space-y-4 shadow-lg";
+          mineCard.className = "p-5 rounded-3xl bg-mineora-bg border border-purple-500/40 space-y-4 shadow-xl";
 
           let workersHtml = "";
           (mine.workers || []).forEach(w => {
             const isWorking = w.workedToday;
             workersHtml += `
-              <div class="p-3 rounded-xl bg-mineora-card border ${isWorking ? 'border-mineora-green/30' : 'border-rose-500/30'} flex items-center justify-between text-xs">
+              <div class="p-3 rounded-2xl bg-mineora-card border ${isWorking ? 'border-mineora-green/40' : 'border-rose-500/30'} flex items-center justify-between text-xs">
                 <div class="flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full ${isWorking ? 'bg-mineora-green animate-pulse' : 'bg-rose-500'}"></span>
-                  <strong class="text-white font-mono">${w.username}</strong>
+                  <span class="w-2.5 h-2.5 rounded-full ${isWorking ? 'bg-mineora-green animate-pulse' : 'bg-rose-500'}"></span>
+                  <div>
+                    <strong class="text-white font-mono block">${w.username}</strong>
+                    <span class="text-[9px] text-slate-400 block">${isWorking ? 'Vardiyada (Çalışıyor)' : 'Çalışmadı (Boşta)'}</span>
+                  </div>
                 </div>
                 <div class="text-right font-mono text-[11px]">
-                  <span class="${isWorking ? 'text-mineora-gold font-bold' : 'text-slate-500'}">+${w.oraMined.toFixed(2)} ORA</span>
-                  <span class="text-[9px] text-slate-500 block">${w.lastSeen}</span>
+                  <span class="${isWorking ? 'text-mineora-gold font-bold' : 'text-slate-500'}">+${(w.oraMined || 0).toFixed(2)} ORA</span>
+                  <span class="text-[9px] text-slate-500 block">${w.lastSeen || 'Bugün'}</span>
                 </div>
               </div>
             `;
@@ -1668,25 +1704,27 @@
 
           mineCard.innerHTML = `
             <div class="flex flex-wrap items-center justify-between border-b border-mineora-border pb-3">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-black">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg font-black border border-purple-500/30">
                   <i class="fa-solid fa-mountain"></i>
                 </div>
                 <div>
                   <strong class="text-sm text-white block">${mine.mineName}</strong>
-                  <span class="text-[10px] text-slate-400">Maden Sahibi: <span class="text-mineora-gold font-bold">${mine.ownerUsername}</span></span>
+                  <span class="text-[11px] text-slate-400">Ocak Sahibi: <strong class="text-mineora-gold">${mine.ownerUsername}</strong></span>
                 </div>
               </div>
               <div class="text-right">
-                <span class="text-[10px] text-slate-400 block">Şirkete Sağlanan Pay:</span>
+                <span class="text-[10px] text-slate-400 block">Şirket Kasa Payı:</span>
                 <strong class="text-mineora-gold font-mono text-xs">+${(mine.dividendEarnedOra || 0).toFixed(2)} ORA</strong>
               </div>
             </div>
 
-            <div class="space-y-2">
-              <span class="text-[10px] uppercase font-bold text-slate-400 block">Ocakta Çalışan İşçiler (${(mine.workers || []).length} / 65 Kapasite):</span>
-              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                ${workersHtml || '<span class="text-slate-500 text-[10px]">Bu madende henüz işçi yok.</span>'}
+            <div class="space-y-2 pl-4 border-l-2 border-purple-500/30 ml-3">
+              <span class="text-[10px] uppercase font-black text-slate-400 block flex items-center gap-1.5">
+                <i class="fa-solid fa-diagram-project text-cyan-400"></i> Bu Ocağa Bağlı İşçi Soy Ağacı (${(mine.workers || []).length} / 65 Kapasite):
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+                ${workersHtml || '<span class="text-slate-500 text-xs py-2">Bu madende henüz işçi kaydı yok.</span>'}
               </div>
             </div>
           `;
@@ -1694,67 +1732,68 @@
         });
 
       } else {
-        titleEl.innerHTML = `<span class="text-mineora-gold">${CurrentUser.username}</span> Maden Ocağı İşletmesi`;
-        descEl.innerText = "Ocağınıza bağlı çalışan işçilerinizi takip edin ve yeni işçiler davet edin (Kendi Kontenjanınız: Max 50).";
+        // MADEN SAHİBİ SOY AĞACI GÖRÜNÜMÜ
+        titleEl.innerHTML = `<span class="text-mineora-gold">${CurrentUser.username}</span> Maden Ocağı • İşçi Soy Ağacı Masası`;
+        descEl.innerText = "Yönetici Statüsü: Kazı yapamazsınız. Ocağınıza bağlı 50 işçinin kullanıcı adını ve anlık vardiya durumlarını buradan takip edersiniz.";
         refDisplay.innerText = CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;
 
         const workers = CurrentUser.workers || [];
         const activeCount = workers.filter(w => w.workedToday).length;
 
         statsBar.innerHTML = `
-      <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-border">
-        <span class="text-slate-400 text-[10px] block">İşçi Kontenjanı</span>
-        <strong class="text-white font-mono text-sm">${workers.length} / 50 Madenci</strong>
-      </div>
-      <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-green/30">
-        <span class="text-slate-400 text-[10px] block">Vardiyada (Bugün)</span>
-        <strong class="text-mineora-green font-mono text-sm">${activeCount} Aktif</strong>
-      </div>
-      <div class="p-3 bg-mineora-bg rounded-xl border border-rose-500/30">
-        <span class="text-slate-400 text-[10px] block">Bugün Çalışmayan</span>
-        <strong class="text-rose-400 font-mono text-sm">${workers.length - activeCount} Boşta</strong>
-      </div>
-      <div class="p-3 bg-mineora-gold rounded-xl border border-mineora-gold/30">
-        <span class="text-slate-400 text-[10px] block">İşçi Üretim Havuzu</span>
-        <strong class="text-mineora-gold font-mono text-sm">${workers.reduce((acc, w) => acc + w.oraMined, 0).toFixed(2)} ORA</strong>
-      </div>
-    `;
+          <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-border">
+            <span class="text-slate-400 text-[10px] block">İşçi Kontenjanı</span>
+            <strong class="text-white font-mono text-sm">${workers.length} / 50 Madenci</strong>
+          </div>
+          <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-green/30">
+            <span class="text-slate-400 text-[10px] block">Vardiyada (Çalışan)</span>
+            <strong class="text-mineora-green font-mono text-sm">${activeCount} Aktif</strong>
+          </div>
+          <div class="p-3 bg-mineora-bg rounded-xl border border-rose-500/30">
+            <span class="text-slate-400 text-[10px] block">Bugün Çalışmayan</span>
+            <strong class="text-rose-400 font-mono text-sm">${workers.length - activeCount} Boşta</strong>
+          </div>
+          <div class="p-3 bg-mineora-gold rounded-xl border border-mineora-gold/30">
+            <span class="text-slate-400 text-[10px] block">İşçi Üretim Havuzu</span>
+            <strong class="text-mineora-gold font-mono text-sm">${workers.reduce((acc, w) => acc + (w.oraMined || 0), 0).toFixed(2)} ORA</strong>
+          </div>
+        `;
 
-        container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"></div>`;
+        container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5"></div>`;
         const grid = container.querySelector('div');
 
         if (workers.length === 0) {
-          container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Henüz madeninize bağlı işçi bulunmuyor. Referans kodunuzla (${CurrentUser.refCode}) yeni işçiler kaydedebilirsiniz.</div>`;
+          container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs bg-mineora-bg rounded-2xl border border-mineora-border">Ocağınızda henüz kayıtlı işçi madenci bulunmuyor. Referans kodunuzu (${CurrentUser.refCode}) paylaşarak işçileri ocağınıza bağlayabilirsiniz (Maksimum 50 işçi).</div>`;
           return;
         }
 
         workers.forEach((worker, idx) => {
           const isWorking = worker.workedToday;
           const card = document.createElement('div');
-          card.className = `p-4 rounded-2xl bg-mineora-bg border ${isWorking ? 'border-mineora-green/40' : 'border-rose-500/30'} space-y-3`;
+          card.className = `p-4 rounded-2xl bg-mineora-bg border ${isWorking ? 'border-mineora-green/40' : 'border-rose-500/30'} space-y-2 shadow-lg`;
           card.innerHTML = `
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold text-slate-400">İşçi #${idx + 1}</span>
-          <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isWorking ? 'bg-mineora-green/15 text-mineora-green' : 'bg-rose-500/15 text-rose-400'}">
-            ${isWorking ? 'Vardiyada' : 'Çalışmadı'}
-          </span>
-        </div>
-        <div>
-          <strong class="text-sm font-bold text-white block">${worker.username}</strong>
-          <span class="text-[10px] text-slate-400">Son İşlem: ${worker.lastSeen}</span>
-        </div>
-        <div class="p-2 rounded-xl bg-mineora-card border border-mineora-border flex justify-between text-[11px] font-mono">
-          <span class="text-slate-400">Üretim:</span>
-          <strong class="${isWorking ? 'text-mineora-gold' : 'text-slate-500'}">+${worker.oraMined.toFixed(2)} ORA</strong>
-        </div>
-      `;
+            <div class="flex items-center justify-between border-b border-mineora-border pb-2">
+              <span class="text-[10px] font-bold text-slate-400">İşçi Madenci #${idx + 1}</span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isWorking ? 'bg-mineora-green/15 text-mineora-green' : 'bg-rose-500/15 text-rose-400'}">
+                ${isWorking ? 'Vardiyada' : 'Çalışmadı'}
+              </span>
+            </div>
+            <div>
+              <strong class="text-sm font-bold text-white block font-mono">${worker.username}</strong>
+              <span class="text-[10px] text-slate-400">Durum: <strong class="${isWorking ? 'text-mineora-green' : 'text-rose-400'}">${isWorking ? 'Aktif Kazıda' : 'Boşta Bekliyor'}</strong></span>
+            </div>
+            <div class="p-2 rounded-xl bg-mineora-card border border-mineora-border flex justify-between text-[11px] font-mono">
+              <span class="text-slate-400">Ocağa Katkısı:</span>
+              <strong class="${isWorking ? 'text-mineora-gold' : 'text-slate-500'}">+${(worker.oraMined || 0).toFixed(2)} ORA</strong>
+            </div>
+          `;
           grid.appendChild(card);
         });
       }
     }
 
     // ============================================================================
-    // 2. ADMIN.JS (KURUCU PATRON MASTER ENGINE - admin js_4.txt)
+    // 2. ADMIN.JS (KURUCU PATRON MASTER ENGINE - admin js_5.txt)
     // ============================================================================
     const GENESIS_TOTAL_ORA_SUPPLY = 1000000000.00;
     const BURN_DEAD_ADDRESS = "0x000000000000000000000000000000000000dEaD";
@@ -1906,40 +1945,40 @@
         const tr = document.createElement('tr');
         tr.className = "hover:bg-mineora-input/40 border-b border-mineora-border transition text-xs";
         tr.innerHTML = `
-      <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg ${isMourpheus ? 'bg-rose-500/20 text-rose-400' : 'bg-mineora-input text-cyan-400'} flex items-center justify-center font-black">
-          ${isMourpheus ? '<i class="fa-solid fa-crown text-[10px]"></i>' : u.username.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <span>${u.username}</span>
-          ${isMourpheus ? '<span class="ml-1 text-[9px] text-rose-400 font-bold uppercase">(KURUCU)</span>' : ''}
-          <span class="text-[10px] text-slate-500 block font-mono">${u.email || 'Belirtilmedi'}</span>
-        </div>
-      </td>
-      <td class="py-3 px-4 font-mono text-slate-300">
-        <span class="bg-black/40 px-2 py-1 rounded border border-mineora-border text-amber-300 font-bold">${u.pass || '***'}</span>
-      </td>
-      <td class="py-3 px-4">
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.kycVerified ? 'bg-mineora-green/15 text-mineora-green' : 'bg-amber-500/15 text-amber-400'}">
-          ${u.kycVerified ? 'Onaylı' : 'Bekliyor'}
-        </span>
-      </td>
-      <td class="py-3 px-4 font-bold text-white">${u.role || 'Aday'}</td>
-      <td class="py-3 px-4 font-mono font-bold text-mineora-green">$${(u.usdt || 0).toFixed(2)}</td>
-      <td class="py-3 px-4 font-mono font-bold text-mineora-gold">${(u.ora || 0).toFixed(2)} ORA</td>
-      <td class="py-3 px-4 text-right">
-        <div class="flex items-center justify-end gap-1.5">
-          <button onclick="openAdminModifyModal('${u.username}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500/40 font-bold text-[11px] transition cursor-pointer">
-            <i class="fa-solid fa-sliders mr-1"></i> Yönet
-          </button>
-          ${!isMourpheus ? `
-            <button onclick="adminDeleteUser('${u.username}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 font-bold text-[11px] transition cursor-pointer" title="Kullanıcıyı Sil">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          ` : ''}
-        </div>
-      </td>
-    `;
+          <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg ${isMourpheus ? 'bg-rose-500/20 text-rose-400' : 'bg-mineora-input text-cyan-400'} flex items-center justify-center font-black">
+              ${isMourpheus ? '<i class="fa-solid fa-crown text-[10px]"></i>' : u.username.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span>${u.username}</span>
+              ${isMourpheus ? '<span class="ml-1 text-[9px] text-rose-400 font-bold uppercase">(KURUCU)</span>' : ''}
+              <span class="text-[10px] text-slate-500 block font-mono">${u.email || 'Belirtilmedi'}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 font-mono text-slate-300">
+            <span class="bg-black/40 px-2 py-1 rounded border border-mineora-border text-amber-300 font-bold">${u.pass || '***'}</span>
+          </td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.kycVerified ? 'bg-mineora-green/15 text-mineora-green' : 'bg-amber-500/15 text-amber-400'}">
+              ${u.kycVerified ? 'Onaylı' : 'Bekliyor'}
+            </span>
+          </td>
+          <td class="py-3 px-4 font-bold text-white">${u.role || 'Aday'}</td>
+          <td class="py-3 px-4 font-mono font-bold text-mineora-green">$${(u.usdt || 0).toFixed(2)}</td>
+          <td class="py-3 px-4 font-mono font-bold text-mineora-gold">${(u.ora || 0).toFixed(2)} ORA</td>
+          <td class="py-3 px-4 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <button onclick="openAdminModifyModal('${u.username}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500/40 font-bold text-[11px] transition cursor-pointer">
+                <i class="fa-solid fa-sliders mr-1"></i> Yönet
+              </button>
+              ${!isMourpheus ? `
+                <button onclick="adminDeleteUser('${u.username}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 font-bold text-[11px] transition cursor-pointer" title="Kullanıcıyı Sil">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        `;
         tbody.appendChild(tr);
       });
     }
@@ -2105,24 +2144,24 @@
         const card = document.createElement('div');
         card.className = "p-4 rounded-2xl bg-mineora-card border border-amber-500/30 flex flex-wrap items-center justify-between gap-3 text-xs";
         card.innerHTML = `
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-          <strong class="text-white">${item.username}</strong>
-          <span class="text-[10px] text-slate-500 font-mono">${item.createdAt}</span>
-        </div>
-        <span class="text-[11px] text-slate-400 block font-mono mt-0.5">Hedef: ${item.address}</span>
-        <strong class="text-sm font-black font-mono text-mineora-green">$${item.amount.toFixed(2)} USDT</strong>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="approveWithdrawal(${item.id})" class="px-3.5 py-2 rounded-xl bg-mineora-green hover:opacity-90 text-white font-bold text-xs cursor-pointer">
-          <i class="fa-solid fa-check mr-1"></i> Onayla & Gönder
-        </button>
-        <button onclick="rejectWithdrawal(${item.id})" class="px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-400 font-bold text-xs cursor-pointer">
-          <i class="fa-solid fa-xmark mr-1"></i> Reddet & İade Et
-        </button>
-      </div>
-    `;
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              <strong class="text-white">${item.username}</strong>
+              <span class="text-[10px] text-slate-500 font-mono">${item.createdAt}</span>
+            </div>
+            <span class="text-[11px] text-slate-400 block font-mono mt-0.5">Hedef: ${item.address}</span>
+            <strong class="text-sm font-black font-mono text-mineora-green">$${item.amount.toFixed(2)} USDT</strong>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="approveWithdrawal(${item.id})" class="px-3.5 py-2 rounded-xl bg-mineora-green hover:opacity-90 text-white font-bold text-xs cursor-pointer">
+              <i class="fa-solid fa-check mr-1"></i> Onayla & Gönder
+            </button>
+            <button onclick="rejectWithdrawal(${item.id})" class="px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-400 font-bold text-xs cursor-pointer">
+              <i class="fa-solid fa-xmark mr-1"></i> Reddet & İade Et
+            </button>
+          </div>
+        `;
         container.appendChild(card);
       });
     }
@@ -2168,49 +2207,49 @@
       const workers = allUsers.filter(u => u.role === "İşçi Madenci");
 
       container.innerHTML = `
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-      <div class="p-4 rounded-2xl bg-mineora-card border border-purple-500/40 space-y-2">
-        <span class="font-black text-purple-400 block uppercase tracking-wider text-[11px]">
-          <i class="fa-solid fa-building-wheat mr-1"></i> Şirket Sahipleri (${companyOwners.length})
-        </span>
-        <div class="space-y-1.5">
-          ${companyOwners.map(c => `
-            <div class="p-2 bg-mineora-bg rounded-xl border border-mineora-border flex justify-between">
-              <strong class="text-white">${c.username}</strong>
-              <span class="text-mineora-gold font-mono">${(c.ora || 0).toFixed(0)} ORA</span>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="p-4 rounded-2xl bg-mineora-card border border-purple-500/40 space-y-2">
+            <span class="font-black text-purple-400 block uppercase tracking-wider text-[11px]">
+              <i class="fa-solid fa-building-wheat mr-1"></i> Şirket Sahipleri (${companyOwners.length})
+            </span>
+            <div class="space-y-1.5">
+              ${companyOwners.map(c => `
+                <div class="p-2 bg-mineora-bg rounded-xl border border-mineora-border flex justify-between">
+                  <strong class="text-white">${c.username}</strong>
+                  <span class="text-mineora-gold font-mono">${(c.ora || 0).toFixed(0)} ORA</span>
+                </div>
+              `).join('') || '<span class="text-slate-500 text-[10px]">Henüz şirket sahibi yok.</span>'}
             </div>
-          `).join('') || '<span class="text-slate-500 text-[10px]">Henüz şirket sahibi yok.</span>'}
-        </div>
-      </div>
+          </div>
 
-      <div class="p-4 rounded-2xl bg-mineora-card border border-mineora-gold/40 space-y-2">
-        <span class="font-black text-mineora-gold block uppercase tracking-wider text-[11px]">
-          <i class="fa-solid fa-mountain mr-1"></i> Maden Sahipleri (${mineOwners.length})
-        </span>
-        <div class="space-y-1.5">
-          ${mineOwners.map(m => `
-            <div class="p-2 bg-mineora-card rounded-xl border border-mineora-border flex justify-between">
-              <strong class="text-white">${m.username}</strong>               <span class="text-mineora-green font-mono">$${(m.usdt || 0).toFixed(0)}</span>
+          <div class="p-4 rounded-2xl bg-mineora-card border border-mineora-gold/40 space-y-2">
+            <span class="font-black text-mineora-gold block uppercase tracking-wider text-[11px]">
+              <i class="fa-solid fa-mountain mr-1"></i> Maden Sahipleri (${mineOwners.length})
+            </span>
+            <div class="space-y-1.5">
+              ${mineOwners.map(m => `
+                <div class="p-2 bg-mineora-card rounded-xl border border-mineora-border flex justify-between">
+                  <strong class="text-white">${m.username}</strong>               <span class="text-mineora-green font-mono">$${(m.usdt || 0).toFixed(0)}</span>
+                </div>
+              `).join('') || '<span class="text-slate-500 text-[10px]">Henüz maden sahibi yok.</span>'}
             </div>
-          `).join('') || '<span class="text-slate-500 text-[10px]">Henüz maden sahibi yok.</span>'}
-        </div>
-      </div>
+          </div>
 
-      <div class="p-4 rounded-2xl bg-mineora-card border border-cyan-500/40 space-y-2">
-        <span class="font-black text-cyan-400 block uppercase tracking-wider text-[11px]">
-          <i class="fa-solid fa-person-digging mr-1"></i> İşçi Madenciler (${workers.length})
-        </span>
-        <div class="space-y-1.5">
-          ${workers.map(w => `
-            <div class="p-2 bg-mineora-card rounded-xl border border-mineora-border flex justify-between">
-              <strong class="text-white">${w.username}</strong>
-              <span class="text-slate-400 font-mono">${(w.ora || 0).toFixed(1)} ORA</span>
+          <div class="p-4 rounded-2xl bg-mineora-card border border-cyan-500/40 space-y-2">
+            <span class="font-black text-cyan-400 block uppercase tracking-wider text-[11px]">
+              <i class="fa-solid fa-person-digging mr-1"></i> İşçi Madenciler (${workers.length})
+            </span>
+            <div class="space-y-1.5">
+              ${workers.map(w => `
+                <div class="p-2 bg-mineora-card rounded-xl border border-mineora-border flex justify-between">
+                  <strong class="text-white">${w.username}</strong>
+                  <span class="text-slate-400 font-mono">${(w.ora || 0).toFixed(1)} ORA</span>
+                </div>
+              `).join('') || '<span class="text-slate-500 text-[10px]">Henüz işçi yok.</span>'}
             </div>
-          `).join('') || '<span class="text-slate-500 text-[10px]">Henüz işçi yok.</span>'}
+          </div>
         </div>
-      </div>
-    </div>
-  `;
+      `;
     }
 
     function renderAdminHUD() {
@@ -2235,7 +2274,7 @@
     }
 
     // ============================================================================
-    // 3. MINING.JS (SİNEMATİK KAZI MOTORU - mining js_4.txt)
+    // 3. MINING.JS (KAZI MOTORU - YALNIZCA İŞÇİ MADENCİ KAZABİLİR - mining js_5.txt)
     // ============================================================================
     let activeMineIdx = 0;
     let wagonFill = 0;
@@ -2316,6 +2355,19 @@
 
     function selectMine(idx) {
       if (!CurrentUser) return;
+
+      // MADEN SAHİBİ VE ŞİRKET SAHİBİ OCAK SEÇİP KAZIYA GİREMEZ
+      if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi") {
+        showToast("⛔ Siz yönetici statüsündesiniz! Kazı yapamazsınız, yönetim masanızdan işçilerinizi takip edebilirsiniz.", "warning");
+        switchTab('owner');
+        return;
+      }
+      if (CurrentUser.role === "Aday") {
+        showToast("⚠️ Kazı yapabilmek için 'Kariyer Seç' sekmesinden İşçi Lisansı almalısınız!", "warning");
+        switchTab('career');
+        return;
+      }
+
       checkMinesCooldown();
       const m = CurrentUser.mines[idx];
 
@@ -2345,6 +2397,19 @@
 
     function strikePickaxe() {
       if (!CurrentUser || isTransitLocked) return;
+
+      // KESİN KURAL: YALNIZCA İŞÇİ MADENCİ KAZMA VURABİLİR
+      if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi") {
+        showToast("⛔ Siz yönetici statüsündesiniz! Kazma vuramazsınız. Kazancınız bağlı işçilerden otomatik akar.", "warning");
+        switchTab('owner');
+        return;
+      }
+      if (CurrentUser.role === "Aday") {
+        showToast("⛔ Lisansınız yok! Lütfen 'Kariyer Seç' sekmesinden İşçi Madenci lisansı edinin.", "warning");
+        switchTab('career');
+        return;
+      }
+
       const m = CurrentUser.mines[activeMineIdx];
       if (m.depleted) {
         showToast("⚠️ Bu maden 24 saatliğine mühürlenmiştir!", "warning");
@@ -2812,7 +2877,7 @@
     }
 
     // ============================================================================
-    // 4. P2P.JS (ÇİFT TARAFLI ALIM/SATIM VE İLAN İPTAL MOTORU - P2P js_4.txt)
+    // 4. P2P.JS (ÇİFT TARAFLI ALIM/SATIM VE İLAN İPTAL MOTORU - P2P js_5.txt)
     // ============================================================================
     function getP2pOrders() {
       const saved = localStorage.getItem('mineora_global_p2p_orders');
@@ -2939,32 +3004,32 @@
         const btnText = p2pFilter === 'buy' ? "USDT Öde & ORA Al" : "ORA Devret & USDT Al";
 
         tr.innerHTML = `
-      <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-mineora-input flex items-center justify-center text-mineora-gold text-xs font-black">
-          ${order.merchant.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <span>${order.merchant}</span>
-          ${isMyOrder ? '<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SENİN İLANIN</span>' : ''}
-        </div>
-      </td>
-      <td class="py-3.5 px-4 font-mono font-bold text-white">$${order.price.toFixed(4)} USDT</td>
-      <td class="py-3.5 px-4 font-mono">
-        <span class="text-mineora-gold font-bold">${order.oraAmount.toLocaleString()} ORA</span>
-        <span class="text-slate-400 text-[10px] block">($${order.usdtAmount.toFixed(2)} USDT)</span>
-      </td>
-      <td class="py-3.5 px-4 text-right">
-        ${isMyOrder ? `
-          <button onclick="cancelP2pOrder(${order.id})" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 transition cursor-pointer">
-            <i class="fa-solid fa-ban mr-1"></i> İptal Et
-          </button>
-        ` : `
-          <button onclick="openP2pTradeModal(${order.id})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer ${btnClass}">
-            ${btnText}
-          </button>
-        `}
-      </td>
-    `;
+          <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-mineora-input flex items-center justify-center text-mineora-gold text-xs font-black">
+              ${order.merchant.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span>${order.merchant}</span>
+              ${isMyOrder ? '<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SENİN İLANIN</span>' : ''}
+            </div>
+          </td>
+          <td class="py-3.5 px-4 font-mono font-bold text-white">$${order.price.toFixed(4)} USDT</td>
+          <td class="py-3.5 px-4 font-mono">
+            <span class="text-mineora-gold font-bold">${order.oraAmount.toLocaleString()} ORA</span>
+            <span class="text-slate-400 text-[10px] block">($${order.usdtAmount.toFixed(2)} USDT)</span>
+          </td>
+          <td class="py-3.5 px-4 text-right">
+            ${isMyOrder ? `
+              <button onclick="cancelP2pOrder(${order.id})" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 transition cursor-pointer">
+                <i class="fa-solid fa-ban mr-1"></i> İptal Et
+              </button>
+            ` : `
+              <button onclick="openP2pTradeModal(${order.id})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer ${btnClass}">
+                ${btnText}
+              </button>
+            `}
+          </td>
+        `;
         tbody.appendChild(tr);
       });
     }
@@ -3064,7 +3129,7 @@
     }
 
     // ============================================================================
-    // 5. STAKE.JS (ORA BANKASI & VADELİ MEVDUAT KASASI - stakejs_4.txt)
+    // 5. STAKE.JS (ORA BANKASI & VADELİ MEVDUAT KASASI - stakejs_5.txt)
     // ============================================================================
     const STAKE_PLANS = {
       60: {
@@ -3236,47 +3301,47 @@
         card.className = `p-4 rounded-2xl bg-mineora-bg border ${s.claimed ? 'border-slate-800 opacity-60' : (isUnlocked ? 'border-mineora-green/60' : 'border-amber-500/40')} flex flex-wrap items-center justify-between gap-4 text-xs shadow-lg`;
         
         card.innerHTML = `
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl ${s.claimed ? 'bg-slate-800 text-slate-400' : (isUnlocked ? 'bg-mineora-green/20 text-mineora-green' : 'bg-amber-500/20 text-amber-400')} flex items-center justify-center text-lg font-black">
-          <i class="fa-solid ${s.claimed ? 'fa-check-double' : (isUnlocked ? 'fa-lock-open' : 'fa-vault')}"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <strong class="text-white text-sm font-mono">${s.amount.toLocaleString()} ORA</strong>
-            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-card text-cyan-300 border border-cyan-500/30">${s.planDays} Gün</span>
-            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-green/15 text-mineora-green">+%${s.profitPercent}</span>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl ${s.claimed ? 'bg-slate-800 text-slate-400' : (isUnlocked ? 'bg-mineora-green/20 text-mineora-green' : 'bg-amber-500/20 text-amber-400')} flex items-center justify-center text-lg font-black">
+              <i class="fa-solid ${s.claimed ? 'fa-check-double' : (isUnlocked ? 'fa-lock-open' : 'fa-vault')}"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <strong class="text-white text-sm font-mono">${s.amount.toLocaleString()} ORA</strong>
+                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-card text-cyan-300 border border-cyan-500/30">${s.planDays} Gün</span>
+                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-green/15 text-mineora-green">+%${s.profitPercent}</span>
+              </div>
+              <span class="text-[10px] ${isUnlocked ? 'text-mineora-green font-bold' : 'text-slate-400'} block font-mono mt-0.5">${timeText}</span>
+            </div>
           </div>
-          <span class="text-[10px] ${isUnlocked ? 'text-mineora-green font-bold' : 'text-slate-400'} block font-mono mt-0.5">${timeText}</span>
-        </div>
-      </div>
 
-      <div class="flex items-center gap-4">
-        <div class="text-right">
-          <span class="text-[10px] text-slate-400 block font-bold">Vade Sonu Net Kazanç:</span>
-          <strong class="text-mineora-gold font-mono text-sm">+${s.expectedProfit.toFixed(2)} ORA</strong>
-        </div>
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 block font-bold">Vade Sonu Net Kazanç:</span>
+              <strong class="text-mineora-gold font-mono text-sm">+${s.expectedProfit.toFixed(2)} ORA</strong>
+            </div>
 
-        <div>
-          ${s.claimed ? `
-            <span class="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs">Tahsil Edildi</span>
-          ` : (isUnlocked ? `
-            <button onclick="claimStakeMaturity(${s.id})" class="px-5 py-2.5 rounded-xl bg-mineora-green hover:opacity-90 text-white font-black text-xs transition cursor-pointer shadow-lg shadow-mineora-green/20 animate-pulse">
-              Kazancı ve Ana Parayı Çek
-            </button>
-          ` : `
-            <button disabled class="px-4 py-2 rounded-xl bg-mineora-card border border-mineora-border text-slate-500 font-bold text-xs cursor-not-allowed">
-              <i class="fa-solid fa-lock mr-1"></i> Kilitli
-            </button>
-          `)}
-        </div>
-      </div>
-    `;
+            <div>
+              ${s.claimed ? `
+                <span class="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs">Tahsil Edildi</span>
+              ` : (isUnlocked ? `
+                <button onclick="claimStakeMaturity(${s.id})" class="px-5 py-2.5 rounded-xl bg-mineora-green hover:opacity-90 text-white font-black text-xs transition cursor-pointer shadow-lg shadow-mineora-green/20 animate-pulse">
+                  Kazancı ve Ana Parayı Çek
+                </button>
+              ` : `
+                <button disabled class="px-4 py-2 rounded-xl bg-mineora-card border border-mineora-border text-slate-500 font-bold text-xs cursor-not-allowed">
+                  <i class="fa-solid fa-lock mr-1"></i> Kilitli
+                </button>
+              `)}
+            </div>
+          </div>
+        `;
         container.appendChild(card);
       });
     }
 
     // ============================================================================
-    // 6. WALLET.JS (TRC20 & ONAYLI ÇEKİM - wallet js_4.txt)
+    // 6. WALLET.JS (TRC20 & ONAYLI ÇEKİM - wallet js_5.txt)
     // ============================================================================
     const OFFICIAL_TRC20_DEPOSIT_ADDRESS = "TLj3hK8Kz7gD9qE2wP8yZ7X1mV5nR4bQ9T";
 
