@@ -104,7 +104,7 @@
       <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <button type="button" onclick="toggleLanguage()" class="px-2.5 py-1.5 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs font-black flex items-center gap-1.5 transition cursor-pointer">
           <i class="fa-solid fa-globe text-mineora-gold"></i>
-          <span id="lang-toggle-text-nav" class="lang-toggle-text">EN</span>
+          <span class="lang-toggle-text">EN</span>
         </button>
         <button type="button" onclick="openModal('modal-info')" class="px-2 sm:px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-gold/40 text-mineora-gold text-xs sm:text-sm font-bold flex items-center gap-1.5 transition cursor-pointer">
           <i class="fa-solid fa-circle-info"></i>
@@ -737,29 +737,82 @@
   </div>
 
   <div id="modal-wallet" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[90vh] overflow-y-auto">
+    <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
-        <h3 class="text-base font-black text-white">TRC20 USDT Cüzdan Merkezi</h3>
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-mineora-gold/20 text-mineora-gold flex items-center justify-center font-bold">
+            <i class="fa-solid fa-wallet"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-white">TRC20 Varlık & Mutabakat Merkezi</h3>
+            <span class="text-[10px] text-slate-400">TRON Ağı • Doğrudan Cüzdan Entegrasyonu</span>
+          </div>
+        </div>
         <button type="button" onclick="closeModal('modal-wallet')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <div class="grid grid-cols-2 bg-mineora-bg p-1 rounded-2xl border border-mineora-border">
-        <button type="button" onclick="setWalletTab('deposit')" id="wallet-tab-btn-deposit" class="py-2.5 rounded-xl font-bold bg-mineora-gold text-black cursor-pointer">USDT Yatır</button>
-        <button type="button" onclick="setWalletTab('withdraw')" id="wallet-tab-btn-withdraw" class="py-2.5 rounded-xl font-bold text-slate-400 hover:text-white cursor-pointer">USDT Çek</button>
+
+      <div class="flex bg-mineora-bg p-1.5 rounded-2xl border border-mineora-border gap-2">
+        <button type="button" onclick="setWalletTab('deposit')" id="wallet-tab-btn-deposit" class="flex-1 py-3 rounded-2xl font-black text-xs bg-gradient-to-r from-amber-500 to-mineora-gold text-black shadow-lg shadow-mineora-gold/20 transition cursor-pointer flex items-center justify-center gap-2">
+          <i class="fa-solid fa-arrow-down"></i> USDT Yatır
+        </button>
+        <button type="button" onclick="setWalletTab('withdraw')" id="wallet-tab-btn-withdraw" class="flex-1 py-3 rounded-2xl font-bold text-xs text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer flex items-center justify-center gap-2">
+          <i class="fa-solid fa-arrow-up"></i> USDT Çek
+        </button>
       </div>
+
       <div id="wallet-view-deposit" class="space-y-4">
-        <div class="flex flex-col items-center justify-center p-3.5 bg-white rounded-2xl max-w-[160px] mx-auto shadow-inner">
-          <div id="qrcode-container"></div>
+        <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-border text-center space-y-3">
+          <span class="text-[11px] text-slate-400 block font-medium">Aşağıdaki TRC20 adresine dilediğiniz borsadan veya soğuk cüzdandan transfer yapabilirsiniz:</span>
+          
+          <div class="p-3 bg-white rounded-2xl max-w-[160px] mx-auto shadow-xl inline-block">
+            <div id="qrcode-container" class="flex items-center justify-center"></div>
+          </div>
+
+          <div class="relative">
+            <input type="text" id="wallet-trc20-box" readonly onclick="copyWalletAddress()" class="w-full bg-mineora-input border border-mineora-border hover:border-mineora-gold/50 rounded-xl px-3 py-2.5 text-mineora-gold font-mono text-xs outline-none cursor-pointer text-center font-bold tracking-wider">
+            <span class="text-[9px] text-slate-500 block mt-1"><i class="fa-solid fa-copy mr-1"></i>Adresi kopyalamak için kutuya tıklayın</span>
+          </div>
         </div>
-        <input type="text" id="wallet-trc20-box" readonly onclick="copyWalletAddress()" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-mineora-gold font-mono text-xs outline-none cursor-pointer">
-        <input type="number" step="any" id="deposit-amount-input" placeholder="Gönderilen USDT Miktarı" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
-        <input type="text" id="deposit-txid-input" placeholder="Borsanın Verdiği TXID / Hash Kodu" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-cyan-300 font-mono text-[11px] outline-none">
-        <button type="button" onclick="submitDepositReceipt()" class="w-full py-2.5 rounded-xl bg-mineora-green text-white font-bold text-xs cursor-pointer">Yatırımı Bildir & Onaya Gönder</button>
+
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-300">Transfer Bildirimi Yapın:</label>
+          <input type="number" step="any" id="deposit-amount-input" placeholder="Gönderdiğiniz USDT Tutarı (Min: 10 USDT)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none focus:border-mineora-gold">
+          <input type="text" id="deposit-txid-input" placeholder="İşlem Hash / TXID Kodunu Yapıştırın" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-cyan-300 font-mono text-xs outline-none focus:border-cyan-400">
+        </div>
+
+        <button type="button" onclick="submitDepositReceipt()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs transition shadow-xl shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2">
+          <i class="fa-solid fa-circle-check"></i> Transferi Bildir & Bakiyeye Ekle
+        </button>
       </div>
-      <div id="wallet-view-withdraw" class="hidden space-y-3.5">
-        <input type="text" id="withdraw-target-address" placeholder="T ile başlayan TRC20 cüzdan adresi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono outline-none">
-        <input type="number" step="any" id="withdraw-amount-usdt" placeholder="Çekilecek USDT Miktarı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono outline-none">
-        <input type="password" id="withdraw-auth-password" placeholder="Oyuna Giriş Şifreniz" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
-        <button type="button" onclick="executeWithdrawal()" class="w-full py-3.5 rounded-xl bg-mineora-green text-white font-black text-xs cursor-pointer">Şifreyi Doğrula & Çekim Talebi Aç</button>
+
+      <div id="wallet-view-withdraw" class="hidden space-y-4">
+        <div class="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[11px] text-amber-200/90 leading-relaxed">
+          <i class="fa-solid fa-shield-halved text-mineora-gold mr-1"></i> Çekim talepleriniz blokzincir mutabakat sırasına alınır ve güvenlik doğrulaması tamamlandıktan sonra harici cüzdanınıza iletilir.
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Alıcı TRON (TRC20) Cüzdan Adresiniz</label>
+            <input type="text" id="withdraw-target-address" placeholder="T ile başlayan TRC20 adresi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none focus:border-emerald-500">
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-[10px] text-slate-400 font-bold">Çekilecek USDT Tutarı</label>
+              <button type="button" onclick="fillMaxWithdraw()" class="text-mineora-gold text-[10px] font-bold hover:underline cursor-pointer">TÜMÜ (MAX)</button>
+            </div>
+            <input type="number" step="any" id="withdraw-amount-usdt" placeholder="Min: 10 USDT" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none focus:border-emerald-500">
+          </div>
+
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Güvenlik Onayı (Hesap Şifreniz)</label>
+            <input type="password" id="withdraw-auth-password" placeholder="Oyuna giriş şifrenizi doğrulayın" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <button type="button" onclick="executeWithdrawal()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs transition shadow-xl shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2">
+          <i class="fa-solid fa-paper-plane"></i> Çekim Talebini Başlat
+        </button>
       </div>
     </div>
   </div>
@@ -864,13 +917,66 @@
   </div>
 
   <div id="modal-info" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="relative w-full max-w-2xl bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
-      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
-        <h3 class="text-base font-black text-white font-cinzel">MINEORA Protokol Kılavuzu</h3>
-        <button type="button" onclick="closeModal('modal-info')"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <div class="relative w-full max-w-2xl bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-mineora-gold text-black flex items-center justify-center text-lg font-black shadow-lg">
+            <i class="fa-solid fa-cube"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-white font-cinzel tracking-wider">MINEORA PROTOKOLÜ VE EKONOMİK MİMARİSİ</h3>
+            <span class="text-[10px] text-slate-400">Kapalı Devre Üretim, Rezerv Çapası ve Serbest Borsa Standardı</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-info')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <p class="text-slate-300 leading-relaxed">Ekosistemdeki tüm maden çıkarma, ekipman alımı ve rezerv transferleri <strong>1 ORA = 0.10 USDT ($0.10)</strong> çapasına bağlıdır.</p>
-      <button type="button" onclick="closeModal('modal-info')" class="w-full py-3 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer">Kapat</button>
+
+      <div class="space-y-4 text-slate-300 leading-relaxed text-[12px]">
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
+          <h4 class="text-mineora-gold font-black text-xs flex items-center gap-2">
+            <i class="fa-solid fa-anchor"></i> 1. Sabit Değer Standardı (Peg Mekanizması)
+          </h4>
+          <p>
+            MINEORA ekosisteminde çıkarılan ve takas edilen <strong>ORA</strong> emtiası, protokol genelinde matematiksel olarak <strong>1 ORA = 0.10 USDT ($0.10)</strong> değerine sabitlenmiştir. Sistem dışarıdan kontrolsüz sermaye kabul etmez; tüm değer üretimi maden sahalarındaki emeğe ve işletme hiyerarşisine dayanır.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
+          <h4 class="text-cyan-400 font-black text-xs flex items-center gap-2">
+            <i class="fa-solid fa-sitemap"></i> 2. Üç Katmanlı Organizasyon Yapısı
+          </h4>
+          <p>
+            Sistem bir yatırım havuzu değildir; üyelerin operasyonel iş birliğine dayalı bir madencilik simülasyonudur:
+          </p>
+          <ul class="list-disc list-inside space-y-1 pl-2 text-slate-400">
+            <li><strong class="text-white">İşçi Madenci:</strong> Günlük vardiyalarda aktif kazı yaparak cevher üretir, vagonları doldurur ve doğrudan rezerv çıktısı kazanır.</li>
+            <li><strong class="text-white">Maden Sahibi:</strong> Kendi ocağını işletir, ekibini koordine eder ve altındaki işçilerin çıkardığı cevherden yönetim payı alır.</li>
+            <li><strong class="text-white">Şirket Sahibi (Holding):</strong> Birden fazla maden ocağını tek çatı altında konsolide ederek bölgesel üretimi ve lojistiği yönetir.</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
+          <h4 class="text-emerald-400 font-black text-xs flex items-center gap-2">
+            <i class="fa-solid fa-handshake"></i> 3. Serbest Piyasa (P2P Borsa) ve Emanet (Escrow)
+          </h4>
+          <p>
+            Üretilen ORA varlıkları protokol tarafından geri satın alınmaz veya suni kazanç vadedilmez. Oyuncular, çıkardıkları ORA cevherini <strong>P2P Takas Borsası</strong> üzerinden diğer oyuncularla doğrudan USDT karşılığında takas eder. Sistem bu süreçte tarafsız bir emanetçi (escrow) olarak varlıkları güvenceye alır.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-rose-500/30 space-y-2">
+          <h4 class="text-rose-400 font-black text-xs flex items-center gap-2">
+            <i class="fa-solid fa-fire"></i> 4. Deflasyonist Yakım (Burn Fırını)
+          </h4>
+          <p>
+            Ekosistemdeki ORA arzı sınırsız değildir. Maden asansörü (Crash) tahliyelerinden, vadeli staking işlemlerinden ve P2P pazarındaki takaslardan kesilen işlem harçları doğrudan <strong>dEaD yakım adresine</strong> gönderilerek kalıcı olarak dolaşımdan silinir. Bu mekanizma enflasyonu önler ve rezervin iç değerini korur.
+          </p>
+        </div>
+      </div>
+
+      <button type="button" onclick="closeModal('modal-info')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 text-black font-black text-xs transition shadow-xl cursor-pointer">
+        Anladım, Protokole Dön
+      </button>
     </div>
   </div>
 <!-- ================= TÜM MOTORLAR (TAM SENKRONİZE VE KESİNTİSİZ JS ÇEKİRDEĞİ) ================= -->
@@ -1119,20 +1225,12 @@
         const targetUser = getStoredUser(newUsername) || CurrentUser;
         if (!targetUser) return;
 
-        if (newRole === "Maden Sahibi") {
-          let companyOwner = null;
-          if (leader.role === "Şirket Sahibi") {
-            companyOwner = leader;
-          } else if (leader.referredBy) {
-            const topLeader = findUserByRefCode(leader.referredBy);
-            if (topLeader && topLeader.role === "Şirket Sahibi") companyOwner = topLeader;
-          }
-
-          if (companyOwner) {
-            if (!companyOwner.minesOwned) companyOwner.minesOwned = [];
-            const exists = companyOwner.minesOwned.some(m => m.ownerUsername.toLowerCase() === newUsername.toLowerCase());
+        if (leader.role === "Şirket Sahibi") {
+          if (newRole === "Maden Sahibi") {
+            if (!leader.minesOwned) leader.minesOwned = [];
+            const exists = leader.minesOwned.some(m => m.ownerUsername.toLowerCase() === newUsername.toLowerCase());
             if (!exists) {
-              companyOwner.minesOwned.unshift({
+              leader.minesOwned.unshift({
                 mineId: `MINE-${newUsername.toUpperCase()}`,
                 mineName: `${newUsername} Alpin Ocağı`,
                 ownerUsername: newUsername,
@@ -1142,59 +1240,85 @@
             }
             if (isFeeDeducted) {
               const commOra = 1000.00;
-              companyOwner.ora = Number(((companyOwner.ora || 0) + commOra).toFixed(2));
-              addUserNotificationLog(companyOwner, "Maden Sahibi Katılımı (%10)", `${newUsername} referansınızla ocak kurdu.`, `+${commOra.toFixed(2)} ORA`, "commission");
-              showToast(`💰 Referans Primi: ${companyOwner.username} hesabına %10 (+${commOra} ORA) aktarıldı!`, "success");
+              leader.ora = Number(((leader.ora || 0) + commOra).toFixed(2));
+              addUserNotificationLog(leader, "Maden Sahibi Katılım Primi (%10)", `${newUsername} filonuza ocak kurdu.`, `+${commOra.toFixed(2)} ORA`, "commission");
+              showToast(`💰 Referans Primi: ${leader.username} hesabına %10 (+${commOra} ORA) aktarıldı!`, "success");
             }
-            saveStoredUser(companyOwner);
-            if (CurrentUser && CurrentUser.username.toLowerCase() === companyOwner.username.toLowerCase()) {
-              CurrentUser.minesOwned = companyOwner.minesOwned;
-              CurrentUser.ora = companyOwner.ora;
-              CurrentUser.logs = companyOwner.logs;
-              renderHierarchyUI();
-              updateNotificationBadge();
+          } else {
+            if (!leader.workers) leader.workers = [];
+            const exists = leader.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
+            if (!exists) {
+              leader.workers.unshift({
+                username: newUsername,
+                workedToday: false,
+                oraMined: 0.00,
+                role: newRole,
+                joinedAt: new Date().toLocaleDateString('tr-TR')
+              });
             }
           }
-        } else if (newRole === "İşçi Madenci") {
-          let mineOwner = null, companyOwner = null;
-          if (leader.role === "Maden Sahibi") {
-            mineOwner = leader;
-            if (mineOwner.referredBy) {
-              const top = findUserByRefCode(mineOwner.referredBy);
-              if (top && top.role === "Şirket Sahibi") companyOwner = top;
-            }
-          } else if (leader.role === "Şirket Sahibi") {
-            companyOwner = leader;
+          saveStoredUser(leader);
+          if (CurrentUser && CurrentUser.username.toLowerCase() === leader.username.toLowerCase()) {
+            CurrentUser.minesOwned = leader.minesOwned;
+            CurrentUser.workers = leader.workers;
+            CurrentUser.ora = leader.ora;
+            CurrentUser.logs = leader.logs;
+            renderHierarchyUI();
+            updateNotificationBadge();
+          }
+          return;
+        }
+
+        if (leader.role === "Maden Sahibi") {
+          if (!leader.workers) leader.workers = [];
+          const exists = leader.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
+          if (!exists) {
+            leader.workers.unshift({
+              username: newUsername,
+              workedToday: false,
+              oraMined: 0.00,
+              role: newRole,
+              joinedAt: new Date().toLocaleDateString('tr-TR')
+            });
+          }
+          if (isFeeDeducted && newRole === "İşçi Madenci") {
+            const mineComm = 100.00;
+            leader.ora = Number(((leader.ora || 0) + mineComm).toFixed(2));
+            addUserNotificationLog(leader, "Yeni İşçi Katılım Primi (%10)", `${newUsername} ocağınıza katıldı.`, `+${mineComm.toFixed(2)} ORA`, "commission");
+          }
+          saveStoredUser(leader);
+          if (CurrentUser && CurrentUser.username.toLowerCase() === leader.username.toLowerCase()) {
+            CurrentUser.workers = leader.workers;
+            CurrentUser.ora = leader.ora;
+            CurrentUser.logs = leader.logs;
+            renderHierarchyUI();
+            updateNotificationBadge();
           }
 
-          if (mineOwner) {
-            if (!mineOwner.workers) mineOwner.workers = [];
-            if (!mineOwner.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase())) {
-              mineOwner.workers.unshift({ username: newUsername, workedToday: false, oraMined: 0.00, joinedAt: new Date().toLocaleDateString('tr-TR') });
-            }
-            if (isFeeDeducted) {
-              const mineComm = 100.00;
-              mineOwner.ora = Number(((mineOwner.ora || 0) + mineComm).toFixed(2));
-              addUserNotificationLog(mineOwner, "Yeni İşçi Katılımı (%10)", `${newUsername} ocağınıza katıldı.`, `+${mineComm.toFixed(2)} ORA`, "commission");
-            }
-            saveStoredUser(mineOwner);
-            if (CurrentUser && CurrentUser.username.toLowerCase() === mineOwner.username.toLowerCase()) {
-              CurrentUser.workers = mineOwner.workers;
-              CurrentUser.ora = mineOwner.ora;
-              CurrentUser.logs = mineOwner.logs;
-              renderHierarchyUI();
-              updateNotificationBadge();
+          if (leader.referredBy) {
+            const topLeader = findUserByRefCode(leader.referredBy);
+            if (topLeader && topLeader.role === "Şirket Sahibi") {
+              if (!topLeader.minesOwned) topLeader.minesOwned = [];
+              const ocak = topLeader.minesOwned.find(m => m.ownerUsername.toLowerCase() === leader.username.toLowerCase());
+              if (ocak) {
+                if (!ocak.workers) ocak.workers = [];
+                if (!ocak.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase())) {
+                  ocak.workers.unshift({ username: newUsername, workedToday: false, oraMined: 0.00, role: newRole });
+                }
+              }
+              if (isFeeDeducted && newRole === "İşçi Madenci") {
+                const compComm = 50.00;
+                topLeader.ora = Number(((topLeader.ora || 0) + compComm).toFixed(2));
+                addUserNotificationLog(topLeader, "Holding Ekip Katılım Primi (%5)", `${newUsername} filoya katıldı.`, `+${compComm.toFixed(2)} ORA`, "commission");
+              }
+              saveStoredUser(topLeader);
             }
           }
+          return;
+        }
 
-          if (companyOwner) {
-            if (isFeeDeducted) {
-              const compComm = 50.00;
-              companyOwner.ora = Number(((companyOwner.ora || 0) + compComm).toFixed(2));
-              addUserNotificationLog(companyOwner, "Holding Dolaylı İşçi Katılımı (%5)", `${newUsername} filoya katıldı.`, `+${compComm.toFixed(2)} ORA`, "commission");
-            }
-            saveStoredUser(companyOwner);
-          }
+        if (leader.referredBy) {
+          linkHierarchyByRefCode(newUsername, leader.referredBy, newRole, isFeeDeducted);
         }
       };
 
@@ -1234,6 +1358,8 @@
         if (!CurrentUserWorld.workers) CurrentUserWorld.workers = [];
         if (!CurrentUserWorld.logs) CurrentUserWorld.logs = [];
         CurrentUserWorld.kycVerified = true;
+        CurrentUserWorld.usdt = Number(parseFloat(CurrentUserWorld.usdt || 0).toFixed(2));
+        CurrentUserWorld.ora = Number(parseFloat(CurrentUserWorld.ora || 0).toFixed(2));
         if (uKey === "mourpheus") CurrentUserWorld.isRootAdmin = true;
       } else {
         CurrentUserWorld = {
@@ -1532,32 +1658,30 @@
       if (isBoss) switchTab('boss');
       else if (isCompanyOwner || isMineOwner) switchTab('owner');
       else if (isWorker) switchTab('map');
-      else switchTab('p2p');
+      else switchTab('career');
     }
 
     function updateHUD() {
       if (!CurrentUser) return;
       const usdtEl = document.getElementById('hud-usdt-balance');
       const oraEl = document.getElementById('hud-ora-balance');
-      const mUsdt = document.getElementById('wallet-modal-usdt');
-      const mOra = document.getElementById('wallet-modal-ora');
       const trcBox = document.getElementById('wallet-trc20-box');
       const userDisp = document.getElementById('player-username-display');
       const roleBadge = document.getElementById('player-role-badge');
 
-      if (usdtEl) usdtEl.innerText = (CurrentUser.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-      if (oraEl) oraEl.innerText = (CurrentUser.ora || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-      if (mUsdt) mUsdt.innerText = `$${(CurrentUser.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-      if (mOra) mOra.innerText = (CurrentUser.ora || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+      if (usdtEl) usdtEl.innerText = Number(parseFloat(CurrentUser.usdt || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (oraEl) oraEl.innerText = Number(parseFloat(CurrentUser.ora || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       if (trcBox) trcBox.value = OFFICIAL_TRC20_DEPOSIT_ADDRESS;
       if (userDisp) userDisp.innerText = CurrentUser.username;
 
       if (roleBadge) {
         let roleName = CurrentUser.role;
-        if (CurrentUser.role === "Aday") roleName = t('role_candidate');
-        else if (CurrentUser.role === "İşçi Madenci") roleName = t('role_worker');
-        else if (CurrentUser.role === "Maden Sahibi") roleName = t('role_mine_owner');
-        else if (CurrentUser.role === "Şirket Sahibi") roleName = t('role_hold_owner');
+        if (typeof t === 'function') {
+          if (CurrentUser.role === "Aday") roleName = t('role_candidate');
+          else if (CurrentUser.role === "İşçi Madenci") roleName = t('role_worker');
+          else if (CurrentUser.role === "Maden Sahibi") roleName = t('role_mine_owner');
+          else if (CurrentUser.role === "Şirket Sahibi") roleName = t('role_hold_owner');
+        }
 
         roleBadge.innerText = CurrentUser.isRootAdmin ? "Kurucu Yönetici" : roleName;
         roleBadge.className = CurrentUser.role === "Aday" 
@@ -1573,7 +1697,7 @@
       const isCandidate = CurrentUser && CurrentUser.role === "Aday";
       const isManager = CurrentUser && (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi");
 
-      if (tTab === 'boss' && !isBoss) { showToast("⛔ Bu bölüme erişim izniniz yok!", "warning"); tTab = 'p2p'; }
+      if (tTab === 'boss' && !isBoss) { showToast("⛔ Bu bölüme erişim izniniz yok!", "warning"); tTab = 'career'; }
       if (!isBoss) {
         if ((tTab === 'cave' || tTab === 'map') && isCandidate) {
           showToast("⛔ Lisansınız yok! Lütfen önce 'Kariyer Seç' sekmesinden İşçi Lisansı edinin.", "warning");
@@ -1628,12 +1752,14 @@
 
     function upgradeRole(role, costUsdt) {
       if (!CurrentUser) return;
-      const costOra = costUsdt * 10;
-      if (CurrentUser.ora < costOra) {
+      const costOra = Number((costUsdt * 10).toFixed(2));
+      const currentOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
+
+      if (currentOra < costOra) {
         showToast(`⚠️ Yetersiz ORA! '${role}' rolü için ${costUsdt} USDT karşılığı (${costOra} ORA) gereklidir.`, "warning");
         return;
       }
-      CurrentUser.ora = Number((CurrentUser.ora - costOra).toFixed(2));
+      CurrentUser.ora = Number((currentOra - costOra).toFixed(2));
       CurrentUser.role = role;
       addUserNotificationLog(CurrentUser, "Kariyer / Rol Yükseltme", `${role} unvanına geçiş yapıldı.`, `-${costOra.toFixed(2)} ORA`, "upgrade");
 
@@ -1690,14 +1816,14 @@
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 bg-mineora-bg p-2 rounded-2xl border border-mineora-border">
-              <span class="text-[9px] text-slate-400">Ref: <strong class="text-cyan-400 font-mono text-sm">${activeRef}</strong></span>
+              <span class="text-[9px] text-slate-400">Ref Kodunuz: <strong class="text-cyan-400 font-mono text-sm">${activeRef}</strong></span>
               <button type="button" onclick="copyRefCode()" class="px-3 py-1.5 rounded-xl bg-cyan-600 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-copy"></i> Kopyala</button>
             </div>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             <div class="p-3.5 bg-mineora-bg rounded-2xl border border-mineora-border">
-              <span class="text-slate-400 text-[10px] block font-bold">${isCompany ? 'Bağlı Maden' : 'Kayıtlı İşçi'}</span>
-              <strong class="text-white font-mono text-sm">${isCompany ? `${mines.length} Ocak` : `${workers.length} Madenci`}</strong>
+              <span class="text-slate-400 text-[10px] block font-bold">${isCompany ? 'Bağlı Maden' : 'Kayıtlı Madenci'}</span>
+              <strong class="text-white font-mono text-sm">${isCompany ? `${mines.length} Ocak` : `${workers.length} Kişi`}</strong>
             </div>
             <div class="p-3.5 bg-mineora-bg rounded-2xl border border-mineora-green/30">
               <span class="text-slate-400 text-[10px] block font-bold">Vardiyada</span>
@@ -1711,6 +1837,32 @@
               <span class="text-slate-400 text-[10px] block font-bold">Toplam Ekip Üretimi</span>
               <strong class="text-mineora-gold font-mono text-sm">${workers.reduce((a, b) => a + (b.oraMined || 0), 0).toFixed(2)} ORA</strong>
             </div>
+          </div>
+
+          <div class="space-y-3 pt-3">
+            <h3 class="text-xs font-black uppercase text-slate-300 flex items-center gap-2"><i class="fa-solid fa-users text-cyan-400"></i> Alt Kadronuzdaki Üyeler</h3>
+            ${isCompany ? `
+              <div class="space-y-3">
+                ${mines.length === 0 ? '<div class="p-4 bg-mineora-bg rounded-xl text-center text-slate-500 text-xs">Henüz bağlı maden ocağı yok.</div>' : mines.map((m, i) => `
+                  <div class="p-3 bg-mineora-bg rounded-xl border border-purple-500/30 flex justify-between items-center text-xs">
+                    <div><strong>${m.mineName}</strong> (${m.ownerUsername})</div>
+                    <div class="text-mineora-gold font-mono">${(m.workers || []).length} İşçi</div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                ${workers.length === 0 ? '<div class="col-span-full p-4 bg-mineora-bg rounded-xl text-center text-slate-500 text-xs">Ocağınıza kayıtlı madenci bulunmuyor.</div>' : workers.map(w => `
+                  <div class="p-3 bg-mineora-bg rounded-xl border ${w.workedToday ? 'border-mineora-green/40' : 'border-mineora-border'} flex justify-between items-center text-xs">
+                    <div>
+                      <strong class="text-white block">${w.username}</strong>
+                      <span class="text-[10px] text-slate-400">${w.role || 'İşçi'} • ${w.workedToday ? 'Vardiyada' : 'Boşta'}</span>
+                    </div>
+                    <span class="font-mono text-mineora-gold font-bold">+${(w.oraMined || 0).toFixed(1)} ORA</span>
+                  </div>
+                `).join('')}
+              </div>
+            `}
           </div>
         </div>
       `;
@@ -1862,8 +2014,8 @@
             </td>
             <td class="py-3 px-4">${u.isVaultLocked ? '<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40 font-bold">KİLİTLİ</span>' : '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">Aktif</span>'}</td>
             <td class="py-3 px-4 font-bold text-white">${u.role || 'Aday'}</td>
-            <td class="py-3 px-4 font-mono font-bold text-mineora-green">$${(u.usdt || 0).toFixed(2)}</td>
-            <td class="py-3 px-4 font-mono font-bold text-mineora-gold">${(u.ora || 0).toFixed(2)} ORA</td>
+            <td class="py-3 px-4 font-mono font-bold text-mineora-green">$${Number(parseFloat(u.usdt || 0)).toFixed(2)}</td>
+            <td class="py-3 px-4 font-mono font-bold text-mineora-gold">${Number(parseFloat(u.ora || 0)).toFixed(2)} ORA</td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
               ${!isMourpheus ? `
                 <button type="button" onclick="openAdminModifyModal('${u.username}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-600/40 font-bold text-[11px] mr-1 cursor-pointer">
@@ -1931,17 +2083,30 @@
 
     function saveAdminUserModifications() {
       if (!selectedTargetUser) return;
-      selectedTargetUser.usdt = parseFloat(document.getElementById('admin-mod-usdt')?.value) || 0;
-      selectedTargetUser.ora = parseFloat(document.getElementById('admin-mod-ora')?.value) || 0;
-      selectedTargetUser.role = document.getElementById('admin-mod-role')?.value || "İşçi Madenci";
+      const newUsdt = parseFloat(document.getElementById('admin-mod-usdt')?.value) || 0;
+      const newOra = parseFloat(document.getElementById('admin-mod-ora')?.value) || 0;
+      const newRole = document.getElementById('admin-mod-role')?.value || "İşçi Madenci";
+
+      selectedTargetUser.usdt = Number(newUsdt.toFixed(2));
+      selectedTargetUser.ora = Number(newOra.toFixed(2));
+      selectedTargetUser.role = newRole;
+
       saveStoredUser(selectedTargetUser);
+
+      if (selectedTargetUser.referredBy && typeof linkHierarchyByRefCode === 'function') {
+        linkHierarchyByRefCode(selectedTargetUser.username, selectedTargetUser.referredBy, newRole, false);
+      }
+
       if (CurrentUser && CurrentUser.username.toLowerCase() === selectedTargetUser.username.toLowerCase()) {
         CurrentUser = selectedTargetUser;
         updateHUD();
+        configureUserTabs();
       }
+
       closeModal('modal-admin-modify-user');
       renderAdminUserTable();
-      showToast("✅ Veriler güncellendi!", "success");
+      renderAdminGlobalHierarchyTree();
+      showToast("✅ Veriler güncellendi ve hiyerarşi senkronize edildi!", "success");
     }
 
     function adminDeleteUser(username) {
@@ -1953,6 +2118,7 @@
         try { fbDb.ref('users/' + uKey).remove(); } catch(e) {}
       }
       renderAdminUserTable();
+      renderAdminGlobalHierarchyTree();
       showToast("🗑️ Kullanıcı silindi.", "info");
     }
 
@@ -2133,6 +2299,7 @@
     function initAdminMasterPanel() {
       if (!CurrentUser || CurrentUser.username.toLowerCase() !== "mourpheus") return;
       renderAdminHUD();
+      renderAdminCommissionInputs();
       renderAdminUserTable();
       renderAdminDepositQueue();
       renderAdminWithdrawalQueue();
@@ -2182,21 +2349,59 @@
 
       setTimeout(() => {
         swingFrame = 2;
+        spawnRockDebris(isSweetSpot);
+
         wagonFill = Math.min(100, wagonFill + fillAmount);
         CurrentUser.ora = Number(((CurrentUser.ora || 0) + rewardOra).toFixed(2));
-        deductMinedOraFromMasterReserve(rewardOra);
-        document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
+        if (typeof deductMinedOraFromMasterReserve === 'function') {
+          deductMinedOraFromMasterReserve(rewardOra);
+        }
+
+        const wagonFillEl = document.getElementById('wagon-fill-text');
+        if (wagonFillEl) wagonFillEl.innerText = `${wagonFill}%`;
+
+        showFloatingReward(
+          isSweetSpot ? `⚡ KRİTİK VURUŞ! +${rewardOra.toFixed(2)} ORA` : `+${rewardOra.toFixed(2)} ORA`,
+          isSweetSpot ? "#facc15" : "#0ecb81"
+        );
+
         updateHUD();
         saveUserWorld();
+
         if (wagonFill >= 100) setTimeout(() => triggerWagonFull(), 400);
       }, 120);
 
-      setTimeout(() => { isSwinging = false; swingFrame = 0; }, 280);
+      setTimeout(() => { isSwinging = false; swingFrame = 0; }, 300);
+    }
+
+    function spawnRockDebris(isCritical) {
+      const w = mCanvas ? mCanvas.width : 800;
+      const h = mCanvas ? mCanvas.height : 450;
+      const strikeX = w * 0.36;
+      const strikeY = h * 0.58;
+
+      const count = isCritical ? 18 : 8;
+      for (let i = 0; i < count; i++) {
+        rockParticles.push({
+          x: strikeX, y: strikeY,
+          vx: (Math.random() * 6 + 2), vy: -(Math.random() * 5 + 2),
+          size: Math.random() * 5 + 3,
+          color: Math.random() < 0.6 ? '#f59e0b' : '#78350f',
+          life: 25
+        });
+      }
+
+      const v = document.getElementById('mine-viewport');
+      if (v && isCritical) {
+        v.classList.add('screen-shake');
+        setTimeout(() => v.classList.remove('screen-shake'), 180);
+      }
     }
 
     function renderMineLoop() {
       const sec = document.getElementById('sec-cave');
       if (!mCtx || !sec || sec.classList.contains('hidden')) return;
+
       const w = mCanvas.width, h = mCanvas.height;
 
       mCtx.fillStyle = '#06080b';
@@ -2207,15 +2412,22 @@
       mCtx.moveTo(0, 0); mCtx.lineTo(w * 0.42, 0); mCtx.lineTo(w * 0.36, h); mCtx.lineTo(0, h);
       mCtx.closePath(); mCtx.fill();
 
+      mCtx.strokeStyle = '#f59e0b';
+      mCtx.lineWidth = 3;
+      mCtx.beginPath();
+      mCtx.moveTo(w * 0.22, h * 0.2); mCtx.lineTo(w * 0.34, h * 0.45); mCtx.lineTo(w * 0.28, h * 0.75);
+      mCtx.stroke();
+
       lanternSway = Math.sin(Date.now() / 600) * 8;
       const lanternX = w * 0.52 + lanternSway, lanternY = 85;
       mCtx.strokeStyle = '#334155'; mCtx.lineWidth = 2;
       mCtx.beginPath(); mCtx.moveTo(w * 0.52, 0); mCtx.lineTo(lanternX, lanternY - 14); mCtx.stroke();
-      mCtx.fillStyle = '#fef08a';
-      mCtx.beginPath(); mCtx.arc(lanternX, lanternY, 9, 0, Math.PI * 2); mCtx.fill();
+      mCtx.fillStyle = '#78350f'; mCtx.fillRect(lanternX - 8, lanternY - 14, 16, 6);
+      mCtx.fillStyle = '#fef08a'; mCtx.beginPath(); mCtx.arc(lanternX, lanternY, 9, 0, Math.PI * 2); mCtx.fill();
 
       const roomLight = mCtx.createRadialGradient(lanternX, lanternY, 5, lanternX, lanternY, 260);
       roomLight.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
+      roomLight.addColorStop(0.5, 'rgba(245, 158, 11, 0.12)');
       roomLight.addColorStop(1, 'rgba(0, 0, 0, 0)');
       mCtx.fillStyle = roomLight;
       mCtx.fillRect(0, 0, w, h);
@@ -2240,20 +2452,102 @@
       if (wagonFill > 0) {
         const fillH = (wagonFill / 100) * 32;
         mCtx.fillStyle = currentWagonStage === 2 ? '#c084fc' : '#f59e0b';
-        mCtx.fillRect(wagonX + 5, wagonY + wagonH - fillH, wagonW - 10, fillH);
+        mCtx.beginPath();
+        mCtx.moveTo(wagonX + 5, wagonY + 10);
+        mCtx.quadraticCurveTo(wagonX + wagonW / 2, wagonY - fillH, wagonX + wagonW - 5, wagonY + 10);
+        mCtx.fill();
       }
 
       const minerX = w * 0.44, minerY = h - 110;
+      mCtx.save();
+      mCtx.translate(minerX, minerY);
+
+      mCtx.fillStyle = '#0f172a';
+      mCtx.fillRect(-12, 50, 10, 35);
+      mCtx.fillRect(4, 50, 10, 35);
+
       mCtx.fillStyle = '#ea580c';
-      mCtx.fillRect(minerX - 14, minerY + 15, 28, 38);
+      mCtx.fillRect(-14, 15, 28, 38);
+
+      mCtx.fillStyle = '#fdba74';
+      mCtx.beginPath(); mCtx.arc(0, 4, 11, 0, Math.PI * 2); mCtx.fill();
+
       mCtx.fillStyle = '#facc15';
+      mCtx.beginPath(); mCtx.arc(0, 0, 13, Math.PI, 0); mCtx.fill();
+
+      mCtx.fillStyle = '#ffffff';
+      mCtx.fillRect(-14, -4, 6, 6);
+
+      const headlampBeam = mCtx.createRadialGradient(-14, -2, 2, -130, 10, 160);
+      headlampBeam.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+      headlampBeam.addColorStop(0.3, 'rgba(254, 240, 138, 0.4)');
+      headlampBeam.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      mCtx.fillStyle = headlampBeam;
       mCtx.beginPath();
-      mCtx.arc(minerX, minerY, 12, 0, Math.PI * 2);
-      mCtx.fill();
+      mCtx.moveTo(-14, -2); mCtx.lineTo(-180, -60); mCtx.lineTo(-180, 80);
+      mCtx.closePath(); mCtx.fill();
+
+      mCtx.save();
+      let handleStartX, handleStartY, handleEndX, handleEndY, headCenterX, headCenterY, headAngle;
+
+      if (swingFrame === 0) {
+        handleStartX = -4; handleStartY = 24; handleEndX = -30; handleEndY = 6;
+        headCenterX = -30; headCenterY = 6; headAngle = -0.5;
+        mCtx.strokeStyle = '#ea580c'; mCtx.lineWidth = 6;
+        mCtx.beginPath(); mCtx.moveTo(-6, 20); mCtx.lineTo(-14, 24); mCtx.stroke();
+      } else if (swingFrame === 1) {
+        handleStartX = -2; handleStartY = 18; handleEndX = 22; handleEndY = -32;
+        headCenterX = 22; headCenterY = -32; headAngle = 0.8;
+        mCtx.strokeStyle = '#ea580c'; mCtx.lineWidth = 6;
+        mCtx.beginPath(); mCtx.moveTo(-6, 18); mCtx.lineTo(6, 4); mCtx.stroke();
+      } else {
+        handleStartX = -4; handleStartY = 24; handleEndX = -58; handleEndY = 36;
+        headCenterX = -58; headCenterY = 36; headAngle = -1.6;
+        mCtx.strokeStyle = '#ea580c'; mCtx.lineWidth = 6;
+        mCtx.beginPath(); mCtx.moveTo(-6, 20); mCtx.lineTo(-28, 28); mCtx.stroke();
+      }
+
+      mCtx.strokeStyle = '#854d0e';
+      mCtx.lineWidth = 4;
+      mCtx.lineCap = 'round';
+      mCtx.beginPath();
+      mCtx.moveTo(handleStartX, handleStartY); mCtx.lineTo(handleEndX, handleEndY);
+      mCtx.stroke();
+
+      mCtx.save();
+      mCtx.translate(headCenterX, headCenterY);
+      mCtx.rotate(headAngle);
+
+      mCtx.fillStyle = '#94a3b8';
+      mCtx.strokeStyle = '#cbd5e1';
+      mCtx.lineWidth = 1.5;
+      mCtx.beginPath();
+      mCtx.moveTo(-22, -4); mCtx.lineTo(0, -6); mCtx.lineTo(22, -4); mCtx.lineTo(26, 0);
+      mCtx.lineTo(20, 2); mCtx.lineTo(0, 4); mCtx.lineTo(-20, 2); mCtx.lineTo(-26, 0);
+      mCtx.closePath(); mCtx.fill(); mCtx.stroke();
+
+      mCtx.fillStyle = '#475569';
+      mCtx.fillRect(-4, -6, 8, 12);
+      mCtx.restore();
+
+      mCtx.fillStyle = '#451a03';
+      mCtx.beginPath(); mCtx.arc(handleStartX, handleStartY, 4.5, 0, Math.PI * 2); mCtx.fill();
+
+      mCtx.restore();
+      mCtx.restore();
+
+      for (let i = rockParticles.length - 1; i >= 0; i--) {
+        const p = rockParticles[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.life--;
+        mCtx.fillStyle = p.color;
+        mCtx.fillRect(p.x, p.y, p.size, p.size);
+        if (p.life <= 0) rockParticles.splice(i, 1);
+      }
 
       mFrame = requestAnimationFrame(renderMineLoop);
     }
 
+    let mapCooldownTimer = null;
     function renderAlpMapPins() {
       const c = document.getElementById('alp-map-container');
       if (!c || !CurrentUser) return;
@@ -2263,30 +2557,81 @@
         { top: '28%', left: '55%' }, { top: '60%', left: '75%' }, { top: '20%', left: '85%' }
       ];
 
+      const now = Date.now();
       CurrentUser.mines.forEach((mine, idx) => {
         const p = coords[idx];
         const isDep = mine.depleted;
+        let timeRemainingText = "";
+
+        if (isDep && mine.sealedAt) {
+          const leftMs = Math.max(0, COOLDOWN_24H_MS - (now - mine.sealedAt));
+          const leftHours = Math.floor(leftMs / (1000 * 60 * 60));
+          const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
+          const leftSecs = Math.floor((leftMs % (1000 * 60)) / 1000);
+          timeRemainingText = `${leftHours}s ${leftMins}d ${leftSecs}sn`;
+        }
+
+        let icon = isDep ? 'fa-lock' : 'fa-gem';
+        let bg = isDep 
+          ? 'bg-mineora-card text-rose-500 border-rose-500/40 cursor-not-allowed opacity-80' 
+          : 'bg-mineora-gold text-black border-yellow-200 hover:scale-110 shadow-xl cursor-pointer';
+          
+        let badge = isDep 
+          ? `<span class="mt-1 px-2 py-0.5 rounded bg-mineora-red/90 text-white text-[9px] font-mono font-bold flex items-center gap-1 shadow"><i class="fa-solid fa-clock"></i> ${timeRemainingText}</span>`
+          : `<span class="mt-1 px-2.5 py-1 rounded-xl bg-mineora-card/90 border border-mineora-gold/40 text-[11px] font-black text-mineora-gold shadow-lg">${idx+1}. ${mine.name.split(' ')[0]}</span>`;
+
         const btn = document.createElement('button');
-        btn.className = `mine-pin absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-20 cursor-pointer`;
+        btn.className = `mine-pin absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition transform z-20`;
         btn.style.top = p.top; btn.style.left = p.left;
         btn.onclick = () => selectMine(idx);
-        btn.innerHTML = `<div class="w-12 h-12 rounded-2xl ${isDep ? 'bg-mineora-card text-rose-500' : 'bg-mineora-gold text-black'} flex items-center justify-center font-black border-2"><i class="fa-solid ${isDep ? 'fa-lock' : 'fa-gem'}"></i></div><span class="mt-1 px-2 py-0.5 rounded bg-mineora-card text-[10px] text-white">${idx+1}. Ocak</span>`;
+        btn.innerHTML = `<div class="w-12 h-12 rounded-2xl ${bg} flex items-center justify-center font-black border-2 text-lg"><i class="fa-solid ${icon}"></i></div>${badge}`;
         c.appendChild(btn);
       });
+
+      if (!mapCooldownTimer) {
+        mapCooldownTimer = setInterval(() => {
+          if (!document.getElementById('sec-map').classList.contains('hidden')) {
+            checkMinesCooldown();
+            renderAlpMapPins();
+          }
+        }, 1000);
+      }
     }
 
     function selectMine(idx) {
       if (!CurrentUser) return;
-      if (CurrentUser.role === "Aday") { showToast("⛔ İşçi lisansı almalısınız!", "warning"); switchTab('career'); return; }
+      if (CurrentUser.role === "Aday") { showToast("⛔ Maden sahasına girmek için önce 'Kariyer Seç' sekmesinden İşçi Madenci lisansı almalısınız!", "warning"); switchTab('career'); return; }
+      if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi") { showToast("⛔ Siz yönetici statüsündesiniz! Kazı yapamazsınız, yönetim masanızdan filonuzu takip edebilirsiniz.", "warning"); switchTab('owner'); return; }
+
       checkMinesCooldown();
       const m = CurrentUser.mines[idx];
-      if (m.depleted) { showToast("⏳ Bu ocak 24 saat mühürlü!", "warning"); return; }
+      if (m.depleted) {
+        const now = Date.now();
+        const leftMs = Math.max(0, COOLDOWN_24H_MS - (now - (m.sealedAt || now)));
+        const leftHours = Math.floor(leftMs / (1000 * 60 * 60));
+        const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
+        showToast(`⏳ Bu maden 24 saatliğine mühürlüdür! Kalan süre: ${leftHours} saat ${leftMins} dakika.`, "warning");
+        return;
+      }
 
-      activeMineIdx = idx; wagonFill = 0; currentWagonStage = 1; isTransitLocked = false;
+      activeMineIdx = idx; wagonFill = 0; currentWagonStage = 1; isTransitLocked = false; rockParticles = [];
       document.getElementById('transit-overlay')?.classList.add('hidden');
       document.getElementById('active-mine-title').innerText = m.name;
-      document.getElementById('wagon-fill-text').innerText = "0%";
+      document.getElementById('active-mine-mineral').innerText = `Cevher: ${m.mineral}`;
+      document.getElementById('wagon-round-indicator').innerText = "Vagon Aşaması: 1 / 2";
+      document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
       switchTab('cave');
+      showToast(`⛏️ ${m.name} ocağına inildi! Kazmanızı vurarak vagonu doldurun.`, "info");
+    }
+
+    function showFloatingReward(text, color = '#f0b90b') {
+      const container = document.getElementById('floating-text-container');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = 'absolute font-black font-mono text-xs floating-text drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]';
+      el.style.left = '44%'; el.style.top = '40%'; el.style.color = color; el.innerText = text;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 900);
     }
 
     function triggerWagonFull() {
@@ -2294,6 +2639,95 @@
       document.getElementById('transit-overlay')?.classList.remove('hidden');
       document.getElementById('transit-timer-box')?.classList.add('hidden');
       document.getElementById('btn-dispatch-wagon')?.classList.remove('hidden');
+
+      if (currentWagonStage === 1) {
+        document.getElementById('transit-title').innerText = "1. Vagon Doldu!";
+        document.getElementById('transit-desc').innerText = "1. Vagonu asansöre gönderin. 15 saniye içinde yüzeye çekilip boş vagon indirilecek ve 2. etaba devam edeceksiniz.";
+        document.getElementById('btn-dispatch-text').innerText = "1. Vagonu Asansöre Gönder (15s Tahliye)";
+      } else {
+        document.getElementById('transit-title').innerText = "2. Son Vagon Doldu & Rezerv Tamamlandı!";
+        document.getElementById('transit-desc').innerText = "Son vagonu yüzeye gönderin (5 saniye). Günlük hak edişler dağıtılacak ve ocak 24 saatliğine mühürlenecektir.";
+        document.getElementById('btn-dispatch-text').innerText = "Son Vagonu Yüzeye Gönder (5s Tahliye & Mühür)";
+      }
+    }
+
+    function distributeDailyMiningRoyalties(workerUsername) {
+      if (!CurrentUser || !CurrentUser.referredBy) return;
+      const leader = typeof findUserByRefCode === 'function' ? findUserByRefCode(CurrentUser.referredBy) : null;
+      if (!leader) return;
+
+      let mineOwner = null, companyOwner = null;
+      if (leader.role === "Maden Sahibi") {
+        mineOwner = leader;
+        if (mineOwner.referredBy && typeof findUserByRefCode === 'function') {
+          const top = findUserByRefCode(mineOwner.referredBy);
+          if (top && top.role === "Şirket Sahibi") companyOwner = top;
+        }
+      } else if (leader.role === "Şirket Sahibi") {
+        companyOwner = leader;
+      } else if (leader.role === "İşçi Madenci" && leader.referredBy) {
+        const parent = typeof findUserByRefCode === 'function' ? findUserByRefCode(leader.referredBy) : null;
+        if (parent && parent.role === "Maden Sahibi") {
+          mineOwner = parent;
+          if (mineOwner.referredBy) {
+            const top = findUserByRefCode(mineOwner.referredBy);
+            if (top && top.role === "Şirket Sahibi") companyOwner = top;
+          }
+        } else if (parent && parent.role === "Şirket Sahibi") {
+          companyOwner = parent;
+        }
+      }
+
+      const todayStr = new Date().toDateString();
+      if (mineOwner) {
+        const MINE_DAILY_CAP = 150.00, intendedAmount = 1.50;
+        if (mineOwner.lastRoyaltyDate !== todayStr) { mineOwner.lastRoyaltyDate = todayStr; mineOwner.dailyRoyaltiesEarned = 0.00; }
+        const currentEarned = Number(mineOwner.dailyRoyaltiesEarned || 0);
+        const payable = Math.min(intendedAmount, Math.max(0, MINE_DAILY_CAP - currentEarned));
+        const overflowToBurn = Number((intendedAmount - payable).toFixed(2));
+
+        if (payable > 0) {
+          mineOwner.ora = Number(((mineOwner.ora || 0) + payable).toFixed(2));
+          mineOwner.dailyRoyaltiesEarned = Number((currentEarned + payable).toFixed(2));
+          addUserNotificationLog(mineOwner, "Günlük Maden Rezerv Payı", `${workerUsername} kazıyı tamamladı.`, `+${payable.toFixed(2)} ORA`, "income");
+        }
+        if (overflowToBurn > 0 && typeof registerProtocolSystemBurn === 'function') {
+          registerProtocolSystemBurn(overflowToBurn, `Maden Sahibi (${mineOwner.username}) Günlük %1.5 Tavan Aşımı`);
+        }
+        if (mineOwner.workers) {
+          const w = mineOwner.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
+          if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
+        }
+        saveStoredUser(mineOwner);
+      }
+
+      if (companyOwner) {
+        const COMP_DAILY_CAP = 750.00, intendedCompAmount = 0.50;
+        if (companyOwner.lastRoyaltyDate !== todayStr) { companyOwner.lastRoyaltyDate = todayStr; companyOwner.dailyRoyaltiesEarned = 0.00; }
+        const currentCompEarned = Number(companyOwner.dailyRoyaltiesEarned || 0);
+        const payableComp = Math.min(intendedCompAmount, Math.max(0, COMP_DAILY_CAP - currentCompEarned));
+        const overflowCompToBurn = Number((intendedCompAmount - payableComp).toFixed(2));
+
+        if (payableComp > 0) {
+          companyOwner.ora = Number(((companyOwner.ora || 0) + payableComp).toFixed(2));
+          companyOwner.dailyRoyaltiesEarned = Number((currentCompEarned + payableComp).toFixed(2));
+          addUserNotificationLog(companyOwner, "Holding Günlük Cevher Payı", `${workerUsername} vardiyayı bitirdi.`, `+${payableComp.toFixed(2)} ORA`, "income");
+        }
+        if (overflowCompToBurn > 0 && typeof registerProtocolSystemBurn === 'function') {
+          registerProtocolSystemBurn(overflowCompToBurn, `Şirket Sahibi (${companyOwner.username}) Günlük %1.5 Tavan Aşımı`);
+        }
+        if (mineOwner && companyOwner.minesOwned) {
+          const ocak = companyOwner.minesOwned.find(m => m.ownerUsername.toLowerCase() === mineOwner.username.toLowerCase());
+          if (ocak && ocak.workers) {
+            const w = ocak.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
+            if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
+          }
+        } else if (companyOwner.workers) {
+          const w = companyOwner.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
+          if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
+        }
+        saveStoredUser(companyOwner);
+      }
     }
 
     function startElevatorDispatch() {
@@ -2301,7 +2735,16 @@
       document.getElementById('transit-timer-box')?.classList.remove('hidden');
       let countdown = (currentWagonStage === 1) ? 15 : 5;
       const timerText = document.getElementById('transit-countdown');
+      const subText = document.getElementById('transit-subtext');
       if (timerText) timerText.innerText = countdown;
+
+      if (currentWagonStage === 1) {
+        if (subText) subText.innerText = "1. Vagon asansöre alındı, yüzeye çekiliyor...";
+        showToast("🚀 1. Vagon asansöre yüklendi, tahliye başladı (15 sn)...", "info");
+      } else {
+        if (subText) subText.innerText = "Son vagon yüzeye çekiliyor, ocak mühürleniyor...";
+        showToast("⚡ Son tahliye başladı (5 sn)...", "info");
+      }
 
       const iv = setInterval(() => {
         countdown--;
@@ -2309,29 +2752,30 @@
         if (countdown <= 0) {
           clearInterval(iv);
           if (currentWagonStage === 1) {
-            currentWagonStage = 2; wagonFill = 0; isTransitLocked = false;
+            currentWagonStage = 2; wagonFill = 0; isTransitLocked = false; rockParticles = [];
             document.getElementById('transit-overlay')?.classList.add('hidden');
             document.getElementById('wagon-fill-text').innerText = "0%";
-            document.getElementById('wagon-round-indicator').innerText = "Vagon: 2 / 2";
-            showToast("✅ 2. Vagon raylara indi!", "success");
+            document.getElementById('wagon-round-indicator').innerText = "Vagon Aşaması: 2 / 2 (Derin Damar)";
+            showToast("✅ 1. Vagon boşaltıldı! 2. vagon raylara indi, kazıya devam edin!", "success");
           } else {
             const m = CurrentUser.mines[activeMineIdx];
-            m.depleted = true; m.sealedAt = Date.now();
-            saveUserWorld();
-            showToast(`🏆 ${m.name} tamamlandı ve mühürlendi!`, "success");
-            document.getElementById('transit-overlay')?.classList.add('hidden');
-            switchTab('map');
+            m.depleted = true; m.sealedAt = Date.now(); m.hp = 0; wagonFill = 0;
+            addUserNotificationLog(CurrentUser, "Günlük Maden Kazısı Tamamlandı", `${m.name} ocağından 2 vagon cevher çıkarıldı.`, "+8.00 ORA", "income");
+            distributeDailyMiningRoyalties(CurrentUser.username);
+            saveUserWorld(); updateHUD();
+            showToast(`🏆 ${m.name} tamamlandı! Günlük rezerv payları dağıtıldı ve ocak 24 SAAT mühürlendi!`, "success");
+            setTimeout(() => { document.getElementById('transit-overlay')?.classList.add('hidden'); switchTab('map'); renderAlpMapPins(); }, 800);
           }
         }
       }, 1000);
     }
 
     // ============================================================================
-    // 5. CRASH MOTORU (TAM SİNEMATİK HALAT ANİMASYONU)
+    // 5. CRASH MOTORU (DİNAMİK ŞAFT FİZİĞİ & SERBEST DÜŞÜŞ)
     // ============================================================================
     let crashCanvas, crashCtx, crashFrame, crashState = "waiting", currentMultiplier = 1.00, crashPoint = 2.00, countdownTimer = 5, crashTickerInterval = null;
     let userCrashBet = 0, hasPlacedBet = false, hasCashedOut = false, userCashOutMultiplier = 1.00, userWonAmount = 0.00, crashHistory = [1.24, 1.05, 1.68, 1.12, 3.40];
-    let shaftYOffset = 0, sparks = [], debris = [], cageY = 0, cageVy = 0, cageAngle = 0;
+    let shaftYOffset = 0, sparks = [], debris = [], cageY = 0, cageVy = 0, cageAngle = 0, cableSnapY = 0, cableSnapVy = 0;
 
     function initCrashEngine() {
       crashCanvas = document.getElementById('crash-canvas');
@@ -2340,17 +2784,12 @@
       crashCanvas.width = crashCanvas.clientWidth || 800;
       crashCanvas.height = crashCanvas.clientHeight || 400;
 
-      renderCrashHistoryBar();
-      calculateCrashEstProfit();
-      updateCrashActionBtn();
+      renderCrashHistoryBar(); calculateCrashEstProfit(); updateCrashActionBtn();
 
       if (crashState === "waiting" || !crashTickerInterval) {
-        clearInterval(crashTickerInterval);
-        crashTickerInterval = null;
-        startCrashCountdown();
+        clearInterval(crashTickerInterval); crashTickerInterval = null; startCrashCountdown();
       }
-      cancelAnimationFrame(crashFrame);
-      renderCrashCanvasLoop();
+      cancelAnimationFrame(crashFrame); renderCrashCanvasLoop();
     }
 
     function generateCrashPoint() {
@@ -2364,8 +2803,8 @@
 
     function startCrashCountdown() {
       crashState = "waiting"; currentMultiplier = 1.00; countdownTimer = 5; hasCashedOut = false;
-      userCashOutMultiplier = 1.00; userWonAmount = 0.00;
-      sparks = []; debris = []; cageY = 0; cageVy = 0; cageAngle = 0;
+      userCashOutMultiplier = 1.00; userWonAmount = 0.00; sparks = []; debris = [];
+      cageY = 0; cageVy = 0; cageAngle = 0; cableSnapY = 0; cableSnapVy = 0;
 
       const statusBadge = document.getElementById('crash-badge-status');
       const multText = document.getElementById('crash-multiplier-text');
@@ -2387,9 +2826,7 @@
         if (subStatus) subStatus.innerText = `Asansör ${countdownTimer} sn içinde kuyuya inecek...`;
 
         if (countdownTimer <= 0) {
-          clearInterval(crashTickerInterval);
-          crashTickerInterval = null;
-          launchCrashElevator();
+          clearInterval(crashTickerInterval); crashTickerInterval = null; launchCrashElevator();
         }
       }, 1000);
     }
@@ -2446,24 +2883,23 @@
       }
       if (subStatus) subStatus.innerText = `Asansör ${crashPoint.toFixed(2)}x seviyesinde kuyu dibine çakıldı!`;
 
-      const w = crashCanvas ? crashCanvas.width : 800;
-      const h = crashCanvas ? crashCanvas.height : 400;
-      for (let i = 0; i < 45; i++) {
+      cageVy = 2.0; cageAngle = (Math.random() - 0.5) * 0.15; cableSnapVy = -12.0;
+      const w = crashCanvas ? crashCanvas.width : 800, h = crashCanvas ? crashCanvas.height : 400;
+      const centerX = w / 2, currentCageY = h * 0.52;
+
+      for (let i = 0; i < 60; i++) {
         debris.push({
-          x: w / 2 + (Math.random() - 0.5) * 60,
-          y: h / 2 + (Math.random() - 0.5) * 40,
-          vx: (Math.random() - 0.5) * 14,
-          vy: (Math.random() - 0.7) * 12,
-          size: Math.random() * 8 + 3,
-          color: Math.random() < 0.5 ? '#f43f5e' : (Math.random() < 0.5 ? '#f59e0b' : '#334155'),
-          angle: Math.random() * Math.PI * 2,
-          vAngle: (Math.random() - 0.5) * 0.2
+          x: centerX + (Math.random() - 0.5) * 70, y: currentCageY + (Math.random() - 0.5) * 50,
+          vx: (Math.random() - 0.5) * 16, vy: (Math.random() - 0.8) * 14, size: Math.random() * 7 + 3,
+          color: Math.random() < 0.4 ? '#f43f5e' : (Math.random() < 0.7 ? '#f59e0b' : '#334155'),
+          angle: Math.random() * Math.PI * 2, vAngle: (Math.random() - 0.5) * 0.25
         });
       }
 
       if (hasPlacedBet && !hasCashedOut) {
         showToast(`💥 Çelik halat ${crashPoint.toFixed(2)}x'da koptu! ${userCrashBet} ORA yakım fırınına gönderildi.`, "warning");
-        registerProtocolSystemBurn(userCrashBet, "Crash Kaybı");
+        if (typeof registerProtocolSystemBurn === 'function') registerProtocolSystemBurn(userCrashBet, "Crash Kaybı Yakımı");
+        addUserNotificationLog(CurrentUser, "Asansör Halatı Koptu (Kayıp)", `${crashPoint.toFixed(2)}x derinliğinde kaza meydana geldi.`, `-${userCrashBet.toFixed(2)} ORA`, "alert");
       }
 
       crashHistory.unshift(crashPoint);
@@ -2473,16 +2909,14 @@
       hasPlacedBet = false; hasCashedOut = false; userCrashBet = 0;
       updateCrashActionBtn();
       setTimeout(() => startCrashCountdown(), 3800);
+      renderCrashCanvasLoop();
     }
 
     function calculateCrashEstProfit() {
       const betAmt = parseFloat(document.getElementById('crash-bet-input')?.value) || 0;
       const estEl = document.getElementById('crash-est-profit');
       if (estEl) {
-        if (hasCashedOut) {
-          estEl.innerText = `+${userWonAmount.toFixed(2)} ORA (Kilitlendi)`;
-          return;
-        }
+        if (hasCashedOut) { estEl.innerText = `+${userWonAmount.toFixed(2)} ORA (Kilitlendi)`; return; }
         const grossProfit = betAmt * currentMultiplier;
         const netWin = betAmt + (grossProfit - betAmt) * 0.95;
         estEl.innerText = `+${netWin.toFixed(2)} ORA`;
@@ -2494,8 +2928,7 @@
       const input = document.getElementById('crash-bet-input');
       if (input) {
         input.value = Math.max(1, Math.floor(CurrentUser.ora || 0));
-        calculateCrashEstProfit();
-        updateCrashActionBtn();
+        calculateCrashEstProfit(); updateCrashActionBtn();
       }
     }
 
@@ -2510,7 +2943,8 @@
           return;
         }
 
-        const amt = parseFloat(document.getElementById('crash-bet-input')?.value) || 0;
+        const betInput = document.getElementById('crash-bet-input');
+        const amt = parseFloat(betInput?.value) || 0;
         if (isNaN(amt) || amt < 1) { showToast("⚠️ Minimum bahis 1 ORA'dır!", "warning"); return; }
         if (amt > (CurrentUser.ora || 0)) { showToast(`⚠️ Yetersiz bakiye! Mevcut: ${(CurrentUser.ora || 0).toFixed(2)} ORA`, "warning"); return; }
 
@@ -2530,9 +2964,12 @@
         userWonAmount = Number((grossTotal - protocolBurnFee).toFixed(2));
 
         CurrentUser.ora = Number(((CurrentUser.ora || 0) + userWonAmount).toFixed(2));
-        if (protocolBurnFee > 0) registerProtocolSystemBurn(protocolBurnFee, "Crash %5 Burn");
+        if (protocolBurnFee > 0 && typeof registerProtocolSystemBurn === 'function') {
+          registerProtocolSystemBurn(protocolBurnFee, "Crash Kazanç Harcı (%5 Burn)");
+        }
 
         saveUserWorld(); updateHUD(); updateCrashActionBtn();
+        addUserNotificationLog(CurrentUser, "Asansör Tahliyesi (Kazanç)", `${userCashOutMultiplier.toFixed(2)}x seviyesinde tahliye yapıldı. (%5 Yakım: ${protocolBurnFee} ORA)`, `+${userWonAmount.toFixed(2)} ORA`, "income");
         showToast(`🎉 Başarılı Tahliye! ${userCashOutMultiplier.toFixed(2)}x ile +${userWonAmount.toFixed(2)} ORA aldınız!`, "success");
       }
     }
@@ -2544,11 +2981,11 @@
 
       if (crashState === "waiting") {
         if (hasPlacedBet) {
-          btn.className = "w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm cursor-pointer";
+          btn.className = "w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm transition shadow-lg cursor-pointer";
           btnText.innerText = `Bahsi İptal Et (${userCrashBet} ORA)`;
         } else {
           const amt = parseFloat(document.getElementById('crash-bet-input')?.value) || 10;
-          btn.className = "w-full py-3.5 rounded-2xl bg-mineora-green hover:opacity-90 text-white font-black text-sm cursor-pointer";
+          btn.className = "w-full py-3.5 rounded-2xl bg-mineora-green hover:opacity-90 text-white font-black text-sm transition shadow-lg cursor-pointer";
           btnText.innerText = `Bahsi Onayla (${amt} ORA)`;
         }
       } else if (crashState === "running") {
@@ -2556,7 +2993,7 @@
           const currentGross = userCrashBet * currentMultiplier;
           const profit = Math.max(0, currentGross - userCrashBet);
           const liveWin = (currentGross - profit * 0.05).toFixed(2);
-          btn.className = "w-full py-3.5 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm cursor-pointer animate-pulse";
+          btn.className = "w-full py-3.5 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm transition shadow-2xl shadow-mineora-gold/40 cursor-pointer animate-pulse";
           btnText.innerText = `Tahliye Et (${liveWin} ORA)`;
         } else if (hasCashedOut) {
           btn.className = "w-full py-3.5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm cursor-not-allowed";
@@ -2590,15 +3027,16 @@
 
       const w = crashCanvas.width, h = crashCanvas.height;
       const bgGrad = crashCtx.createLinearGradient(0, 0, 0, h);
-      bgGrad.addColorStop(0, '#040608');
-      bgGrad.addColorStop(1, '#0b0f14');
+      bgGrad.addColorStop(0, '#040608'); bgGrad.addColorStop(1, '#0f141c');
       crashCtx.fillStyle = bgGrad;
       crashCtx.fillRect(0, 0, w, h);
 
       let speed = 0;
       if (crashState === "running") {
-        speed = Math.min(28, 4 + Math.pow(currentMultiplier, 1.25));
+        speed = Math.min(32, 5 + Math.pow(currentMultiplier, 1.3));
         shaftYOffset = (shaftYOffset + speed) % 90;
+      } else if (crashState === "crashed") {
+        shaftYOffset = (shaftYOffset + 2) % 90;
       }
 
       const wallW = 60;
@@ -2606,38 +3044,72 @@
       crashCtx.fillRect(0, 0, wallW, h);
       crashCtx.fillRect(w - wallW, 0, wallW, h);
 
+      crashCtx.strokeStyle = '#2b1d14';
+      crashCtx.lineWidth = 4;
       for (let y = -90 + shaftYOffset; y < h + 90; y += 90) {
         crashCtx.fillStyle = '#3a2518';
         crashCtx.fillRect(0, y, wallW, 14);
         crashCtx.fillRect(w - wallW, y, wallW, 14);
+        crashCtx.strokeStyle = '#1e293b';
+        crashCtx.strokeRect(0, y, wallW, 14);
+        crashCtx.strokeRect(w - wallW, y, wallW, 14);
       }
 
       const railLeftX = wallW + 18, railRightX = w - wallW - 18;
-      crashCtx.strokeStyle = '#475569'; crashCtx.lineWidth = 5;
+      crashCtx.strokeStyle = '#475569';
+      crashCtx.lineWidth = 5;
       crashCtx.beginPath();
       crashCtx.moveTo(railLeftX, 0); crashCtx.lineTo(railLeftX, h);
       crashCtx.moveTo(railRightX, 0); crashCtx.lineTo(railRightX, h);
       crashCtx.stroke();
 
+      crashCtx.strokeStyle = '#1e242c';
+      crashCtx.lineWidth = 2;
+      for (let y = -45 + (shaftYOffset % 45); y < h + 45; y += 45) {
+        crashCtx.beginPath();
+        crashCtx.moveTo(railLeftX - 10, y); crashCtx.lineTo(railLeftX + 5, y);
+        crashCtx.moveTo(railRightX - 5, y); crashCtx.lineTo(railRightX + 10, y);
+        crashCtx.stroke();
+      }
+
       const centerX = w / 2;
       let currentCageY = h * 0.52;
 
       if (crashState !== "crashed") {
-        crashCtx.strokeStyle = '#94a3b8'; crashCtx.lineWidth = 3;
+        const jitter = crashState === "running" ? (Math.random() - 0.5) * Math.min(6, currentMultiplier * 0.35) : 0;
+        crashCtx.strokeStyle = '#94a3b8';
+        crashCtx.lineWidth = 3;
         crashCtx.beginPath();
-        crashCtx.moveTo(centerX - 16, 0); crashCtx.lineTo(centerX - 16, currentCageY - 45);
-        crashCtx.moveTo(centerX + 16, 0); crashCtx.lineTo(centerX + 16, currentCageY - 45);
+        crashCtx.moveTo(centerX - 16 + jitter, 0); crashCtx.lineTo(centerX - 16 + jitter, currentCageY - 45);
+        crashCtx.moveTo(centerX + 16 - jitter, 0); crashCtx.lineTo(centerX + 16 - jitter, currentCageY - 45);
+        crashCtx.stroke();
+
+        crashCtx.strokeStyle = '#f59e0b';
+        crashCtx.lineWidth = 4;
+        crashCtx.beginPath();
+        crashCtx.moveTo(centerX - 24, currentCageY - 20);
+        crashCtx.lineTo(centerX, currentCageY - 45);
+        crashCtx.lineTo(centerX + 24, currentCageY - 20);
+        crashCtx.stroke();
+      } else {
+        cableSnapY += cableSnapVy;
+        cableSnapVy += 0.5;
+        crashCtx.strokeStyle = '#ef4444';
+        crashCtx.lineWidth = 3;
+        crashCtx.beginPath();
+        crashCtx.moveTo(centerX - 16, 0); crashCtx.lineTo(centerX - 22 + (Math.random() - 0.5) * 10, Math.max(10, 45 + cableSnapY));
+        crashCtx.moveTo(centerX + 16, 0); crashCtx.lineTo(centerX + 14 + (Math.random() - 0.5) * 10, Math.max(10, 35 + cableSnapY));
         crashCtx.stroke();
       }
 
       crashCtx.save();
       if (crashState === "crashed") {
-        cageVy += 0.85; cageY += cageVy; cageAngle += 0.08;
+        cageVy += 1.4; cageY += cageVy; cageAngle += 0.05;
         currentCageY += cageY;
         crashCtx.translate(centerX, currentCageY);
         crashCtx.rotate(cageAngle);
       } else {
-        const shake = crashState === "running" ? (Math.random() - 0.5) * Math.min(4, currentMultiplier * 0.25) : 0;
+        const shake = crashState === "running" ? (Math.random() - 0.5) * Math.min(5, currentMultiplier * 0.3) : 0;
         crashCtx.translate(centerX + shake, currentCageY);
       }
 
@@ -2650,18 +3122,38 @@
       crashCtx.lineWidth = 2;
       crashCtx.strokeRect(-cageW / 2, -cageH / 2, cageW, cageH);
 
+      crashCtx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+      crashCtx.lineWidth = 2;
+      for (let bx = -cageW / 2 + 10; bx < cageW / 2; bx += 11) {
+        crashCtx.beginPath();
+        crashCtx.moveTo(bx, -cageH / 2 + 10); crashCtx.lineTo(bx, cageH / 2 - 10);
+        crashCtx.stroke();
+      }
+
       crashCtx.fillStyle = '#ea580c';
       crashCtx.fillRect(-10, -5, 20, 26);
       crashCtx.fillStyle = '#facc15';
-      crashCtx.beginPath();
-      crashCtx.arc(0, -14, 9, Math.PI, 0);
-      crashCtx.fill();
+      crashCtx.beginPath(); crashCtx.arc(0, -14, 9, Math.PI, 0); crashCtx.fill();
+      crashCtx.fillStyle = '#ffffff';
+      crashCtx.fillRect(-3, -16, 6, 4);
 
+      if (crashState !== "crashed") {
+        const lightGrad = crashCtx.createRadialGradient(0, -14, 2, 0, 80, 100);
+        lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.7)');
+        lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        crashCtx.fillStyle = lightGrad;
+        crashCtx.beginPath();
+        crashCtx.moveTo(0, -14); crashCtx.lineTo(-60, 120); crashCtx.lineTo(60, 120);
+        crashCtx.closePath(); crashCtx.fill();
+      }
+
+      crashCtx.fillStyle = crashState === "crashed" ? '#f43f5e' : (Math.floor(Date.now() / 200) % 2 === 0 ? '#f59e0b' : '#78350f');
+      crashCtx.beginPath(); crashCtx.arc(0, -cageH / 2 - 4, 5, 0, Math.PI * 2); crashCtx.fill();
       crashCtx.restore();
 
-      if (crashState === "running" && Math.random() < 0.65) {
-        sparks.push({ x: railLeftX, y: currentCageY, vx: -(Math.random() * 4 + 1), vy: (Math.random() - 0.5) * 6, life: 18 });
-        sparks.push({ x: railRightX, y: currentCageY, vx: Math.random() * 4 + 1, vy: (Math.random() - 0.5) * 6, life: 18 });
+      if (crashState === "running" && Math.random() < 0.75) {
+        sparks.push({ x: railLeftX, y: currentCageY + (Math.random() - 0.5) * 20, vx: -(Math.random() * 4 + 1), vy: (Math.random() - 0.5) * 6, life: 18 });
+        sparks.push({ x: railRightX, y: currentCageY + (Math.random() - 0.5) * 20, vx: Math.random() * 4 + 1, vy: (Math.random() - 0.5) * 6, life: 18 });
       }
 
       for (let i = sparks.length - 1; i >= 0; i--) {
@@ -2672,241 +3164,621 @@
         if (s.life <= 0) sparks.splice(i, 1);
       }
 
+      if (crashState === "crashed") {
+        for (let i = debris.length - 1; i >= 0; i--) {
+          const d = debris[i];
+          d.x += d.vx; d.y += d.vy; d.vy += 0.55; d.angle += d.vAngle;
+          crashCtx.save();
+          crashCtx.translate(d.x, d.y);
+          crashCtx.rotate(d.angle);
+          crashCtx.fillStyle = d.color;
+          crashCtx.fillRect(-d.size / 2, -d.size / 2, d.size, d.size);
+          crashCtx.restore();
+        }
+      }
+
       crashFrame = requestAnimationFrame(renderCrashCanvasLoop);
     }
 
     // ============================================================================
-    // 6. P2P BORSA MOTORU
+    // 6. P2P BORSA MOTORU (ÇİFT TARAFLI ALIM/SATIM & EMANET)
     // ============================================================================
     function getP2pOrders() {
       const saved = localStorage.getItem('mineora_global_p2p_orders');
       if (saved) { try { return JSON.parse(saved); } catch(e) {} }
       return [];
     }
-    function saveP2pOrders(o) {
-      localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(o));
-      if (typeof fbDb !== 'undefined' && fbDb) { try { fbDb.ref('p2pOrders').set(o); } catch(e) {} }
+    function saveP2pOrders(o) { 
+      localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(o)); 
+      if (typeof fbDb !== 'undefined' && fbDb) {
+        try { fbDb.ref('p2pOrders').set(o); } catch(e) {}
+      }
     }
-    let globalP2pOrders = getP2pOrders(), p2pFilter = 'buy', p2pCreateSide = 'buy', activeP2pOrder = null;
+
+    let globalP2pOrders = getP2pOrders();
+    let p2pFilter = 'buy';
+    let p2pCreateSide = 'buy';
+    let activeP2pOrder = null;
+    let isP2pProcessing = false;
 
     function setP2pFilter(filter) {
       p2pFilter = filter;
+      const buyBtn = document.getElementById('p2p-tab-buy');
+      const sellBtn = document.getElementById('p2p-tab-sell');
+      
+      if (buyBtn) {
+        buyBtn.className = filter === 'buy' 
+          ? "px-5 py-2 rounded-xl text-xs font-black bg-mineora-green text-white shadow-lg shadow-mineora-green/20 transition cursor-pointer" 
+          : "px-5 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition cursor-pointer";
+      }
+      if (sellBtn) {
+        sellBtn.className = filter === 'sell' 
+          ? "px-5 py-2 rounded-xl text-xs font-black bg-rose-600 text-white shadow-lg shadow-rose-600/20 transition cursor-pointer" 
+          : "px-5 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition cursor-pointer";
+      }
       renderP2pOrders();
     }
+
     function setP2pCreateSide(side) {
       p2pCreateSide = side;
+      const buySideBtn = document.getElementById('p2p-side-buy-btn');
+      const sellSideBtn = document.getElementById('p2p-side-sell-btn');
+
+      if (buySideBtn) {
+        buySideBtn.className = side === 'buy' 
+          ? "py-2.5 rounded-xl font-bold bg-mineora-green text-white cursor-pointer shadow-lg" 
+          : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer";
+      }
+      if (sellSideBtn) {
+        sellSideBtn.className = side === 'sell' 
+          ? "py-2.5 rounded-xl font-bold bg-rose-600 text-white cursor-pointer shadow-lg" 
+          : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer";
+      }
       calculateP2pCreatePreview();
     }
+
     function calculateP2pCreatePreview() {
       const price = parseFloat(document.getElementById('p2p-create-price')?.value) || 0;
       const amt = parseFloat(document.getElementById('p2p-create-amount')?.value) || 0;
-      const prev = document.getElementById('p2p-preview-usdt');
-      if (prev) prev.innerText = `$${(price * amt).toFixed(2)} USDT`;
+      const preview = document.getElementById('p2p-preview-usdt');
+      if (preview) preview.innerText = `$${(price * amt).toFixed(2)} USDT`;
     }
 
     function submitP2pOrder() {
       if (!CurrentUser) return;
-      const price = parseFloat(document.getElementById('p2p-create-price')?.value) || 0;
-      const oraAmt = parseFloat(document.getElementById('p2p-create-amount')?.value) || 0;
-      if (price <= 0 || oraAmt <= 0) { showToast("⚠️ Miktarları kontrol edin!", "warning"); return; }
-      const totalUsdt = Number((price * oraAmt).toFixed(2));
+      if (isP2pProcessing) { showToast("⏳ İşleminiz işleniyor, lütfen bekleyin...", "info"); return; }
 
-      if (p2pCreateSide === 'sell') {
-        if (oraAmt > (CurrentUser.ora || 0)) { showToast("⚠️ Yetersiz ORA!", "warning"); return; }
-        CurrentUser.ora = Number(((CurrentUser.ora || 0) - oraAmt).toFixed(2));
-      } else {
-        if (totalUsdt > (CurrentUser.usdt || 0)) { showToast("⚠️ Yetersiz USDT!", "warning"); return; }
-        CurrentUser.usdt = Number(((CurrentUser.usdt || 0) - totalUsdt).toFixed(2));
+      const price = parseFloat(document.getElementById('p2p-create-price')?.value);
+      const oraAmt = parseFloat(document.getElementById('p2p-create-amount')?.value);
+
+      if (isNaN(price) || price <= 0 || isNaN(oraAmt) || oraAmt <= 0) {
+        showToast("⚠️ Lütfen geçerli bir fiyat ve ORA miktarı girin!", "warning");
+        return;
       }
 
-      saveUserWorld(); updateHUD();
-      globalP2pOrders.unshift({ id: Date.now(), side: p2pCreateSide, merchant: CurrentUser.username, price, oraAmount: oraAmt, usdtAmount: totalUsdt });
+      const totalUsdt = Number((price * oraAmt).toFixed(2));
+      const currentOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
+      const currentUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
+
+      if (p2pCreateSide === 'sell') {
+        if (oraAmt > currentOra) { showToast(`⚠️ Satmak için yetersiz ORA! Mevcut: ${currentOra.toFixed(2)} ORA`, "warning"); return; }
+        CurrentUser.ora = Number((currentOra - oraAmt).toFixed(2));
+      } else {
+        if (totalUsdt > currentUsdt) { showToast(`⚠️ Alış ilanı için yetersiz USDT! Gerekli: $${totalUsdt.toFixed(2)} USDT`, "warning"); return; }
+        CurrentUser.usdt = Number((currentUsdt - totalUsdt).toFixed(2));
+      }
+
+      isP2pProcessing = true;
+      saveUserWorld();
+      updateHUD();
+
+      globalP2pOrders.unshift({
+        id: Date.now(), side: p2pCreateSide, merchant: CurrentUser.username, price: price, oraAmount: oraAmt, usdtAmount: totalUsdt
+      });
+
       saveP2pOrders(globalP2pOrders);
       closeModal('modal-p2p-create');
       renderP2pOrders();
-      showToast("📋 İlan yayınlandı!", "success");
+      showToast("📋 İlanınız canlı borsaya yerleştirildi ve varlık emanete alındı!", "success");
+      setTimeout(() => { isP2pProcessing = false; }, 800);
+    }
+
+    function cancelP2pOrder(orderId) {
+      if (!CurrentUser || isP2pProcessing) return;
+      const idx = globalP2pOrders.findIndex(o => o.id === orderId);
+      if (idx === -1) return;
+      const order = globalP2pOrders[idx];
+
+      if (order.merchant.toLowerCase() !== CurrentUser.username.toLowerCase()) {
+        showToast("⛔ Sadece kendi açtığınız ilanı iptal edebilirsiniz!", "warning");
+        return;
+      }
+
+      isP2pProcessing = true;
+      if (order.side === 'sell') {
+        CurrentUser.ora = Number(((CurrentUser.ora || 0) + order.oraAmount).toFixed(2));
+        showToast(`↩️ İlan iptal edildi! ${order.oraAmount.toFixed(2)} ORA iade edildi.`, "info");
+      } else {
+        CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + order.usdtAmount).toFixed(2));
+        showToast(`↩️ İlan iptal edildi! $${order.usdtAmount.toFixed(2)} USDT iade edildi.`, "info");
+      }
+
+      globalP2pOrders.splice(idx, 1);
+      saveP2pOrders(globalP2pOrders);
+      saveUserWorld(); updateHUD(); renderP2pOrders();
+      setTimeout(() => { isP2pProcessing = false; }, 600);
     }
 
     function renderP2pOrders() {
       const tbody = document.getElementById('p2p-order-list');
       if (!tbody) return;
       tbody.innerHTML = "";
+
       const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
       const filtered = globalP2pOrders.filter(o => o.side === targetSide && o.oraAmount > 0);
 
-      if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">İlan yok.</td></tr>`; return; }
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">Bu yönde aktif borsa ilanı bulunmuyor.</td></tr>`;
+        return;
+      }
+
       filtered.forEach(order => {
         const isMyOrder = CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase();
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-mineora-bg/50 transition";
+        tr.className = "hover:bg-mineora-bg/50 transition border-b border-mineora-border/40 text-xs";
+        const btnClass = p2pFilter === 'buy' ? "bg-mineora-green hover:opacity-90 text-white" : "bg-rose-600 hover:opacity-90 text-white";
+        const btnText = p2pFilter === 'buy' ? "USDT Öde & ORA Al" : "ORA Sat & USDT Al";
+
         tr.innerHTML = `
-          <td class="py-3.5 px-4 font-bold text-white">${order.merchant}</td>
-          <td class="py-3.5 px-4 font-mono font-bold">$${order.price.toFixed(4)}</td>
-          <td class="py-3.5 px-4 font-mono">${order.oraAmount} ORA ($${order.usdtAmount.toFixed(2)})</td>
+          <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-mineora-input flex items-center justify-center text-mineora-gold text-xs font-black">
+              ${order.merchant.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span>${order.merchant}</span>
+              ${isMyOrder ? '<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SENİN İLANIN</span>' : ''}
+            </div>
+          </td>
+          <td class="py-3.5 px-4 font-mono font-bold text-white">$${order.price.toFixed(4)} USDT</td>
+          <td class="py-3.5 px-4 font-mono">
+            <span class="text-mineora-gold font-bold">${order.oraAmount.toLocaleString()} ORA</span>
+            <span class="text-slate-400 text-[10px] block">($${order.usdtAmount.toFixed(2)} USDT)</span>
+          </td>
           <td class="py-3.5 px-4 text-right">
-            ${isMyOrder ? `<button onclick="cancelP2pOrder(${order.id})" class="px-3 py-1.5 rounded-xl bg-rose-600/20 text-rose-400 cursor-pointer">İptal</button>` : `<button onclick="openP2pTradeModal(${order.id})" class="px-4 py-2 rounded-xl bg-mineora-green text-white font-bold cursor-pointer">Takas Et</button>`}
+            ${isMyOrder ? `
+              <button type="button" onclick="cancelP2pOrder(${order.id})" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 transition cursor-pointer">
+                <i class="fa-solid fa-ban mr-1"></i> İptal Et
+              </button>
+            ` : `
+              <button type="button" onclick="openP2pTradeModal(${order.id})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ${btnClass}">
+                ${btnText}
+              </button>
+            `}
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function cancelP2pOrder(orderId) {
-      const idx = globalP2pOrders.findIndex(o => o.id === orderId);
-      if (idx === -1) return;
-      const order = globalP2pOrders[idx];
-      if (order.side === 'sell') CurrentUser.ora = Number(((CurrentUser.ora || 0) + order.oraAmount).toFixed(2));
-      else CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + order.usdtAmount).toFixed(2));
-      globalP2pOrders.splice(idx, 1);
-      saveP2pOrders(globalP2pOrders);
-      saveUserWorld(); updateHUD(); renderP2pOrders();
-      showToast("↩️ İlan iptal edildi.", "info");
-    }
-
     function openP2pTradeModal(orderId) {
-      activeP2pOrder = globalP2pOrders.find(o => o.id === orderId);
-      if (!activeP2pOrder) return;
-      document.getElementById('p2p-trade-merchant').innerText = activeP2pOrder.merchant;
-      document.getElementById('p2p-trade-price').innerText = `$${activeP2pOrder.price.toFixed(4)} USDT`;
-      document.getElementById('p2p-trade-input-ora').value = activeP2pOrder.oraAmount;
+      const order = globalP2pOrders.find(o => o.id === orderId);
+      if (!order) return;
+      activeP2pOrder = order;
+
+      if (CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase()) {
+        showToast("⚠️ Kendi açtığınız ilandan işlem yapamazsınız!", "warning");
+        return;
+      }
+
+      const isBuy = p2pFilter === 'buy';
+      const title = document.getElementById('p2p-trade-title');
+      const merchant = document.getElementById('p2p-trade-merchant');
+      const price = document.getElementById('p2p-trade-price');
+      const inputOra = document.getElementById('p2p-trade-input-ora');
+      const btn = document.getElementById('p2p-trade-btn-confirm');
+
+      if (title) title.innerText = isBuy ? `USDT ile ORA Satın Al (${order.merchant})` : `ORA Satışı Karşılığı USDT Al (${order.merchant})`;
+      if (merchant) merchant.innerText = order.merchant;
+      if (price) price.innerText = `$${order.price.toFixed(4)} USDT`;
+      if (inputOra) inputOra.value = order.oraAmount;
+
+      if (btn) {
+        btn.className = isBuy 
+          ? "w-full py-3.5 rounded-xl bg-mineora-green text-white font-black text-xs hover:opacity-90 transition cursor-pointer" 
+          : "w-full py-3.5 rounded-xl bg-rose-600 text-white font-black text-xs hover:opacity-90 transition cursor-pointer";
+        btn.innerText = isBuy ? "USDT Öde ve ORA Teslim Al" : "ORA Gönder ve USDT Tahsil Et";
+      }
+
       openModal('modal-p2p-trade');
     }
 
     function confirmP2pTrade() {
       if (!CurrentUser || !activeP2pOrder) return;
-      const amtOra = parseFloat(document.getElementById('p2p-trade-input-ora')?.value) || 0;
-      if (amtOra <= 0 || amtOra > activeP2pOrder.oraAmount) { showToast("⚠️ Geçersiz miktar!", "warning"); return; }
-      const totalUsdt = Number((amtOra * activeP2pOrder.price).toFixed(2));
-      const merchantObj = getStoredUser(activeP2pOrder.merchant);
-      if (!merchantObj) { showToast("⚠️ Satıcı bulunamadı!", "warning"); return; }
+      if (isP2pProcessing) { showToast("⏳ Takas işleniyor, lütfen bekleyin...", "info"); return; }
 
-      if (p2pFilter === 'buy') {
-        if ((CurrentUser.usdt || 0) < totalUsdt) { showToast("⚠️ Yetersiz USDT!", "warning"); return; }
-        CurrentUser.usdt = Number(((CurrentUser.usdt || 0) - totalUsdt).toFixed(2));
-        CurrentUser.ora = Number(((CurrentUser.ora || 0) + amtOra).toFixed(2));
-        merchantObj.usdt = Number(((merchantObj.usdt || 0) + totalUsdt).toFixed(2));
-      } else {
-        if ((CurrentUser.ora || 0) < amtOra) { showToast("⚠️ Yetersiz ORA!", "warning"); return; }
-        CurrentUser.ora = Number(((CurrentUser.ora || 0) - amtOra).toFixed(2));
-        CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + totalUsdt).toFixed(2));
-        merchantObj.ora = Number(((merchantObj.ora || 0) + amtOra).toFixed(2));
+      const amtOra = parseFloat(document.getElementById('p2p-trade-input-ora')?.value);
+      if (isNaN(amtOra) || amtOra <= 0 || amtOra > activeP2pOrder.oraAmount) { 
+        showToast("⚠️ Geçersiz veya ilan limitini aşan miktar!", "warning"); 
+        return; 
       }
 
-      saveStoredUser(merchantObj);
+      const feeUsdtPercent = (typeof ProtocolState !== 'undefined' && ProtocolState.feeUsdtPercent) ? ProtocolState.feeUsdtPercent : 1.0;
+      const feeOraPercent = (typeof ProtocolState !== 'undefined' && ProtocolState.feeOraPercent) ? ProtocolState.feeOraPercent : 1.0;
+
+      const rawUsdt = Number((amtOra * activeP2pOrder.price).toFixed(2));
+      const feeUsdt = Number(((rawUsdt * feeUsdtPercent) / 100).toFixed(2));
+      const burnOra = Number(((amtOra * feeOraPercent) / 100).toFixed(2));
+
+      const merchantKey = `mineora_user_${activeP2pOrder.merchant.toLowerCase()}`;
+      let merchantObj = null;
+      try { merchantObj = JSON.parse(localStorage.getItem(merchantKey)); } catch(e) {}
+
+      if (!merchantObj) { showToast("⚠️ İlan sahibinin verilerine ulaşılamadı!", "warning"); return; }
+
+      isP2pProcessing = true;
+
+      if (p2pFilter === 'buy') {
+        const totalUsdt = Number((rawUsdt + feeUsdt).toFixed(2));
+        const myUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
+        if (myUsdt < totalUsdt) {
+          showToast(`⚠️ Yetersiz USDT! Gerekli: $${totalUsdt.toFixed(2)} USDT`, "warning");
+          isP2pProcessing = false;
+          return;
+        }
+
+        CurrentUser.usdt = Number((myUsdt - totalUsdt).toFixed(2));
+        CurrentUser.ora = Number(((CurrentUser.ora || 0) + (amtOra - burnOra)).toFixed(2));
+        merchantObj.usdt = Number(((merchantObj.usdt || 0) + rawUsdt).toFixed(2));
+        saveStoredUser(merchantObj);
+        showToast(`✅ P2P Başarılı! ${(amtOra - burnOra).toFixed(2)} ORA cüzdanınıza aktarıldı!`, "success");
+      } else {
+        const myOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
+        if (myOra < amtOra) {
+          showToast(`⚠️ Satmak için yetersiz ORA! Mevcut: ${myOra.toFixed(2)} ORA`, "warning");
+          isP2pProcessing = false;
+          return;
+        }
+
+        const netUsdt = Number((rawUsdt - feeUsdt).toFixed(2));
+        CurrentUser.ora = Number((myOra - amtOra).toFixed(2));
+        CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + netUsdt).toFixed(2));
+        merchantObj.ora = Number(((merchantObj.ora || 0) + (amtOra - burnOra)).toFixed(2));
+        saveStoredUser(merchantObj);
+        showToast(`✅ P2P Başarılı! $${netUsdt.toFixed(2)} USDT cüzdanınıza aktarıldı!`, "success");
+      }
+
+      if (typeof ProtocolState !== 'undefined') {
+        ProtocolState.adminVaultUsdt = Number(((ProtocolState.adminVaultUsdt || 0) + feeUsdt).toFixed(2));
+        ProtocolState.totalBurnedOra = Number(((ProtocolState.totalBurnedOra || 0) + burnOra).toFixed(2));
+        saveGlobalProtocolState(ProtocolState);
+      }
+
+      if (typeof AdminState !== 'undefined') {
+        AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) + feeUsdt).toFixed(2));
+        AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + burnOra).toFixed(2));
+        if (typeof saveAdminProtocolState === 'function') saveAdminProtocolState(AdminState);
+      }
+
       activeP2pOrder.oraAmount = Number((activeP2pOrder.oraAmount - amtOra).toFixed(2));
-      if (activeP2pOrder.oraAmount <= 0.01) globalP2pOrders = globalP2pOrders.filter(o => o.id !== activeP2pOrder.id);
+      activeP2pOrder.usdtAmount = Number((activeP2pOrder.oraAmount * activeP2pOrder.price).toFixed(2));
+      if (activeP2pOrder.oraAmount <= 0.001) {
+        globalP2pOrders = globalP2pOrders.filter(o => o.id !== activeP2pOrder.id);
+      }
+
       saveP2pOrders(globalP2pOrders);
-      saveUserWorld(); updateHUD();
-      closeModal('modal-p2p-trade'); renderP2pOrders();
-      showToast("✅ Takas tamamlandı!", "success");
+      saveUserWorld(); updateHUD(); closeModal('modal-p2p-trade'); renderP2pOrders();
+      setTimeout(() => { isP2pProcessing = false; }, 800);
+    }
+
+    if (typeof fbDb !== 'undefined' && fbDb) {
+      try {
+        fbDb.ref('p2pOrders').on('value', snapshot => {
+          const val = snapshot.val();
+          if (val) {
+            globalP2pOrders = val;
+            localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(val));
+            const p2pSec = document.getElementById('sec-p2p');
+            if (p2pSec && !p2pSec.classList.contains('hidden')) renderP2pOrders();
+          }
+        });
+      } catch(e) {}
     }
 
     // ============================================================================
     // 7. STAKE MOTORU
     // ============================================================================
     const STAKE_PLANS = {
-      60: { days: 60, totalProfitPercent: 100.0 },
-      90: { days: 90, totalProfitPercent: 200.0 },
-      120: { days: 120, totalProfitPercent: 300.0 }
+      60: { days: 60, durationMs: 60 * 24 * 60 * 60 * 1000, totalProfitPercent: 100.0, badge: "Standart Kasa", dailyRateText: "~%1.66 Günlük" },
+      90: { days: 90, durationMs: 90 * 24 * 60 * 60 * 1000, totalProfitPercent: 200.0, badge: "Gümüş Kasa", dailyRateText: "~%2.22 Günlük" },
+      120: { days: 120, durationMs: 120 * 24 * 60 * 60 * 1000, totalProfitPercent: 300.0, badge: "Altın VIP Kasa", dailyRateText: "~%2.50 Günlük" }
     };
-    let selectedStakeDays = 60;
+    let selectedStakeDays = 60, stakeTickerInterval = null;
 
     function setStakePlan(days) {
       selectedStakeDays = days;
+      [60, 90, 120].forEach(d => {
+        const btn = document.getElementById(`stake-plan-btn-${d}`);
+        if (btn) {
+          btn.className = (d === days)
+            ? "p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 text-black font-black border-2 border-yellow-200 shadow-xl cursor-pointer transition transform scale-102 text-left"
+            : "p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer transition text-left";
+        }
+      });
       calculateStakePreview();
     }
+
     function calculateStakePreview() {
       const amt = parseFloat(document.getElementById('stake-deposit-amount')?.value) || 0;
       const plan = STAKE_PLANS[selectedStakeDays];
       const profit = (amt * plan.totalProfitPercent) / 100;
-      document.getElementById('stake-preview-profit').innerText = `+${profit.toFixed(2)} ORA`;
+      const dailyProfit = profit / plan.days;
+      const rewardEl = document.getElementById('stake-preview-profit');
+      const dailyEl = document.getElementById('stake-preview-daily');
+      if (rewardEl) rewardEl.innerText = `+${profit.toFixed(2)} ORA (%${plan.totalProfitPercent})`;
+      if (dailyEl) dailyEl.innerText = `~${dailyProfit.toFixed(2)} ORA / Gün`;
     }
+
     function fillMaxStake() {
       if (!CurrentUser) return;
-      document.getElementById('stake-deposit-amount').value = Math.floor(CurrentUser.ora || 0);
-      calculateStakePreview();
+      const amtInput = document.getElementById('stake-deposit-amount');
+      if (amtInput) {
+        amtInput.value = Math.floor(Number(parseFloat(CurrentUser.ora || 0)));
+        calculateStakePreview();
+      }
     }
+
     function executeDepositStake() {
       if (!CurrentUser) return;
-      const amt = parseFloat(document.getElementById('stake-deposit-amount')?.value) || 0;
-      if (amt < 100 || amt > (CurrentUser.ora || 0)) { showToast("⚠️ Min: 100 ORA veya yetersiz bakiye!", "warning"); return; }
+      const amtInput = document.getElementById('stake-deposit-amount');
+      const amount = parseFloat(amtInput?.value) || 0;
+      const currentOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
+
+      if (isNaN(amount) || amount < 100) { showToast("⚠️ Minimum stake tutarı 100 ORA'dır!", "warning"); return; }
+      if (amount > currentOra) { showToast(`⚠️ Yetersiz bakiye! Mevcut: ${currentOra.toFixed(2)} ORA`, "warning"); return; }
+
       const plan = STAKE_PLANS[selectedStakeDays];
-      CurrentUser.ora = Number(((CurrentUser.ora || 0) - amt).toFixed(2));
+      const now = Date.now(), unlockDate = now + plan.durationMs;
+      const expectedProfit = Number(((amount * plan.totalProfitPercent) / 100).toFixed(2));
+
+      CurrentUser.ora = Number((currentOra - amount).toFixed(2));
       if (!CurrentUser.stakes) CurrentUser.stakes = [];
+
       CurrentUser.stakes.unshift({
-        id: Date.now(), amount: amt, planDays: plan.days,
-        expectedProfit: (amt * plan.totalProfitPercent) / 100, claimedProfit: 0,
-        startDate: Date.now(), unlockDate: Date.now() + plan.days * 86400000, principalClaimed: false
+        id: Date.now(), amount: amount, planDays: plan.days, profitPercent: plan.totalProfitPercent,
+        expectedProfit: expectedProfit, claimedProfit: 0.00, lastAccrualTime: now, startDate: now, unlockDate: unlockDate, principalClaimed: false
       });
-      saveUserWorld(); updateHUD(); renderActiveStakes();
-      showToast("🔒 Varlık kasaya kilitlendi!", "success");
+
+      saveUserWorld(); updateHUD();
+      if (amtInput) amtInput.value = "";
+      calculateStakePreview(); renderActiveStakes();
+      showToast(`🔒 ${amount.toLocaleString()} ORA, %${plan.totalProfitPercent} kâr hedefiyle ${plan.days} gün kasaya kilitlendi!`, "success");
     }
-    function renderActiveStakes() {
-      const c = document.getElementById('active-stakes-list');
-      if (!c || !CurrentUser) return;
-      c.innerHTML = "";
-      (CurrentUser.stakes || []).forEach(s => {
-        const card = document.createElement('div');
-        card.className = "p-4 rounded-2xl bg-mineora-bg border border-mineora-border flex justify-between text-xs";
-        card.innerHTML = `<div><strong>${s.amount} ORA</strong> (${s.planDays} Gün)</div><div class="text-mineora-green font-bold">+${s.expectedProfit} ORA Kâr</div>`;
-        c.appendChild(card);
+
+    function processAccruedStakeProfits() {
+      if (!CurrentUser || !CurrentUser.stakes || CurrentUser.stakes.length === 0) return;
+      const now = Date.now();
+      let totalDistributed = 0, updated = false;
+
+      CurrentUser.stakes.forEach(s => {
+        const effectiveTime = Math.min(now, s.unlockDate);
+        const elapsedSinceLast = effectiveTime - (s.lastAccrualTime || s.startDate);
+        if (elapsedSinceLast > 0 && s.claimedProfit < s.expectedProfit) {
+          const ratePerMs = s.expectedProfit / (s.planDays * 24 * 60 * 60 * 1000);
+          let newlyAccrued = Math.min(elapsedSinceLast * ratePerMs, s.expectedProfit - s.claimedProfit);
+          if (newlyAccrued > 0.0001) {
+            s.claimedProfit = Number((s.claimedProfit + newlyAccrued).toFixed(4));
+            s.lastAccrualTime = effectiveTime;
+            totalDistributed += newlyAccrued;
+            updated = true;
+          }
+        }
       });
+
+      if (updated && totalDistributed > 0) {
+        CurrentUser.ora = Number(((CurrentUser.ora || 0) + totalDistributed).toFixed(4));
+        if (typeof deductMinedOraFromMasterReserve === 'function') deductMinedOraFromMasterReserve(totalDistributed);
+        saveUserWorld(); updateHUD();
+      }
+    }
+
+    function claimPrincipalReturn(stakeId) {
+      if (!CurrentUser || !CurrentUser.stakes) return;
+      const s = CurrentUser.stakes.find(item => item.id === stakeId);
+      if (!s) return;
+      const now = Date.now();
+      if (now < s.unlockDate) { showToast("⏳ Bu kasanın kilit süresi henüz dolmadı!", "warning"); return; }
+      if (s.principalClaimed) { showToast("⚠️ Ana para zaten cüzdanınıza iade edilmiş.", "info"); return; }
+
+      processAccruedStakeProfits();
+      s.principalClaimed = true;
+      CurrentUser.ora = Number(((CurrentUser.ora || 0) + s.amount).toFixed(2));
+      saveUserWorld(); updateHUD(); renderActiveStakes();
+      showToast(`🎉 Tebrikler! ${s.amount.toLocaleString()} ORA ana paranız cüzdanınıza iade edildi!`, "success");
+    }
+
+    function renderActiveStakes() {
+      const container = document.getElementById('active-stakes-list');
+      if (!container || !CurrentUser) return;
+      const stakes = CurrentUser.stakes || [];
+      if (stakes.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">Şu anda banka kasasında kilitli vadeli ORA varlığınız bulunmuyor.</div>`;
+        return;
+      }
+
+      const now = Date.now();
+      container.innerHTML = "";
+      stakes.forEach(s => {
+        const isUnlocked = now >= s.unlockDate;
+        let timeText = "";
+        if (isUnlocked) {
+          timeText = "Vade Tamamlandı (Kilit Açık)";
+        } else {
+          const leftMs = s.unlockDate - now;
+          const leftDays = Math.floor(leftMs / (1000 * 60 * 60 * 24));
+          const leftHours = Math.floor((leftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
+          const leftSecs = Math.floor((leftMs % (1000 * 60)) / 1000);
+          timeText = `${leftDays}g ${leftHours}s ${leftMins}d ${leftSecs}sn kaldı`;
+        }
+
+        const dailyProfit = s.expectedProfit / s.planDays;
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-2xl bg-mineora-bg border ${s.principalClaimed ? 'border-slate-800 opacity-60' : (isUnlocked ? 'border-mineora-green/60' : 'border-amber-500/40')} flex flex-wrap items-center justify-between gap-4 text-xs shadow-lg`;
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl ${s.principalClaimed ? 'bg-slate-800 text-slate-400' : (isUnlocked ? 'bg-mineora-green/20 text-mineora-green' : 'bg-amber-500/20 text-amber-400')} flex items-center justify-center text-lg font-black">
+              <i class="fa-solid ${s.principalClaimed ? 'fa-check-double' : (isUnlocked ? 'fa-lock-open' : 'fa-vault')}"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <strong class="text-white text-sm font-mono">${s.amount.toLocaleString()} ORA</strong>
+                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-card text-cyan-300 border border-cyan-500/30">${s.planDays} Gün</span>
+                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-green/15 text-mineora-green">+%${s.profitPercent} Kâr</span>
+              </div>
+              <span class="text-[10px] ${isUnlocked ? 'text-mineora-green font-bold' : 'text-cyan-400'} block font-mono mt-0.5"><i class="fa-solid fa-stopwatch mr-1"></i> ${timeText}</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-5">
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 block font-bold">Cüzdana Yansıyan Kazanç:</span>
+              <strong class="text-mineora-green font-mono text-sm">+${(s.claimedProfit || 0).toFixed(2)} / ${s.expectedProfit.toFixed(0)} ORA</strong>
+              <span class="text-[9px] text-slate-500 block font-mono">(~${dailyProfit.toFixed(2)} ORA/Gün)</span>
+            </div>
+            <div>
+              ${s.principalClaimed ? '<span class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-[11px] block">Tahsil Edildi</span>' : (isUnlocked ? `<button type="button" onclick="claimPrincipalReturn(${s.id})" class="px-4 py-2.5 rounded-xl bg-mineora-green hover:opacity-90 text-white font-black text-xs transition cursor-pointer shadow-lg shadow-mineora-green/20 animate-pulse">Ana Parayı İade Al</button>` : '<span class="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-[10px] flex items-center gap-1"><i class="fa-solid fa-coins text-mineora-gold animate-bounce"></i> Kâr Akıyor</span>')}
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    if (!stakeTickerInterval) {
+      stakeTickerInterval = setInterval(() => {
+        const secStake = document.getElementById('sec-stake');
+        if (secStake && !secStake.classList.contains('hidden')) {
+          processAccruedStakeProfits();
+          renderActiveStakes();
+        }
+      }, 1000);
     }
 
     // ============================================================================
     // 8. CÜZDAN MOTORU (TRC20)
     // ============================================================================
+    let isWalletProcessing = false;
+
     function setWalletTab(tab) {
       const isDep = tab === 'deposit';
-      document.getElementById('wallet-view-deposit')?.classList.toggle('hidden', !isDep);
-      document.getElementById('wallet-view-withdraw')?.classList.toggle('hidden', isDep);
+      const depView = document.getElementById('wallet-view-deposit');
+      const withView = document.getElementById('wallet-view-withdraw');
+      const depBtn = document.getElementById('wallet-tab-btn-deposit');
+      const withBtn = document.getElementById('wallet-tab-btn-withdraw');
+
+      if (depView) depView.classList.toggle('hidden', !isDep);
+      if (withView) withView.classList.toggle('hidden', isDep);
+
+      if (depBtn) {
+        depBtn.className = isDep 
+          ? "flex-1 py-3 rounded-2xl font-black text-xs bg-gradient-to-r from-amber-500 to-mineora-gold text-black shadow-lg shadow-mineora-gold/20 transition cursor-pointer flex items-center justify-center gap-2" 
+          : "flex-1 py-3 rounded-2xl font-bold text-xs text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer flex items-center justify-center gap-2";
+      }
+      if (withBtn) {
+        withBtn.className = !isDep 
+          ? "flex-1 py-3 rounded-2xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-lg shadow-emerald-500/20 transition cursor-pointer flex items-center justify-center gap-2" 
+          : "flex-1 py-3 rounded-2xl font-bold text-xs text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer flex items-center justify-center gap-2";
+      }
     }
+
     function renderQrCode() {
       const box = document.getElementById('qrcode-container');
-      if (box && typeof QRCode !== 'undefined') {
-        box.innerHTML = "";
-        new QRCode(box, { text: OFFICIAL_TRC20_DEPOSIT_ADDRESS, width: 130, height: 130 });
+      if (!box) return;
+      box.innerHTML = "";
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(box, {
+          text: OFFICIAL_TRC20_DEPOSIT_ADDRESS,
+          width: 140, height: 140,
+          colorDark: "#0b0e11", colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
       }
       const addrBox = document.getElementById('wallet-trc20-box');
       if (addrBox) addrBox.value = OFFICIAL_TRC20_DEPOSIT_ADDRESS;
     }
+
     function copyWalletAddress() {
       navigator.clipboard.writeText(OFFICIAL_TRC20_DEPOSIT_ADDRESS).then(() => {
-        showToast("📋 TRC20 Adresi Kopyalandı!", "success");
+        showToast("📋 Resmi TRC20 rezerv adresi kopyalandı!", "success");
       });
     }
+
     function fillMaxWithdraw() {
       if (!CurrentUser) return;
-      document.getElementById('withdraw-amount-usdt').value = (CurrentUser.usdt || 0).toFixed(2);
+      const withInput = document.getElementById('withdraw-amount-usdt');
+      if (withInput) withInput.value = Math.max(0, CurrentUser.usdt || 0).toFixed(2);
     }
+
     function submitDepositReceipt() {
-      if (!CurrentUser) return;
-      const amt = parseFloat(document.getElementById('deposit-amount-input')?.value) || 0;
-      const txid = document.getElementById('deposit-txid-input')?.value.trim();
-      if (amt < 10 || !txid || txid.length < 15) { showToast("⚠️ Geçersiz tutar veya TXID!", "warning"); return; }
-      queueDepositForAdminApproval(CurrentUser.username, amt, txid);
+      if (!CurrentUser || isWalletProcessing) return;
+      const amtInput = document.getElementById('deposit-amount-input');
+      const txidInput = document.getElementById('deposit-txid-input');
+      const amt = parseFloat(amtInput?.value) || 0;
+      const txid = txidInput?.value.trim();
+
+      if (isNaN(amt) || amt < 10) { showToast("⚠️ Minimum yatırma mutabakatı 10 USDT'dir!", "warning"); return; }
+      if (!txid || txid.length < 15) { showToast("⛔ Transfer Hash (TXID) kodunu girmek zorunludur!", "warning"); return; }
+
+      const existingDeposits = (typeof AdminState !== 'undefined' && AdminState.pendingDeposits) ? AdminState.pendingDeposits : [];
+      if (existingDeposits.some(d => d.txid && d.txid.toLowerCase() === txid.toLowerCase())) {
+        showToast("⛔ Bu işlem kodu zaten mutabakat kuyruğunda bekliyor!", "warning"); return;
+      }
+
+      isWalletProcessing = true;
+      if (typeof queueDepositForAdminApproval === 'function') queueDepositForAdminApproval(CurrentUser.username, amt, txid);
+      if (amtInput) amtInput.value = "";
+      if (txidInput) txidInput.value = "";
       closeModal('modal-wallet');
-      showToast("⏳ Yatırım bildirimi patron onayına gönderildi!", "info");
+      showToast(`⏳ $${amt.toFixed(2)} USDT yatırım bildiriminiz alındı. Blokzincir transferiniz onaylandıktan sonra bakiyenize yansıyacaktır.`, "info");
+      setTimeout(() => { isWalletProcessing = false; }, 1000);
     }
+
     function executeWithdrawal() {
       if (!CurrentUser) return;
-      if (CurrentUser.isVaultLocked) { showToast("⛔ Kasa kilitli!", "warning"); return; }
-      const amt = parseFloat(document.getElementById('withdraw-amount-usdt')?.value) || 0;
-      const addr = document.getElementById('withdraw-target-address')?.value.trim();
-      const pwd = document.getElementById('withdraw-auth-password')?.value.trim();
-      if (amt < 10 || amt > (CurrentUser.usdt || 0) || !addr || pwd !== CurrentUser.pass) {
-        showToast("⚠️ Bilgileri veya şifrenizi kontrol edin!", "warning");
-        return;
-      }
-      CurrentUser.usdt = Number(((CurrentUser.usdt || 0) - amt).toFixed(2));
+      if (CurrentUser.isVaultLocked) { showToast("⛔ Güvenlik kilidi devrede olan hesaplar çekim yapamaz. Lütfen destek birimiyle iletişime geçin.", "warning"); return; }
+      if (isWalletProcessing) { showToast("⏳ İşleminiz işleniyor, lütfen bekleyin...", "info"); return; }
+
+      const targetInput = document.getElementById('withdraw-target-address');
+      const amtInput = document.getElementById('withdraw-amount-usdt');
+      const pwdInput = document.getElementById('withdraw-auth-password');
+      const targetAddr = targetInput?.value.trim();
+      const amt = parseFloat(amtInput?.value);
+      const pwd = pwdInput?.value.trim();
+
+      if (isNaN(amt) || amt <= 0) { showToast("⚠️ Lütfen geçerli bir çekim tutarı girin!", "warning"); return; }
+      if (amt < 10) { showToast("⚠️ Minimum çekim tutarı 10 USDT'dir!", "warning"); return; }
+      if (!targetAddr || !targetAddr.startsWith('T') || targetAddr.length < 30) { showToast("⚠️ Lütfen 'T' ile başlayan geçerli bir TRON (TRC20) cüzdan adresi girin!", "warning"); return; }
+
+      const currentUsdt = Number(CurrentUser.usdt) || 0;
+      if (amt > currentUsdt) { showToast(`⚠️ Yetersiz bakiye! Mevcut USDT: $${currentUsdt.toFixed(2)}`, "warning"); return; }
+      if (!pwd) { showToast("⚠️ Güvenliğiniz için hesap şifrenizi girmelisiniz!", "warning"); return; }
+      if (pwd !== CurrentUser.pass) { showToast("❌ Hatalı şifre! Çekim talebi durduruldu.", "warning"); return; }
+
+      isWalletProcessing = true;
+      CurrentUser.usdt = Number((currentUsdt - amt).toFixed(2));
       saveUserWorld(); updateHUD();
-      queueWithdrawalForAdminApproval(CurrentUser.username, amt, addr);
+
+      if (typeof queueWithdrawalForAdminApproval === 'function') queueWithdrawalForAdminApproval(CurrentUser.username, amt, targetAddr);
+      if (targetInput) targetInput.value = "";
+      if (amtInput) amtInput.value = "";
+      if (pwdInput) pwdInput.value = "";
+
       closeModal('modal-wallet');
-      showToast("🔒 Çekim talebi oluşturuldu!", "success");
+      showToast(`🔒 $${amt.toFixed(2)} USDT çekim talebiniz işleme alındı. Talebiniz onaylandıktan sonra cüzdanınıza yansıyacaktır.`, "success");
+      setTimeout(() => { isWalletProcessing = false; }, 1000);
     }
 
     // ============================================================================
-    // BAŞLATICI
+    // BAŞLATICI & KLAVYE DİNLİYİCİSİ
     // ============================================================================
     window.addEventListener('DOMContentLoaded', () => {
       applyTranslations();
@@ -2917,7 +3789,6 @@
       }
     });
 
-    // Klavyeden [Boşluk] veya [X] ile kazma vurma desteği
     window.addEventListener('keydown', (e) => {
       const caveSec = document.getElementById('sec-cave');
       if (!caveSec || caveSec.classList.contains('hidden')) return;
