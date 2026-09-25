@@ -1217,6 +1217,7 @@
       return null;
     }
 
+    // SINIRSIZ EKLEME VE DOĞRUDAN %10 + 1 ÜSTE %5 PRİM DAĞITIM MOTORU
     function linkHierarchyByRefCode(newUsername, refCode, newRole = "Aday", isFeeDeducted = false) {
       if (!refCode || !refCode.trim()) return;
 
@@ -1225,12 +1226,21 @@
         const targetUser = getStoredUser(newUsername) || CurrentUser;
         if (!targetUser) return;
 
-        if (leader.role === "Şirket Sahibi") {
-          if (newRole === "Maden Sahibi") {
-            if (!leader.minesOwned) leader.minesOwned = [];
-            const exists = leader.minesOwned.some(m => m.ownerUsername.toLowerCase() === newUsername.toLowerCase());
+        // 1. Durum: Yeni Üye 'Maden Sahibi' Olursa (1000 USDT Karşılığı 10000 ORA)
+        if (newRole === "Maden Sahibi") {
+          let companyOwner = null;
+          if (leader.role === "Şirket Sahibi") {
+            companyOwner = leader;
+          } else if (leader.referredBy) {
+            const topLeader = findUserByRefCode(leader.referredBy);
+            if (topLeader && topLeader.role === "Şirket Sahibi") companyOwner = topLeader;
+          }
+
+          if (companyOwner) {
+            if (!companyOwner.minesOwned) companyOwner.minesOwned = [];
+            const exists = companyOwner.minesOwned.some(m => m.ownerUsername.toLowerCase() === newUsername.toLowerCase());
             if (!exists) {
-              leader.minesOwned.unshift({
+              companyOwner.minesOwned.unshift({
                 mineId: `MINE-${newUsername.toUpperCase()}`,
                 mineName: `${newUsername} Alpin Ocağı`,
                 ownerUsername: newUsername,
@@ -1239,86 +1249,101 @@
               });
             }
             if (isFeeDeducted) {
-              const commOra = 1000.00;
-              leader.ora = Number(((leader.ora || 0) + commOra).toFixed(2));
-              addUserNotificationLog(leader, "Maden Sahibi Katılım Primi (%10)", `${newUsername} filonuza ocak kurdu.`, `+${commOra.toFixed(2)} ORA`, "commission");
-              showToast(`💰 Referans Primi: ${leader.username} hesabına %10 (+${commOra} ORA) aktarıldı!`, "success");
+              const commOra = 1000.00; // %10 Prim
+              companyOwner.ora = Number(((companyOwner.ora || 0) + commOra).toFixed(2));
+              addUserNotificationLog(companyOwner, "Maden Sahibi Katılım Primi (%10)", `${newUsername} filonuza yeni ocak kurdu.`, `+${commOra.toFixed(2)} ORA`, "commission");
+              showToast(`💰 Referans Primi: ${companyOwner.username} hesabına %10 (+${commOra} ORA) aktarıldı!`, "success");
             }
-          } else {
-            if (!leader.workers) leader.workers = [];
-            const exists = leader.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
-            if (!exists) {
-              leader.workers.unshift({
-                username: newUsername,
-                workedToday: false,
-                oraMined: 0.00,
-                role: newRole,
-                joinedAt: new Date().toLocaleDateString('tr-TR')
-              });
+            saveStoredUser(companyOwner);
+            if (CurrentUser && CurrentUser.username.toLowerCase() === companyOwner.username.toLowerCase()) {
+              CurrentUser.minesOwned = companyOwner.minesOwned;
+              CurrentUser.ora = companyOwner.ora;
+              CurrentUser.logs = companyOwner.logs;
+              renderHierarchyUI();
+              updateNotificationBadge();
             }
-          }
-          saveStoredUser(leader);
-          if (CurrentUser && CurrentUser.username.toLowerCase() === leader.username.toLowerCase()) {
-            CurrentUser.minesOwned = leader.minesOwned;
-            CurrentUser.workers = leader.workers;
-            CurrentUser.ora = leader.ora;
-            CurrentUser.logs = leader.logs;
-            renderHierarchyUI();
-            updateNotificationBadge();
           }
           return;
         }
 
-        if (leader.role === "Maden Sahibi") {
-          if (!leader.workers) leader.workers = [];
-          const exists = leader.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
-          if (!exists) {
-            leader.workers.unshift({
+        // 2. Durum: Yeni Üye 'İşçi Madenci' Olursa (100 USDT Karşılığı 1000 ORA)
+        if (newRole === "İşçi Madenci") {
+          let directParent = leader; // Ekleyen kişi (İşçi, Maden Sahibi veya Şirket Sahibi)
+          let grandParent = null;   // Onun da üstündeki lider
+
+          if (directParent.referredBy) {
+            grandParent = findUserByRefCode(directParent.referredBy);
+          }
+
+          // 1. Üstün Listesine Kayıt (Sınırsız Ekleme)
+          if (!directParent.workers) directParent.workers = [];
+          const existsInDirect = directParent.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
+          if (!existsInDirect) {
+            directParent.workers.unshift({
               username: newUsername,
               workedToday: false,
               oraMined: 0.00,
-              role: newRole,
+              role: "İşçi Madenci",
               joinedAt: new Date().toLocaleDateString('tr-TR')
             });
+          } else {
+            const wObj = directParent.workers.find(w => w.username.toLowerCase() === newUsername.toLowerCase());
+            if (wObj) wObj.role = "İşçi Madenci";
           }
-          if (isFeeDeducted && newRole === "İşçi Madenci") {
-            const mineComm = 100.00;
-            leader.ora = Number(((leader.ora || 0) + mineComm).toFixed(2));
-            addUserNotificationLog(leader, "Yeni İşçi Katılım Primi (%10)", `${newUsername} ocağınıza katıldı.`, `+${mineComm.toFixed(2)} ORA`, "commission");
+
+          // 1. Kademe: Doğrudan Ekleyene %10 (100 ORA) Anında Aktarılır
+          if (isFeeDeducted) {
+            const directComm = 100.00;
+            directParent.ora = Number(((directParent.ora || 0) + directComm).toFixed(2));
+            addUserNotificationLog(directParent, "1. Kademe Referans Primi (%10)", `${newUsername} madenci lisansı aldı.`, `+${directComm.toFixed(2)} ORA`, "commission");
+            showToast(`💰 1. Seviye Prim: ${directParent.username} hesabına +${directComm} ORA aktarıldı!`, "success");
           }
-          saveStoredUser(leader);
-          if (CurrentUser && CurrentUser.username.toLowerCase() === leader.username.toLowerCase()) {
-            CurrentUser.workers = leader.workers;
-            CurrentUser.ora = leader.ora;
-            CurrentUser.logs = leader.logs;
+          saveStoredUser(directParent);
+
+          if (CurrentUser && CurrentUser.username.toLowerCase() === directParent.username.toLowerCase()) {
+            CurrentUser.workers = directParent.workers;
+            CurrentUser.ora = directParent.ora;
+            CurrentUser.logs = directParent.logs;
             renderHierarchyUI();
             updateNotificationBadge();
           }
 
-          if (leader.referredBy) {
-            const topLeader = findUserByRefCode(leader.referredBy);
-            if (topLeader && topLeader.role === "Şirket Sahibi") {
-              if (!topLeader.minesOwned) topLeader.minesOwned = [];
-              const ocak = topLeader.minesOwned.find(m => m.ownerUsername.toLowerCase() === leader.username.toLowerCase());
-              if (ocak) {
-                if (!ocak.workers) ocak.workers = [];
-                if (!ocak.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase())) {
-                  ocak.workers.unshift({ username: newUsername, workedToday: false, oraMined: 0.00, role: newRole });
-                }
-              }
-              if (isFeeDeducted && newRole === "İşçi Madenci") {
-                const compComm = 50.00;
-                topLeader.ora = Number(((topLeader.ora || 0) + compComm).toFixed(2));
-                addUserNotificationLog(topLeader, "Holding Ekip Katılım Primi (%5)", `${newUsername} filoya katıldı.`, `+${compComm.toFixed(2)} ORA`, "commission");
-              }
-              saveStoredUser(topLeader);
+          // 2. Kademe: 1 Üstündeki Kişiye %5 (50 ORA) Aktarılır
+          if (grandParent) {
+            if (!grandParent.workers) grandParent.workers = [];
+            if (isFeeDeducted) {
+              const grandComm = 50.00;
+              grandParent.ora = Number(((grandParent.ora || 0) + grandComm).toFixed(2));
+              addUserNotificationLog(grandParent, "2. Kademe Ekip Primi (%5)", `Alt ekibinizden (${directParent.username}) yeni lisans: ${newUsername}`, `+${grandComm.toFixed(2)} ORA`, "commission");
+            }
+            saveStoredUser(grandParent);
+
+            if (CurrentUser && CurrentUser.username.toLowerCase() === grandParent.username.toLowerCase()) {
+              CurrentUser.ora = grandParent.ora;
+              CurrentUser.logs = grandParent.logs;
+              renderHierarchyUI();
+              updateNotificationBadge();
             }
           }
           return;
         }
 
-        if (leader.referredBy) {
-          linkHierarchyByRefCode(newUsername, leader.referredBy, newRole, isFeeDeducted);
+        // 3. Durum: Yeni Üye Henüz 'Aday' İken (İlk Kayıt)
+        if (!leader.workers) leader.workers = [];
+        const existsAday = leader.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
+        if (!existsAday) {
+          leader.workers.unshift({
+            username: newUsername,
+            workedToday: false,
+            oraMined: 0.00,
+            role: "Aday",
+            joinedAt: new Date().toLocaleDateString('tr-TR')
+          });
+          saveStoredUser(leader);
+          if (CurrentUser && CurrentUser.username.toLowerCase() === leader.username.toLowerCase()) {
+            CurrentUser.workers = leader.workers;
+            renderHierarchyUI();
+          }
         }
       };
 
@@ -2422,7 +2447,6 @@
       const lanternX = w * 0.52 + lanternSway, lanternY = 85;
       mCtx.strokeStyle = '#334155'; mCtx.lineWidth = 2;
       mCtx.beginPath(); mCtx.moveTo(w * 0.52, 0); mCtx.lineTo(lanternX, lanternY - 14); mCtx.stroke();
-      mCtx.fillStyle = '#78350f'; mCtx.fillRect(lanternX - 8, lanternY - 14, 16, 6);
       mCtx.fillStyle = '#fef08a'; mCtx.beginPath(); mCtx.arc(lanternX, lanternY, 9, 0, Math.PI * 2); mCtx.fill();
 
       const roomLight = mCtx.createRadialGradient(lanternX, lanternY, 5, lanternX, lanternY, 260);
