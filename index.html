@@ -74,14 +74,14 @@
     }
     .btn-tactile:active { transform: scale(0.97); }
     .floating-text { animation: floatUp 1s ease-out forwards; pointer-events: none; }
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      100% { opacity: 0; transform: translate(-50%, -60px) scale(1.2); }
+    @keyframes floatUp { 
+      0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 
+      100% { opacity: 0; transform: translate(-50%, -60px) scale(1.2); } 
     }
     .fire-pulse { animation: fireGlow 1.5s infinite alternate; }
-    @keyframes fireGlow {
-      from { text-shadow: 0 0 4px #f97316, 0 0 10px #ef4444; }
-      to { text-shadow: 0 0 12px #f97316, 0 0 25px #dc2626; }
+    @keyframes fireGlow { 
+      from { text-shadow: 0 0 4px #f97316, 0 0 10px #ef4444; } 
+      to { text-shadow: 0 0 12px #f97316, 0 0 25px #dc2626; } 
     }
   </style>
 </head>
@@ -161,8 +161,8 @@
           <span data-i18n="badge_fleet">Filo Yönetimi: Çok Katmanlı Hiyerarşi</span>
         </div>
         <div class="p-3 rounded-2xl bg-mineora-card/80 border border-mineora-border flex items-center justify-center gap-2 text-slate-300">
-          <i class="fa-solid fa-fire text-rose-500"></i>
-          <span data-i18n="badge_elevator">Maden Asansörü: Dinamik Tahliye</span>
+          <i class="fa-solid fa-elevator text-rose-500"></i>
+          <span data-i18n="badge_elevator">Maden Asansörü: Biletli Keşif</span>
         </div>
       </div>
     </main>
@@ -210,6 +210,7 @@
         </div>
 
         <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          <!-- USDT Cüzdan -->
           <div class="flex-1 sm:flex-initial bg-mineora-bg px-2.5 sm:px-3 py-1.5 rounded-xl border border-mineora-border flex items-center gap-2 justify-center sm:justify-start">
             <i class="fa-solid fa-dollar-sign text-mineora-green text-xs"></i>
             <div class="leading-none">
@@ -218,11 +219,21 @@
             </div>
           </div>
 
+          <!-- ORA Varlık -->
           <div class="flex-1 sm:flex-initial bg-mineora-bg px-2.5 sm:px-3 py-1.5 rounded-xl border border-mineora-border flex items-center gap-2 justify-center sm:justify-start">
             <i class="fa-solid fa-coins text-mineora-gold text-xs"></i>
             <div class="leading-none">
               <span data-i18n="ora_label" class="text-[8px] sm:text-[9px] text-slate-400 block leading-tight">ORA Varlık</span>
               <span id="hud-ora-balance" class="text-xs sm:text-xs font-black text-mineora-gold font-mono leading-none">0.00</span>
+            </div>
+          </div>
+
+          <!-- Alp Kristali Sayacı (HUD Entegre) -->
+          <div class="flex-1 sm:flex-initial bg-mineora-bg px-2.5 sm:px-3 py-1.5 rounded-xl border border-cyan-500/30 flex items-center gap-2 justify-center sm:justify-start">
+            <i class="fa-solid fa-gem text-cyan-400 text-xs animate-pulse"></i>
+            <div class="leading-none">
+              <span class="text-[8px] sm:text-[9px] text-slate-400 block leading-tight">Alp Kristali</span>
+              <span id="hud-crystal-balance" class="text-xs sm:text-xs font-black text-cyan-300 font-mono leading-none">0</span>
             </div>
           </div>
 
@@ -256,8 +267,8 @@
       <button type="button" onclick="switchTab('map')" id="tab-btn-map" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer"><i class="fa-solid fa-map mr-1"></i> <span data-i18n="tab_map">Saha Haritası (5 Bölge)</span></button>
       <button type="button" onclick="switchTab('cave')" id="tab-btn-cave" class="px-4 py-2 rounded-xl text-xs font-bold bg-mineora-gold text-black transition whitespace-nowrap shadow-md cursor-pointer"><i class="fa-solid fa-person-digging mr-1 text-black"></i> <span data-i18n="tab_cave">Kazı Sahnesi</span></button>
       
-      <button type="button" onclick="switchTab('crash')" id="tab-btn-crash" class="px-4 py-2 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition whitespace-nowrap cursor-pointer animate-pulse">
-        <i class="fa-solid fa-fire-flame-curved mr-1 text-rose-500"></i> <span data-i18n="tab_crash">MADEN ASANSÖRÜ (CRASH)</span>
+      <button type="button" onclick="switchTab('crash')" id="tab-btn-crash" class="px-4 py-2 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 transition whitespace-nowrap cursor-pointer animate-pulse">
+        <i class="fa-solid fa-elevator mr-1 text-cyan-400"></i> <span data-i18n="tab_crash">MADEN ASANSÖRÜ</span>
       </button>
 
       <button type="button" onclick="switchTab('p2p')" id="tab-btn-p2p" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-pointer"><i class="fa-solid fa-handshake mr-1"></i> <span data-i18n="tab_p2p">BORSA TAKAS (P2P)</span></button>
@@ -510,22 +521,22 @@
 
       <!-- 4.5) MADEN ASANSÖRÜ (CRASH) -->
       <section id="sec-crash" class="hidden space-y-4 max-w-5xl mx-auto">
-        <div class="bg-mineora-card border border-rose-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+        <div class="bg-mineora-card border border-cyan-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-4">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-500 flex items-center justify-center text-2xl font-black border border-rose-500/30">
-                <i class="fa-solid fa-fire-flame-curved"></i>
+              <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-2xl font-black border border-cyan-500/30">
+                <i class="fa-solid fa-elevator"></i>
               </div>
               <div>
                 <h2 class="text-xl font-black text-white flex items-center gap-2">
-                  <span data-i18n="crash_title">Maden Asansörü: Derin Yükseliş</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">CRASH PROTOCOL</span>
+                  <span data-i18n="crash_title">Maden Asansörü: Derin Keşif</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">BİLETLİ SEFER</span>
                 </h2>
-                <span data-i18n="crash_sub" class="text-xs text-slate-400">Asansör derine indikçe çarpan katlanır! Halat kopmadan tahliye et, cevheri topla.</span>
+                <span data-i18n="crash_sub" class="text-xs text-slate-400">Alp Kristalleriyle kuyuya inin. Sıfır ORA riski, derin keşif çarpanı!</span>
               </div>
             </div>
             <div id="crash-badge-status" class="px-4 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-2">
-              <i class="fa-solid fa-clock animate-spin"></i> <span data-i18n="crash_bets_open">Bahisler Açık (5s)</span>
+              <i class="fa-solid fa-clock animate-spin"></i> <span data-i18n="crash_bets_open">Keşif Hazırlığı (5s)</span>
             </div>
           </div>
 
@@ -541,24 +552,26 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             <div class="p-3.5 bg-mineora-bg rounded-2xl border border-mineora-border space-y-1">
               <div class="flex justify-between items-center text-xs">
-                <span data-i18n="crash_input_label" class="text-slate-400 font-bold text-[10px]">Koyulacak ORA Miktarı:</span>
-                <button type="button" onclick="fillMaxCrashBet()" data-i18n="crash_max" class="text-mineora-gold text-[10px] font-bold hover:underline cursor-pointer">TÜMÜ (MAX)</button>
+                <span data-i18n="crash_input_label" class="text-slate-400 font-bold text-[10px]">İniş Harcı:</span>
+                <button type="button" onclick="fillMaxCrashBet()" data-i18n="crash_max" class="text-cyan-400 text-[10px] font-bold hover:underline cursor-pointer">BİLETLER</button>
               </div>
-              <input type="number" id="crash-bet-input" value="10" min="1" step="any" oninput="calculateCrashEstProfit(); updateCrashActionBtn();" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono font-bold text-sm outline-none focus:border-rose-500">
+              <div class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-cyan-300 font-mono font-bold text-sm">
+                1 Alp Kristali
+              </div>
             </div>
 
             <div class="p-3.5 bg-mineora-bg rounded-2xl border border-mineora-border space-y-1">
               <span data-i18n="crash_est_profit" class="text-slate-400 font-bold text-[10px] block">Potansiyel Net Hacim:</span>
               <div class="flex items-center justify-between pt-1">
-                <strong id="crash-est-profit" class="text-base font-black font-mono text-mineora-green">+0.00 ORA</strong>
-                <span class="text-[10px] text-slate-500 font-mono">(Canlı Çarpan)</span>
+                <strong id="crash-est-profit" class="text-base font-black font-mono text-mineora-green">+1.00 ORA</strong>
+                <span class="text-[10px] text-slate-500 font-mono">(1 ORA × Çarpan)</span>
               </div>
             </div>
 
             <div class="flex items-end">
               <button type="button" id="btn-crash-action" onclick="handleCrashActionBtn()" class="w-full py-3.5 rounded-2xl bg-mineora-green hover:opacity-90 text-white font-black text-sm transition shadow-xl shadow-mineora-green/20 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fa-solid fa-play"></i>
-                <span id="btn-crash-action-text" data-i18n="crash_confirm_bet">Bahsi Onayla (10 ORA)</span>
+                <span id="btn-crash-action-text" data-i18n="crash_confirm_bet">Kuyuya İn (1 Alp Kristali Kullan)</span>
               </button>
             </div>
           </div>
@@ -944,18 +957,17 @@
           </p>
         </div>
 
-        <div class="p-4 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
-          <h4 class="text-cyan-400 font-black text-xs flex items-center gap-2">
-            <i class="fa-solid fa-sitemap"></i> 2. Üç Katmanlı Organizasyon Yapısı
-          </h4>
-          <p>
-            Sistem bir yatırım havuzu değildir; üyelerin operasyonel iş birliğine dayalı bir madencilik simülasyonudur:
-          </p>
-          <ul class="list-disc list-inside space-y-1 pl-2 text-slate-400">
-            <li><strong class="text-white">İşçi Madenci:</strong> Günlük vardiyalarda aktif kazı yaparak cevher üretir, vagonları doldurur ve doğrudan rezerv çıktısı kazanır.</li>
-            <li><strong class="text-white">Maden Sahibi:</strong> Kendi ocağını işletir, ekibini koordine eder ve altındaki işçilerin çıkardığı cevherden yönetim payı alır.</li>
-            <li><strong class="text-white">Şirket Sahibi (Holding):</strong> Birden fazla maden ocağını tek çatı altında konsolide ederek bölgesel üretimi ve lojistiği yönetir.</li>
-          </ul>
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-cyan-500/30 font-black text-xs flex items-center gap-2">
+          <i class="fa-solid fa-sitemap"></i> 2. Üç Katmanlı Organizasyon Yapısı
+        </h4>
+        <p>
+          Sistem bir yatırım havuzu değildir; üyelerin operasyonel iş birliğine dayalı bir madencilik simülasyonudur:
+        </p>
+        <ul class="list-disc list-inside space-y-1 pl-2 text-slate-400">
+          <li><strong class="text-white">İşçi Madenci:</strong> Günlük vardiyalarda aktif kazı yaparak cevher üretir, vagonları doldurur ve doğrudan rezerv çıktısı kazanır.</li>
+          <li><strong class="text-white">Maden Sahibi:</strong> Kendi ocağını işletir, ekibini koordine eder ve altındaki işçilerin çıkardığı cevherden yönetim payı alır.</li>
+          <li><strong class="text-white">Şirket Sahibi (Holding):</strong> Birden fazla maden ocağını tek çatı altında konsolide ederek bölgesel üretimi ve lojistiği yönetir.</li>
+        </ul>
         </div>
 
         <div class="p-4 rounded-2xl bg-mineora-bg border border-emerald-400 font-black text-xs flex items-center gap-2">
@@ -971,7 +983,7 @@
             <i class="fa-solid fa-fire"></i> 4. Deflasyonist Yakım (Burn Fırını)
           </h4>
           <p>
-            Ekosistemdeki ORA arzı sınırsız değildir. Maden asansörü (Crash) tahliyelerinden, vadeli staking işlemlerinden ve P2P pazarındaki takaslardan kesilen işlem harçları doğrudan <strong>dEaD yakım adresine</strong> gönderilerek kalıcı olarak dolaşımdan silinir. Bu mekanizma enflasyonu önler ve rezervin iç değerini korur.
+            Ekosistemdeki ORA arzı sınırsız değildir. Maden asansörü (Crash) seferlerinden, vadeli staking işlemlerinden ve P2P pazarındaki takaslardan kesilen işlem harçları doğrudan <strong>dEaD yakım adresine</strong> gönderilerek kalıcı olarak dolaşımdan silinir. Bu mekanizma enflasyonu önler ve rezervin iç değerini korur.
           </p>
         </div>
       </div>
@@ -981,9 +993,10 @@
       </button>
     </div>
   </div>
-<!-- ================= TÜM MOTORLAR (TAM SENKRONİZE VE KESİNTİSİZ JS ÇEKİRDEĞİ) ================= -->
+
+  <!-- ================= TÜM MOTORLAR (TAM SENKRONİZE VE KESİNTİSİZ JS ÇEKİRDEĞİ) ================= -->
   <script>
-    // ============================================================================
+// ============================================================================
     // 1. LANG MOTORU (TR / EN)
     // ============================================================================
     let currentLang = localStorage.getItem('mineora_lang') || 'tr';
@@ -996,18 +1009,18 @@
         landing_title_2: "Kendi Maden İmparatorluğunu İnşa Et!",
         landing_desc: "Alp Dağları'nın keşfedilmemiş damarlarında başlayan bu yolculukta, çıkarılan her cevher ve kurulan her maden filosu ekosistemdeki gücünü belirler. Tünelleri kaz, filonu genişlet ve rezervlerin kontrolünü eline al.",
         start_btn: "Sisteme Katıl & Başla", inspect_btn: "Ekosistem Mimarisini İncele",
-        badge_peg: "Değer Standardı: USDT Endeksli", badge_fleet: "Filo Yönetimi: Çok Katmanlı Hiyerarşi", badge_elevator: "Maden Asansörü: Dinamik Tahliye",
+        badge_peg: "Değer Standardı: USDT Endeksli", badge_fleet: "Filo Yönetimi: Çok Katmanlı Hiyerarşi", badge_elevator: "Maden Asansörü: Biletli Keşif",
         tab_boss: "Yönetici Masası", tab_owner_worker: "Maden Soy Ağacı & İşçi Masası", tab_owner_hold: "Şirket Soy Ağacı & Filo Masası",
         tab_home: "Genel Bakış", tab_map: "Saha Haritası (5 Bölge)", tab_cave: "Kazı Sahnesi",
-        tab_crash: "MADEN ASANSÖRÜ (CRASH)", tab_p2p: "BORSA TAKAS (P2P)", tab_stake: "ORA BANKASI (STAKE)",
+        tab_crash: "MADEN ASANSÖRÜ", tab_p2p: "BORSA TAKAS (P2P)", tab_stake: "ORA BANKASI (STAKE)",
         tab_career: "Kariyer Seç", tab_settings: "Şifre Değiştir",
         wagon_full_text: "Vagon Doluluk", power_label: "Vuruş Şiddeti & Zamanlama", power_sub: "Yeşil/Sarı bölgede basarak cevheri parçalayın",
         strike_btn: "KAZMAYI VUR [BOŞLUK / TIKLA]", elevator_send: "Vagonu Asansöre Gönder",
-        crash_title: "Maden Asansörü: Derin Yükseliş", crash_sub: "Asansör derine indikçe çarpan katlanır! Halat kopmadan tahliye et, cevheri topla.",
-        crash_bets_open: "Bahisler Açık", crash_preparing: "Asansör Hazırlanıyor...", crash_input_label: "Koyulacak ORA Miktarı:",
-        crash_max: "TÜMÜ (MAX)", crash_est_profit: "Potansiyel Net Hacim:", crash_confirm_bet: "Bahsi Onayla",
-        crash_cancel_bet: "Bahsi İptal Et", crash_cashout: "Tahliye Et", crash_cashed_out: "Tahliye Edildi",
-        crash_crashed: "Halat Koptu / Çakıldı!", crash_running: "Kuyuya İniş Başladı!",
+        crash_title: "Maden Asansörü: Derin Keşif", crash_sub: "Alp Kristalleriyle kuyuya inin. Sıfır ORA riski, derin keşif çarpanı!",
+        crash_bets_open: "Keşif Hazırlığı", crash_preparing: "Asansör Hazırlanıyor...", crash_input_label: "İniş Harcı:",
+        crash_max: "BİLETLER", crash_est_profit: "Potansiyel Net Hacim:", crash_confirm_bet: "Kuyuya İn (1 Alp Kristali Kullan)",
+        crash_cancel_bet: "İnişi İptal Et (1 Kristal)", crash_cashout: "Tahliye Et", crash_cashed_out: "Tahliye Edildi",
+        crash_crashed: "Halat Koptu!", crash_running: "Derin İniş Başladı!",
         role_candidate: "Aday", role_worker: "İşçi Madenci", role_mine_owner: "Maden Sahibi", role_hold_owner: "Şirket Sahibi"
       },
       en: {
@@ -1018,18 +1031,18 @@
         landing_title_2: "Build Your Mining Empire!",
         landing_desc: "In this journey beginning in the uncharted veins of the Alps, every ore extracted and fleet formed establishes your dominance. Dig tunnels, scale your workforce, and take control of the reserves.",
         start_btn: "Join Protocol & Start", inspect_btn: "Inspect Architecture",
-        badge_peg: "Standard: USDT Pegged", badge_fleet: "Fleet: Multi-Layer Hierarchy", badge_elevator: "Mine Elevator: Dynamic Evacuation",
+        badge_peg: "Standard: USDT Pegged", badge_fleet: "Fleet: Multi-Layer Hierarchy", badge_elevator: "Mine Elevator: Ticket Discovery",
         tab_boss: "Admin Desk", tab_owner_worker: "Mine Tree & Workforce", tab_owner_hold: "Holding Tree & Fleet",
         tab_home: "Overview", tab_map: "Alpine Map (5 Sectors)", tab_cave: "Mining Stage",
-        tab_crash: "MINE ELEVATOR (CRASH)", tab_p2p: "P2P EXCHANGE", tab_stake: "ORA BANK (STAKE)",
+        tab_crash: "MINE ELEVATOR", tab_p2p: "P2P EXCHANGE", tab_stake: "ORA BANK (STAKE)",
         tab_career: "Select Career", tab_settings: "Change Password",
         wagon_full_text: "Wagon Capacity", power_label: "Strike Force & Timing", power_sub: "Hit the green/yellow zone to shatter ore",
         strike_btn: "STRIKE PICKAXE [SPACE / TAP]", elevator_send: "Dispatch to Elevator",
-        crash_title: "Mine Elevator: Deep Ascent", crash_sub: "Multipliers surge as you descend! Evacuate before the cable snaps.",
-        crash_bets_open: "Bets Open", crash_preparing: "Elevator Preparing...", crash_input_label: "ORA Stake Amount:",
-        crash_max: "ALL (MAX)", crash_est_profit: "Estimated Net Volume:", crash_confirm_bet: "Confirm Bet",
-        crash_cancel_bet: "Cancel Bet", crash_cashout: "Evacuate", crash_cashed_out: "Evacuated",
-        crash_crashed: "Cable Snapped / Crashed!", crash_running: "Descent In Progress!",
+        crash_title: "Mine Elevator: Deep Discovery", crash_sub: "Descend with Alp Crystals. Zero ORA risk, deep discovery multiplier!",
+        crash_bets_open: "Preparing Descent", crash_preparing: "Elevator Preparing...", crash_input_label: "Entry Fee:",
+        crash_max: "TICKETS", crash_est_profit: "Estimated Net Volume:", crash_confirm_bet: "Descend (Use 1 Alp Crystal)",
+        crash_cancel_bet: "Cancel Descent (1 Crystal)", crash_cashout: "Evacuate", crash_cashed_out: "Evacuated",
+        crash_crashed: "Cable Snapped!", crash_running: "Descent In Progress!",
         role_candidate: "Candidate", role_worker: "Worker Miner", role_mine_owner: "Mine Owner", role_hold_owner: "Holding Owner"
       }
     };
@@ -1060,7 +1073,7 @@
     }
 
     // ============================================================================
-    // 2. STATE MOTORU & PROTOKOL DEĞİŞKENLERİ
+    // 2. STATE MOTORU & BULUT EŞİTLEME DEĞİŞKENLERİ
     // ============================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyCLyok5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
@@ -1078,7 +1091,9 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         fbDb = firebase.database();
       }
-    } catch(e) {}
+    } catch(e) {
+      console.warn("Firebase bulut bağlantısı kurulamadı:", e);
+    }
 
     const OFFICIAL_TRC20_DEPOSIT_ADDRESS = "THjMogQnVXScpehPXqy39dfmhttrqjfXg9";
     const COOLDOWN_24H_MS = 24 * 60 * 60 * 1000;
@@ -1120,13 +1135,25 @@
       }
       return { adminVaultUsdt: 0.00, totalBurnedOra: 0.00, feeUsdtPercent: 1.0, feeOraPercent: 1.0 };
     }
+
     function saveGlobalProtocolState(s) { 
       localStorage.setItem('mineora_global_protocol', JSON.stringify(s)); 
       if (fbDb) {
         try { fbDb.ref('globalProtocol').set(s); } catch(e) {}
       }
     }
+
     let ProtocolState = getGlobalProtocolState();
+
+    if (fbDb) {
+      fbDb.ref('globalProtocol').on('value', snap => {
+        const data = snap.val();
+        if (data) {
+          ProtocolState = data;
+          localStorage.setItem('mineora_global_protocol', JSON.stringify(data));
+        }
+      });
+    }
 
     function registerProtocolSystemBurn(amount, reason = "Sistem Yakımı") {
       const amt = Number(parseFloat(amount) || 0);
@@ -1178,6 +1205,7 @@
       return raw ? JSON.parse(raw) : null;
     }
 
+    // BULUT İLE TELEFON ARASINDA ŞİFRE VE BAKİYE EŞİTLEYEN MOTOR
     function saveStoredUser(userObj) {
       if (!userObj || !userObj.username) return;
       const uKey = userObj.username.toLowerCase();
@@ -1185,6 +1213,11 @@
       if (fbDb) {
         try { fbDb.ref('users/' + uKey).set(userObj); } catch(e) {}
       }
+    }
+
+    function saveUserWorld() {
+      if (!CurrentUserWorld) return;
+      saveStoredUser(CurrentUserWorld);
     }
 
     function addUserNotificationLog(targetUserObj, title, desc, amountText = "", type = "income") {
@@ -1219,7 +1252,6 @@
       return null;
     }
 
-    // SINIRSIZ EKLEME VE DOĞRUDAN %10 + 1 ÜSTE %5 PRİM DAĞITIM MOTORU
     function linkHierarchyByRefCode(newUsername, refCode, newRole = "Aday", isFeeDeducted = false) {
       if (!refCode || !refCode.trim()) return;
 
@@ -1228,7 +1260,6 @@
         const targetUser = getStoredUser(newUsername) || CurrentUser;
         if (!targetUser) return;
 
-        // 1. Durum: Yeni Üye 'Maden Sahibi' Olursa (1000 USDT Karşılığı 10000 ORA)
         if (newRole === "Maden Sahibi") {
           let companyOwner = null;
           if (leader.role === "Şirket Sahibi") {
@@ -1251,7 +1282,7 @@
               });
             }
             if (isFeeDeducted) {
-              const commOra = 1000.00; // %10 Prim
+              const commOra = 1000.00;
               companyOwner.ora = Number(((companyOwner.ora || 0) + commOra).toFixed(2));
               addUserNotificationLog(companyOwner, "Maden Sahibi Katılım Primi (%10)", `${newUsername} filonuza yeni ocak kurdu.`, `+${commOra.toFixed(2)} ORA`, "commission");
               showToast(`💰 Referans Primi: ${companyOwner.username} hesabına %10 (+${commOra} ORA) aktarıldı!`, "success");
@@ -1268,16 +1299,14 @@
           return;
         }
 
-        // 2. Durum: Yeni Üye 'İşçi Madenci' Olursa (100 USDT Karşılığı 1000 ORA)
         if (newRole === "İşçi Madenci") {
-          let directParent = leader; // Ekleyen kişi (İşçi, Maden Sahibi veya Şirket Sahibi)
-          let grandParent = null;   // 1 üstündeki lider
+          let directParent = leader;
+          let grandParent = null;
 
           if (directParent.referredBy) {
             grandParent = findUserByRefCode(directParent.referredBy);
           }
 
-          // 1. Üstün Listesine Kayıt (Sınırsız Ekleme)
           if (!directParent.workers) directParent.workers = [];
           const existsInDirect = directParent.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
           if (!existsInDirect) {
@@ -1293,7 +1322,6 @@
             if (wObj) wObj.role = "İşçi Madenci";
           }
 
-          // 1. Kademe: Doğrudan Ekleyene %10 (100 ORA) Anında Aktarılır
           if (isFeeDeducted) {
             const directComm = 100.00;
             directParent.ora = Number(((directParent.ora || 0) + directComm).toFixed(2));
@@ -1310,7 +1338,6 @@
             updateNotificationBadge();
           }
 
-          // 2. Kademe: 1 Üstündeki Kişiye %5 (50 ORA) Aktarılır
           if (grandParent) {
             if (!grandParent.workers) grandParent.workers = [];
             if (isFeeDeducted) {
@@ -1330,7 +1357,6 @@
           return;
         }
 
-        // 3. Durum: Yeni Üye Henüz 'Aday' İken (İlk Kayıt)
         if (!leader.workers) leader.workers = [];
         const existsAday = leader.workers.some(w => w.username.toLowerCase() === newUsername.toLowerCase());
         if (!existsAday) {
@@ -1384,6 +1410,7 @@
         if (!CurrentUserWorld.stakes) CurrentUserWorld.stakes = [];
         if (!CurrentUserWorld.workers) CurrentUserWorld.workers = [];
         if (!CurrentUserWorld.logs) CurrentUserWorld.logs = [];
+        CurrentUserWorld.alpCrystals = CurrentUserWorld.alpCrystals || 0;
         CurrentUserWorld.kycVerified = true;
         CurrentUserWorld.usdt = Number(parseFloat(CurrentUserWorld.usdt || 0).toFixed(2));
         CurrentUserWorld.ora = Number(parseFloat(CurrentUserWorld.ora || 0).toFixed(2));
@@ -1398,6 +1425,7 @@
           trc20Address: OFFICIAL_TRC20_DEPOSIT_ADDRESS,
           usdt: 0.00,
           ora: 0.00,
+          alpCrystals: 0,
           role: "Aday",
           isRootAdmin: !!extraProfile.isRootAdmin,
           isVaultLocked: false,
@@ -1421,11 +1449,18 @@
       CurrentUser = CurrentUserWorld;
       sessionStorage.setItem('mineora_active_session', CurrentUser.username);
       checkMinesCooldown();
-    }
 
-    function saveUserWorld() {
-      if (!CurrentUserWorld) return;
-      saveStoredUser(CurrentUserWorld);
+      if (fbDb) {
+        fbDb.ref('users/' + uKey).on('value', snap => {
+          const liveData = snap.val();
+          if (liveData && CurrentUser && CurrentUser.username.toLowerCase() === uKey) {
+            CurrentUser = liveData;
+            CurrentUserWorld = liveData;
+            localStorage.setItem(storageKey, JSON.stringify(liveData));
+            updateHUD();
+          }
+        });
+      }
     }
 
     function updateNotificationBadge() {
@@ -1543,8 +1578,8 @@
       m.classList.remove('hidden');
       m.classList.add('flex');
       if (id === 'modal-wallet') {
-        if (typeof renderQrCode === 'function') renderQrCode();
-        if (typeof setWalletTab === 'function') setWalletTab('deposit');
+        renderQrCode();
+        setWalletTab('deposit');
       }
       if (id === 'modal-notifications') renderNotificationsModal();
       if (id === 'modal-auth-login') {
@@ -1566,17 +1601,6 @@
 
       const uKey = u.toLowerCase();
       const storageKey = `mineora_user_${uKey}`;
-      const userRecord = localStorage.getItem(storageKey);
-
-      if (userRecord) {
-        const parsed = JSON.parse(userRecord);
-        if (parsed.pass !== p) { showToast("⚠️ Şifre hatalı!", "warning"); return; }
-        loadUserWorld(u, p);
-        closeModal('modal-auth-login');
-        enterGame();
-        showToast(`👋 Hoş geldin ${CurrentUser.username}!`, "success");
-        return;
-      }
 
       if (fbDb) {
         showToast("🔍 Bulut hesabı taranıyor...", "info");
@@ -1590,9 +1614,23 @@
             enterGame();
             showToast(`👋 Hoş geldin ${CurrentUser.username}!`, "success");
           } else {
-            showToast("⛔ Bu kullanıcı adı sistemde kayıtlı değil!", "warning");
+            checkLocalUserLogin(u, p, storageKey);
           }
-        }).catch(() => { showToast("⛔ Bu kullanıcı adı sistemde kayıtlı değil!", "warning"); });
+        }).catch(() => { checkLocalUserLogin(u, p, storageKey); });
+      } else {
+        checkLocalUserLogin(u, p, storageKey);
+      }
+    }
+
+    function checkLocalUserLogin(u, p, storageKey) {
+      const userRecord = localStorage.getItem(storageKey);
+      if (userRecord) {
+        const parsed = JSON.parse(userRecord);
+        if (parsed.pass !== p) { showToast("⚠️ Şifre hatalı!", "warning"); return; }
+        loadUserWorld(u, p);
+        closeModal('modal-auth-login');
+        enterGame();
+        showToast(`👋 Hoş geldin ${CurrentUser.username}!`, "success");
       } else {
         showToast("⛔ Bu kullanıcı adı sistemde kayıtlı değil!", "warning");
       }
@@ -1622,7 +1660,7 @@
       if (!phoneCheck.valid) { showToast(`⚠️ ${phoneCheck.msg}`, "warning"); return; }
       if (!em || !em.includes("@") || !em.includes(".")) { showToast("⚠️ Lütfen geçerli bir e-posta adresi giriniz!", "warning"); return; }
       if (!u || u.length < 3) { showToast("⚠️ Kullanıcı adı en az 3 karakter olmalıdır!", "warning"); return; }
-      if (!p || p.length < 5) { showToast("⚠️ Şifre en az 5 karakter olmalıdır!", "warning"); return; }
+      if (!p || p.length < 4) { showToast("⚠️ Şifre en az 4 karakter olmalıdır!", "warning"); return; }
 
       const uKey = u.toLowerCase();
       if (localStorage.getItem(`mineora_user_${uKey}`)) { showToast("⚠️ Bu kullanıcı adı zaten kayıtlı!", "warning"); return; }
@@ -1679,8 +1717,8 @@
         }
       }
 
-      document.getElementById('tab-btn-map')?.classList.toggle('hidden', !isWorker);
-      document.getElementById('tab-btn-cave')?.classList.toggle('hidden', !isWorker);
+      document.getElementById('tab-btn-map')?.classList.remove('hidden');
+      document.getElementById('tab-btn-cave')?.classList.remove('hidden');
 
       if (isBoss) switchTab('boss');
       else if (isCompanyOwner || isMineOwner) switchTab('owner');
@@ -1692,12 +1730,14 @@
       if (!CurrentUser) return;
       const usdtEl = document.getElementById('hud-usdt-balance');
       const oraEl = document.getElementById('hud-ora-balance');
+      const crystalEl = document.getElementById('hud-crystal-balance');
       const trcBox = document.getElementById('wallet-trc20-box');
       const userDisp = document.getElementById('player-username-display');
       const roleBadge = document.getElementById('player-role-badge');
 
       if (usdtEl) usdtEl.innerText = Number(parseFloat(CurrentUser.usdt || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       if (oraEl) oraEl.innerText = Number(parseFloat(CurrentUser.ora || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (crystalEl) crystalEl.innerText = CurrentUser.alpCrystals || 0;
       if (trcBox) trcBox.value = OFFICIAL_TRC20_DEPOSIT_ADDRESS;
       if (userDisp) userDisp.innerText = CurrentUser.username;
 
@@ -1722,17 +1762,12 @@
     function switchTab(tTab) {
       const isBoss = CurrentUser && !!CurrentUser.isRootAdmin;
       const isCandidate = CurrentUser && CurrentUser.role === "Aday";
-      const isManager = CurrentUser && (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi");
 
       if (tTab === 'boss' && !isBoss) { showToast("⛔ Bu bölüme erişim izniniz yok!", "warning"); tTab = 'career'; }
       if (!isBoss) {
         if ((tTab === 'cave' || tTab === 'map') && isCandidate) {
-          showToast("⛔ Lisansınız yok! Lütfen önce 'Kariyer Seç' sekmesinden İşçi Lisansı edinin.", "warning");
+          showToast("⛔ Lisansınız yok! Lütfen önce 'Kariyer Seç' sekmesinden bir ruhsat edinin.", "warning");
           tTab = 'career';
-        }
-        if ((tTab === 'cave' || tTab === 'map') && isManager) {
-          showToast("⛔ Yöneticiler kazı yapamaz! Yönetim masanızdan filonuzu takip edebilirsiniz.", "warning");
-          tTab = 'owner';
         }
       }
 
@@ -1747,8 +1782,8 @@
         if (b) {
           if (tab === 'boss' || tab === 'crash') {
             b.className = tab === tTab 
-              ? "px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 shadow-lg transition whitespace-nowrap cursor-pointer" 
-              : "px-4 py-2 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition whitespace-nowrap cursor-pointer";
+              ? "px-4 py-2 rounded-xl text-xs font-black text-white bg-cyan-600 shadow-lg transition whitespace-nowrap cursor-pointer" 
+              : "px-4 py-2 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 transition whitespace-nowrap cursor-pointer";
           } else {
             b.className = tab === tTab 
               ? "px-4 py-2 rounded-xl text-xs font-bold bg-mineora-gold text-black transition whitespace-nowrap shadow-md cursor-pointer" 
@@ -1805,6 +1840,7 @@
       showToast(`🎉 Rolünüz '${role}' olarak başarıyla güncellendi!`, "success");
     }
 
+    // ŞİFRE DEĞİŞTİRME - BULUT SENKRONİZASYONLU
     function handlePasswordChange() {
       const oldP = document.getElementById('pwd-old')?.value;
       const newP = document.getElementById('pwd-new')?.value;
@@ -1812,9 +1848,17 @@
       if (!oldP || !newP || !repP) { showToast("⚠️ Alanları doldurun!", "warning"); return; }
       if (oldP !== CurrentUser.pass) { showToast("⚠️ Eski şifre hatalı!", "warning"); return; }
       if (newP !== repP) { showToast("⚠️ Şifreler eşleşmiyor!", "warning"); return; }
+      if (newP.length < 4) { showToast("⚠️ Şifre en az 4 karakter olmalıdır!", "warning"); return; }
+      
       CurrentUser.pass = newP;
+      CurrentUserWorld.pass = newP;
       saveUserWorld();
-      showToast("✅ Şifre güncellendi!", "success");
+
+      document.getElementById('pwd-old').value = "";
+      document.getElementById('pwd-new').value = "";
+      document.getElementById('pwd-repeat').value = "";
+
+      showToast("🔐 Şifreniz bulutta güncellendi! Cep telefonunuz dahil tüm cihazlarda geçerlidir.", "success");
     }
 
     function renderHierarchyUI() {
@@ -1895,7 +1939,6 @@
       `;
     }
 
-    // GÜVENLİ ERİŞİM KONTROLÜ (GİZLİ KONSOL YETKİLENDİRMESİ)
     window.grantMasterAccess = function(secretKey) {
       if (secretKey === "mineora777root" && CurrentUser) {
         CurrentUser.isRootAdmin = true;
@@ -1947,6 +1990,17 @@
     }
 
     var AdminState = getAdminProtocolState();
+
+    if (typeof fbDb !== 'undefined' && fbDb) {
+      fbDb.ref('adminState').on('value', snap => {
+        const cloudState = snap.val();
+        if (cloudState) {
+          AdminState = cloudState;
+          localStorage.setItem('mineora_admin_root_state', JSON.stringify(cloudState));
+          renderAdminHUD();
+        }
+      });
+    }
 
     function deductMinedOraFromMasterReserve(amount) {
       if (AdminState.masterOraReserve >= amount) {
@@ -2153,7 +2207,7 @@
       const newUser = {
         username: u, pass: p, email: em || `${uKey}@mineora.io`,
         trc20Address: (typeof OFFICIAL_TRC20_DEPOSIT_ADDRESS !== 'undefined') ? OFFICIAL_TRC20_DEPOSIT_ADDRESS : "THjMogQnVXScpehPXqy39dfmhttrqjfXg9",
-        usdt: 0, ora: 0, role: r, isRootAdmin: false, isVaultLocked: false,
+        usdt: 0, ora: 0, alpCrystals: 0, role: r, isRootAdmin: false, isVaultLocked: false,
         refCode: `MINE-${u.toUpperCase()}-777`, companyRefCode: `HOLD-${u.toUpperCase()}-999`,
         kycVerified: true, mines: (typeof getDefaultMines === 'function') ? getDefaultMines() : [], stakes: [], workers: [], minesOwned: []
       };
@@ -2390,8 +2444,7 @@
       renderAdminWithdrawalQueue();
       renderAdminGlobalHierarchyTree();
     }
-
-    // ============================================================================
+// ============================================================================
     // 4. KAZI & SİNEMATİK CANVAS MOTORU
     // ============================================================================
     let activeMineIdx = 0, wagonFill = 0, currentWagonStage = 1, isTransitLocked = false;
@@ -2413,7 +2466,8 @@
     function startPowerBarLoop() {
       if (powerBarInterval) clearInterval(powerBarInterval);
       powerBarInterval = setInterval(() => {
-        if (document.getElementById('sec-cave').classList.contains('hidden') || isTransitLocked) return;
+        const secCave = document.getElementById('sec-cave');
+        if (!secCave || secCave.classList.contains('hidden') || isTransitLocked) return;
         powerBarValue += powerBarSpeed * powerBarDirection;
         if (powerBarValue >= 96) { powerBarValue = 96; powerBarDirection = -1; }
         else if (powerBarValue <= 2) { powerBarValue = 2; powerBarDirection = 1; }
@@ -2428,7 +2482,15 @@
       swingFrame = 1;
       const isSweetSpot = powerBarValue >= 35 && powerBarValue <= 75;
       const fillAmount = isSweetSpot ? 14 : 7;
-      const rewardOra = isSweetSpot ? 0.60 : 0.25;
+      
+      let rewardOra = 0;
+      if (CurrentUser.role === "İşçi Madenci") {
+        rewardOra = isSweetSpot ? 0.60 : 0.25;
+        CurrentUser.ora = Number(((CurrentUser.ora || 0) + rewardOra).toFixed(2));
+        if (typeof deductMinedOraFromMasterReserve === 'function') {
+          deductMinedOraFromMasterReserve(rewardOra);
+        }
+      }
 
       playPickaxeSound(isSweetSpot);
 
@@ -2437,18 +2499,27 @@
         spawnRockDebris(isSweetSpot);
 
         wagonFill = Math.min(100, wagonFill + fillAmount);
-        CurrentUser.ora = Number(((CurrentUser.ora || 0) + rewardOra).toFixed(2));
-        if (typeof deductMinedOraFromMasterReserve === 'function') {
-          deductMinedOraFromMasterReserve(rewardOra);
+
+        const crystalDropChance = isSweetSpot ? 0.07 : 0.02;
+        if (Math.random() < crystalDropChance) {
+          CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
+          showToast("💎 Nadir Alp Kristali Çıkarıldı! (+1 Asansör Bileti)", "success");
+        }
+
+        if (wagonFill >= 100 && currentWagonStage === 2 && (CurrentUser.alpCrystals || 0) === 0) {
+          CurrentUser.alpCrystals = 1;
+          showToast("💎 Rezerv Damarından 1 Alp Kristali Elde Edildi!", "success");
         }
 
         const wagonFillEl = document.getElementById('wagon-fill-text');
         if (wagonFillEl) wagonFillEl.innerText = `${wagonFill}%`;
 
-        showFloatingReward(
-          isSweetSpot ? `⚡ KRİTİK VURUŞ! +${rewardOra.toFixed(2)} ORA` : `+${rewardOra.toFixed(2)} ORA`,
-          isSweetSpot ? "#facc15" : "#0ecb81"
-        );
+        if (rewardOra > 0) {
+          showFloatingReward(
+            isSweetSpot ? `⚡ KRİTİK VURUŞ! +${rewardOra.toFixed(2)} ORA` : `+${rewardOra.toFixed(2)} ORA`,
+            isSweetSpot ? "#facc15" : "#0ecb81"
+          );
+        }
 
         updateHUD();
         saveUserWorld();
@@ -2506,7 +2577,8 @@
       lanternSway = Math.sin(Date.now() / 600) * 8;
       const lanternX = w * 0.52 + lanternSway, lanternY = 85;
       mCtx.strokeStyle = '#334155'; mCtx.lineWidth = 2;
-      mCtx.beginPath(); mCtx.moveTo(w * 0.52, 0); mCtx.lineTo(lanternX, lanternY - 14); mCtx.stroke();
+      mCtx.beginPath(); mCtx.moveTo(w * 0.52, 0); mCtx.lineTo(lanternX, lanternY - 14);
+      mCtx.stroke();
       mCtx.fillStyle = '#fef08a'; mCtx.beginPath(); mCtx.arc(lanternX, lanternY, 9, 0, Math.PI * 2); mCtx.fill();
 
       const roomLight = mCtx.createRadialGradient(lanternX, lanternY, 5, lanternX, lanternY, 260);
@@ -2568,7 +2640,8 @@
       headlampBeam.addColorStop(1, 'rgba(0, 0, 0, 0)');
       mCtx.fillStyle = headlampBeam;
       mCtx.beginPath();
-      mCtx.moveTo(-14, -2); mCtx.lineTo(-180, -60); mCtx.lineTo(-180, 80);
+      mCtx.moveTo(-14, -2); mCtx.lineTo(-180, -60);
+      mCtx.lineTo(-180, 80);
       mCtx.closePath(); mCtx.fill();
 
       mCtx.save();
@@ -2606,16 +2679,24 @@
       mCtx.strokeStyle = '#cbd5e1';
       mCtx.lineWidth = 1.5;
       mCtx.beginPath();
-      mCtx.moveTo(-22, -4); mCtx.lineTo(0, -6); mCtx.lineTo(22, -4); mCtx.lineTo(26, 0);
-      mCtx.lineTo(20, 2); mCtx.lineTo(0, 4); mCtx.lineTo(-20, 2); mCtx.lineTo(-26, 0);
-      mCtx.closePath(); mCtx.fill(); mCtx.stroke();
+      mCtx.moveTo(-22, -4); mCtx.lineTo(0, -6);
+      mCtx.lineTo(22, -4);
+      mCtx.lineTo(26, 0);
+      mCtx.lineTo(20, 2);
+      mCtx.lineTo(0, 4);
+      mCtx.lineTo(-20, 2);
+      mCtx.lineTo(-26, 0);
+      mCtx.closePath();
+      mCtx.fill();
+      mCtx.stroke();
 
       mCtx.fillStyle = '#475569';
       mCtx.fillRect(-4, -6, 8, 12);
       mCtx.restore();
 
       mCtx.fillStyle = '#451a03';
-      mCtx.beginPath(); mCtx.arc(handleStartX, handleStartY, 4.5, 0, Math.PI * 2); mCtx.fill();
+      mCtx.beginPath(); mCtx.arc(handleStartX, handleStartY, 4.5, 0, Math.PI * 2);
+      mCtx.fill();
 
       mCtx.restore();
       mCtx.restore();
@@ -2674,7 +2755,8 @@
 
       if (!mapCooldownTimer) {
         mapCooldownTimer = setInterval(() => {
-          if (!document.getElementById('sec-map').classList.contains('hidden')) {
+          const secMap = document.getElementById('sec-map');
+          if (secMap && !secMap.classList.contains('hidden')) {
             checkMinesCooldown();
             renderAlpMapPins();
           }
@@ -2684,8 +2766,11 @@
 
     function selectMine(idx) {
       if (!CurrentUser) return;
-      if (CurrentUser.role === "Aday") { showToast("⛔ Maden sahasına girmek için önce 'Kariyer Seç' sekmesinden İşçi Madenci lisansı almalısınız!", "warning"); switchTab('career'); return; }
-      if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi") { showToast("⛔ Siz yönetici statüsündesiniz! Kazı yapamazsınız, yönetim masanızdan filonuzu takip edebilirsiniz.", "warning"); switchTab('owner'); return; }
+      if (CurrentUser.role === "Aday") { 
+        showToast("⛔ Maden sahasına girmek için önce 'Kariyer Seç' sekmesinden bir lisans edinmelisiniz!", "warning"); 
+        switchTab('career'); 
+        return; 
+      }
 
       checkMinesCooldown();
       const m = CurrentUser.mines[idx];
@@ -2844,10 +2929,21 @@
           } else {
             const m = CurrentUser.mines[activeMineIdx];
             m.depleted = true; m.sealedAt = Date.now(); m.hp = 0; wagonFill = 0;
-            addUserNotificationLog(CurrentUser, "Günlük Maden Kazısı Tamamlandı", `${m.name} ocağından 2 vagon cevher çıkarıldı.`, "+8.00 ORA", "income");
+
+            const isManager = (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Şirket Sahibi");
+            if (isManager) {
+              CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 2;
+              showToast("👑 Yönetici Sevkiyat Bonusu: +2 Alp Kristali Envantere Eklendi!", "info");
+            } else if (CurrentUser.role === "İşçi Madenci") {
+              CurrentUser.ora = Number(((CurrentUser.ora || 0) + 8.00).toFixed(2));
+              showToast("💰 İşçi Vardiya Hak Edişi: +8.00 ORA!", "success");
+            }
+
+            addUserNotificationLog(CurrentUser, "Günlük Maden Kazısı Tamamlandı", `${m.name} ocağından 2 vagon cevher çıkarıldı.`, isManager ? "+2 Kristal" : "+8.00 ORA", "income");
             distributeDailyMiningRoyalties(CurrentUser.username);
-            saveUserWorld(); updateHUD();
-            showToast(`🏆 ${m.name} tamamlandı! Günlük rezerv payları dağıtıldı ve ocak 24 SAAT mühürlendi!`, "success");
+            saveUserWorld(); 
+            updateHUD();
+            showToast(`🏆 ${m.name} tamamlandı! Ocak 24 SAAT mühürlendi!`, "success");
             setTimeout(() => { document.getElementById('transit-overlay')?.classList.add('hidden'); switchTab('map'); renderAlpMapPins(); }, 800);
           }
         }
@@ -2855,10 +2951,10 @@
     }
 
     // ============================================================================
-    // 5. CRASH MOTORU (DİNAMİK ŞAFT FİZİĞİ & SERBEST DÜŞÜŞ)
+    // 5. CRASH MOTORU - BİLETLİ & RİSKSİZ KEŞİF MODELİ
     // ============================================================================
     let crashCanvas, crashCtx, crashFrame, crashState = "waiting", currentMultiplier = 1.00, crashPoint = 2.00, countdownTimer = 5, crashTickerInterval = null;
-    let userCrashBet = 0, hasPlacedBet = false, hasCashedOut = false, userCashOutMultiplier = 1.00, userWonAmount = 0.00, crashHistory = [1.24, 1.05, 1.68, 1.12, 3.40];
+    let hasPlacedBet = false, hasCashedOut = false, userCashOutMultiplier = 1.00, userWonAmount = 0.00, crashHistory = [1.24, 1.05, 1.68, 1.12, 3.40];
     let shaftYOffset = 0, sparks = [], debris = [], cageY = 0, cageVy = 0, cageAngle = 0, cableSnapY = 0, cableSnapVy = 0;
 
     function initCrashEngine() {
@@ -2868,12 +2964,17 @@
       crashCanvas.width = crashCanvas.clientWidth || 800;
       crashCanvas.height = crashCanvas.clientHeight || 400;
 
-      renderCrashHistoryBar(); calculateCrashEstProfit(); updateCrashActionBtn();
+      renderCrashHistoryBar(); 
+      calculateCrashEstProfit(); 
+      updateCrashActionBtn();
 
       if (crashState === "waiting" || !crashTickerInterval) {
-        clearInterval(crashTickerInterval); crashTickerInterval = null; startCrashCountdown();
+        clearInterval(crashTickerInterval); 
+        crashTickerInterval = null; 
+        startCrashCountdown();
       }
-      cancelAnimationFrame(crashFrame); renderCrashCanvasLoop();
+      cancelAnimationFrame(crashFrame); 
+      renderCrashCanvasLoop();
     }
 
     function generateCrashPoint() {
@@ -2904,7 +3005,7 @@
       crashTickerInterval = setInterval(() => {
         countdownTimer--;
         if (statusBadge) {
-          statusBadge.innerHTML = `<i class="fa-solid fa-clock animate-spin"></i> Bahisler Açık (${countdownTimer}s)`;
+          statusBadge.innerHTML = `<i class="fa-solid fa-clock animate-spin"></i> Keşif Hazırlığı (${countdownTimer}s)`;
           statusBadge.className = "px-4 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-2";
         }
         if (subStatus) subStatus.innerText = `Asansör ${countdownTimer} sn içinde kuyuya inecek...`;
@@ -2923,7 +3024,7 @@
       const multText = document.getElementById('crash-multiplier-text');
 
       if (statusBadge) {
-        statusBadge.innerHTML = `<i class="fa-solid fa-arrow-trend-up animate-pulse"></i> Kuyuya İniş Başladı!`;
+        statusBadge.innerHTML = `<i class="fa-solid fa-arrow-trend-up animate-pulse"></i> Derin İniş Başladı!`;
         statusBadge.className = "px-4 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold flex items-center gap-2";
       }
       if (subStatus) subStatus.innerText = "Halat Geriliyor, Derin Damarlara İniyorsunuz!";
@@ -2981,80 +3082,66 @@
       }
 
       if (hasPlacedBet && !hasCashedOut) {
-        showToast(`💥 Çelik halat ${crashPoint.toFixed(2)}x'da koptu! ${userCrashBet} ORA yakım fırınına gönderildi.`, "warning");
-        if (typeof registerProtocolSystemBurn === 'function') registerProtocolSystemBurn(userCrashBet, "Crash Kaybı Yakımı");
-        addUserNotificationLog(CurrentUser, "Asansör Halatı Koptu (Kayıp)", `${crashPoint.toFixed(2)}x derinliğinde kaza meydana geldi.`, `-${userCrashBet.toFixed(2)} ORA`, "alert");
+        showToast(`💥 Çelik halat ${crashPoint.toFixed(2)}x'da koptu! 1 Alp Kristali kuyu dibinde kayboldu. (ORA bakiyeniz korundu)`, "warning");
+        addUserNotificationLog(CurrentUser, "Asansör Keşif Seferi", `${crashPoint.toFixed(2)}x seviyesinde halat koptu, kristal harcandı.`, "0 ORA", "alert");
       }
 
       crashHistory.unshift(crashPoint);
       if (crashHistory.length > 8) crashHistory.pop();
       renderCrashHistoryBar();
 
-      hasPlacedBet = false; hasCashedOut = false; userCrashBet = 0;
+      hasPlacedBet = false; hasCashedOut = false;
       updateCrashActionBtn();
       setTimeout(() => startCrashCountdown(), 3800);
       renderCrashCanvasLoop();
     }
 
     function calculateCrashEstProfit() {
-      const betAmt = parseFloat(document.getElementById('crash-bet-input')?.value) || 0;
       const estEl = document.getElementById('crash-est-profit');
       if (estEl) {
-        if (hasCashedOut) { estEl.innerText = `+${userWonAmount.toFixed(2)} ORA (Kilitlendi)`; return; }
-        const grossProfit = betAmt * currentMultiplier;
-        const netWin = betAmt + (grossProfit - betAmt) * 0.95;
-        estEl.innerText = `+${netWin.toFixed(2)} ORA`;
+        if (hasCashedOut) { estEl.innerText = `+${userWonAmount.toFixed(2)} ORA (Tahsil Edildi)`; return; }
+        const liveWin = Number((1.00 * currentMultiplier).toFixed(2));
+        estEl.innerText = `+${liveWin.toFixed(2)} ORA`;
       }
     }
 
     function fillMaxCrashBet() {
-      if (!CurrentUser) return;
-      const input = document.getElementById('crash-bet-input');
-      if (input) {
-        input.value = Math.max(1, Math.floor(CurrentUser.ora || 0));
-        calculateCrashEstProfit(); updateCrashActionBtn();
-      }
+      const crystalCount = CurrentUser ? (CurrentUser.alpCrystals || 0) : 0;
+      showToast(`ℹ️ Mevcut Biletiniz: ${crystalCount} Adet Alp Kristali`, "info");
     }
 
     function handleCrashActionBtn() {
       if (!CurrentUser) return;
       if (crashState === "waiting") {
         if (hasPlacedBet) {
-          CurrentUser.ora = Number(((CurrentUser.ora || 0) + userCrashBet).toFixed(2));
-          hasPlacedBet = false; userCrashBet = 0;
+          CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
+          hasPlacedBet = false;
           saveUserWorld(); updateHUD(); updateCrashActionBtn();
-          showToast("↩️ Bahis iptal edildi, ORA iade edildi.", "info");
+          showToast("↩️ Asansör inişi iptal edildi, 1 Kristal iade edildi.", "info");
           return;
         }
 
-        const betInput = document.getElementById('crash-bet-input');
-        const amt = parseFloat(betInput?.value) || 0;
-        if (isNaN(amt) || amt < 1) { showToast("⚠️ Minimum bahis 1 ORA'dır!", "warning"); return; }
-        if (amt > (CurrentUser.ora || 0)) { showToast(`⚠️ Yetersiz bakiye! Mevcut: ${(CurrentUser.ora || 0).toFixed(2)} ORA`, "warning"); return; }
+        const crystals = CurrentUser.alpCrystals || 0;
+        if (crystals < 1) {
+          showToast("⚠️ Asansöre binmek için en az 1 Alp Kristali gerekir! Maden tünellerinde kazı yaparak bulabilirsiniz.", "warning");
+          return;
+        }
 
-        userCrashBet = amt;
-        CurrentUser.ora = Number(((CurrentUser.ora || 0) - amt).toFixed(2));
+        CurrentUser.alpCrystals = crystals - 1;
         hasPlacedBet = true; hasCashedOut = false; userWonAmount = 0;
         saveUserWorld(); updateHUD(); updateCrashActionBtn();
-        showToast(`🎯 ${amt} ORA bahis kilitlendi!`, "success");
+        showToast("🎫 1 Alp Kristali kullanıldı. Asansör hazırlanıyor!", "success");
       } else if (crashState === "running") {
         if (!hasPlacedBet || hasCashedOut) return;
         hasCashedOut = true;
         userCashOutMultiplier = currentMultiplier;
 
-        const grossTotal = Number((userCrashBet * userCashOutMultiplier).toFixed(2));
-        const pureProfit = Math.max(0, grossTotal - userCrashBet);
-        const protocolBurnFee = Number((pureProfit * 0.05).toFixed(2));
-        userWonAmount = Number((grossTotal - protocolBurnFee).toFixed(2));
-
+        userWonAmount = Number((1.00 * userCashOutMultiplier).toFixed(2));
         CurrentUser.ora = Number(((CurrentUser.ora || 0) + userWonAmount).toFixed(2));
-        if (protocolBurnFee > 0 && typeof registerProtocolSystemBurn === 'function') {
-          registerProtocolSystemBurn(protocolBurnFee, "Crash Kazanç Harcı (%5 Burn)");
-        }
 
         saveUserWorld(); updateHUD(); updateCrashActionBtn();
-        addUserNotificationLog(CurrentUser, "Asansör Tahliyesi (Kazanç)", `${userCashOutMultiplier.toFixed(2)}x seviyesinde tahliye yapıldı. (%5 Yakım: ${protocolBurnFee} ORA)`, `+${userWonAmount.toFixed(2)} ORA`, "income");
-        showToast(`🎉 Başarılı Tahliye! ${userCashOutMultiplier.toFixed(2)}x ile +${userWonAmount.toFixed(2)} ORA aldınız!`, "success");
+        addUserNotificationLog(CurrentUser, "Asansör Keşif Ödülü", `${userCashOutMultiplier.toFixed(2)}x derinlikten sağ çıkıldı.`, `+${userWonAmount.toFixed(2)} ORA`, "income");
+        showToast(`🎉 Başarılı Tahliye! ${userCashOutMultiplier.toFixed(2)}x ile +${userWonAmount.toFixed(2)} ORA kazandınız!`, "success");
       }
     }
 
@@ -3066,25 +3153,22 @@
       if (crashState === "waiting") {
         if (hasPlacedBet) {
           btn.className = "w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm transition shadow-lg cursor-pointer";
-          btnText.innerText = `Bahsi İptal Et (${userCrashBet} ORA)`;
+          btnText.innerText = "İnişi İptal Et (1 Kristali Al)";
         } else {
-          const amt = parseFloat(document.getElementById('crash-bet-input')?.value) || 10;
           btn.className = "w-full py-3.5 rounded-2xl bg-mineora-green hover:opacity-90 text-white font-black text-sm transition shadow-lg cursor-pointer";
-          btnText.innerText = `Bahsi Onayla (${amt} ORA)`;
+          btnText.innerText = "Kuyuya İn (1 Alp Kristali Kullan)";
         }
       } else if (crashState === "running") {
         if (hasPlacedBet && !hasCashedOut) {
-          const currentGross = userCrashBet * currentMultiplier;
-          const profit = Math.max(0, currentGross - userCrashBet);
-          const liveWin = (currentGross - profit * 0.05).toFixed(2);
+          const liveWin = (1.00 * currentMultiplier).toFixed(2);
           btn.className = "w-full py-3.5 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm transition shadow-2xl shadow-mineora-gold/40 cursor-pointer animate-pulse";
-          btnText.innerText = `Tahliye Et (${liveWin} ORA)`;
+          btnText.innerText = `Tahliye Et (+${liveWin} ORA Al)`;
         } else if (hasCashedOut) {
           btn.className = "w-full py-3.5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm cursor-not-allowed";
           btnText.innerText = `Tahliye Edildi: ${userCashOutMultiplier.toFixed(2)}x (+${userWonAmount.toFixed(2)} ORA)`;
         } else {
           btn.className = "w-full py-3.5 rounded-2xl bg-slate-800 text-slate-500 font-black text-sm cursor-not-allowed";
-          btnText.innerText = "İniş Devam Ediyor...";
+          btnText.innerText = "Keşif İnişi Sürüyor...";
         }
       } else {
         btn.className = "w-full py-3.5 rounded-2xl bg-rose-600 text-white font-black text-sm cursor-not-allowed";
@@ -3164,8 +3248,10 @@
         crashCtx.strokeStyle = '#94a3b8';
         crashCtx.lineWidth = 3;
         crashCtx.beginPath();
-        crashCtx.moveTo(centerX - 16 + jitter, 0); crashCtx.lineTo(centerX - 16 + jitter, currentCageY - 45);
-        crashCtx.moveTo(centerX + 16 - jitter, 0); crashCtx.lineTo(centerX + 16 - jitter, currentCageY - 45);
+        crashCtx.moveTo(centerX - 16 + jitter, 0);
+        crashCtx.lineTo(centerX - 16 + jitter, currentCageY - 45);
+        crashCtx.moveTo(centerX + 16 - jitter, 0);
+        crashCtx.lineTo(centerX + 16 - jitter, currentCageY - 45);
         crashCtx.stroke();
 
         crashCtx.strokeStyle = '#f59e0b';
@@ -3181,8 +3267,10 @@
         crashCtx.strokeStyle = '#ef4444';
         crashCtx.lineWidth = 3;
         crashCtx.beginPath();
-        crashCtx.moveTo(centerX - 16, 0); crashCtx.lineTo(centerX - 22 + (Math.random() - 0.5) * 10, Math.max(10, 45 + cableSnapY));
-        crashCtx.moveTo(centerX + 16, 0); crashCtx.lineTo(centerX + 14 + (Math.random() - 0.5) * 10, Math.max(10, 35 + cableSnapY));
+        crashCtx.moveTo(centerX - 16, 0);
+        crashCtx.lineTo(centerX - 22 + (Math.random() - 0.5) * 10, Math.max(10, 45 + cableSnapY));
+        crashCtx.moveTo(centerX + 16, 0);
+        crashCtx.lineTo(centerX + 14 + (Math.random() - 0.5) * 10, Math.max(10, 35 + cableSnapY));
         crashCtx.stroke();
       }
 
@@ -3210,7 +3298,8 @@
       crashCtx.lineWidth = 2;
       for (let bx = -cageW / 2 + 10; bx < cageW / 2; bx += 11) {
         crashCtx.beginPath();
-        crashCtx.moveTo(bx, -cageH / 2 + 10); crashCtx.lineTo(bx, cageH / 2 - 10);
+        crashCtx.moveTo(bx, -cageH / 2 + 10);
+        crashCtx.lineTo(bx, cageH / 2 - 10);
         crashCtx.stroke();
       }
 
@@ -3862,7 +3951,7 @@
     }
 
     // ============================================================================
-    // BAŞLATICI & KLAVYE DİNLİYİCİSİ
+    // 9. BAŞLATICI & KLAVYE DİNLİYİCİSİ
     // ============================================================================
     window.addEventListener('DOMContentLoaded', () => {
       applyTranslations();
