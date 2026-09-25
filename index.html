@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  
+  <!-- ARAMA MOTORU & AI BOT ENGELLEYİCİ META ETİKETLERİ -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="google-extended" content="noindex, nofollow">
   <title>MINEORA • İşçilikten Maden İmparatorluğuna</title>
   
   <!-- ================= GOOGLE ADSENSE ================= -->
@@ -183,7 +187,7 @@
                 <span id="player-role-badge" class="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-black uppercase bg-mineora-gold/15 text-mineora-gold border border-mineora-gold/30 shrink-0 truncate max-w-[90px]">İşçi</span>
               </div>
               <div class="text-[10px] text-slate-400 truncate max-w-[110px] sm:max-w-none">
-                <strong id="player-username-display" class="text-slate-200">mourpheus</strong>
+                <strong id="player-username-display" class="text-slate-200">-</strong>
               </div>
             </div>
           </div>
@@ -244,7 +248,7 @@
 
     <div class="bg-mineora-bg border-b border-mineora-border px-4 sm:px-6 py-2 flex gap-2 overflow-x-auto scrollbar-none">
       <button type="button" onclick="switchTab('boss')" id="tab-btn-boss" class="hidden px-4 py-2 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition whitespace-nowrap cursor-pointer">
-        <i class="fa-solid fa-crown mr-1"></i> <span data-i18n="tab_boss">Kurucu Masası</span>
+        <i class="fa-solid fa-crown mr-1"></i> <span data-i18n="tab_boss">Yönetici Masası</span>
       </button>
 
       <button type="button" onclick="switchTab('owner')" id="tab-btn-owner" class="hidden px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition whitespace-nowrap cursor-pointer"><i class="fa-solid fa-sitemap mr-1 text-mineora-gold"></i> <span id="tab-owner-text" data-i18n="tab_owner_worker">Maden Sahibi Masası</span></button>
@@ -272,8 +276,8 @@
                 <i class="fa-solid fa-crown"></i>
               </div>
               <div>
-                <h2 class="text-xl font-black text-white">Kurucu Patron Master Komuta Masası</h2>
-                <span class="text-xs text-slate-400">Tek Yetkili: <strong class="text-rose-400">mourpheus</strong> | 1 Milyar Genesis ORA</span>
+                <h2 class="text-xl font-black text-white">Yönetici Protokol Komuta Masası</h2>
+                <span class="text-xs text-slate-400">Rezerv Protokolü & Dinamik Emtia Havuzu</span>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -294,7 +298,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label class="text-slate-400 text-[10px] block font-bold mb-1">Hedef Kullanıcı Adı (Kendiniz Dahil)</label>
-                <input type="text" id="admin-grant-target-user" placeholder="Örn: mourpheus veya oyuncu_adi" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-mineora-gold">
+                <input type="text" id="admin-grant-target-user" placeholder="Kullanıcı adı" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-mineora-gold">
               </div>
               <div>
                 <label class="text-slate-400 text-[10px] block font-bold mb-1">Aktarılacak ORA Miktarı</label>
@@ -399,7 +403,6 @@
                 <thead class="bg-black/40 text-slate-400 uppercase text-[10px]">
                   <tr>
                     <th class="py-3 px-4">Kullanıcı</th>
-                    <th class="py-3 px-4">Giriş Şifresi</th>
                     <th class="py-3 px-4">Kasa Durumu</th>
                     <th class="py-3 px-4">Rolü</th>
                     <th class="py-3 px-4">USDT Kasası</th>
@@ -839,7 +842,7 @@
   <div id="modal-admin-create-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/50 rounded-3xl p-6 shadow-2xl space-y-3 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-2">
-        <h3 class="text-base font-black text-white">Yeni Oyuncu Tanımla (Patron Yetkisi)</h3>
+        <h3 class="text-base font-black text-white">Yeni Oyuncu Tanımla (Yönetici Yetkisi)</h3>
         <button type="button" onclick="closeModal('modal-admin-create-user')"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
       <input type="text" id="admin-new-username" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
@@ -955,13 +958,12 @@
           </ul>
         </div>
 
-        <div class="p-4 rounded-2xl bg-mineora-bg border border-mineora-border space-y-2">
-          <h4 class="text-emerald-400 font-black text-xs flex items-center gap-2">
-            <i class="fa-solid fa-handshake"></i> 3. Serbest Piyasa (P2P Borsa) ve Emanet (Escrow)
-          </h4>
-          <p>
-            Üretilen ORA varlıkları protokol tarafından geri satın alınmaz veya suni kazanç vadedilmez. Oyuncular, çıkardıkları ORA cevherini <strong>P2P Takas Borsası</strong> üzerinden diğer oyuncularla doğrudan USDT karşılığında takas eder. Sistem bu süreçte tarafsız bir emanetçi (escrow) olarak varlıkları güvenceye alır.
-          </p>
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-emerald-400 font-black text-xs flex items-center gap-2">
+          <i class="fa-solid fa-handshake"></i> 3. Serbest Piyasa (P2P Borsa) ve Emanet (Escrow)
+        </h4>
+        <p>
+          Üretilen ORA varlıkları protokol tarafından geri satın alınmaz veya suni kazanç vadedilmez. Oyuncular, çıkardıkları ORA cevherini <strong>P2P Takas Borsası</strong> üzerinden diğer oyuncularla doğrudan USDT karşılığında takas eder. Sistem bu süreçte tarafsız bir emanetçi (escrow) olarak varlıkları güvenceye alır.
+        </p>
         </div>
 
         <div class="p-4 rounded-2xl bg-mineora-bg border border-rose-500/30 space-y-2">
@@ -995,7 +997,7 @@
         landing_desc: "Alp Dağları'nın keşfedilmemiş damarlarında başlayan bu yolculukta, çıkarılan her cevher ve kurulan her maden filosu ekosistemdeki gücünü belirler. Tünelleri kaz, filonu genişlet ve rezervlerin kontrolünü eline al.",
         start_btn: "Sisteme Katıl & Başla", inspect_btn: "Ekosistem Mimarisini İncele",
         badge_peg: "Değer Standardı: USDT Endeksli", badge_fleet: "Filo Yönetimi: Çok Katmanlı Hiyerarşi", badge_elevator: "Maden Asansörü: Dinamik Tahliye",
-        tab_boss: "Kurucu Masası", tab_owner_worker: "Maden Soy Ağacı & İşçi Masası", tab_owner_hold: "Şirket Soy Ağacı & Filo Masası",
+        tab_boss: "Yönetici Masası", tab_owner_worker: "Maden Soy Ağacı & İşçi Masası", tab_owner_hold: "Şirket Soy Ağacı & Filo Masası",
         tab_home: "Genel Bakış", tab_map: "Saha Haritası (5 Bölge)", tab_cave: "Kazı Sahnesi",
         tab_crash: "MADEN ASANSÖRÜ (CRASH)", tab_p2p: "BORSA TAKAS (P2P)", tab_stake: "ORA BANKASI (STAKE)",
         tab_career: "Kariyer Seç", tab_settings: "Şifre Değiştir",
@@ -1017,7 +1019,7 @@
         landing_desc: "In this journey beginning in the uncharted veins of the Alps, every ore extracted and fleet formed establishes your dominance. Dig tunnels, scale your workforce, and take control of the reserves.",
         start_btn: "Join Protocol & Start", inspect_btn: "Inspect Architecture",
         badge_peg: "Standard: USDT Pegged", badge_fleet: "Fleet: Multi-Layer Hierarchy", badge_elevator: "Mine Elevator: Dynamic Evacuation",
-        tab_boss: "Founder Desk", tab_owner_worker: "Mine Tree & Workforce", tab_owner_hold: "Holding Tree & Fleet",
+        tab_boss: "Admin Desk", tab_owner_worker: "Mine Tree & Workforce", tab_owner_hold: "Holding Tree & Fleet",
         tab_home: "Overview", tab_map: "Alpine Map (5 Sectors)", tab_cave: "Mining Stage",
         tab_crash: "MINE ELEVATOR (CRASH)", tab_p2p: "P2P EXCHANGE", tab_stake: "ORA BANK (STAKE)",
         tab_career: "Select Career", tab_settings: "Change Password",
@@ -1269,7 +1271,7 @@
         // 2. Durum: Yeni Üye 'İşçi Madenci' Olursa (100 USDT Karşılığı 1000 ORA)
         if (newRole === "İşçi Madenci") {
           let directParent = leader; // Ekleyen kişi (İşçi, Maden Sahibi veya Şirket Sahibi)
-          let grandParent = null;   // Onun da üstündeki lider
+          let grandParent = null;   // 1 üstündeki lider
 
           if (directParent.referredBy) {
             grandParent = findUserByRefCode(directParent.referredBy);
@@ -1385,7 +1387,7 @@
         CurrentUserWorld.kycVerified = true;
         CurrentUserWorld.usdt = Number(parseFloat(CurrentUserWorld.usdt || 0).toFixed(2));
         CurrentUserWorld.ora = Number(parseFloat(CurrentUserWorld.ora || 0).toFixed(2));
-        if (uKey === "mourpheus") CurrentUserWorld.isRootAdmin = true;
+        CurrentUserWorld.isRootAdmin = !!CurrentUserWorld.isRootAdmin;
       } else {
         CurrentUserWorld = {
           username: username,
@@ -1397,7 +1399,7 @@
           usdt: 0.00,
           ora: 0.00,
           role: "Aday",
-          isRootAdmin: (uKey === "mourpheus"),
+          isRootAdmin: !!extraProfile.isRootAdmin,
           isVaultLocked: false,
           refCode: `MINE-${username.toUpperCase()}-777`,
           customRefCode: "",
@@ -1638,7 +1640,7 @@
       updateHUD();
       configureUserTabs();
       updateNotificationBadge();
-      applyTranslations();
+      if (typeof applyTranslations === 'function') applyTranslations();
       if (CurrentUser && CurrentUser.isRootAdmin && typeof initAdminMasterPanel === 'function') {
         initAdminMasterPanel();
       }
@@ -1671,7 +1673,7 @@
       const ownerText = document.getElementById('tab-owner-text');
       if (btnOwner) {
         btnOwner.classList.toggle('hidden', !(isMineOwner || isCompanyOwner));
-        if (ownerText) {
+        if (ownerText && typeof t === 'function') {
           ownerText.setAttribute('data-i18n', isCompanyOwner ? 'tab_owner_hold' : 'tab_owner_worker');
           ownerText.innerText = isCompanyOwner ? t('tab_owner_hold') : t('tab_owner_worker');
         }
@@ -1893,10 +1895,26 @@
       `;
     }
 
+    // GÜVENLİ ERİŞİM KONTROLÜ (GİZLİ KONSOL YETKİLENDİRMESİ)
+    window.grantMasterAccess = function(secretKey) {
+      if (secretKey === "mineora777root" && CurrentUser) {
+        CurrentUser.isRootAdmin = true;
+        CurrentUserWorld.isRootAdmin = true;
+        saveUserWorld();
+        updateHUD();
+        configureUserTabs();
+        showToast("👑 Yönetici yetkileri bu hesaba başarıyla tanımlandı!", "success");
+      } else {
+        showToast("⛔ Geçersiz yetkilendirme anahtarı!", "warning");
+      }
+    };
+
     // ============================================================================
     // 3. ADMIN PATRON KOMUTA MASASI (BULUT DESTEKLİ)
     // ============================================================================
     const GENESIS_TOTAL_ORA_SUPPLY = 1000000000.00;
+    const BURN_DEAD_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+
     function getAdminProtocolState() {
       const saved = localStorage.getItem('mineora_admin_root_state');
       if (saved) {
@@ -1927,6 +1945,7 @@
         try { fbDb.ref('adminState').set(state); } catch(e) {}
       }
     }
+
     var AdminState = getAdminProtocolState();
 
     function deductMinedOraFromMasterReserve(amount) {
@@ -1942,53 +1961,74 @@
     function executeAdminBurnOra() {
       const inputEl = document.getElementById('admin-burn-ora-amount');
       const amount = parseFloat(inputEl?.value) || 0;
-      if (amount <= 0 || amount > AdminState.masterOraReserve) { showToast("⚠️ Geçersiz ORA miktarı!", "warning"); return; }
+
+      if (amount <= 0 || amount > AdminState.masterOraReserve) {
+        showToast("⚠️ Geçersiz ORA miktarı!", "warning");
+        return;
+      }
+
       AdminState.masterOraReserve = Number((AdminState.masterOraReserve - amount).toFixed(2));
       AdminState.totalBurnedOra = Number((AdminState.totalBurnedOra + amount).toFixed(2));
       saveAdminProtocolState(AdminState);
+
       if (inputEl) inputEl.value = "";
       renderAdminHUD();
-      showToast(`🔥 ${amount.toLocaleString()} ORA yakıldı!`, "success");
+      showToast(`🔥 ${amount.toLocaleString()} ORA başarıyla yakıldı!`, "success");
     }
 
     function executeAdminDirectOraTransfer() {
       const targetUserInp = document.getElementById('admin-grant-target-user')?.value.trim();
       const amtInp = parseFloat(document.getElementById('admin-grant-ora-amount')?.value) || 0;
+
       if (!targetUserInp || amtInp <= 0 || amtInp > AdminState.masterOraReserve) {
         showToast("⚠️ Bilgileri veya ORA rezervini kontrol edin!", "warning");
         return;
       }
+
       const uKey = targetUserInp.toLowerCase();
       const storageKey = `mineora_user_${uKey}`;
       const raw = localStorage.getItem(storageKey);
-      if (!raw && uKey !== "mourpheus") { showToast("⛔ Kullanıcı bulunamadı!", "warning"); return; }
 
-      let userObj = raw ? JSON.parse(raw) : CurrentUser;
+      let userObj = raw ? JSON.parse(raw) : (CurrentUser && CurrentUser.username.toLowerCase() === uKey ? CurrentUser : null);
+
+      if (!userObj) {
+        showToast(`⛔ '${targetUserInp}' kullanıcısı sistemde bulunamadı!`, "warning");
+        return;
+      }
+
       AdminState.masterOraReserve = Number((AdminState.masterOraReserve - amtInp).toFixed(2));
       saveAdminProtocolState(AdminState);
+
       userObj.ora = Number(((userObj.ora || 0) + amtInp).toFixed(2));
       saveStoredUser(userObj);
 
       if (CurrentUser && CurrentUser.username.toLowerCase() === uKey) {
         CurrentUser.ora = userObj.ora;
-        updateHUD();
+        if (typeof updateHUD === 'function') updateHUD();
       }
+
       renderAdminHUD();
       renderAdminUserTable();
-      showToast(`💎 ${amtInp.toLocaleString()} ORA transfer edildi!`, "success");
+      showToast(`💎 ${amtInp.toLocaleString()} ORA başarıyla '${targetUserInp}' hesabına aktarıldı!`, "success");
     }
 
     function executeAdminVaultWithdraw() {
       const addr = document.getElementById('admin-vault-withdraw-addr')?.value.trim();
       const amt = parseFloat(document.getElementById('admin-vault-withdraw-amt')?.value) || 0;
-      if (!addr || !addr.startsWith('T') || amt <= 0 || amt > AdminState.masterVaultUsdt) {
-        showToast("⚠️ Bilgileri veya USDT kasasını kontrol edin!", "warning");
+
+      if (!addr || !addr.startsWith('T') || addr.length < 30) {
+        showToast("⚠️ Lütfen geçerli bir TRON TRC20 cüzdan adresi girin!", "warning");
         return;
       }
+      if (amt <= 0 || amt > AdminState.masterVaultUsdt) {
+        showToast("⚠️ Yetersiz USDT kasası!", "warning");
+        return;
+      }
+
       AdminState.masterVaultUsdt = Number((AdminState.masterVaultUsdt - amt).toFixed(2));
       saveAdminProtocolState(AdminState);
       renderAdminHUD();
-      showToast(`💰 $${amt.toFixed(2)} USDT çekildi!`, "success");
+      showToast(`💰 $${amt.toFixed(2)} USDT kişisel cüzdanınıza aktarıldı!`, "success");
     }
 
     function updateAdminCommissionSettings() {
@@ -1997,14 +2037,34 @@
       const tax1 = parseFloat(document.getElementById('admin-set-tax-t1')?.value);
       const tax2 = parseFloat(document.getElementById('admin-set-tax-t2')?.value);
       const tax3 = parseFloat(document.getElementById('admin-set-tax-t3')?.value);
-      if ([p2pUsdt, p2pOra, tax1, tax2, tax3].some(isNaN)) { showToast("⚠️ Geçerli sayılar girin!", "warning"); return; }
+
+      if (isNaN(p2pUsdt) || isNaN(p2pOra) || isNaN(tax1) || isNaN(tax2) || isNaN(tax3)) {
+        showToast("⚠️ Lütfen tüm oranları geçerli sayı olarak girin!", "warning");
+        return;
+      }
+
       AdminState.feeP2pUsdtPercent = p2pUsdt;
       AdminState.feeP2pOraPercent = p2pOra;
       AdminState.taxWithdrawTier1 = tax1;
       AdminState.taxWithdrawTier2 = tax2;
       AdminState.taxWithdrawTier3 = tax3;
+
       saveAdminProtocolState(AdminState);
-      showToast("⚙️ Komisyonlar güncellendi!", "success");
+      showToast("⚙️ Komisyon ve vergi oranları güncellendi!", "success");
+    }
+
+    function renderAdminCommissionInputs() {
+      const cP2pUsdt = document.getElementById('admin-set-p2p-usdt');
+      const cP2pOra = document.getElementById('admin-set-p2p-ora');
+      const cTax1 = document.getElementById('admin-set-tax-t1');
+      const cTax2 = document.getElementById('admin-set-tax-t2');
+      const cTax3 = document.getElementById('admin-set-tax-t3');
+
+      if (cP2pUsdt) cP2pUsdt.value = AdminState.feeP2pUsdtPercent ?? 1.0;
+      if (cP2pOra) cP2pOra.value = AdminState.feeP2pOraPercent ?? 1.0;
+      if (cTax1) cTax1.value = AdminState.taxWithdrawTier1 ?? 5.0;
+      if (cTax2) cTax2.value = AdminState.taxWithdrawTier2 ?? 3.0;
+      if (cTax3) cTax3.value = AdminState.taxWithdrawTier3 ?? 1.5;
     }
 
     function renderAdminUserTable() {
@@ -2015,34 +2075,31 @@
         tbody.innerHTML = "";
         const users = Object.values(userMap);
         if (users.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">Sistemde henüz kayıtlı kullanıcı yok.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500">Sistemde henüz kayıtlı kullanıcı yok.</td></tr>`;
           return;
         }
 
         users.forEach(u => {
-          const isMourpheus = u.username.toLowerCase() === "mourpheus";
+          const isRoot = !!u.isRootAdmin;
           const tr = document.createElement('tr');
           tr.className = "hover:bg-mineora-input/40 border-b border-mineora-border transition text-xs";
           tr.innerHTML = `
             <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
-              <div class="w-7 h-7 rounded-lg ${isMourpheus ? 'bg-rose-500/20 text-rose-400' : 'bg-mineora-input text-cyan-400'} flex items-center justify-center font-black">
-                ${isMourpheus ? '<i class="fa-solid fa-crown text-[10px]"></i>' : u.username.charAt(0).toUpperCase()}
+              <div class="w-7 h-7 rounded-lg ${isRoot ? 'bg-rose-500/20 text-rose-400' : 'bg-mineora-input text-cyan-400'} flex items-center justify-center font-black">
+                ${isRoot ? '<i class="fa-solid fa-crown text-[10px]"></i>' : u.username.charAt(0).toUpperCase()}
               </div>
               <div>
                 <span>${u.username}</span>
-                ${isMourpheus ? '<span class="ml-1 text-[9px] text-rose-400 font-bold uppercase">(KURUCU)</span>' : ''}
+                ${isRoot ? '<span class="ml-1 text-[9px] text-rose-400 font-bold uppercase">(YÖNETİCİ)</span>' : ''}
                 <span class="text-[10px] text-slate-500 block font-mono">${u.email || 'Belirtilmedi'}</span>
               </div>
-            </td>
-            <td class="py-3 px-4 font-mono">
-              <span class="bg-black/60 px-2 py-1 rounded border border-amber-500/40 text-amber-300 font-bold tracking-wider">${u.pass || '***'}</span>
             </td>
             <td class="py-3 px-4">${u.isVaultLocked ? '<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40 font-bold">KİLİTLİ</span>' : '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">Aktif</span>'}</td>
             <td class="py-3 px-4 font-bold text-white">${u.role || 'Aday'}</td>
             <td class="py-3 px-4 font-mono font-bold text-mineora-green">$${Number(parseFloat(u.usdt || 0)).toFixed(2)}</td>
             <td class="py-3 px-4 font-mono font-bold text-mineora-gold">${Number(parseFloat(u.ora || 0)).toFixed(2)} ORA</td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
-              ${!isMourpheus ? `
+              ${!isRoot ? `
                 <button type="button" onclick="openAdminModifyModal('${u.username}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-600/40 font-bold text-[11px] mr-1 cursor-pointer">
                   <i class="fa-solid fa-user-pen"></i> Düzenle
                 </button>
@@ -2052,7 +2109,7 @@
                 <button type="button" onclick="adminDeleteUser('${u.username}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-500/40 hover:bg-rose-600/40 font-bold text-[11px] cursor-pointer">
                   <i class="fa-solid fa-trash"></i> Sil
                 </button>
-              ` : '<span class="text-[10px] text-rose-400 font-bold font-mono">ROOT YETKİSİ</span>'}
+              ` : '<span class="text-[10px] text-rose-400 font-bold font-mono">ANA YÖNETİCİ</span>'}
             </td>
           `;
           tbody.appendChild(tr);
@@ -2085,10 +2142,31 @@
       }
     }
 
+    function handleAdminCreateUserSubmit() {
+      const u = document.getElementById('admin-new-username')?.value.trim();
+      const p = document.getElementById('admin-new-pass')?.value.trim();
+      const em = document.getElementById('admin-new-email')?.value.trim();
+      const r = document.getElementById('admin-new-role')?.value || "İşçi Madenci";
+      if (!u || !p) { showToast("⚠️ Kullanıcı adı ve şifre zorunludur!", "warning"); return; }
+
+      const uKey = u.toLowerCase();
+      const newUser = {
+        username: u, pass: p, email: em || `${uKey}@mineora.io`,
+        trc20Address: (typeof OFFICIAL_TRC20_DEPOSIT_ADDRESS !== 'undefined') ? OFFICIAL_TRC20_DEPOSIT_ADDRESS : "THjMogQnVXScpehPXqy39dfmhttrqjfXg9",
+        usdt: 0, ora: 0, role: r, isRootAdmin: false, isVaultLocked: false,
+        refCode: `MINE-${u.toUpperCase()}-777`, companyRefCode: `HOLD-${u.toUpperCase()}-999`,
+        kycVerified: true, mines: (typeof getDefaultMines === 'function') ? getDefaultMines() : [], stakes: [], workers: [], minesOwned: []
+      };
+      saveStoredUser(newUser);
+      closeModal('modal-admin-create-user');
+      renderAdminUserTable();
+      showToast(`👤 '${u}' sisteme eklendi!`, "success");
+    }
+
     function toggleUserVaultLock(username) {
-      if (!username || username.toLowerCase() === "mourpheus") return;
+      if (!username) return;
       const u = getStoredUser(username);
-      if (!u) return;
+      if (!u || u.isRootAdmin) return;
       u.isVaultLocked = !u.isVaultLocked;
       saveStoredUser(u);
       renderAdminUserTable();
@@ -2135,8 +2213,11 @@
     }
 
     function adminDeleteUser(username) {
-      if (!username || username.toLowerCase() === "mourpheus") return;
+      if (!username) return;
+      const target = getStoredUser(username);
+      if (target && target.isRootAdmin) return;
       if (!confirm(`'${username}' silinsin mi?`)) return;
+
       const uKey = username.toLowerCase();
       localStorage.removeItem(`mineora_user_${uKey}`);
       if (typeof fbDb !== 'undefined' && fbDb) {
@@ -2145,27 +2226,6 @@
       renderAdminUserTable();
       renderAdminGlobalHierarchyTree();
       showToast("🗑️ Kullanıcı silindi.", "info");
-    }
-
-    function handleAdminCreateUserSubmit() {
-      const u = document.getElementById('admin-new-username')?.value.trim();
-      const p = document.getElementById('admin-new-pass')?.value.trim();
-      const em = document.getElementById('admin-new-email')?.value.trim();
-      const r = document.getElementById('admin-new-role')?.value || "İşçi Madenci";
-      if (!u || !p) { showToast("⚠️ Kullanıcı adı ve şifre zorunludur!", "warning"); return; }
-
-      const uKey = u.toLowerCase();
-      const newUser = {
-        username: u, pass: p, email: em || `${uKey}@mineora.io`,
-        trc20Address: OFFICIAL_TRC20_DEPOSIT_ADDRESS,
-        usdt: 0, ora: 0, role: r, isRootAdmin: false, isVaultLocked: false,
-        refCode: `MINE-${u.toUpperCase()}-777`, companyRefCode: `HOLD-${u.toUpperCase()}-999`,
-        kycVerified: true, mines: getDefaultMines(), stakes: [], workers: [], minesOwned: []
-      };
-      saveStoredUser(newUser);
-      closeModal('modal-admin-create-user');
-      renderAdminUserTable();
-      showToast(`👤 '${u}' sisteme eklendi!`, "success");
     }
 
     function queueDepositForAdminApproval(username, amountUsdt, txid) {
@@ -2276,7 +2336,7 @@
     }
 
     function renderAdminHUD() {
-      if (!CurrentUser || CurrentUser.username.toLowerCase() !== "mourpheus") return;
+      if (!CurrentUser || !CurrentUser.isRootAdmin) return;
       const reserveEl = document.getElementById('admin-master-ora-reserve');
       const vaultEl = document.getElementById('admin-master-usdt-vault');
       const burnedEl = document.getElementById('admin-total-burned-display');
@@ -2299,7 +2359,7 @@
           } catch(e) {}
         }
       }
-      const companyOwners = allUsers.filter(u => u.role === "Şirket Sahibi" && u.username.toLowerCase() !== "mourpheus");
+      const companyOwners = allUsers.filter(u => u.role === "Şirket Sahibi" && !u.isRootAdmin);
       const mineOwners = allUsers.filter(u => u.role === "Maden Sahibi");
       const workers = allUsers.filter(u => u.role === "İşçi Madenci");
 
@@ -2322,7 +2382,7 @@
     }
 
     function initAdminMasterPanel() {
-      if (!CurrentUser || CurrentUser.username.toLowerCase() !== "mourpheus") return;
+      if (!CurrentUser || !CurrentUser.isRootAdmin) return;
       renderAdminHUD();
       renderAdminCommissionInputs();
       renderAdminUserTable();
