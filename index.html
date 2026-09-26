@@ -1063,7 +1063,7 @@
     });
   }
 
-  // ---------- MODÜL 2: STATE.JS (GÜNCELLENMİŞ VE TAM MOTOR) ----------
+  // ---------- MODÜL 2: STATE.JS (CANLI TÜM CİHAZ EŞİTLEMELİ MOTOR) ----------
   const firebaseConfig = {
     apiKey: "AIzaSyCLyok5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
     authDomain: "mineora-web.firebaseapp.com",
@@ -1241,7 +1241,8 @@
     return null;
   }
 
-  // 1. Canlıdaki eski kullanıcıları (workers, minesOwned ve referredBy dahil) onaran fonksiyon
+  // ==================== 4 DERİNLİK & EVRENSEL EŞLEME MOTORU ====================
+
   function autoMigrateReferralLineage() {
     const allUsersMap = {};
     for (let i = 0; i < localStorage.length; i++) {
@@ -1256,22 +1257,19 @@
 
     let hasChanges = false;
 
-    // A) Eski sürümden gelen workers ve minesOwned içindeki üyeleri doğrudan eşle
     Object.keys(allUsersMap).forEach(k => {
       const leader = allUsersMap[k];
       
-      // Eski workers listesini tara
       if (Array.isArray(leader.workers)) {
         leader.workers.forEach(w => {
           const wKey = (w.username || "").toLowerCase();
           if (allUsersMap[wKey] && !allUsersMap[wKey].referredBy) {
-            allUsersMap[wKey].referredBy = leader.refCode || leader.companyRefCode || leader.username;
+            allUsersMap[wKey].referredBy = leader.companyRefCode || leader.refCode || leader.username;
             hasChanges = true;
           }
         });
       }
 
-      // Eski minesOwned listesini tara
       if (Array.isArray(leader.minesOwned)) {
         leader.minesOwned.forEach(m => {
           const ownerKey = (m.ownerUsername || "").toLowerCase();
@@ -1292,7 +1290,6 @@
       }
     });
 
-    // B) referral_chain dizilerini yukarıya doğru zincirle
     function traceChain(username) {
       const chain = [];
       let cur = allUsersMap[username.toLowerCase()];
@@ -1331,7 +1328,6 @@
     }
   }
 
-  // 2. Kullanıcının altındaki MAKSİMUM 4 DERİNLİKTEKİ ekibini getiren filtre
   function getFourDepthTeam(targetUsername) {
     if (!targetUsername) return [];
     const target = targetUsername.toLowerCase();
@@ -1364,7 +1360,6 @@
         }
       }
 
-      // Zincir henüz oluşmamışsa doğrudan refCode/isim eşleşmesine bak
       if (depth === -1 && member.referredBy) {
         const refVal = member.referredBy.trim().toUpperCase();
         const myRefs = [
@@ -1380,7 +1375,6 @@
         }
       }
 
-      // 4 derinlik kuralı: 1, 2, 3 ve 4. seviyeler listelenir; 5 ve sonrası gizlenir
       if (depth >= 1 && depth <= 4) {
         team.push({
           username: member.username,
@@ -1396,12 +1390,11 @@
     return team.sort((a, b) => a.depth - b.depth);
   }
 
-  // 3. 4 Kademeli Ters Prim Dağıtımı (1: %10, 2: %7, 3: %5, 4: %3)
   function distributeFourDepthCommission(buyerUser, costOra) {
     if (!buyerUser || !buyerUser.referral_chain || buyerUser.referral_chain.length === 0) return;
 
     const chain = buyerUser.referral_chain;
-    const rates = [0.10, 0.07, 0.05, 0.03]; // 1. Doğrudan: %10, 2: %7, 3: %5, 4: %3
+    const rates = [0.10, 0.07, 0.05, 0.03];
 
     for (let i = 0; i < rates.length; i++) {
       const sponsorIndex = chain.length - 1 - i;
@@ -1546,14 +1539,24 @@
     sessionStorage.setItem('mineora_active_session', CurrentUser.username);
     checkMinesCooldown();
 
+    // Tüm cihazlarda tam ekosistemi buluttan çeken canlı dinleyici
     if (fbDb) {
-      fbDb.ref('users/' + uKey).on('value', snap => {
-        const liveData = snap.val();
-        if (liveData && CurrentUser && CurrentUser.username.toLowerCase() === uKey) {
-          CurrentUser = liveData;
-          CurrentUserWorld = liveData;
-          localStorage.setItem(storageKey, JSON.stringify(liveData));
+      fbDb.ref('users').on('value', snap => {
+        const allCloudUsers = snap.val();
+        if (allCloudUsers) {
+          Object.keys(allCloudUsers).forEach(k => {
+            localStorage.setItem(`mineora_user_${k}`, JSON.stringify(allCloudUsers[k]));
+          });
+          if (allCloudUsers[uKey]) {
+            CurrentUser = allCloudUsers[uKey];
+            CurrentUserWorld = allCloudUsers[uKey];
+          }
+          autoMigrateReferralLineage();
           updateHUD();
+          const secOwner = document.getElementById('sec-owner');
+          if (secOwner && !secOwner.classList.contains('hidden')) {
+            renderHierarchyUI();
+          }
         }
       });
     }
@@ -1796,8 +1799,6 @@
   function configureUserTabs() {
     if (!CurrentUser) return;
     const isBoss = !!CurrentUser.isRootAdmin;
-    const isCompanyOwner = CurrentUser.role === "Şirket Sahibi";
-    const isMineOwner = CurrentUser.role === "Maden Sahibi";
 
     document.getElementById('tab-btn-boss')?.classList.toggle('hidden', !isBoss);
     document.getElementById('sec-boss')?.classList.toggle('hidden', !isBoss);
@@ -1919,7 +1920,6 @@
       if (!CurrentUser.refCode) CurrentUser.refCode = `MINE-${CurrentUser.username.toUpperCase()}-777`;
     }
 
-    // 4 Kademeli Ters Prim Dağıtımı Tetiklenir (%10, %7, %5, %3)
     distributeFourDepthCommission(CurrentUser, costOra);
 
     saveUserWorld();
@@ -4058,7 +4058,7 @@
   });
 
   window.addEventListener('keydown', (e) => {
-    // Kullanıcı herhangi bir metin kutusuna yazı yazıyorsa tuş vuruşunu engelleme
+    // Kullanıcı herhangi bir metin kutusuna yazı yazıyorsa tuş vuruşunu engelleme (x, X, boşluk kilidi çözüldü)
     const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
     if (activeTag === 'input' || activeTag === 'textarea') return;
 
