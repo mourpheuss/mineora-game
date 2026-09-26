@@ -12,7 +12,7 @@
   <!-- GOOGLE ADSENSE -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2796343477534643" crossorigin="anonymous"></script>
 
-  <!-- FIREBASE KÜTÜPHANELERİ -->
+  <!-- FIREBASE BULUT KÜTÜPHANELERİ -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
@@ -209,7 +209,6 @@
         </div>
 
         <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          <!-- USDT Cüzdan -->
           <div class="flex-1 sm:flex-initial bg-mineora-bg px-2.5 sm:px-3 py-1.5 rounded-xl border border-mineora-border flex items-center gap-2 justify-center sm:justify-start">
             <i class="fa-solid fa-dollar-sign text-mineora-green text-xs"></i>
             <div class="leading-none">
@@ -218,7 +217,6 @@
             </div>
           </div>
 
-          <!-- ORA Varlık -->
           <div class="flex-1 sm:flex-initial bg-mineora-bg px-2.5 sm:px-3 py-1.5 rounded-xl border border-mineora-border flex items-center gap-2 justify-center sm:justify-start">
             <i class="fa-solid fa-coins text-mineora-gold text-xs"></i>
             <div class="leading-none">
@@ -227,7 +225,6 @@
             </div>
           </div>
 
-          <!-- Alp Kristali Sayacı -->
           <div class="flex-1 sm:flex-initial bg-mineora-bg px-2.5 sm:px-3 py-1.5 rounded-xl border border-cyan-500/30 flex items-center gap-2 justify-center sm:justify-start">
             <i class="fa-solid fa-gem text-cyan-400 text-xs animate-pulse"></i>
             <div class="leading-none">
@@ -1066,7 +1063,7 @@
     });
   }
 
-  // ---------- MODÜL 2: STATE.JS (4 DERİNLİK & TERS PRİM MOTORU ENTEGRE) ----------
+  // ---------- MODÜL 2: STATE.JS (GÜNCELLENMİŞ VE TAM MOTOR) ----------
   const firebaseConfig = {
     apiKey: "AIzaSyCLyok5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
     authDomain: "mineora-web.firebaseapp.com",
@@ -1084,7 +1081,7 @@
       fbDb = firebase.database();
     }
   } catch(e) {
-    console.warn("Firebase bağlantısı yok:", e);
+    console.warn("Firebase bulut bağlantısı kurulamadı:", e);
   }
 
   const OFFICIAL_TRC20_DEPOSIT_ADDRESS = "THjMogQnVXScpehPXqy39dfmhttrqjfXg9";
@@ -1236,14 +1233,15 @@
           const r2 = (u.customRefCode || "").toUpperCase();
           const r3 = (u.companyRefCode || "").toUpperCase();
           const r4 = (u.customCompanyRefCode || "").toUpperCase();
-          if (clean === r1 || clean === r2 || clean === r3 || clean === r4) return u;
+          const uname = (u.username || "").toUpperCase();
+          if (clean === r1 || clean === r2 || clean === r3 || clean === r4 || clean === uname) return u;
         } catch(e) {}
       }
     }
     return null;
   }
 
-  // 1. Canlıdaki eski kullanıcıları geriye dönük tarayıp zincirlerini onaran fonksiyon
+  // 1. Canlıdaki eski kullanıcıları (workers, minesOwned ve referredBy dahil) onaran fonksiyon
   function autoMigrateReferralLineage() {
     const allUsersMap = {};
     for (let i = 0; i < localStorage.length; i++) {
@@ -1258,20 +1256,56 @@
 
     let hasChanges = false;
 
+    // A) Eski sürümden gelen workers ve minesOwned içindeki üyeleri doğrudan eşle
     Object.keys(allUsersMap).forEach(k => {
-      if (!Array.isArray(allUsersMap[k].referral_chain)) {
-        allUsersMap[k].referral_chain = [];
-        hasChanges = true;
+      const leader = allUsersMap[k];
+      
+      // Eski workers listesini tara
+      if (Array.isArray(leader.workers)) {
+        leader.workers.forEach(w => {
+          const wKey = (w.username || "").toLowerCase();
+          if (allUsersMap[wKey] && !allUsersMap[wKey].referredBy) {
+            allUsersMap[wKey].referredBy = leader.refCode || leader.companyRefCode || leader.username;
+            hasChanges = true;
+          }
+        });
+      }
+
+      // Eski minesOwned listesini tara
+      if (Array.isArray(leader.minesOwned)) {
+        leader.minesOwned.forEach(m => {
+          const ownerKey = (m.ownerUsername || "").toLowerCase();
+          if (allUsersMap[ownerKey] && !allUsersMap[ownerKey].referredBy) {
+            allUsersMap[ownerKey].referredBy = leader.companyRefCode || leader.refCode || leader.username;
+            hasChanges = true;
+          }
+          if (Array.isArray(m.workers)) {
+            m.workers.forEach(mw => {
+              const mwKey = (mw.username || "").toLowerCase();
+              if (allUsersMap[mwKey] && !allUsersMap[mwKey].referredBy) {
+                allUsersMap[mwKey].referredBy = m.ownerUsername;
+                hasChanges = true;
+              }
+            });
+          }
+        });
       }
     });
 
+    // B) referral_chain dizilerini yukarıya doğru zincirle
     function traceChain(username) {
       const chain = [];
       let cur = allUsersMap[username.toLowerCase()];
       const visited = new Set();
 
       while (cur && cur.referredBy) {
-        const parent = findUserByRefCode(cur.referredBy);
+        const refVal = cur.referredBy.trim().toUpperCase();
+        let parent = findUserByRefCode(refVal);
+        
+        if (!parent && allUsersMap[refVal.toLowerCase()]) {
+          parent = allUsersMap[refVal.toLowerCase()];
+        }
+
         if (!parent || visited.has(parent.username.toLowerCase())) break;
         visited.add(parent.username.toLowerCase());
         chain.unshift(parent.username);
@@ -1282,7 +1316,7 @@
 
     Object.keys(allUsersMap).forEach(k => {
       const calculatedChain = traceChain(allUsersMap[k].username);
-      if (JSON.stringify(allUsersMap[k].referral_chain) !== JSON.stringify(calculatedChain)) {
+      if (!Array.isArray(allUsersMap[k].referral_chain) || JSON.stringify(allUsersMap[k].referral_chain) !== JSON.stringify(calculatedChain)) {
         allUsersMap[k].referral_chain = calculatedChain;
         hasChanges = true;
       }
@@ -1316,25 +1350,46 @@
     const team = [];
 
     allUsers.forEach(member => {
-      if (!member.referral_chain || !Array.isArray(member.referral_chain)) return;
-      const chainLower = member.referral_chain.map(s => s.toLowerCase());
-      const targetIndex = chainLower.indexOf(target);
+      if (member.username.toLowerCase() === target) return;
 
-      if (targetIndex !== -1) {
-        const depth = chainLower.length - targetIndex;
+      let depth = -1;
+      let directSponsor = "-";
 
-        // 4 derinlik kuralı: Sadece 1, 2, 3 ve 4. seviyeler gösterilir
-        if (depth >= 1 && depth <= 4) {
-          const directSponsor = chainLower[chainLower.length - 1];
-          team.push({
-            username: member.username,
-            depth: depth,
-            sponsor: directSponsor,
-            role: member.role || "Aday",
-            ora: member.ora || 0,
-            usdt: member.usdt || 0
-          });
+      if (Array.isArray(member.referral_chain) && member.referral_chain.length > 0) {
+        const chainLower = member.referral_chain.map(s => s.toLowerCase());
+        const targetIndex = chainLower.indexOf(target);
+        if (targetIndex !== -1) {
+          depth = chainLower.length - targetIndex;
+          directSponsor = member.referral_chain[member.referral_chain.length - 1];
         }
+      }
+
+      // Zincir henüz oluşmamışsa doğrudan refCode/isim eşleşmesine bak
+      if (depth === -1 && member.referredBy) {
+        const refVal = member.referredBy.trim().toUpperCase();
+        const myRefs = [
+          (CurrentUser?.refCode || "").toUpperCase(),
+          (CurrentUser?.customRefCode || "").toUpperCase(),
+          (CurrentUser?.companyRefCode || "").toUpperCase(),
+          (CurrentUser?.customCompanyRefCode || "").toUpperCase(),
+          target.toUpperCase()
+        ];
+        if (myRefs.includes(refVal)) {
+          depth = 1;
+          directSponsor = targetUsername;
+        }
+      }
+
+      // 4 derinlik kuralı: 1, 2, 3 ve 4. seviyeler listelenir; 5 ve sonrası gizlenir
+      if (depth >= 1 && depth <= 4) {
+        team.push({
+          username: member.username,
+          depth: depth,
+          sponsor: directSponsor,
+          role: member.role || "Aday",
+          ora: member.ora || 0,
+          usdt: member.usdt || 0
+        });
       }
     });
 
@@ -1424,7 +1479,7 @@
           const clean = refCode.trim().toUpperCase();
           for (let k in all) {
             const u = all[k];
-            if ((u.refCode||"").toUpperCase() === clean || (u.customRefCode||"").toUpperCase() === clean || (u.companyRefCode||"").toUpperCase() === clean) {
+            if ((u.refCode||"").toUpperCase() === clean || (u.customRefCode||"").toUpperCase() === clean || (u.companyRefCode||"").toUpperCase() === clean || (u.username||"").toUpperCase() === clean) {
               saveStoredUser(u);
               processLink(u);
               break;
@@ -2520,7 +2575,8 @@
     if (powerBarInterval) clearInterval(powerBarInterval);
     powerBarInterval = setInterval(() => {
       const secCave = document.getElementById('sec-cave');
-      if (!secCave || secCave.classList.contains('hidden') || isTransitLocked) return;
+      if (!secCave || secCave.classList.contains('hidden')) return;
+      if (isTransitLocked) return;
       powerBarValue += powerBarSpeed * powerBarDirection;
       if (powerBarValue >= 96) { powerBarValue = 96; powerBarDirection = -1; }
       else if (powerBarValue <= 2) { powerBarValue = 2; powerBarDirection = 1; }
@@ -2689,7 +2745,7 @@
 
     const headlampBeam = mCtx.createRadialGradient(-14, -2, 2, -130, 10, 160);
     headlampBeam.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
-    headlampBeam.addColorStop(0.3, 'rgba(254, 240, 138, 0.4)');
+    headlampBeam.addColorStop(0.3, 'rgba(245, 240, 138, 0.4)');
     headlampBeam.addColorStop(1, 'rgba(0, 0, 0, 0)');
     mCtx.fillStyle = headlampBeam;
     mCtx.beginPath();
@@ -3986,7 +4042,7 @@
     setTimeout(() => { isWalletProcessing = false; }, 1000);
   }
 
-  // ---------- MODÜL 9: MAIN.JS ----------
+  // ---------- MODÜL 9: MAIN.JS (INPUT VE KUTU KORUMALI) ----------
   window.addEventListener('DOMContentLoaded', () => {
     // Canlıdaki eski kullanıcıların 4 derinlikli soy zincirini otomatik onarır
     if (typeof autoMigrateReferralLineage === 'function') {
@@ -4002,8 +4058,13 @@
   });
 
   window.addEventListener('keydown', (e) => {
+    // Kullanıcı herhangi bir metin kutusuna yazı yazıyorsa tuş vuruşunu engelleme
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    if (activeTag === 'input' || activeTag === 'textarea') return;
+
     const caveSec = document.getElementById('sec-cave');
     if (!caveSec || caveSec.classList.contains('hidden')) return;
+
     if (e.key === ' ' || e.key === 'x' || e.key === 'X' || e.key === 'Enter') {
       e.preventDefault();
       performMiningStrike();
