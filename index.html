@@ -84,6 +84,36 @@
       to { text-shadow: 0 0 12px #f97316, 0 0 25px #dc2626; } 
     }
   </style>
+
+  <!-- ERKEN MODAL MOTORU (Tıklamaların her an hatasız çalışmasını sağlar) -->
+  <script>
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if (!m) return;
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      if (id === 'modal-wallet') {
+        if (typeof renderQrCode === 'function') renderQrCode();
+        if (typeof setWalletTab === 'function') setWalletTab('deposit');
+      }
+      if (id === 'modal-notifications' && typeof renderNotificationsModal === 'function') {
+        renderNotificationsModal();
+      }
+      if (id === 'modal-auth-login') {
+        setTimeout(() => { document.getElementById('login-user')?.focus(); }, 100);
+      }
+    }
+
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      if (!m) return;
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+  </script>
 </head>
 <body class="bg-mineora-bg text-slate-100 min-h-screen flex flex-col justify-between selection:bg-mineora-gold selection:text-black">
 
@@ -2036,28 +2066,6 @@ function showToast(msg, type = "info") {
   container.appendChild(tEl);
   setTimeout(() => tEl.remove(), 3200);
 }
-
-window.openModal = function(id) {
-  const m = document.getElementById(id);
-  if (!m) return;
-  m.classList.remove('hidden');
-  m.classList.add('flex');
-  if (id === 'modal-wallet') {
-    if (typeof renderQrCode === 'function') renderQrCode();
-    if (typeof setWalletTab === 'function') setWalletTab('deposit');
-  }
-  if (id === 'modal-notifications') renderNotificationsModal();
-  if (id === 'modal-auth-login') {
-    setTimeout(() => { document.getElementById('login-user')?.focus(); }, 100);
-  }
-};
-
-window.closeModal = function(id) {
-  const m = document.getElementById(id);
-  if (!m) return;
-  m.classList.add('hidden');
-  m.classList.remove('flex');
-};
 
 window.handleLogin = function() {
   const u = document.getElementById('login-user')?.value.trim();
@@ -4057,1086 +4065,1358 @@ function renderCrashCanvasLoop() {
 
   crashFrame = requestAnimationFrame(renderCrashCanvasLoop);
 }
-// ================= 4. BEP-20 / NOWPAYMENTS CÜZDAN MOTORU (wallet.js) =================
-let isWalletProcessing = false;
-const NOWPAYMENTS_API_KEY = "101Y7VW-THAMMMS-P2AJF28-H1V76AX";
-const MASTER_TRUST_WALLET_BEP20 = "0x9bCaE8db59621D8A3345405D92ECA803c9D6C431";
+// ================= 10. CANLI YAYIN & GELİŞMİŞ WEBRTC SES/VİDEO MOTORU (live.js) =================
+let activeLiveRoom = null;
+let localMediaStream = null;
+let rtcPeerConnections = {}; // targetKey -> RTCPeerConnection
+let isCamActive = true;
+let isMicActive = true;
+let hasHandRaised = false;
+let isGhostAdminMode = false;
+let pendingPinRoomId = null;
+let pendingTicketRoom = null;
 
-function setWalletTab(tab) {
-  const isDep = tab === 'deposit';
-  const depView = document.getElementById('wallet-view-deposit');
-  const withView = document.getElementById('wallet-view-withdraw');
-  const depBtn = document.getElementById('wallet-tab-btn-deposit');
-  const withBtn = document.getElementById('wallet-tab-btn-withdraw');
+// Web Audio API Ses Mikseri (Yayıncı + Konuşmacı Sesi)
+let broadcastAudioCtx = null;
+let broadcastAudioDest = null;
+let hostMicSourceNode = null;
 
-  if (depView) depView.classList.toggle('hidden', !isDep);
-  if (withView) withView.classList.toggle('hidden', isDep);
+// Spam & Moderasyon Takibi
+let userChatTimestamps = [];
+let chatMuteUntilTime = 0;
 
-  if (depBtn) {
-    depBtn.className = isDep 
-      ? "flex-1 py-3 rounded-2xl font-black text-xs bg-gradient-to-r from-amber-500 to-mineora-gold text-black shadow-lg shadow-mineora-gold/20 transition cursor-pointer flex items-center justify-center gap-2" 
-      : "flex-1 py-3 rounded-2xl font-bold text-xs text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer flex items-center justify-center gap-2";
-  }
-  if (withBtn) {
-    withBtn.className = !isDep 
-      ? "flex-1 py-3 rounded-2xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-lg shadow-emerald-500/20 transition cursor-pointer flex items-center justify-center gap-2" 
-      : "flex-1 py-3 rounded-2xl font-bold text-xs text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer flex items-center justify-center gap-2";
+// Firebase Dinleyicileri
+let roomsRefListener = null;
+let activeRoomRefListener = null;
+let chatRefListener = null;
+let hostSignalingBound = false;
+
+// STUN Sunucuları
+const rtcConfig = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" }
+  ]
+};
+
+function sanitizeFbKey(key) {
+  if (!key) return "anon";
+  return key.toLowerCase().replace(/[\.\#\$\/\[\]\s]/g, '_');
+}
+
+// ================= METİN FİLTRESİ =================
+const INAPPROPRIATE_PATTERNS = [
+  /amk/i, /aq/i, /sik/i, /siki/i, /siktir/i, /pic/i, /orospu/i, /yarrak/i, /tasak/i, /got/i,
+  /ibne/i, /gotveren/i, /fahise/i, /pezevenk/i, /porn/i, /porno/i, /sex/i, /seks/i,
+  /nsfw/i, /escort/i, /amcik/i, /dalyarak/i, /fuck/i, /bitch/i, /whore/i, /dick/i, /pussy/i
+];
+
+function sanitizeForProfanityCheck(text) {
+  if (!text) return "";
+  return text.toLowerCase().replace(/[\s\.\-_,\*\/\\\|@!#\$%^&()+=:;~`"']/g, '');
+}
+
+function checkInappropriateContent(rawText) {
+  if (!rawText) return false;
+  const normalized = sanitizeForProfanityCheck(rawText);
+  return INAPPROPRIATE_PATTERNS.some(regex => regex.test(normalized) || regex.test(rawText.toLowerCase()));
+}
+
+// ================= KASA VE USDT AKTARIMLARI =================
+function creditAdminMasterVaultUsdt(amount) {
+  const amt = Number(parseFloat(amount) || 0);
+  if (amt <= 0) return;
+  if (typeof AdminState !== 'undefined' && AdminState) {
+    AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) + amt).toFixed(2));
+    if (typeof saveAdminProtocolState === 'function') saveAdminProtocolState(AdminState);
   }
 }
 
-async function getOrCreateUserDepositAddress(username) {
-  if (!username) return MASTER_TRUST_WALLET_BEP20;
+function creditUserUsdt(username, amount, logTitle, logDesc) {
+  const amt = Number(parseFloat(amount) || 0);
+  if (amt <= 0 || !username) return;
+  const uKey = username.toLowerCase();
 
-  if (CurrentUser && CurrentUser.bep20DepositAddress) {
-    return CurrentUser.bep20DepositAddress;
+  if (CurrentUser && CurrentUser.username.toLowerCase() === uKey) {
+    CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + amt).toFixed(2));
+    if (typeof addUserNotificationLog === 'function') {
+      addUserNotificationLog(CurrentUser, logTitle, logDesc, `+$${amt.toFixed(2)} USDT`, "income");
+    }
+    saveUserWorld();
+    updateHUD();
+  } else if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref(`users/${uKey}/usdt`).transaction(cur => Number(((cur || 0) + amt).toFixed(2)));
   }
+}
+
+// ================= LOBİ & ODA YÖNETİMİ =================
+function initLiveRoomsLobby() {
+  const lobbyView = document.getElementById('live-lobby-view');
+  const activeView = document.getElementById('live-room-active-view');
+  if (lobbyView) lobbyView.classList.remove('hidden');
+  if (activeView) activeView.classList.add('hidden');
+
+  renderLiveRoomsList();
+  listenToLiveRooms();
+}
+
+function listenToLiveRooms() {
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    if (roomsRefListener) fbDb.ref('liveRooms').off('value', roomsRefListener);
+    roomsRefListener = fbDb.ref('liveRooms').on('value', snapshot => {
+      renderLiveRoomsList(snapshot.val());
+    });
+  }
+}
+
+function renderLiveRoomsList(roomsData = null) {
+  const grid = document.getElementById('live-rooms-grid');
+  if (!grid) return;
+
+  const renderRooms = (roomsObj) => {
+    grid.innerHTML = "";
+    if (!roomsObj || Object.keys(roomsObj).length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full p-8 text-center bg-mineora-card/50 rounded-2xl border border-mineora-border text-xs text-slate-500 notranslate" translate="no">
+          <i class="fa-solid fa-tower-broadcast text-3xl mb-2 text-slate-600 block"></i>
+          Şu anda aktif canlı yayın odası bulunmuyor. Kendi ekibiniz için bir oda kurun!
+        </div>
+      `;
+      return;
+    }
+
+    const currentUname = CurrentUser ? CurrentUser.username.toLowerCase() : "";
+
+    Object.keys(roomsObj).forEach(roomId => {
+      const room = roomsObj[roomId];
+      if (!room || !room.host) return;
+
+      const isLocked = !!room.hasPin;
+      const isTicketed = (room.ticketPrice && room.ticketPrice > 0);
+      const isQuarantined = !!room.isQuarantined;
+      const viewerCount = room.viewers ? Object.keys(room.viewers).length : 1;
+
+      const card = document.createElement('div');
+      card.className = `p-5 rounded-3xl bg-mineora-card border ${isQuarantined ? 'border-rose-600/60 bg-rose-950/10' : 'border-mineora-border hover:border-rose-500/40'} transition shadow-xl flex flex-col justify-between space-y-4 group notranslate`;
+      card.setAttribute('translate', 'no');
+      card.innerHTML = `
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${isQuarantined ? 'bg-rose-600 text-white' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'} flex items-center gap-1.5 ${isQuarantined ? '' : 'animate-pulse'}">
+              <span class="w-1.5 h-1.5 rounded-full ${isQuarantined ? 'bg-white' : 'bg-rose-500'}"></span> ${isQuarantined ? 'DONDURULDU' : 'CANLI'}
+            </span>
+            <div class="flex items-center gap-2 text-xs font-mono">
+              ${isTicketed ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-mineora-green border border-emerald-500/30 text-[10px] font-bold">$${Number(room.ticketPrice).toFixed(2)}</span>` : ''}
+              ${isLocked ? '<i class="fa-solid fa-lock text-amber-400" title="Şifreli"></i>' : ''}
+              <span class="flex items-center gap-1 text-slate-400"><i class="fa-solid fa-eye text-slate-500"></i> ${viewerCount}</span>
+            </div>
+          </div>
+          <div>
+            <h4 class="font-black text-white text-sm group-hover:text-rose-400 transition">${room.title}</h4>
+            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 font-mono">
+              <span class="text-slate-300 font-bold">${room.host}</span>
+              <span>•</span>
+              <span class="text-mineora-gold">${room.hostRole || 'Miner'}</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" onclick="attemptJoinRoom('${roomId}')" class="w-full py-2.5 rounded-xl ${isTicketed ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white' : 'bg-mineora-input hover:bg-rose-600 hover:text-white text-slate-200'} font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow">
+          <i class="fa-solid fa-right-to-bracket"></i> ${isTicketed ? `Bilet Al ($${Number(room.ticketPrice).toFixed(2)})` : 'Odaya Katıl'}
+        </button>
+      `;
+      grid.appendChild(card);
+    });
+  };
+
+  if (roomsData !== null && typeof roomsData === 'object') {
+    renderRooms(roomsData);
+  } else if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref('liveRooms').once('value').then(snap => renderRooms(snap.val())).catch(() => {});
+  }
+}
+
+// ================= ODA KURMA & YAYIN BAŞLATMA =================
+function openCreateRoomModal() {
+  if (!CurrentUser) {
+    showToast("⚠️ Canlı oda açmak için giriş yapmalısınız!", "warning");
+    return;
+  }
+  openModal('modal-create-live-room');
+}
+
+async function handleCreateLiveRoomSubmit() {
+  if (!CurrentUser) return;
+
+  const titleInput = document.getElementById('new-room-title');
+  const pinInput = document.getElementById('new-room-pin');
+  const ticketInput = document.getElementById('new-room-ticket');
+
+  const title = titleInput?.value.trim();
+  const pin = pinInput?.value.trim();
+  const ticketPrice = parseFloat(ticketInput?.value) || 0;
+
+  if (!title || title.length < 3) {
+    showToast("⚠️ En az 3 karakterli bir oda başlığı yazın!", "warning");
+    return;
+  }
+
+  const hostSafeKey = sanitizeFbKey(CurrentUser.username);
+  const roomId = `room_${hostSafeKey}_${Date.now()}`;
+
+  const roomData = {
+    id: roomId,
+    title: title,
+    host: CurrentUser.username,
+    hostRole: CurrentUser.role || "Miner",
+    ticketPrice: Math.max(0, ticketPrice),
+    hasPin: !!pin,
+    createdAt: Date.now(),
+    isQuarantined: false,
+    viewers: { [hostSafeKey]: true },
+    speakers: { [hostSafeKey]: true }
+  };
+  if (pin) roomData.pin = pin;
 
   try {
-    const response = await fetch("https://api.nowpayments.io/v1/payment", {
-      method: "POST",
-      headers: {
-        "x-api-key": NOWPAYMENTS_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        price_amount: 10,
-        price_currency: "usd",
-        pay_currency: "usdtbsc",
-        order_id: `DEP_${username}_${Date.now()}`,
-        order_description: `Mineora Deposit - ${username}`
-      })
-    });
-
-    const data = await response.json();
-    if (data && data.pay_address) {
-      if (CurrentUser) {
-        CurrentUser.bep20DepositAddress = data.pay_address;
-        CurrentUser.lastPaymentId = data.payment_id;
-        if (typeof saveUserWorld === 'function') saveUserWorld();
-      }
-      return data.pay_address;
-    }
+    localMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   } catch (err) {
-    console.warn("NOWPayments automated address warning, master vault used:", err);
+    try {
+      localMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e2) {
+      showToast("⚠️ Kamera/Mikrofon izni alınamadı.", "warning");
+    }
   }
 
-  return MASTER_TRUST_WALLET_BEP20;
+  // Yayıncının Web Audio ses mikserini kur
+  initHostAudioMixer();
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    await fbDb.ref(`liveRooms/${roomId}`).set(roomData);
+  }
+
+  closeModal('modal-create-live-room');
+  if (titleInput) titleInput.value = "";
+  if (pinInput) pinInput.value = "";
+  if (ticketInput) ticketInput.value = "";
+
+  enterRoomView(roomData, true);
+  showToast(`🎉 '${title}' canlı yayın odası açıldı!`, "success");
 }
 
-async function renderQrCode() {
-  const box = document.getElementById('qrcode-container');
-  const addrBox = document.getElementById('wallet-trc20-box');
-  if (!box) return;
-  box.innerHTML = "<div class='text-xs text-slate-500 py-8 flex items-center justify-center animate-pulse'>Generating Secure BEP-20 (BSC) Address...</div>";
+function initHostAudioMixer() {
+  try {
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) return;
+    broadcastAudioCtx = new AudioCtxClass();
+    broadcastAudioDest = broadcastAudioCtx.createMediaStreamDestination();
+    if (localMediaStream && localMediaStream.getAudioTracks().length > 0) {
+      hostMicSourceNode = broadcastAudioCtx.createMediaStreamSource(localMediaStream);
+      hostMicSourceNode.connect(broadcastAudioDest);
+    }
+  } catch (e) {
+    console.warn("Mikser uyarısı:", e);
+  }
+}
 
-  const username = CurrentUser ? CurrentUser.username : "";
-  const dedicatedAddr = await getOrCreateUserDepositAddress(username);
+// ================= ODAYA GİRİŞ =================
+function attemptJoinRoom(roomId) {
+  if (!CurrentUser) {
+    showToast("⚠️ Odaya katılmak için giriş yapmalısınız!", "warning");
+    return;
+  }
 
-  box.innerHTML = "";
-  if (typeof QRCode !== 'undefined') {
-    new QRCode(box, {
-      text: dedicatedAddr,
-      width: 140, height: 140,
-      colorDark: "#0b0e11", colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.H
+  const proceed = (room) => {
+    if (!room) {
+      showToast("⛔ Bu oda artık mevcut değil!", "warning");
+      renderLiveRoomsList();
+      return;
+    }
+
+    const isHost = room.host.toLowerCase() === CurrentUser.username.toLowerCase();
+    if (room.hasPin && !isHost) {
+      pendingPinRoomId = roomId;
+      openModal('modal-room-pin-prompt');
+      return;
+    }
+
+    executeJoinRoom(room);
+  };
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref(`liveRooms/${roomId}`).once('value').then(snap => proceed(snap.val()));
+  }
+}
+
+function submitRoomPinCheck() {
+  const pinEntered = document.getElementById('input-room-pin')?.value.trim();
+  if (!pendingPinRoomId) return;
+
+  fbDb.ref(`liveRooms/${pendingPinRoomId}`).once('value').then(snap => {
+    const room = snap.val();
+    if (room && room.pin === pinEntered) {
+      closeModal('modal-room-pin-prompt');
+      executeJoinRoom(room);
+    } else {
+      showToast("❌ Hatalı oda şifresi!", "warning");
+    }
+  });
+}
+
+function executeJoinRoom(room) {
+  const isHost = room.host.toLowerCase() === CurrentUser.username.toLowerCase();
+  const uSafeKey = sanitizeFbKey(CurrentUser.username);
+
+  if (typeof fbDb !== 'undefined' && fbDb && !isHost) {
+    fbDb.ref(`liveRooms/${room.id}/viewers/${uSafeKey}`).set(true);
+  }
+
+  enterRoomView(room, isHost);
+}
+
+// ================= ODA İÇİ EKRANI =================
+function enterRoomView(room, isHost) {
+  activeLiveRoom = room;
+  hasHandRaised = false;
+
+  document.getElementById('live-lobby-view')?.classList.add('hidden');
+  document.getElementById('live-room-active-view')?.classList.remove('hidden');
+
+  document.getElementById('current-room-title').innerText = room.title;
+  document.getElementById('current-room-host').innerText = `Yayıncı: ${room.host} (${room.hostRole || 'Miner'})`;
+  document.getElementById('live-host-badge-name').innerText = room.host;
+
+  const hostCtrl = document.getElementById('host-controls');
+  const viewerCtrl = document.getElementById('viewer-controls');
+  const hostReqBtn = document.getElementById('host-requests-btn-container');
+
+  if (hostCtrl) hostCtrl.classList.toggle('hidden', !isHost);
+  if (hostReqBtn) hostReqBtn.classList.toggle('hidden', !isHost);
+  if (viewerCtrl) viewerCtrl.classList.toggle('hidden', isHost);
+
+  const videoEl = document.getElementById('live-host-video');
+  const placeholderEl = document.getElementById('live-video-placeholder');
+
+  if (isHost && localMediaStream) {
+    if (videoEl) {
+      videoEl.srcObject = localMediaStream;
+      videoEl.muted = true;
+      videoEl.play().catch(() => {});
+    }
+    if (placeholderEl) placeholderEl.classList.add('hidden');
+  } else {
+    if (videoEl) {
+      videoEl.srcObject = null;
+      videoEl.muted = false;
+    }
+    if (placeholderEl) placeholderEl.classList.remove('hidden');
+  }
+
+  bindActiveRoomListeners(room.id, isHost);
+  initRoomChat(room.id);
+
+  if (!isHost) {
+    initViewerWebRTC(room.id);
+  } else {
+    listenToIncomingViewerSignalsOnce(room.id);
+  }
+}
+
+function leaveCurrentRoom() {
+  if (!activeLiveRoom) return;
+  const isHost = CurrentUser && activeLiveRoom.host.toLowerCase() === CurrentUser.username.toLowerCase();
+  const roomId = activeLiveRoom.id;
+
+  if (localMediaStream) {
+    localMediaStream.getTracks().forEach(track => track.stop());
+    localMediaStream = null;
+  }
+
+  if (broadcastAudioCtx) {
+    try { broadcastAudioCtx.close(); } catch(e) {}
+    broadcastAudioCtx = null;
+    broadcastAudioDest = null;
+    hostMicSourceNode = null;
+  }
+
+  document.querySelectorAll('audio[id^="speaker-audio-"]').forEach(el => el.remove());
+
+  Object.keys(rtcPeerConnections).forEach(k => {
+    try { rtcPeerConnections[k].close(); } catch(e) {}
+  });
+  rtcPeerConnections = {};
+  hostSignalingBound = false;
+
+  const videoEl = document.getElementById('live-host-video');
+  if (videoEl) videoEl.srcObject = null;
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    const uSafeKey = sanitizeFbKey(CurrentUser.username);
+    if (isHost) {
+      fbDb.ref(`liveRooms/${roomId}`).remove();
+    } else {
+      fbDb.ref(`liveRooms/${roomId}/viewers/${uSafeKey}`).remove();
+      fbDb.ref(`liveRooms/${roomId}/speakers/${uSafeKey}`).remove();
+      fbDb.ref(`liveRooms/${roomId}/handRaises/${uSafeKey}`).remove();
+      fbDb.ref(`liveRooms/${roomId}/signaling/${uSafeKey}`).remove();
+    }
+
+    if (activeRoomRefListener) fbDb.ref(`liveRooms/${roomId}`).off('value', activeRoomRefListener);
+    if (chatRefListener) fbDb.ref(`liveRooms/${roomId}/chat`).off('child_added', chatRefListener);
+  }
+
+  activeLiveRoom = null;
+  initLiveRoomsLobby();
+  showToast(isHost ? "🛑 Canlı yayın sonlandırıldı." : "Odadan ayrıldınız.", "info");
+}
+
+// ================= WEBRTC SİNYALİZASYON (KESİNTİSİZ AKIŞ) =================
+
+// Yayıncı: Gelen izleyicileri dinler (Sadece bir kez bağlanır)
+function listenToIncomingViewerSignalsOnce(roomId) {
+  if (hostSignalingBound || !fbDb || !CurrentUser) return;
+  hostSignalingBound = true;
+
+  const signalingRef = fbDb.ref(`liveRooms/${roomId}/signaling`);
+
+  signalingRef.on('child_added', viewerNodeSnap => {
+    const viewerSafeKey = viewerNodeSnap.key;
+
+    // Teklifin gelmesini .on('value') ile bekle (Yarış durumunu %100 çözer)
+    viewerNodeSnap.ref.child('offer').on('value', async offerSnap => {
+      const offer = offerSnap.val();
+      if (!offer || rtcPeerConnections[viewerSafeKey]) return;
+
+      const pc = new RTCPeerConnection(rtcConfig);
+      rtcPeerConnections[viewerSafeKey] = pc;
+
+      // 1. Yayıncının video ve ses parçalarını ekle
+      if (localMediaStream) {
+        localMediaStream.getVideoTracks().forEach(track => pc.addTrack(track, localMediaStream));
+      }
+
+      // Mikser sesi (Yayıncı + Sahnedekiler)
+      if (broadcastAudioDest && broadcastAudioDest.stream.getAudioTracks().length > 0) {
+        broadcastAudioDest.stream.getAudioTracks().forEach(track => pc.addTrack(track, broadcastAudioDest.stream));
+      } else if (localMediaStream) {
+        localMediaStream.getAudioTracks().forEach(track => pc.addTrack(track, localMediaStream));
+      }
+
+      // 2. Konuşmacıdan gelen sesi karşıla
+      pc.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          const stream = event.streams[0];
+          // A) Yayıncının hoparlöründen duyur
+          let audioEl = document.getElementById(`speaker-audio-${viewerSafeKey}`);
+          if (!audioEl) {
+            audioEl = document.createElement('audio');
+            audioEl.id = `speaker-audio-${viewerSafeKey}`;
+            audioEl.autoplay = true;
+            audioEl.playsInline = true;
+            audioEl.style.display = 'none';
+            document.body.appendChild(audioEl);
+          }
+          audioEl.srcObject = stream;
+          audioEl.play().catch(e => console.warn("Speaker ses çalma:", e));
+
+          // B) Miksere bağla (Diğer izleyicilerin de duyması için)
+          if (broadcastAudioCtx && broadcastAudioDest) {
+            try {
+              if (broadcastAudioCtx.state === 'suspended') broadcastAudioCtx.resume();
+              const source = broadcastAudioCtx.createMediaStreamSource(stream);
+              source.connect(broadcastAudioDest);
+            } catch(e) {}
+          }
+        }
+      };
+
+      // 3. ICE adaylarını izleyiciye gönder
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          viewerNodeSnap.ref.child('hostCandidates').push(event.candidate.toJSON());
+        }
+      };
+
+      // 4. Uzak teklifi ayarla ve cevap üret
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      await viewerNodeSnap.ref.child('answer').set({
+        sdp: answer.sdp,
+        type: answer.type
+      });
+
+      // 5. İzleyicinin adaylarını kabul et
+      viewerNodeSnap.ref.child('viewerCandidates').on('child_added', cSnap => {
+        const c = cSnap.val();
+        if (c) pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+      });
+    });
+  });
+}
+
+// İzleyici: Odaya bağlanır
+async function initViewerWebRTC(roomId) {
+  if (!fbDb || !CurrentUser) return;
+  const mySafeKey = sanitizeFbKey(CurrentUser.username);
+  const pc = new RTCPeerConnection(rtcConfig);
+  rtcPeerConnections[mySafeKey] = pc;
+
+  const mySigRef = fbDb.ref(`liveRooms/${roomId}/signaling/${mySafeKey}`);
+  await mySigRef.remove(); // Temiz sinyal kutusu
+
+  // 1. Yayıncının görüntüsü geldiğinde çal
+  pc.ontrack = (event) => {
+    const videoEl = document.getElementById('live-host-video');
+    const placeholderEl = document.getElementById('live-video-placeholder');
+    if (videoEl && event.streams && event.streams[0]) {
+      videoEl.srcObject = event.streams[0];
+      videoEl.muted = false;
+      videoEl.play().catch(() => {
+        videoEl.muted = true;
+        videoEl.play();
+      });
+      if (placeholderEl) placeholderEl.classList.add('hidden');
+    }
+  };
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      mySigRef.child('viewerCandidates').push(event.candidate.toJSON());
+    }
+  };
+
+  // Video alımı ve çift yönlü ses kanalı rezerve et
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'sendrecv' });
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  await mySigRef.child('offer').set({
+    sdp: offer.sdp,
+    type: offer.type
+  });
+
+  // Yayıncının cevabını dinle
+  mySigRef.child('answer').on('value', async snap => {
+    const answer = snap.val();
+    if (answer && !pc.currentRemoteDescription) {
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    }
+  });
+
+  // Yayıncının adaylarını ekle
+  mySigRef.child('hostCandidates').on('child_added', snap => {
+    const cand = snap.val();
+    if (cand) pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+  });
+}
+
+// ================= SAHNE & SÖZ ALMA SİSTEMİ =================
+
+// İzleyici "El Kaldır" dediğinde mikrofon iznini KULLANICI TIKLAMASIYLA alıyoruz
+async function toggleRaiseHand() {
+  if (!activeLiveRoom || !CurrentUser) return;
+  hasHandRaised = !hasHandRaised;
+
+  const btnText = document.getElementById('raise-hand-text');
+  const btn = document.getElementById('btn-raise-hand');
+  const uSafeKey = sanitizeFbKey(CurrentUser.username);
+
+  if (hasHandRaised) {
+    // 1. Tıklama anında mikrofonu hazırla (Güvenlik engeli yemez)
+    if (!localMediaStream) {
+      try {
+        localMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Söz verilene kadar mikrofonu sustur
+        localMediaStream.getAudioTracks().forEach(t => t.enabled = false);
+      } catch (err) {
+        hasHandRaised = false;
+        showToast("⚠️ Mikrofon izni vermeden söz isteyemezsiniz.", "warning");
+        return;
+      }
+    }
+
+    if (btnText) btnText.innerText = "İsteği Geri Çek";
+    if (btn) btn.className = "px-4 py-2 rounded-xl bg-amber-600 text-white font-black flex items-center gap-2 cursor-pointer shadow-lg";
+
+    if (typeof fbDb !== 'undefined' && fbDb) {
+      fbDb.ref(`liveRooms/${activeLiveRoom.id}/handRaises/${uSafeKey}`).set({
+        username: CurrentUser.username,
+        time: Date.now()
+      });
+    }
+    showToast("✋ Söz hakkı istendi. Yayıncının onayı bekleniyor.", "info");
+  } else {
+    if (btnText) btnText.innerText = "Söz İste (El Kaldır)";
+    if (btn) btn.className = "px-4 py-2 rounded-xl bg-mineora-gold text-black font-black flex items-center gap-2 cursor-pointer shadow-lg";
+
+    if (localMediaStream) {
+      localMediaStream.getTracks().forEach(t => t.stop());
+      localMediaStream = null;
+    }
+
+    if (typeof fbDb !== 'undefined' && fbDb) {
+      fbDb.ref(`liveRooms/${activeLiveRoom.id}/handRaises/${uSafeKey}`).remove();
+    }
+  }
+}
+
+// Yayıncı onayladığında izleyicinin mikrofonunu açan fonksiyon
+async function checkSpeakerStatus(speakersObj) {
+  if (!CurrentUser || !activeLiveRoom) return;
+  const isHost = activeLiveRoom.host.toLowerCase() === CurrentUser.username.toLowerCase();
+  if (isHost) return; // Yayıncı kendi mikrofon durumunu kontrol etmez
+
+  const uSafeKey = sanitizeFbKey(CurrentUser.username);
+  const isSpeakerNow = !!speakersObj[uSafeKey] || !!speakersObj[CurrentUser.username];
+
+  const pc = rtcPeerConnections[uSafeKey];
+
+  if (isSpeakerNow) {
+    if (!localMediaStream) {
+      try {
+        localMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch(e) {
+        showToast("⚠️ Mikrofon algılanamadı.", "warning");
+        return;
+      }
+    }
+
+    // Mikrofonun sesini yayına aç
+    localMediaStream.getAudioTracks().forEach(t => t.enabled = true);
+
+    if (pc && localMediaStream) {
+      const audioTrack = localMediaStream.getAudioTracks()[0];
+      const senders = pc.getSenders();
+      const audioSender = senders.find(s => s.track && s.track.kind === 'audio' || (s.dtmf !== undefined));
+      if (audioSender) {
+        await audioSender.replaceTrack(audioTrack);
+      } else {
+        pc.addTrack(audioTrack, localMediaStream);
+      }
+    }
+    showToast("🎙️ Yayıncı söz verdi! Mikrofonunuz yayında!", "success");
+  } else if (!isSpeakerNow && localMediaStream) {
+    // Söz hakkı geri alındıysa mikrofonu sustur
+    if (pc) {
+      const senders = pc.getSenders();
+      const audioSender = senders.find(s => s.track && s.track.kind === 'audio' || (s.dtmf !== undefined));
+      if (audioSender) audioSender.replaceTrack(null);
+    }
+    localMediaStream.getTracks().forEach(t => t.stop());
+    localMediaStream = null;
+    showToast("🛑 Söz hakkınız sona erdi.", "info");
+  }
+}
+
+function openSpeakerRequestsModal() {
+  openModal('modal-speaker-requests');
+}
+
+function renderSpeakerRequestsList(raisesObj) {
+  const container = document.getElementById('speaker-requests-list');
+  if (!container) return;
+  container.innerHTML = "";
+
+  const entries = Object.keys(raisesObj).map(key => ({
+    safeKey: key,
+    username: raisesObj[key].username || key
+  }));
+
+  if (entries.length === 0) {
+    container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs notranslate" translate="no">Şu an söz isteyen yok.</div>`;
+    return;
+  }
+
+  entries.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'p-3 rounded-2xl border flex items-center justify-between text-xs bg-mineora-bg border-mineora-border notranslate';
+    row.setAttribute('translate', 'no');
+    row.innerHTML = `
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-hand text-amber-400"></i>
+        <strong class="text-white">${item.username}</strong>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="approveSpeakerRequest('${item.username}')" class="px-3 py-1.5 rounded-xl bg-mineora-green text-white font-bold cursor-pointer">Söz Ver</button>
+        <button type="button" onclick="rejectSpeakerRequest('${item.username}')" class="px-3 py-1.5 rounded-xl bg-mineora-input text-slate-300 cursor-pointer">Reddet</button>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function approveSpeakerRequest(uname) {
+  if (!activeLiveRoom || !fbDb) return;
+  const safe = sanitizeFbKey(uname);
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/speakers/${safe}`).set(true);
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/handRaises/${safe}`).remove();
+  showToast(`🎤 ${uname} sahneye eklendi!`, "success");
+}
+
+function rejectSpeakerRequest(uname) {
+  if (!activeLiveRoom || !fbDb) return;
+  const safe = sanitizeFbKey(uname);
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/handRaises/${safe}`).remove();
+}
+
+function revokeSpeakerPermission(uname) {
+  if (!activeLiveRoom || !fbDb) return;
+  const safe = sanitizeFbKey(uname);
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/speakers/${safe}`).remove();
+  showToast(`🛑 ${uname} söz hakkı alındı.`, "info");
+}
+
+function renderStageSpeakers(speakersObj) {
+  const container = document.getElementById('stage-speakers-list');
+  const countEl = document.getElementById('stage-speakers-count');
+  if (!container) return;
+  container.innerHTML = "";
+
+  const speakers = Object.keys(speakersObj);
+  if (countEl) countEl.innerText = `${speakers.length} Konuşmacı`;
+
+  speakers.forEach(uname => {
+    const badge = document.createElement('div');
+    badge.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-mineora-bg border border-mineora-border text-xs text-slate-200 font-bold shadow notranslate";
+    badge.setAttribute('translate', 'no');
+    badge.innerHTML = `
+      <i class="fa-solid fa-microphone text-mineora-gold text-[10px] animate-pulse"></i>
+      <span>${uname}</span>
+      ${(activeLiveRoom && activeLiveRoom.host.toLowerCase() === CurrentUser?.username.toLowerCase() && uname.toLowerCase() !== CurrentUser?.username.toLowerCase()) ? `
+        <button type="button" onclick="revokeSpeakerPermission('${uname}')" class="ml-1 text-slate-500 hover:text-rose-400 cursor-pointer" title="Sözü Geri Al">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      ` : ''}
+    `;
+    container.appendChild(badge);
+  });
+}
+
+function bindActiveRoomListeners(roomId, isHost) {
+  if (!fbDb) return;
+  if (activeRoomRefListener) fbDb.ref(`liveRooms/${roomId}`).off('value', activeRoomRefListener);
+
+  activeRoomRefListener = fbDb.ref(`liveRooms/${roomId}`).on('value', snapshot => {
+    const data = snapshot.val();
+    if (!data) {
+      leaveCurrentRoom();
+      return;
+    }
+
+    const viewerNum = data.viewers ? Object.keys(data.viewers).length : 0;
+    const vEl = document.getElementById('live-viewer-num');
+    if (vEl) vEl.innerText = viewerNum;
+
+    renderStageSpeakers(data.speakers || {});
+
+    const raises = data.handRaises || {};
+    const hrEl = document.getElementById('hand-raise-count');
+    if (hrEl) hrEl.innerText = Object.keys(raises).length;
+
+    if (isHost) {
+      renderSpeakerRequestsList(raises);
+    } else {
+      checkSpeakerStatus(data.speakers || {});
+    }
+  });
+}
+
+// ================= CANLI CHAT (ÇEVİRİ ENGELLEYİCİ) =================
+function initRoomChat(roomId) {
+  const container = document.getElementById('live-chat-messages');
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    if (chatRefListener) fbDb.ref(`liveRooms/${roomId}/chat`).off('child_added', chatRefListener);
+
+    chatRefListener = fbDb.ref(`liveRooms/${roomId}/chat`).limitToLast(50).on('child_added', snapshot => {
+      const msg = snapshot.val();
+      if (!msg) return;
+      const existing = container.querySelector(`[data-chat-id="${msg.id || ''}"]`);
+      if (existing && msg.id) return;
+      appendChatMessage(msg);
     });
   }
-
-  if (addrBox) {
-    addrBox.value = dedicatedAddr;
-  }
 }
 
-function copyWalletAddress() {
-  const addrBox = document.getElementById('wallet-trc20-box');
-  const target = addrBox?.value || CurrentUser?.bep20DepositAddress || MASTER_TRUST_WALLET_BEP20;
-  if (!target) return;
-  
-  navigator.clipboard.writeText(target).then(() => {
-    showToast("📋 Dedicated BNB Chain (BEP-20) deposit address copied!", "success");
-  });
-}
+function sendLiveChatMessage() {
+  if (!activeLiveRoom || !CurrentUser) return;
+  const inputEl = document.getElementById('live-chat-input');
+  const text = inputEl?.value.trim();
+  if (!text) return;
 
-function fillMaxWithdraw() {
-  if (!CurrentUser) return;
-  const withInput = document.getElementById('withdraw-amount-usdt');
-  if (withInput) withInput.value = Math.max(0, CurrentUser.usdt || 0).toFixed(2);
-}
-
-function submitDepositReceipt() {
-  if (!CurrentUser || isWalletProcessing) return;
-  const amtInput = document.getElementById('deposit-amount-input');
-  const txidInput = document.getElementById('deposit-txid-input');
-  const amt = parseFloat(amtInput?.value) || 0;
-  let txid = txidInput?.value.trim();
-
-  if (isNaN(amt) || amt < 10) { 
-    showToast("⚠️ Minimum deposit settlement is 10 USDT!", "warning"); 
-    return; 
+  if (checkInappropriateContent(text)) {
+    showToast("🚫 Mesajınız uygunsuz ifadeler içeriyor!", "warning");
+    return;
   }
 
-  if (!txid) {
-    txid = `BSC-AUTO-${Date.now().toString(36).toUpperCase()}`;
-  }
+  const msgId = `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const msgData = {
+    id: msgId,
+    sender: CurrentUser.username,
+    role: CurrentUser.role || "Miner",
+    text: text,
+    time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+  };
 
-  const existingDeposits = (typeof AdminState !== 'undefined' && AdminState.pendingDeposits) ? AdminState.pendingDeposits : [];
-  if (existingDeposits.some(d => d.txid && d.txid.toLowerCase() === txid.toLowerCase())) {
-    showToast("⛔ This transfer identifier is already queued!", "warning"); 
-    return; 
-  }
+  appendChatMessage(msgData);
 
-  isWalletProcessing = true;
-  const dedicatedAddr = CurrentUser.bep20DepositAddress || MASTER_TRUST_WALLET_BEP20;
-
-  if (typeof queueDepositForAdminApproval === 'function') {
-    queueDepositForAdminApproval(CurrentUser.username, amt, `${txid} [BEP-20 Target: ${dedicatedAddr.slice(0, 6)}...${dedicatedAddr.slice(-4)}]`);
-  }
-  
-  if (amtInput) amtInput.value = "";
-  if (txidInput) txidInput.value = "";
-  closeModal('modal-wallet');
-  showToast(`⏳ $${amt.toFixed(2)} USDT deposit notification sent. Funds will credit upon network validation.`, "info");
-  setTimeout(() => { isWalletProcessing = false; }, 1000);
-}
-
-function executeWithdrawal() {
-  if (!CurrentUser) return;
-  if (CurrentUser.isVaultLocked) { 
-    showToast("⛔ Vault locked accounts cannot withdraw. Contact support desk.", "warning"); 
-    return; 
-  }
-  if (isWalletProcessing) { 
-    showToast("⏳ Processing request, please wait...", "info"); 
-    return; 
-  }
-
-  const targetInput = document.getElementById('withdraw-target-address');
-  const amtInput = document.getElementById('withdraw-amount-usdt');
-  const pwdInput = document.getElementById('withdraw-auth-password');
-  const targetAddr = targetInput?.value.trim();
-  const amt = parseFloat(amtInput?.value);
-  const pwd = pwdInput?.value.trim();
-
-  if (isNaN(amt) || amt <= 0) { showToast("⚠️ Enter valid withdrawal amount!", "warning"); return; }
-  if (amt < 10) { showToast("⚠️ Minimum withdrawal is 10 USDT!", "warning"); return; }
-  
-  const isValidAddress = (targetAddr && targetAddr.startsWith('0x') && targetAddr.length === 42) || (targetAddr && targetAddr.startsWith('T') && targetAddr.length >= 30);
-  if (!targetAddr || !isValidAddress) { 
-    showToast("⚠️ Enter a valid BNB Chain (BEP-20) address starting with '0x'!", "warning"); 
-    return; 
-  }
-
-  const currentUsdt = Number(CurrentUser.usdt) || 0;
-  if (amt > currentUsdt) { showToast(`⚠️ Insufficient balance! Current USDT: $${currentUsdt.toFixed(2)}`, "warning"); return; }
-  if (!pwd) { showToast("⚠️ Confirm account password for security!", "warning"); return; }
-  if (pwd !== CurrentUser.pass) { showToast("❌ Incorrect password! Request aborted.", "warning"); return; }
-
-  isWalletProcessing = true;
-  CurrentUser.usdt = Number((currentUsdt - amt).toFixed(2));
-  saveUserWorld(); 
-  updateHUD();
-
-  if (typeof queueWithdrawalForAdminApproval === 'function') {
-    queueWithdrawalForAdminApproval(CurrentUser.username, amt, targetAddr);
-  }
-  
-  if (targetInput) targetInput.value = "";
-  if (amtInput) amtInput.value = "";
-  if (pwdInput) pwdInput.value = "";
-
-  closeModal('modal-wallet');
-  showToast(`🔒 $${amt.toFixed(2)} USDT withdrawal queued. Funds will be sent to your wallet.`, "success");
-  setTimeout(() => { isWalletProcessing = false; }, 1000);
-}
-
-// ================= 5. BORSA TAKAS / P2P MOTORU (p2p.js) =================
-function getP2pOrders() {
-  const saved = localStorage.getItem('mineora_global_p2p_orders');
-  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
-  return [];
-}
-function saveP2pOrders(o) { 
-  localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(o)); 
   if (typeof fbDb !== 'undefined' && fbDb) {
-    try { fbDb.ref('p2pOrders').set(o); } catch(e) {}
+    fbDb.ref(`liveRooms/${activeLiveRoom.id}/chat`).push(msgData);
+  }
+
+  if (inputEl) inputEl.value = "";
+}
+
+function appendChatMessage(msg) {
+  const container = document.getElementById('live-chat-messages');
+  if (!container || !msg) return;
+
+  const isMe = CurrentUser && CurrentUser.username.toLowerCase() === (msg.sender || "").toLowerCase();
+  const div = document.createElement('div');
+  div.className = "notranslate p-2 rounded-xl text-xs " + (isMe ? 'bg-rose-500/10 border border-rose-500/20' : 'bg-mineora-bg border border-mineora-border');
+  div.setAttribute('translate', 'no');
+  if (msg.id) div.setAttribute('data-chat-id', msg.id);
+
+  div.innerHTML = `
+    <div class="flex items-center justify-between text-[10px] text-slate-400 mb-0.5 font-mono">
+      <span class="font-bold ${isMe ? 'text-rose-400' : 'text-mineora-gold'}">${msg.sender} <span class="text-slate-500 font-normal">(${msg.role})</span></span>
+      <span>${msg.time || ''}</span>
+    </div>
+    <p class="text-slate-200 break-words leading-relaxed notranslate" translate="no">${msg.text}</p>
+  `;
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ================= KAMERA & MİKROFON BUTONLARI =================
+function toggleHostCamera() {
+  if (!localMediaStream) return;
+  const videoTrack = localMediaStream.getVideoTracks()[0];
+  if (!videoTrack) return;
+
+  isCamActive = !isCamActive;
+  videoTrack.enabled = isCamActive;
+
+  const btn = document.getElementById('btn-toggle-cam');
+  if (btn) {
+    btn.className = isCamActive
+      ? "px-3 py-2 rounded-xl bg-mineora-input text-white font-bold flex items-center gap-1.5 cursor-pointer"
+      : "px-3 py-2 rounded-xl bg-rose-600/30 text-rose-400 border border-rose-500/40 font-bold flex items-center gap-1.5 cursor-pointer";
+    btn.innerHTML = `<i class="fa-solid ${isCamActive ? 'fa-video' : 'fa-video-slash'}"></i> Kamera`;
   }
 }
 
-let globalP2pOrders = getP2pOrders();
-let p2pFilter = 'buy';
-let p2pCreateSide = 'buy';
-let activeP2pOrder = null;
-let isP2pProcessing = false;
+function toggleHostMic() {
+  if (!localMediaStream) return;
+  const audioTrack = localMediaStream.getAudioTracks()[0];
+  if (!audioTrack) return;
 
-function setP2pFilter(filter) {
-  p2pFilter = filter;
-  const buyBtn = document.getElementById('p2p-tab-buy');
-  const sellBtn = document.getElementById('p2p-tab-sell');
-  
-  if (buyBtn) {
-    buyBtn.className = filter === 'buy' 
-      ? "px-5 py-2 rounded-xl text-xs font-black bg-mineora-green text-white shadow-lg shadow-mineora-green/20 transition cursor-pointer" 
-      : "px-5 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition cursor-pointer";
+  isMicActive = !isMicActive;
+  audioTrack.enabled = isMicActive;
+
+  const btn = document.getElementById('btn-toggle-mic');
+  if (btn) {
+    btn.className = isMicActive
+      ? "px-3 py-2 rounded-xl bg-mineora-input text-white font-bold flex items-center gap-1.5 cursor-pointer"
+      : "px-3 py-2 rounded-xl bg-rose-600/30 text-rose-400 border border-rose-500/40 font-bold flex items-center gap-1.5 cursor-pointer";
+    btn.innerHTML = `<i class="fa-solid ${isMicActive ? 'fa-microphone' : 'fa-microphone-slash'}"></i> Mikrofon`;
   }
-  if (sellBtn) {
-    sellBtn.className = filter === 'sell' 
-      ? "px-5 py-2 rounded-xl text-xs font-black bg-rose-600 text-white shadow-lg shadow-rose-600/20 transition cursor-pointer" 
-      : "px-5 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition cursor-pointer";
-  }
-  renderP2pOrders();
 }
 
-function setP2pCreateSide(side) {
-  p2pCreateSide = side;
-  const buySideBtn = document.getElementById('p2p-side-buy-btn');
-  const sellSideBtn = document.getElementById('p2p-side-sell-btn');
+// ================= 8. YÖNETİCİ VE PROTOKOL MASASI (admin.js) =================
+const DEFAULT_ADMIN_PROTOCOL = {
+  feeUsdtPercent: 1.0,
+  feeOraPercent: 1.0,
+  taxT1: 20.0,
+  taxT2: 10.0,
+  taxT3: 2.0,
+  totalBurnedOra: 0.00,
+  masterVaultUsdt: 0.00,
+  genesisOraReserve: 1000000000.00
+};
 
-  if (buySideBtn) {
-    buySideBtn.className = side === 'buy' 
-      ? "py-2.5 rounded-xl font-bold bg-mineora-green text-white cursor-pointer shadow-lg" 
-      : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer";
+function getAdminProtocolState() {
+  const local = localStorage.getItem('mineora_admin_root_state');
+  if (local) {
+    try { return JSON.parse(local); } catch(e) {}
   }
-  if (sellSideBtn) {
-    sellSideBtn.className = side === 'sell' 
-      ? "py-2.5 rounded-xl font-bold bg-rose-600 text-white cursor-pointer shadow-lg" 
-      : "py-2.5 rounded-xl font-bold bg-mineora-bg text-slate-400 border border-mineora-border cursor-pointer";
-  }
-  calculateP2pCreatePreview();
+  return DEFAULT_ADMIN_PROTOCOL;
 }
 
-function calculateP2pCreatePreview() {
-  const price = parseFloat(document.getElementById('p2p-create-price')?.value) || 0;
-  const amt = parseFloat(document.getElementById('p2p-create-amount')?.value) || 0;
-  const preview = document.getElementById('p2p-preview-usdt');
-  if (preview) preview.innerText = `$${(price * amt).toFixed(2)} USDT`;
+function saveAdminProtocolState(state) {
+  localStorage.setItem('mineora_admin_root_state', JSON.stringify(state));
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    try { fbDb.ref('adminState').set(state); } catch(e) {}
+  }
 }
 
-function submitP2pOrder() {
-  if (!CurrentUser) return;
-  if (isP2pProcessing) { showToast("⏳ Processing request...", "info"); return; }
+let AdminState = getAdminProtocolState();
 
-  const price = parseFloat(document.getElementById('p2p-create-price')?.value);
-  const oraAmt = parseFloat(document.getElementById('p2p-create-amount')?.value);
-
-  if (isNaN(price) || price <= 0 || isNaN(oraAmt) || oraAmt <= 0) {
-    showToast("⚠️ Enter valid price and ORA quantity!", "warning");
-    return;
-  }
-
-  const totalUsdt = Number((price * oraAmt).toFixed(2));
-  const currentOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
-  const currentUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
-
-  if (p2pCreateSide === 'sell') {
-    if (oraAmt > currentOra) { showToast(`⚠️ Insufficient ORA to sell! Available: ${currentOra.toFixed(2)} ORA`, "warning"); return; }
-    CurrentUser.ora = Number((currentOra - oraAmt).toFixed(2));
-  } else {
-    if (totalUsdt > currentUsdt) { showToast(`⚠️ Insufficient USDT for buy offer! Required: $${totalUsdt.toFixed(2)} USDT`, "warning"); return; }
-    CurrentUser.usdt = Number((currentUsdt - totalUsdt).toFixed(2));
-  }
-
-  isP2pProcessing = true;
-  saveUserWorld();
-  updateHUD();
-
-  globalP2pOrders.unshift({
-    id: Date.now(), side: p2pCreateSide, merchant: CurrentUser.username, price: price, oraAmount: oraAmt, usdtAmount: totalUsdt
+if (typeof fbDb !== 'undefined' && fbDb) {
+  fbDb.ref('adminState').on('value', snap => {
+    const val = snap.val();
+    if (val) {
+      AdminState = val;
+      localStorage.setItem('mineora_admin_root_state', JSON.stringify(val));
+      renderAdminHUD();
+    }
   });
-
-  saveP2pOrders(globalP2pOrders);
-  closeModal('modal-p2p-create');
-  renderP2pOrders();
-  showToast("📋 Offer listed on P2P book and funds locked in escrow!", "success");
-  setTimeout(() => { isP2pProcessing = false; }, 800);
 }
 
-function cancelP2pOrder(orderId) {
-  if (!CurrentUser || isP2pProcessing) return;
-  const idx = globalP2pOrders.findIndex(o => o.id === orderId);
-  if (idx === -1) return;
-  const order = globalP2pOrders[idx];
+function initAdminMasterPanel() {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  renderAdminHUD();
+  renderAdminCommissionInputs();
+  renderAdminUserTable();
+  renderAdminGlobalHierarchy();
+  renderAdminDepositQueue();
+  renderAdminWithdrawalQueue();
+  renderAdminLiveRoomsMonitor();
+}
 
-  if (order.merchant.toLowerCase() !== CurrentUser.username.toLowerCase()) {
-    showToast("⛔ You can only cancel your own offers!", "warning");
+function renderAdminHUD() {
+  const oraResEl = document.getElementById('admin-master-ora-reserve');
+  const usdtVaultEl = document.getElementById('admin-master-usdt-vault');
+  const burnedEl = document.getElementById('admin-total-burned-display');
+
+  if (oraResEl) oraResEl.innerText = Number(AdminState.genesisOraReserve || 1000000000).toLocaleString('en-US') + " ORA";
+  if (usdtVaultEl) usdtVaultEl.innerText = "$" + Number(AdminState.masterVaultUsdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDT";
+  if (burnedEl) burnedEl.innerText = Number(AdminState.totalBurnedOra || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) + " ORA";
+}
+
+function renderAdminCommissionInputs() {
+  const p2pUsdt = document.getElementById('admin-set-p2p-usdt');
+  const p2pOra = document.getElementById('admin-set-p2p-ora');
+  const tax1 = document.getElementById('admin-set-tax-t1');
+  const tax2 = document.getElementById('admin-set-tax-t2');
+  const tax3 = document.getElementById('admin-set-tax-t3');
+
+  if (p2pUsdt) p2pUsdt.value = AdminState.feeUsdtPercent || 1.0;
+  if (p2pOra) p2pOra.value = AdminState.feeOraPercent || 1.0;
+  if (tax1) tax1.value = AdminState.taxT1 || 20.0;
+  if (tax2) tax2.value = AdminState.taxT2 || 10.0;
+  if (tax3) tax3.value = AdminState.taxT3 || 2.0;
+}
+
+function updateAdminCommissionSettings() {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  AdminState.feeUsdtPercent = parseFloat(document.getElementById('admin-set-p2p-usdt')?.value) || 1.0;
+  AdminState.feeOraPercent = parseFloat(document.getElementById('admin-set-p2p-ora')?.value) || 1.0;
+  AdminState.taxT1 = parseFloat(document.getElementById('admin-set-tax-t1')?.value) || 20.0;
+  AdminState.taxT2 = parseFloat(document.getElementById('admin-set-tax-t2')?.value) || 10.0;
+  AdminState.taxT3 = parseFloat(document.getElementById('admin-set-tax-t3')?.value) || 2.0;
+
+  saveAdminProtocolState(AdminState);
+  showToast("⚙️ Komisyon ve çıkış vergisi oranları güncellendi!", "success");
+}
+
+function executeAdminDirectOraTransfer() {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const targetU = document.getElementById('admin-grant-target-user')?.value.trim();
+  const amount = parseFloat(document.getElementById('admin-grant-ora-amount')?.value);
+
+  if (!targetU || !amount || amount <= 0) {
+    showToast("⚠️ Geçerli bir kullanıcı adı ve miktar girin!", "warning");
     return;
   }
 
-  isP2pProcessing = true;
-  if (order.side === 'sell') {
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + order.oraAmount).toFixed(2));
-    showToast(`↩️ Offer cancelled! Refunded ${order.oraAmount.toFixed(2)} ORA.`, "info");
-  } else {
-    CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + order.usdtAmount).toFixed(2));
-    showToast(`↩️ Offer cancelled! Refunded $${order.usdtAmount.toFixed(2)} USDT.`, "info");
+  const targetObj = getStoredUser(targetU);
+  if (!targetObj) {
+    showToast("⛔ Kullanıcı bulunamadı!", "warning");
+    return;
   }
 
-  globalP2pOrders.splice(idx, 1);
-  saveP2pOrders(globalP2pOrders);
-  saveUserWorld(); updateHUD(); renderP2pOrders();
-  setTimeout(() => { isP2pProcessing = false; }, 600);
+  if (AdminState.genesisOraReserve < amount) {
+    showToast("⛔ Kalan Master Genesis rezervi yetersiz!", "warning");
+    return;
+  }
+
+  AdminState.genesisOraReserve = Number((AdminState.genesisOraReserve - amount).toFixed(2));
+  targetObj.ora = Number(((targetObj.ora || 0) + amount).toFixed(2));
+
+  addUserNotificationLog(targetObj, "Master ORA Hibesi", `Root Admin tarafından ${amount.toLocaleString()} ORA doğrudan cüzdanınıza aktarıldı.`, `+${amount.toLocaleString()} ORA`, "grant");
+
+  saveAdminProtocolState(AdminState);
+  saveStoredUser(targetObj);
+
+  if (CurrentUser.username.toLowerCase() === targetObj.username.toLowerCase()) {
+    CurrentUser.ora = targetObj.ora;
+    updateHUD();
+  }
+
+  renderAdminHUD();
+  renderAdminUserTable();
+  document.getElementById('admin-grant-ora-amount').value = "";
+  showToast(`🎉 ${targetU} kullanıcısına ${amount.toLocaleString()} ORA başarıyla aktarıldı!`, "success");
 }
 
-function renderP2pOrders() {
-  const tbody = document.getElementById('p2p-order-list');
+function executeAdminVaultWithdraw() {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const targetAddr = document.getElementById('admin-vault-withdraw-addr')?.value.trim();
+  const amount = parseFloat(document.getElementById('admin-vault-withdraw-amt')?.value);
+
+  if (!targetAddr || !amount || amount <= 0) {
+    showToast("⚠️ Hedef BEP-20 adresi ve çekim miktarı girin!", "warning");
+    return;
+  }
+  if (amount > (AdminState.masterVaultUsdt || 0)) {
+    showToast("⛔ Kasada yeterli USDT yok!", "warning");
+    return;
+  }
+
+  AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) - amount).toFixed(2));
+  saveAdminProtocolState(AdminState);
+  renderAdminHUD();
+  document.getElementById('admin-vault-withdraw-amt').value = "";
+  showToast(`💸 ${amount} USDT soğuk cüzdana çekim emri verildi: ${targetAddr}`, "success");
+}
+
+function executeAdminBurnOra() {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const amt = parseFloat(document.getElementById('admin-burn-ora-amount')?.value);
+  if (!amt || amt <= 0) { showToast("⚠️ Miktar girin!", "warning"); return; }
+
+  AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + amt).toFixed(2));
+  saveAdminProtocolState(AdminState);
+  renderAdminHUD();
+  document.getElementById('admin-burn-ora-amount').value = "";
+  showToast(`🔥 ${amt.toLocaleString()} ORA dEaD fırınında yakıldı!`, "success");
+}
+
+// ================= CANLI YAYIN ODALARI RÖNTGENİ & MÜDAHALE MASASI =================
+
+function renderAdminLiveRoomsMonitor() {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+
+  const secBoss = document.getElementById('sec-boss');
+  if (!secBoss) return;
+
+  let monitorContainer = document.getElementById('admin-live-rooms-monitor-card');
+  if (!monitorContainer) {
+    monitorContainer = document.createElement('div');
+    monitorContainer.id = 'admin-live-rooms-monitor-card';
+    monitorContainer.className = 'p-5 rounded-2xl bg-mineora-bg border border-rose-500/40 space-y-4';
+
+    const globalTreeCard = document.getElementById('admin-global-hierarchy-tree')?.parentElement;
+    if (globalTreeCard) {
+      secBoss.querySelector('.p-6')?.insertBefore(monitorContainer, globalTreeCard);
+    } else {
+      secBoss.querySelector('.p-6')?.appendChild(monitorContainer);
+    }
+  }
+
+  const renderRoomsList = (rooms) => {
+    let rowsHtml = '';
+    const roomKeys = rooms ? Object.keys(rooms) : [];
+
+    if (roomKeys.length === 0) {
+      rowsHtml = `<tr><td colspan="6" class="py-6 text-center text-slate-500 notranslate" translate="no">Şu anda aktif canlı yayın odası bulunmuyor.</td></tr>`;
+    } else {
+      roomKeys.forEach(k => {
+        const r = rooms[k];
+        if (!r) return;
+        const reportCount = r.reports ? Object.keys(r.reports).length : 0;
+        const viewerCount = r.viewers ? Object.keys(r.viewers).length : 0;
+        const isQuarantined = !!r.isQuarantined;
+
+        rowsHtml += `
+          <tr class="hover:bg-mineora-card/60 transition notranslate" translate="no">
+            <td class="py-3 px-4">
+              <strong class="text-white block">${r.title}</strong>
+              <span class="text-[10px] text-slate-500 font-mono">${k}</span>
+            </td>
+            <td class="py-3 px-4 font-bold text-mineora-gold">${r.host}</td>
+            <td class="py-3 px-4 font-mono text-slate-300">
+              <i class="fa-solid fa-eye text-cyan-400 mr-1"></i>${viewerCount} İzleyici
+            </td>
+            <td class="py-3 px-4 font-mono">
+              ${r.ticketPrice ? `<span class="text-mineora-green font-bold">$${Number(r.ticketPrice).toFixed(2)}</span>` : '<span class="text-slate-500">Ücretsiz</span>'}
+            </td>
+            <td class="py-3 px-4">
+              ${reportCount > 0 ? `
+                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center gap-1 w-max animate-pulse">
+                  <i class="fa-solid fa-flag"></i> ${reportCount} Şikayet ${isQuarantined ? '(Karantinada)' : ''}
+                </span>
+              ` : `
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Temiz</span>
+              `}
+            </td>
+            <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap notranslate" translate="no">
+              <button type="button" onclick="adminJoinLiveRoomDirect('${k}', false)" class="px-2.5 py-1 rounded-lg bg-mineora-input hover:bg-slate-700 text-white font-bold text-[11px] cursor-pointer" title="Şifre ve Bilet Olmadan Doğrudan Gir">
+                <i class="fa-solid fa-right-to-bracket text-mineora-gold"></i> Gir
+              </button>
+              <button type="button" onclick="adminJoinLiveRoomDirect('${k}', true)" class="px-2.5 py-1 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 font-bold text-[11px] cursor-pointer" title="Görünmez Olarak İzle">
+                <i class="fa-solid fa-ghost"></i> Hayalet
+              </button>
+              <button type="button" onclick="adminNukeLiveRoom('${k}', false)" class="px-2.5 py-1 rounded-lg bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-black text-[11px] cursor-pointer" title="Yayını Zorla Kapat">
+                <i class="fa-solid fa-bolt"></i> Kapat
+              </button>
+              <button type="button" onclick="adminNukeLiveRoom('${k}', true)" class="px-2.5 py-1 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-black text-[11px] cursor-pointer" title="Yayını Kapat ve Yayıncının Cüzdanını Kilitle">
+                <i class="fa-solid fa-ban"></i> Nuke & Ban
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    monitorContainer.innerHTML = `
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3 notranslate" translate="no">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-tower-broadcast"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-white">Canlı Odalar Röntgen & Kırmızı Düğme Masası</h3>
+            <span class="text-[10px] text-slate-400">Tüm şifreli ve biletli odaları ücretsiz izleyin, denetleyin ve tek tıkla sonlandırın.</span>
+          </div>
+        </div>
+        <button type="button" onclick="renderAdminLiveRoomsMonitor()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
+          <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
+        </button>
+      </div>
+      <div class="overflow-x-auto rounded-xl border border-mineora-border notranslate" translate="no">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-black/40 text-slate-400 uppercase text-[10px]">
+            <tr>
+              <th class="py-3 px-4">Oda / Başlık</th>
+              <th class="py-3 px-4">Yayıncı</th>
+              <th class="py-3 px-4">İzleyici</th>
+              <th class="py-3 px-4">Bilet Ücreti</th>
+              <th class="py-3 px-4">Güvenlik Durumu</th>
+              <th class="py-3 px-4 text-right">Admin Müdahalesi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-mineora-border text-slate-200">${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref('liveRooms').once('value', snap => renderRoomsList(snap.val()));
+  } else {
+    try {
+      const localRooms = JSON.parse(localStorage.getItem('mineora_mock_live_rooms') || '{}');
+      renderRoomsList(localRooms);
+    } catch(e) {}
+  }
+}
+
+// ================= KULLANICI RÖNTGENİ & YÖNETİMİ =================
+
+function renderAdminUserTable() {
+  const tbody = document.getElementById('admin-user-table-body');
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
-  const filtered = globalP2pOrders.filter(o => o.side === targetSide && o.oraAmount > 0);
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">No active orders in this direction.</td></tr>`;
-    return;
+  const allUsers = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('mineora_user_')) {
+      try {
+        const u = JSON.parse(localStorage.getItem(k));
+        if (u && u.username) allUsers.push(u);
+      } catch(e) {}
+    }
   }
 
-  filtered.forEach(order => {
-    const isMyOrder = CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase();
+  allUsers.forEach(u => {
     const tr = document.createElement('tr');
-    tr.className = "hover:bg-mineora-bg/50 transition border-b border-mineora-border/40 text-xs";
-    const btnClass = p2pFilter === 'buy' ? "bg-mineora-green hover:opacity-90 text-white" : "bg-rose-600 hover:opacity-90 text-white";
-    const btnText = p2pFilter === 'buy' ? (currentLang === 'ru' ? "Оплатить USDT & Получить ORA" : "Pay USDT & Get ORA") : (currentLang === 'ru' ? "Отправить ORA & Получить USDT" : "Send ORA & Get USDT");
-
+    tr.className = "hover:bg-mineora-bg/60 transition notranslate";
+    tr.setAttribute('translate', 'no');
     tr.innerHTML = `
-      <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-mineora-input flex items-center justify-center text-mineora-gold text-xs font-black">
-          ${order.merchant.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <span>${order.merchant}</span>
-          ${isMyOrder ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">${currentLang === 'ru' ? 'ВАШ ОРДЕР' : 'YOUR OFFER'}</span>` : ''}
-        </div>
+      <td class="py-3 px-4 font-bold text-white">${u.username} ${u.isRootAdmin ? '<span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : ''}</td>
+      <td class="py-3 px-4 font-mono text-slate-400">${u.pass || '••••••'}</td>
+      <td class="py-3 px-4 font-bold text-slate-300">${u.role || 'Candidate'}</td>
+      <td class="py-3 px-4 font-mono text-mineora-green font-bold">$${Number(u.usdt || 0).toFixed(2)}</td>
+      <td class="py-3 px-4 font-mono text-mineora-gold font-bold">${Number(u.ora || 0).toFixed(2)} ORA</td>
+      <td class="py-3 px-4">
+        ${u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>'}
       </td>
-      <td class="py-3.5 px-4 font-mono font-bold text-white">$${order.price.toFixed(4)} USDT</td>
-      <td class="py-3.5 px-4 font-mono">
-        <span class="text-mineora-gold font-bold">${order.oraAmount.toLocaleString()} ORA</span>
-        <span class="text-slate-400 text-[10px] block">($${order.usdtAmount.toFixed(2)} USDT)</span>
-      </td>
-      <td class="py-3.5 px-4 text-right">
-        ${isMyOrder ? `
-          <button type="button" onclick="cancelP2pOrder(${order.id})" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 transition cursor-pointer">
-            <i class="fa-solid fa-ban mr-1"></i> ${currentLang === 'ru' ? 'Отмена' : 'Cancel'}
+      <td class="py-3 px-4 text-right space-x-2 notranslate whitespace-nowrap" translate="no">
+        <button type="button" onclick="toggleAdminVaultLock('${u.username}')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[11px] font-bold cursor-pointer">
+          ${u.isVaultLocked ? 'Kilidi Aç' : 'Kilitle'}
+        </button>
+        <button type="button" onclick="openAdminModifyUserModal('${u.username}')" class="px-2.5 py-1 rounded bg-cyan-600/30 text-cyan-300 hover:bg-cyan-600/50 text-[11px] font-bold cursor-pointer">
+          Düzenle
+        </button>
+        ${!u.isRootAdmin ? `
+          <button type="button" onclick="deleteAdminUser('${u.username}')" class="px-2.5 py-1 rounded bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-[11px] font-bold cursor-pointer transition">
+            Sil
           </button>
-        ` : `
-          <button type="button" onclick="openP2pTradeModal(${order.id})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ${btnClass}">
-            ${btnText}
-          </button>
-        `}
+        ` : ''}
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-function openP2pTradeModal(orderId) {
-  const order = globalP2pOrders.find(o => o.id === orderId);
-  if (!order) return;
-  activeP2pOrder = order;
+function deleteAdminUser(username) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  if (username.toLowerCase() === CurrentUser.username.toLowerCase()) {
+    showToast("⛔ Kendi hesabınızı silemezsiniz!", "warning");
+    return;
+  }
+  const confirmDel = confirm(`'${username}' adlı kullanıcıyı ve tüm oyun verilerini sistemden kalıcı olarak silmek istediğinize emin misiniz?`);
+  if (!confirmDel) return;
 
-  if (CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase()) {
-    showToast("⚠️ You cannot trade against your own offer!", "warning");
+  const uKey = username.toLowerCase();
+  localStorage.removeItem(`mineora_user_${uKey}`);
+  if (typeof addDeletedUser === 'function') addDeletedUser(username);
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref(`users/${uKey}`).remove();
+  }
+
+  renderAdminUserTable();
+  showToast(`🗑️ '${username}' kullanıcısı sistemden kalıcı olarak silindi.`, "info");
+}
+
+function toggleAdminVaultLock(username) {
+  const u = getStoredUser(username);
+  if (!u) return;
+  u.isVaultLocked = !u.isVaultLocked;
+  saveStoredUser(u);
+  renderAdminUserTable();
+  showToast(`🔒 ${username} kullanıcısının kasa durumu: ${u.isVaultLocked ? 'KİLİTLENDİ' : 'AÇILDI'}`, "info");
+}
+
+let activeModTargetUser = null;
+function openAdminModifyUserModal(username) {
+  const u = getStoredUser(username);
+  if (!u) return;
+  activeModTargetUser = u;
+
+  document.getElementById('admin-target-user-name').innerText = u.username;
+  document.getElementById('admin-mod-usdt').value = u.usdt || 0;
+  document.getElementById('admin-mod-ora').value = u.ora || 0;
+  document.getElementById('admin-mod-role').value = u.role || 'Worker Miner';
+
+  openModal('modal-admin-modify-user');
+}
+
+function saveAdminUserModifications() {
+  if (!activeModTargetUser) return;
+  const newUsdt = parseFloat(document.getElementById('admin-mod-usdt').value) || 0;
+  const newOra = parseFloat(document.getElementById('admin-mod-ora').value) || 0;
+  const newRole = document.getElementById('admin-mod-role').value;
+
+  activeModTargetUser.usdt = Number(newUsdt.toFixed(2));
+  activeModTargetUser.ora = Number(newOra.toFixed(2));
+  activeModTargetUser.role = newRole;
+
+  saveStoredUser(activeModTargetUser);
+  closeModal('modal-admin-modify-user');
+  renderAdminUserTable();
+  showToast(`💾 ${activeModTargetUser.username} verileri güncellendi!`, "success");
+}
+
+function handleAdminCreateUserSubmit() {
+  const u = document.getElementById('admin-new-username')?.value.trim();
+  const p = document.getElementById('admin-new-pass')?.value.trim();
+  const em = document.getElementById('admin-new-email')?.value.trim();
+  const r = document.getElementById('admin-new-role')?.value;
+
+  if (!u || !p) { showToast("⚠️ Kullanıcı adı ve şifre zorunludur!", "warning"); return; }
+
+  const uKey = u.toLowerCase();
+  if (localStorage.getItem(`mineora_user_${uKey}`)) {
+    showToast("⚠️ Kullanıcı adı zaten kayıtlı!", "warning");
     return;
   }
 
-  const isBuy = p2pFilter === 'buy';
-  const title = document.getElementById('p2p-trade-title');
-  const merchant = document.getElementById('p2p-trade-merchant');
-  const price = document.getElementById('p2p-trade-price');
-  const inputOra = document.getElementById('p2p-trade-input-ora');
-  const btn = document.getElementById('p2p-trade-btn-confirm');
+  const newUser = {
+    username: u,
+    fullname: u,
+    pass: p,
+    email: em || `${u}@mineora.io`,
+    role: r || "Worker Miner",
+    usdt: 0.00,
+    ora: 0.00,
+    alpCrystals: 0,
+    isRootAdmin: false,
+    isVaultLocked: false,
+    createdAt: Date.now(),
+    refCode: `MINE-${u.toUpperCase()}-777`,
+    companyRefCode: `HOLD-${u.toUpperCase()}-999`,
+    mines: (typeof getDefaultMines === 'function') ? getDefaultMines() : [],
+    stakes: [],
+    workers: [],
+    logs: []
+  };
 
-  if (title) {
-    if (currentLang === 'ru') {
-      title.innerText = isBuy ? `Купить ORA за USDT (${order.merchant})` : `Продать ORA за USDT (${order.merchant})`;
-    } else {
-      title.innerText = isBuy ? `Buy ORA with USDT (${order.merchant})` : `Sell ORA for USDT (${order.merchant})`;
-    }
-  }
-  if (merchant) merchant.innerText = order.merchant;
-  if (price) price.innerText = `$${order.price.toFixed(4)} USDT`;
-  if (inputOra) inputOra.value = order.oraAmount;
-
-  if (btn) {
-    btn.className = isBuy 
-      ? "w-full py-3.5 rounded-xl bg-mineora-green text-white font-black text-xs hover:opacity-90 transition cursor-pointer" 
-      : "w-full py-3.5 rounded-xl bg-rose-600 text-white font-black text-xs hover:opacity-90 transition cursor-pointer";
-    btn.innerText = isBuy 
-      ? (currentLang === 'ru' ? "Оплатить USDT и Получить ORA" : "Pay USDT and Receive ORA")
-      : (currentLang === 'ru' ? "Отправить ORA и Получить USDT" : "Send ORA and Receive USDT");
-  }
-
-  openModal('modal-p2p-trade');
+  saveStoredUser(newUser);
+  closeModal('modal-admin-create-user');
+  renderAdminUserTable();
+  showToast(`🎉 ${u} kullanıcısı oluşturuldu!`, "success");
 }
 
-function confirmP2pTrade() {
-  if (!CurrentUser || !activeP2pOrder) return;
-  if (isP2pProcessing) { showToast("⏳ Processing settlement...", "info"); return; }
+// ================= YATIRMA VE ÇEKİM KUYRUKLARI =================
 
-  const amtOra = parseFloat(document.getElementById('p2p-trade-input-ora')?.value);
-  if (isNaN(amtOra) || amtOra <= 0 || amtOra > activeP2pOrder.oraAmount) { 
-    showToast("⚠️ Invalid quantity or exceeds offer bounds!", "warning"); 
-    return; 
-  }
-
-  const feeUsdtPercent = (typeof ProtocolState !== 'undefined' && ProtocolState.feeUsdtPercent) ? ProtocolState.feeUsdtPercent : 1.0;
-  const feeOraPercent = (typeof ProtocolState !== 'undefined' && ProtocolState.feeOraPercent) ? ProtocolState.feeOraPercent : 1.0;
-
-  const rawUsdt = Number((amtOra * activeP2pOrder.price).toFixed(2));
-  const feeUsdt = Number(((rawUsdt * feeUsdtPercent) / 100).toFixed(2));
-  const burnOra = Number(((amtOra * feeOraPercent) / 100).toFixed(2));
-
-  const merchantKey = `mineora_user_${activeP2pOrder.merchant.toLowerCase()}`;
-  let merchantObj = null;
-  try { merchantObj = JSON.parse(localStorage.getItem(merchantKey)); } catch(e) {}
-
-  if (!merchantObj) { showToast("⚠️ Merchant record unavailable!", "warning"); return; }
-
-  isP2pProcessing = true;
-
-  if (p2pFilter === 'buy') {
-    const totalUsdt = Number((rawUsdt + feeUsdt).toFixed(2));
-    const myUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
-    if (myUsdt < totalUsdt) {
-      showToast(`⚠️ Insufficient USDT! Required: $${totalUsdt.toFixed(2)} USDT`, "warning");
-      isP2pProcessing = false;
-      return;
-    }
-
-    CurrentUser.usdt = Number((myUsdt - totalUsdt).toFixed(2));
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + (amtOra - burnOra)).toFixed(2));
-    merchantObj.usdt = Number(((merchantObj.usdt || 0) + rawUsdt).toFixed(2));
-    saveStoredUser(merchantObj);
-    showToast(`✅ Trade settled! ${(amtOra - burnOra).toFixed(2)} ORA credited to wallet.`, "success");
-  } else {
-    const myOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
-    if (myOra < amtOra) {
-      showToast(`⚠️ Insufficient ORA to sell! Available: ${myOra.toFixed(2)} ORA`, "warning");
-      isP2pProcessing = false;
-      return;
-    }
-
-    const netUsdt = Number((rawUsdt - feeUsdt).toFixed(2));
-    CurrentUser.ora = Number((myOra - amtOra).toFixed(2));
-    CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + netUsdt).toFixed(2));
-    merchantObj.ora = Number(((merchantObj.ora || 0) + (amtOra - burnOra)).toFixed(2));
-    saveStoredUser(merchantObj);
-    showToast(`✅ Trade settled! $${netUsdt.toFixed(2)} USDT credited to wallet.`, "success");
-  }
-
-  if (typeof ProtocolState !== 'undefined') {
-    ProtocolState.adminVaultUsdt = Number(((ProtocolState.adminVaultUsdt || 0) + feeUsdt).toFixed(2));
-    ProtocolState.totalBurnedOra = Number(((ProtocolState.totalBurnedOra || 0) + burnOra).toFixed(2));
-    saveGlobalProtocolState(ProtocolState);
-  }
-
-  if (typeof AdminState !== 'undefined') {
-    AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) + feeUsdt).toFixed(2));
-    AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + burnOra).toFixed(2));
-    if (typeof saveAdminProtocolState === 'function') saveAdminProtocolState(AdminState);
-  }
-
-  activeP2pOrder.oraAmount = Number((activeP2pOrder.oraAmount - amtOra).toFixed(2));
-  activeP2pOrder.usdtAmount = Number((activeP2pOrder.oraAmount * activeP2pOrder.price).toFixed(2));
-  if (activeP2pOrder.oraAmount <= 0.001) {
-    globalP2pOrders = globalP2pOrders.filter(o => o.id !== activeP2pOrder.id);
-  }
-
-  saveP2pOrders(globalP2pOrders);
-  saveUserWorld(); updateHUD(); closeModal('modal-p2p-trade'); renderP2pOrders();
-  setTimeout(() => { isP2pProcessing = false; }, 800);
-}
-
-if (typeof fbDb !== 'undefined' && fbDb) {
-  try {
-    fbDb.ref('p2pOrders').on('value', snapshot => {
-      const val = snapshot.val();
-      if (val) {
-        globalP2pOrders = val;
-        localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(val));
-        const p2pSec = document.getElementById('sec-p2p');
-        if (p2pSec && !p2pSec.classList.contains('hidden')) renderP2pOrders();
-      }
-    });
-  } catch(e) {}
-}
-
-// ================= 6. ORA BANKASI / STAKE MOTORU (stake.js) =================
-const STAKE_PLANS = {
-  60: { days: 60, durationMs: 60 * 24 * 60 * 60 * 1000, totalProfitPercent: 100.0, badge: "Standard Vault", dailyRateText: "~1.66% Daily" },
-  90: { days: 90, durationMs: 90 * 24 * 60 * 60 * 1000, totalProfitPercent: 200.0, badge: "Silver Vault", dailyRateText: "~2.22% Daily" },
-  120: { days: 120, durationMs: 120 * 24 * 60 * 60 * 1000, totalProfitPercent: 300.0, badge: "Gold VIP Vault", dailyRateText: "~2.50% Daily" }
-};
-let selectedStakeDays = 60, stakeTickerInterval = null;
-
-function setStakePlan(days) {
-  selectedStakeDays = days;
-  [60, 90, 120].forEach(d => {
-    const btn = document.getElementById(`stake-plan-btn-${d}`);
-    if (btn) {
-      btn.className = (d === days)
-        ? "p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 text-black font-black border-2 border-yellow-200 shadow-xl cursor-pointer transition transform scale-102 text-left"
-        : "p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer transition text-left";
-    }
-  });
-  calculateStakePreview();
-}
-
-function calculateStakePreview() {
-  const amt = parseFloat(document.getElementById('stake-deposit-amount')?.value) || 0;
-  const plan = STAKE_PLANS[selectedStakeDays];
-  const profit = (amt * plan.totalProfitPercent) / 100;
-  const dailyProfit = profit / plan.days;
-  const rewardEl = document.getElementById('stake-preview-profit');
-  const dailyEl = document.getElementById('stake-preview-daily');
-  if (rewardEl) rewardEl.innerText = `+${profit.toFixed(2)} ORA (+${plan.totalProfitPercent}%)`;
-  if (dailyEl) dailyEl.innerText = `~${dailyProfit.toFixed(2)} ORA / ${currentLang === 'ru' ? 'День' : 'Day'}`;
-}
-
-function fillMaxStake() {
-  if (!CurrentUser) return;
-  const amtInput = document.getElementById('stake-deposit-amount');
-  if (amtInput) {
-    amtInput.value = Math.floor(Number(parseFloat(CurrentUser.ora || 0)));
-    calculateStakePreview();
-  }
-}
-
-function executeDepositStake() {
-  if (!CurrentUser) return;
-  const amtInput = document.getElementById('stake-deposit-amount');
-  const amount = parseFloat(amtInput?.value) || 0;
-  const currentOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
-
-  if (isNaN(amount) || amount < 100) { showToast(currentLang === 'ru' ? "⚠️ Мин. сумма 100 ORA!" : "⚠️ Minimum stake threshold is 100 ORA!", "warning"); return; }
-  if (amount > currentOra) { showToast(currentLang === 'ru' ? `⚠️ Недостаточно ORA! Доступно: ${currentOra.toFixed(2)} ORA` : `⚠️ Insufficient balance! Available: ${currentOra.toFixed(2)} ORA`, "warning"); return; }
-
-  const plan = STAKE_PLANS[selectedStakeDays];
-  const now = Date.now(), unlockDate = now + plan.durationMs;
-  const expectedProfit = Number(((amount * plan.totalProfitPercent) / 100).toFixed(2));
-
-  CurrentUser.ora = Number((currentOra - amount).toFixed(2));
-  if (!CurrentUser.stakes) CurrentUser.stakes = [];
-
-  CurrentUser.stakes.unshift({
-    id: Date.now(), amount: amount, planDays: plan.days, profitPercent: plan.totalProfitPercent,
-    expectedProfit: expectedProfit, claimedProfit: 0.00, lastAccrualTime: now, startDate: now, unlockDate: unlockDate, principalClaimed: false
-  });
-
-  saveUserWorld(); updateHUD();
-  if (amtInput) amtInput.value = "";
-  calculateStakePreview(); renderActiveStakes();
-  showToast(currentLang === 'ru' ? `🔒 ${amount.toLocaleString()} ORA заблокировано на ${plan.days} дн. (+${plan.totalProfitPercent}%)!` : `🔒 ${amount.toLocaleString()} ORA locked for ${plan.days} days targeting +${plan.totalProfitPercent}% yield!`, "success");
-}
-
-function processAccruedStakeProfits() {
-  if (!CurrentUser || !CurrentUser.stakes || CurrentUser.stakes.length === 0) return;
-  const now = Date.now();
-  let totalDistributed = 0, updated = false;
-
-  CurrentUser.stakes.forEach(s => {
-    const effectiveTime = Math.min(now, s.unlockDate);
-    const elapsedSinceLast = effectiveTime - (s.lastAccrualTime || s.startDate);
-    if (elapsedSinceLast > 0 && s.claimedProfit < s.expectedProfit) {
-      const ratePerMs = s.expectedProfit / (s.planDays * 24 * 60 * 60 * 1000);
-      let newlyAccrued = Math.min(elapsedSinceLast * ratePerMs, s.expectedProfit - s.claimedProfit);
-      if (newlyAccrued > 0.0001) {
-        s.claimedProfit = Number((s.claimedProfit + newlyAccrued).toFixed(4));
-        s.lastAccrualTime = effectiveTime;
-        totalDistributed += newlyAccrued;
-        updated = true;
-      }
-    }
-  });
-
-  if (updated && totalDistributed > 0) {
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + totalDistributed).toFixed(4));
-    if (typeof deductMinedOraFromMasterReserve === 'function') deductMinedOraFromMasterReserve(totalDistributed);
-    saveUserWorld(); updateHUD();
-  }
-}
-
-function claimPrincipalReturn(stakeId) {
-  if (!CurrentUser || !CurrentUser.stakes) return;
-  const s = CurrentUser.stakes.find(item => item.id === stakeId);
-  if (!s) return;
-  const now = Date.now();
-  if (now < s.unlockDate) { showToast(currentLang === 'ru' ? "⏳ Срок блокировки еще не истек!" : "⏳ Vault lock term has not matured yet!", "warning"); return; }
-  if (s.principalClaimed) { showToast(currentLang === 'ru' ? "⚠️ Тело вклада уже выплачено на баланс." : "⚠️ Principal already refunded to your wallet.", "info"); return; }
-
-  processAccruedStakeProfits();
-  s.principalClaimed = true;
-  CurrentUser.ora = Number(((CurrentUser.ora || 0) + s.amount).toFixed(2));
-  saveUserWorld(); updateHUD(); renderActiveStakes();
-  showToast(currentLang === 'ru' ? `🎉 ${s.amount.toLocaleString()} ORA возвращено на ваш кошелек!` : `🎉 Congratulations! ${s.amount.toLocaleString()} ORA principal returned to wallet!`, "success");
-}
-
-function renderActiveStakes() {
-  const container = document.getElementById('active-stakes-list');
-  if (!container || !CurrentUser) return;
-  const stakes = CurrentUser.stakes || [];
-  if (stakes.length === 0) {
-    container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">${currentLang === 'ru' ? 'Нет активных срочных вкладов ORA.' : 'No active fixed-term ORA vaults currently locked.'}</div>`;
-    return;
-  }
-
-  const now = Date.now();
-  container.innerHTML = "";
-  stakes.forEach(s => {
-    const isUnlocked = now >= s.unlockDate;
-    let timeText = "";
-    if (isUnlocked) {
-      timeText = currentLang === 'ru' ? "Срок завершен (Разблокировано)" : "Term Matured (Unlocked)";
-    } else {
-      const leftMs = s.unlockDate - now;
-      const leftDays = Math.floor(leftMs / (1000 * 60 * 60 * 24));
-      const leftHours = Math.floor((leftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
-      const leftSecs = Math.floor((leftMs % (1000 * 60)) / 1000);
-      timeText = currentLang === 'ru' 
-        ? `Осталось: ${leftDays}д ${leftHours}ч ${leftMins}м ${leftSecs}с`
-        : `${leftDays}d ${leftHours}h ${leftMins}m ${leftSecs}s remaining`;
-    }
-
-    const dailyProfit = s.expectedProfit / s.planDays;
-    const card = document.createElement('div');
-    card.className = `p-4 rounded-2xl bg-mineora-bg border ${s.principalClaimed ? 'border-slate-800 opacity-60' : (isUnlocked ? 'border-mineora-green/60' : 'border-amber-500/40')} flex flex-wrap items-center justify-between gap-4 text-xs shadow-lg`;
-    card.innerHTML = `
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl ${s.principalClaimed ? 'bg-slate-800 text-slate-400' : (isUnlocked ? 'bg-mineora-green/20 text-mineora-green' : 'bg-amber-500/20 text-amber-400')} flex items-center justify-center text-lg font-black">
-          <i class="fa-solid ${s.principalClaimed ? 'fa-check-double' : (isUnlocked ? 'fa-lock-open' : 'fa-vault')}"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <strong class="text-white text-sm font-mono">${s.amount.toLocaleString()} ORA</strong>
-            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-card text-cyan-300 border border-cyan-500/30">${s.planDays} ${currentLang === 'ru' ? 'Дней' : 'Days'}</span>
-            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-mineora-green/15 text-mineora-green">+${s.profitPercent}%</span>
-          </div>
-          <span class="text-[10px] ${isUnlocked ? 'text-mineora-green font-bold' : 'text-cyan-400'} block font-mono mt-0.5"><i class="fa-solid fa-stopwatch mr-1"></i> ${timeText}</span>
-        </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-5">
-        <div class="text-right">
-          <span class="text-[10px] text-slate-400 block font-bold">${currentLang === 'ru' ? 'Начислено дохода:' : 'Yield Accrued:'}</span>
-          <strong class="text-mineora-green font-mono text-sm">+${(s.claimedProfit || 0).toFixed(2)} / ${s.expectedProfit.toFixed(0)} ORA</strong>
-          <span class="text-[9px] text-slate-500 block font-mono">(~${dailyProfit.toFixed(2)} ORA/${currentLang === 'ru' ? 'День' : 'Day'})</span>
-        </div>
-        <div>
-          ${s.principalClaimed ? `<span class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-[11px] block">${currentLang === 'ru' ? 'Получено' : 'Claimed'}</span>` : (isUnlocked ? `<button type="button" onclick="claimPrincipalReturn(${s.id})" class="px-4 py-2.5 rounded-xl bg-mineora-green hover:opacity-90 text-white font-black text-xs transition cursor-pointer shadow-lg shadow-mineora-green/20 animate-pulse">${currentLang === 'ru' ? 'Забрать Вклад' : 'Reclaim Principal'}</button>` : `<span class="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-[10px] flex items-center gap-1"><i class="fa-solid fa-coins text-mineora-gold animate-bounce"></i> ${currentLang === 'ru' ? 'Идет Начисление' : 'Earning Yield'}</span>`)}
-        </div>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-if (!stakeTickerInterval) {
-  stakeTickerInterval = setInterval(() => {
-    const secStake = document.getElementById('sec-stake');
-    if (secStake && !secStake.classList.contains('hidden')) {
-      processAccruedStakeProfits();
-      renderActiveStakes();
-    }
-  }, 1000);
-}
-
-// ================= 7. MADEN ASANSÖRÜ / CRASH MOTORU (crash.js) =================
-let crashCanvas, crashCtx, crashFrame, crashState = "waiting", currentMultiplier = 1.00, crashPoint = 2.00, countdownTimer = 5, crashTickerInterval = null;
-let hasPlacedBet = false, hasCashedOut = false, userCashOutMultiplier = 1.00, userWonAmount = 0.00, crashHistory = [1.24, 1.05, 1.68, 1.12, 3.40];
-let shaftYOffset = 0, sparks = [], debris = [], cageY = 0, cageVy = 0, cageAngle = 0, cableSnapY = 0, cableSnapVy = 0;
-
-function initCrashEngine() {
-  crashCanvas = document.getElementById('crash-canvas');
-  if (!crashCanvas) return;
-  crashCtx = crashCanvas.getContext('2d');
-  crashCanvas.width = crashCanvas.clientWidth || 800;
-  crashCanvas.height = crashCanvas.clientHeight || 400;
-
-  renderCrashHistoryBar(); 
-  calculateCrashEstProfit(); 
-  updateCrashActionBtn();
-
-  if (crashState === "waiting" || !crashTickerInterval) {
-    clearInterval(crashTickerInterval); 
-    crashTickerInterval = null; 
-    startCrashCountdown();
-  }
-  cancelAnimationFrame(crashFrame); 
-  renderCrashCanvasLoop();
-}
-
-function generateCrashPoint() {
-  const roll = Math.random();
-  if (roll < 0.12) return Number((1.00 + Math.random() * 0.09).toFixed(2));
-  if (roll < 0.60) return Number((1.10 + Math.random() * 0.75).toFixed(2));
-  if (roll < 0.90) return Number((1.86 + Math.random() * 1.54).toFixed(2));
-  if (roll < 0.98) return Number((3.41 + Math.random() * 8.59).toFixed(2));
-  return Number((12.00 + Math.random() * 33.00).toFixed(2));
-}
-
-function startCrashCountdown() {
-  crashState = "waiting"; currentMultiplier = 1.00; countdownTimer = 5; hasCashedOut = false;
-  userCashOutMultiplier = 1.00; userWonAmount = 0.00; sparks = []; debris = [];
-  cageY = 0; cageVy = 0; cageAngle = 0; cableSnapY = 0; cableSnapVy = 0;
-
-  const statusBadge = document.getElementById('crash-badge-status');
-  const multText = document.getElementById('crash-multiplier-text');
-  const subStatus = document.getElementById('crash-sub-status');
-
-  if (multText) {
-    multText.innerText = "1.00x";
-    multText.className = "text-5xl sm:text-7xl font-black font-mono tracking-tight text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.9)]";
-  }
-  updateCrashActionBtn();
-
-  if (crashTickerInterval) clearInterval(crashTickerInterval);
-  crashTickerInterval = setInterval(() => {
-    countdownTimer--;
-    if (statusBadge) {
-      statusBadge.innerHTML = `<i class="fa-solid fa-clock animate-spin"></i> ${t('crash_bets_open')} (${countdownTimer}s)`;
-      statusBadge.className = "px-4 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-2";
-    }
-    if (subStatus) subStatus.innerText = `${t('crash_preparing')} (${countdownTimer}s)`;
-
-    if (countdownTimer <= 0) {
-      clearInterval(crashTickerInterval); crashTickerInterval = null; launchCrashElevator();
-    }
-  }, 1000);
-}
-
-function launchCrashElevator() {
-  crashState = "running"; crashPoint = generateCrashPoint();
-  const startTime = Date.now();
-  const statusBadge = document.getElementById('crash-badge-status');
-  const subStatus = document.getElementById('crash-sub-status');
-  const multText = document.getElementById('crash-multiplier-text');
-
-  if (statusBadge) {
-    statusBadge.innerHTML = `<i class="fa-solid fa-arrow-trend-up animate-pulse"></i> ${t('crash_running')}`;
-    statusBadge.className = "px-4 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold flex items-center gap-2";
-  }
-  if (subStatus) subStatus.innerText = t('crash_running');
-  updateCrashActionBtn();
-
-  function step() {
-    if (crashState !== "running") return;
-    const elapsedSec = (Date.now() - startTime) / 1000;
-    currentMultiplier = Number((1.00 + 0.08 * Math.pow(elapsedSec, 1.88)).toFixed(2));
-
-    if (multText) {
-      multText.innerText = `${currentMultiplier.toFixed(2)}x`;
-      multText.className = "text-5xl sm:text-7xl font-black font-mono tracking-tight text-mineora-gold drop-shadow-[0_4px_25px_rgba(240,185,11,0.5)]";
-    }
-
-    calculateCrashEstProfit();
-    updateCrashActionBtn();
-
-    if (currentMultiplier >= crashPoint) {
-      triggerCrashExplosion();
-      return;
-    }
-    crashFrame = requestAnimationFrame(step);
-  }
-  crashFrame = requestAnimationFrame(step);
-}
-
-function triggerCrashExplosion() {
-  crashState = "crashed"; cancelAnimationFrame(crashFrame);
-  const statusBadge = document.getElementById('crash-badge-status');
-  const subStatus = document.getElementById('crash-sub-status');
-  const multText = document.getElementById('crash-multiplier-text');
-
-  if (multText) {
-    multText.innerText = `${crashPoint.toFixed(2)}x`;
-    multText.className = "text-5xl sm:text-7xl font-black font-mono tracking-tight text-rose-500 fire-pulse drop-shadow-[0_4px_25px_rgba(244,63,94,0.7)]";
-  }
-  if (statusBadge) {
-    statusBadge.innerHTML = `<i class="fa-solid fa-burst"></i> ${t('crash_crashed')}`;
-    statusBadge.className = "px-4 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400 font-mono text-xs font-bold flex items-center gap-2";
-  }
-  if (subStatus) subStatus.innerText = `${t('crash_crashed')} @ ${crashPoint.toFixed(2)}x`;
-
-  cageVy = 2.0; cageAngle = (Math.random() - 0.5) * 0.15; cableSnapVy = -12.0;
-  const w = crashCanvas ? crashCanvas.width : 800, h = crashCanvas ? crashCanvas.height : 400;
-  const centerX = w / 2, currentCageY = h * 0.52;
-
-  for (let i = 0; i < 60; i++) {
-    debris.push({
-      x: centerX + (Math.random() - 0.5) * 70, y: currentCageY + (Math.random() - 0.5) * 50,
-      vx: (Math.random() - 0.5) * 16, vy: (Math.random() - 0.8) * 14, size: Math.random() * 7 + 3,
-      color: Math.random() < 0.4 ? '#f43f5e' : (Math.random() < 0.7 ? '#f59e0b' : '#334155'),
-      angle: Math.random() * Math.PI * 2, vAngle: (Math.random() - 0.5) * 0.25
-    });
-  }
-
-  if (hasPlacedBet && !hasCashedOut) {
-    showToast(`💥 ${t('crash_crashed')} @ ${crashPoint.toFixed(2)}x! Crystal lost, ORA wallet intact.`, "warning");
-    addUserNotificationLog(CurrentUser, "Elevator Exploration", `${crashPoint.toFixed(2)}x crash occurred.`, "0 ORA", "alert");
-  }
-
-  crashHistory.unshift(crashPoint);
-  if (crashHistory.length > 8) crashHistory.pop();
-  renderCrashHistoryBar();
-
-  hasPlacedBet = false; hasCashedOut = false;
-  updateCrashActionBtn();
-  setTimeout(() => startCrashCountdown(), 3800);
-  renderCrashCanvasLoop();
-}
-
-function calculateCrashEstProfit() {
-  const estEl = document.getElementById('crash-est-profit');
-  if (estEl) {
-    if (hasCashedOut) { estEl.innerText = `+${userWonAmount.toFixed(2)} ORA (${t('crash_cashed_out')})`; return; }
-    const liveWin = Number((1.00 * currentMultiplier).toFixed(2));
-    estEl.innerText = `+${liveWin.toFixed(2)} ORA`;
-  }
-}
-
-function fillMaxCrashBet() {
-  const crystalCount = CurrentUser ? (CurrentUser.alpCrystals || 0) : 0;
-  showToast(`ℹ️ Available: ${crystalCount} Alp Crystals`, "info");
-}
-
-function handleCrashActionBtn() {
-  if (!CurrentUser) return;
-
-  if (typeof isCandidateTrialExpired === 'function' && isCandidateTrialExpired(CurrentUser)) {
-    showToast(`⛔ ${t('trial_expired')}`, "warning");
-    return;
-  }
-
-  if (crashState === "waiting") {
-    if (hasPlacedBet) {
-      CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
-      hasPlacedBet = false;
-      saveUserWorld(); updateHUD(); updateCrashActionBtn();
-      showToast(currentLang === 'ru' ? "↩️ Спуск отменен, 1 Кристалл возвращен." : "↩️ Descent cancelled, 1 Crystal refunded.", "info");
-      return;
-    }
-
-    const crystals = CurrentUser.alpCrystals || 0;
-    if (crystals < 1) {
-      showToast(currentLang === 'ru' ? "⚠️ Требуется минимум 1 Кристалл Альп! Добывайте его в забое." : "⚠️ At least 1 Alp Crystal required! Extract in mining tunnels.", "warning");
-      return;
-    }
-
-    CurrentUser.alpCrystals = crystals - 1;
-    hasPlacedBet = true; hasCashedOut = false; userWonAmount = 0;
-    saveUserWorld(); updateHUD(); updateCrashActionBtn();
-    showToast(currentLang === 'ru' ? "🎫 1 Кристалл использован. Лифт готовится!" : "🎫 1 Alp Crystal consumed. Elevator readying!", "success");
-  } else if (crashState === "running") {
-    if (!hasPlacedBet || hasCashedOut) return;
-    hasCashedOut = true;
-    userCashOutMultiplier = currentMultiplier;
-
-    userWonAmount = Number((1.00 * userCashOutMultiplier).toFixed(2));
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + userWonAmount).toFixed(2));
-
-    saveUserWorld(); updateHUD(); updateCrashActionBtn();
-    addUserNotificationLog(CurrentUser, "Elevator Evacuated", `${userCashOutMultiplier.toFixed(2)}x depth escaped.`, `+${userWonAmount.toFixed(2)} ORA`, "income");
-    showToast(`🎉 ${t('crash_cashed_out')} @ ${userCashOutMultiplier.toFixed(2)}x (+${userWonAmount.toFixed(2)} ORA)!`, "success");
-  }
-}
-
-function updateCrashActionBtn() {
-  const btn = document.getElementById('btn-crash-action');
-  const btnText = document.getElementById('btn-crash-action-text');
-  if (!btn || !btnText) return;
-
-  if (crashState === "waiting") {
-    if (hasPlacedBet) {
-      btn.className = "w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm transition shadow-lg cursor-pointer";
-      btnText.innerText = t('crash_cancel_bet');
-    } else {
-      btn.className = "w-full py-3.5 rounded-2xl bg-mineora-green hover:opacity-90 text-white font-black text-sm transition shadow-lg cursor-pointer";
-      btnText.innerText = t('crash_confirm_bet');
-    }
-  } else if (crashState === "running") {
-    if (hasPlacedBet && !hasCashedOut) {
-      const liveWin = (1.00 * currentMultiplier).toFixed(2);
-      btn.className = "w-full py-3.5 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm transition shadow-2xl shadow-mineora-gold/40 cursor-pointer animate-pulse";
-      btnText.innerText = `${t('crash_cashout')} (+${liveWin} ORA)`;
-    } else if (hasCashedOut) {
-      btn.className = "w-full py-3.5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm cursor-not-allowed";
-      btnText.innerText = `${t('crash_cashed_out')}: ${userCashOutMultiplier.toFixed(2)}x (+${userWonAmount.toFixed(2)} ORA)`;
-    } else {
-      btn.className = "w-full py-3.5 rounded-2xl bg-slate-800 text-slate-500 font-black text-sm cursor-not-allowed";
-      btnText.innerText = t('crash_running');
-    }
-  } else {
-    btn.className = "w-full py-3.5 rounded-2xl bg-rose-600 text-white font-black text-sm cursor-not-allowed";
-    btnText.innerText = t('crash_crashed');
-  }
-}
-
-function renderCrashHistoryBar() {
-  const container = document.getElementById('crash-history-bar');
+function renderAdminDepositQueue() {
+  const container = document.getElementById('admin-deposit-queue-list');
   if (!container) return;
-  container.innerHTML = "";
-  crashHistory.forEach(mult => {
-    const badge = document.createElement('span');
-    const isHigh = mult >= 2.00;
-    badge.className = `px-2.5 py-1 rounded-lg text-[10px] font-black font-mono border ${isHigh ? 'bg-mineora-gold/15 text-mineora-gold border-mineora-gold/30' : 'bg-mineora-input text-slate-300 border-mineora-border'}`;
-    badge.innerText = `${mult.toFixed(2)}x`;
-    container.appendChild(badge);
-  });
+  container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
 }
 
-function renderCrashCanvasLoop() {
-  const sec = document.getElementById('sec-crash');
-  if (!crashCtx || !sec || sec.classList.contains('hidden')) return;
+function renderAdminWithdrawalQueue() {
+  const container = document.getElementById('admin-withdrawal-queue-list');
+  if (!container) return;
+  container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen USDT çekim talebi yok.</div>`;
+}
 
-  const w = crashCanvas.width, h = crashCanvas.height;
-  const bgGrad = crashCtx.createLinearGradient(0, 0, 0, h);
-  bgGrad.addColorStop(0, '#040608'); bgGrad.addColorStop(1, '#0f141c');
-  crashCtx.fillStyle = bgGrad;
-  crashCtx.fillRect(0, 0, w, h);
+function renderAdminGlobalHierarchy() {
+  const treeEl = document.getElementById('admin-global-hierarchy-tree');
+  if (!treeEl) return;
+  treeEl.innerHTML = `<div class="p-4 bg-mineora-card rounded-xl text-xs text-slate-400 notranslate" translate="no">Hiyerarşi haritası senkronize.</div>`;
+}
 
-  let speed = 0;
-  if (crashState === "running") {
-    speed = Math.min(32, 5 + Math.pow(currentMultiplier, 1.3));
-    shaftYOffset = (shaftYOffset + speed) % 90;
-  } else if (crashState === "crashed") {
-    shaftYOffset = (shaftYOffset + 2) % 90;
+// ================= 9. ANA BAŞLATICI MOTORU (main.js) =================
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof autoMigrateReferralLineage === 'function') {
+    autoMigrateReferralLineage();
   }
 
-  const wallW = 60;
-  crashCtx.fillStyle = '#12161c';
-  crashCtx.fillRect(0, 0, wallW, h);
-  crashCtx.fillRect(w - wallW, 0, wallW, h);
-
-  crashCtx.strokeStyle = '#2b1d14';
-  crashCtx.lineWidth = 4;
-  for (let y = -90 + shaftYOffset; y < h + 90; y += 90) {
-    crashCtx.fillStyle = '#3a2518';
-    crashCtx.fillRect(0, y, wallW, 14);
-    crashCtx.fillRect(w - wallW, y, wallW, 14);
-    crashCtx.strokeStyle = '#1e293b';
-    crashCtx.strokeRect(0, y, wallW, 14);
-    crashCtx.strokeRect(w - wallW, y, wallW, 14);
+  applyTranslations();
+  const sessionUser = sessionStorage.getItem('mineora_active_session');
+  if (sessionUser) {
+    loadUserWorld(sessionUser);
+    enterGame();
   }
+});
 
-  const railLeftX = wallW + 18, railRightX = w - wallW - 18;
-  crashCtx.strokeStyle = '#475569';
-  crashCtx.lineWidth = 5;
-  crashCtx.beginPath();
-  crashCtx.moveTo(railLeftX, 0); crashCtx.lineTo(railLeftX, h);
-  crashCtx.moveTo(railRightX, 0); crashCtx.lineTo(railRightX, h);
-  crashCtx.stroke();
+// Kazma vuruşu için klavye dinleyicisi
+window.addEventListener('keydown', (e) => {
+  const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+  if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
 
-  crashCtx.strokeStyle = '#1e242c';
-  crashCtx.lineWidth = 2;
-  for (let y = -45 + (shaftYOffset % 45); y < h + 45; y += 45) {
-    crashCtx.beginPath();
-    crashCtx.moveTo(railLeftX - 10, y); crashCtx.lineTo(railLeftX + 5, y);
-    crashCtx.moveTo(railRightX - 5, y); crashCtx.lineTo(railRightX + 10, y);
-    crashCtx.stroke();
-  }
+  const caveSec = document.getElementById('sec-cave');
+  if (!caveSec || caveSec.classList.contains('hidden')) return;
 
-  const centerX = w / 2;
-  let currentCageY = h * 0.52;
-
-  if (crashState !== "crashed") {
-    const jitter = crashState === "running" ? (Math.random() - 0.5) * Math.min(6, currentMultiplier * 0.35) : 0;
-    crashCtx.strokeStyle = '#94a3b8';
-    crashCtx.lineWidth = 3;
-    crashCtx.beginPath();
-    crashCtx.moveTo(centerX - 16 + jitter, 0); crashCtx.lineTo(centerX - 16 + jitter, currentCageY - 45);
-    crashCtx.moveTo(centerX + 16 - jitter, 0); crashCtx.lineTo(centerX + 16 - jitter, currentCageY - 45);
-    crashCtx.stroke();
-
-    crashCtx.strokeStyle = '#f59e0b';
-    crashCtx.lineWidth = 4;
-    crashCtx.beginPath();
-    crashCtx.moveTo(centerX - 24, currentCageY - 20);
-    crashCtx.lineTo(centerX, currentCageY - 45);
-    crashCtx.lineTo(centerX + 24, currentCageY - 20);
-    crashCtx.stroke();
-  } else {
-    cableSnapY += cableSnapVy;
-    cableSnapVy += 0.5;
-    crashCtx.strokeStyle = '#ef4444';
-    crashCtx.lineWidth = 3;
-    crashCtx.beginPath();
-    crashCtx.moveTo(centerX - 16, 0); crashCtx.lineTo(centerX - 22 + (Math.random() - 0.5) * 10, Math.max(10, 45 + cableSnapY));
-    crashCtx.moveTo(centerX + 16, 0); crashCtx.lineTo(centerX + 14 + (Math.random() - 0.5) * 10, Math.max(10, 35 + cableSnapY));
-    crashCtx.stroke();
-  }
-
-  crashCtx.save();
-  if (crashState === "crashed") {
-    cageVy += 1.4; cageY += cageVy; cageAngle += 0.05;
-    currentCageY += cageY;
-    crashCtx.translate(centerX, currentCageY);
-    crashCtx.rotate(cageAngle);
-  } else {
-    const shake = crashState === "running" ? (Math.random() - 0.5) * Math.min(5, currentMultiplier * 0.3) : 0;
-    crashCtx.translate(centerX + shake, currentCageY);
-  }
-
-  const cageW = 76, cageH = 68;
-  crashCtx.fillStyle = crashState === "crashed" ? '#991b1b' : '#334155';
-  crashCtx.fillRect(-cageW / 2, -cageH / 2, cageW, 10);
-  crashCtx.fillStyle = '#0f172a';
-  crashCtx.fillRect(-cageW / 2, cageH / 2 - 10, cageW, 10);
-  crashCtx.strokeStyle = crashState === "crashed" ? '#f43f5e' : '#f59e0b';
-  crashCtx.lineWidth = 2;
-  crashCtx.strokeRect(-cageW / 2, -cageH / 2, cageW, cageH);
-
-  crashCtx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
-  crashCtx.lineWidth = 2;
-  for (let bx = -cageW / 2 + 10; bx < cageW / 2; bx += 11) {
-    crashCtx.beginPath();
-    crashCtx.moveTo(bx, -cageH / 2 + 10);
-    crashCtx.lineTo(bx, cageH / 2 - 10);
-    crashCtx.stroke();
-  }
-
-  crashCtx.fillStyle = '#ea580c';
-  crashCtx.fillRect(-10, -5, 20, 26);
-  crashCtx.fillStyle = '#facc15';
-  crashCtx.beginPath(); crashCtx.arc(0, -14, 9, Math.PI, 0); crashCtx.fill();
-  crashCtx.fillStyle = '#ffffff';
-  crashCtx.fillRect(-3, -16, 6, 4);
-
-  if (crashState !== "crashed") {
-    const lightGrad = crashCtx.createRadialGradient(0, -14, 2, 0, 80, 100);
-    lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.7)');
-    lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-    crashCtx.fillStyle = lightGrad;
-    crashCtx.beginPath();
-    crashCtx.moveTo(0, -14); crashCtx.lineTo(-60, 120); crashCtx.lineTo(60, 120);
-    crashCtx.closePath(); crashCtx.fill();
-  }
-
-  crashCtx.fillStyle = crashState === "crashed" ? '#f43f5e' : (Math.floor(Date.now() / 200) % 2 === 0 ? '#f59e0b' : '#78350f');
-  crashCtx.beginPath(); crashCtx.arc(0, -cageH / 2 - 4, 5, 0, Math.PI * 2); crashCtx.fill();
-  crashCtx.restore();
-
-  if (crashState === "running" && Math.random() < 0.75) {
-    sparks.push({ x: railLeftX, y: currentCageY + (Math.random() - 0.5) * 20, vx: -(Math.random() * 4 + 1), vy: (Math.random() - 0.5) * 6, life: 18 });
-    sparks.push({ x: railRightX, y: currentCageY + (Math.random() - 0.5) * 20, vx: Math.random() * 4 + 1, vy: (Math.random() - 0.5) * 6, life: 18 });
-  }
-
-  for (let i = sparks.length - 1; i >= 0; i--) {
-    const s = sparks[i];
-    s.x += s.vx; s.y += s.vy; s.life--;
-    crashCtx.fillStyle = Math.random() < 0.5 ? '#facc15' : '#f97316';
-    crashCtx.fillRect(s.x, s.y, 2.5, 2.5);
-    if (s.life <= 0) sparks.splice(i, 1);
-  }
-
-  if (crashState === "crashed") {
-    for (let i = debris.length - 1; i >= 0; i--) {
-      const d = debris[i];
-      d.x += d.vx; d.y += d.vy; d.vy += 0.55; d.angle += d.vAngle;
-      crashCtx.save();
-      crashCtx.translate(d.x, d.y);
-      crashCtx.rotate(d.angle);
-      crashCtx.fillStyle = d.color;
-      crashCtx.fillRect(-d.size / 2, -d.size / 2, d.size, d.size);
-      crashCtx.restore();
+  if (e.key === ' ' || e.key === 'x' || e.key === 'X' || e.key === 'Enter') {
+    e.preventDefault();
+    if (typeof performMiningStrike === 'function') {
+      performMiningStrike();
     }
   }
+});
 
-  crashFrame = requestAnimationFrame(renderCrashCanvasLoop);
-}
+// Maden soğuma ve bildirim kontrol döngüsü
+setInterval(() => {
+  if (typeof CurrentUser !== 'undefined' && CurrentUser) {
+    if (typeof checkMinesCooldown === 'function') checkMinesCooldown();
+    if (typeof updateNotificationBadge === 'function') updateNotificationBadge();
+  }
+}, 1000);
+  </script>
+</body>
+</html>
