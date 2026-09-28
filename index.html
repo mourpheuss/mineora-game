@@ -1957,7 +1957,16 @@ function linkHierarchyByRefCode(newUsername, refCode, newRole = "Candidate", isF
 }
 
 function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extraProfile = {}) {
+  if (!username) return;
   const uKey = username.toLowerCase();
+
+  // KRİTİK KONTROL: Silinmiş kullanıcıyı asla diriltme ve oturumunu kapat
+  const deletedList = (typeof getDeletedUsers === 'function') ? getDeletedUsers() : [];
+  if (deletedList.includes(uKey)) {
+    sessionStorage.removeItem('mineora_active_session');
+    return;
+  }
+
   const storageKey = `mineora_user_${uKey}`;
   let data = localStorage.getItem(storageKey);
   if (data) {
@@ -5786,12 +5795,17 @@ function renderAdminUserTable() {
   tbody.innerHTML = "";
 
   const allUsers = [];
+  const deletedList = (typeof getDeletedUsers === 'function') ? getDeletedUsers() : [];
+
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (k && k.startsWith('mineora_user_')) {
       try {
         const u = JSON.parse(localStorage.getItem(k));
-        if (u && u.username) allUsers.push(u);
+        // Silinen kullanıcıları tabloya ASLA alma
+        if (u && u.username && !deletedList.includes(u.username.toLowerCase())) {
+          allUsers.push(u);
+        }
       } catch(e) {}
     }
   }
@@ -5837,17 +5851,43 @@ function deleteAdminUser(username) {
   if (!confirmDel) return;
 
   const uKey = username.toLowerCase();
+
+  // 1. Yerel hafızadan sil ve kara listeye al
   localStorage.removeItem(`mineora_user_${uKey}`);
   if (typeof addDeletedUser === 'function') addDeletedUser(username);
 
+  // 2. Eğer silinen kişi aktif oturumsa oturumu sonlandır (Dirilmesini önler)
+  const sessionUser = sessionStorage.getItem('mineora_active_session');
+  if (sessionUser && sessionUser.toLowerCase() === uKey) {
+    sessionStorage.removeItem('mineora_active_session');
+  }
+
+  // 3. Diğer tüm liderlerin takım (workers) listelerinden söküp at
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('mineora_user_')) {
+      try {
+        const u = JSON.parse(localStorage.getItem(k));
+        if (u && Array.isArray(u.workers)) {
+          const prevLen = u.workers.length;
+          u.workers = u.workers.filter(w => (w.username || '').toLowerCase() !== uKey);
+          if (u.workers.length !== prevLen) {
+            saveStoredUser(u);
+          }
+        }
+      } catch(e) {}
+    }
+  }
+
+  // 4. Firebase'den hem kökten sil hem de Firebase'deki kalıcı Kara Listeye ekle
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref(`users/${uKey}`).remove();
+    fbDb.ref(`deletedUsers/${uKey}`).set(true); // Bulut kara listesi
   }
 
   renderAdminUserTable();
-  showToast(`🗑️ '${username}' kullanıcısı sistemden kalıcı olarak silindi.`, "info");
+  showToast(`🗑️ '${username}' kullanıcısı kalıcı olarak silindi.`, "info");
 }
-
 function toggleAdminVaultLock(username) {
   const u = getStoredUser(username);
   if (!u) return;
