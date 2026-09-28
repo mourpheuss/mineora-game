@@ -380,12 +380,14 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" onclick="openModal('modal-admin-create-user')" class="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
-                  <i class="fa-solid fa-user-plus"></i> Kullanıcı Ekle
-                </button>
-                <span class="px-3 py-1 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs font-black">Root Yetkisi Aktif</span>
-              </div>
-            </div>
+          <button type="button" onclick="openModal('modal-admin-create-user')" class="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-user-plus"></i> Kullanıcı Ekle
+          </button>
+          <button type="button" onclick="updateAdminFinancialVaultMetrics()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 cursor-pointer shadow">
+            <i class="fa-solid fa-rotate"></i> Kasayı Tara
+          </button>
+          <span class="px-3 py-1 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs font-black">Root Yetkisi Aktif</span>
+        </div>
 <!-- CANLI FİNANSAL KASA & NAKİT AKIŞ RÖNTGENİ -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
         <!-- 1. Toplam Oyuncu USDT -->
