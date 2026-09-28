@@ -3082,21 +3082,34 @@ function startElevatorDispatch() {
         const m = CurrentUser.mines[activeMineIdx];
         m.depleted = true; m.sealedAt = Date.now(); m.hp = 0; wagonFill = 0;
 
-        if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Mine Owner" || CurrentUser.role === "Şirket Sahibi" || CurrentUser.role === "Holding Owner") {
-          CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 2;
-          showToast("👑 Management Logistics Bonus: +2 Alp Crystals added!", "info");
-        } else if (CurrentUser.role === "İşçi Madenci" || CurrentUser.role === "Worker Miner") {
-          CurrentUser.ora = Number(((CurrentUser.ora || 0) + 8.00).toFixed(2));
-          showToast("💰 Worker Shift Earnings: +8.00 ORA!", "success");
+        // 120 Günlük Süre Kontrolü
+        const isCycleActive = CurrentUser.cycleExpiresAt && Date.now() < CurrentUser.cycleExpiresAt;
+        const role = CurrentUser.role || "Candidate";
+
+        let baseCostOra = 0;
+        if (role === "Worker Miner" || role === "İşçi Madenci") baseCostOra = 1000;       // $100
+        else if (role === "Mine Owner" || role === "Maden Sahibi") baseCostOra = 10000;    // $1,000
+        else if (role === "Holding Owner" || role === "Şirket Sahibi") baseCostOra = 50000;// $5,000
+
+        let earnedOra = 0;
+        let randomPercent = 0;
+
+        if (baseCostOra > 0 && isCycleActive) {
+          // Günlük %1.50 ile %1.70 arası rastgele oran
+          randomPercent = Number((1.50 + Math.random() * 0.20).toFixed(2));
+          earnedOra = Number(((baseCostOra * randomPercent) / 100).toFixed(2));
+          CurrentUser.ora = Number(((CurrentUser.ora || 0) + earnedOra).toFixed(2));
+          showToast(`💰 Günlük Üretim Geliri (%${randomPercent}): +${earnedOra.toFixed(2)} ORA!`, "success");
+          addUserNotificationLog(CurrentUser, "Günlük Maden Üretimi", `${m.name} kazısı tamamlandı (%${randomPercent} getiri).`, `+${earnedOra.toFixed(2)} ORA`, "income");
+        } else if (!isCycleActive && baseCostOra > 0) {
+          showToast("⚠️ 120 günlük lisans süreniz doldu! Yeniden üretim geliri almak için lisansınızı yenileyin.", "warning");
         } else {
-          showToast("⛏️ Shift complete! Upgrade license to unlock ORA extraction.", "info");
+          showToast("⛏️ Kazı tamamlandı! Madenden üretim geliri almak için bir kariyer lisansı edinin.", "info");
         }
 
-        addUserNotificationLog(CurrentUser, "Daily Extraction Finished", `Extracted 2 wagons from ${m.name}.`, (CurrentUser.role === "İşçi Madenci" || CurrentUser.role === "Worker Miner") ? "+8.00 ORA" : "Completed", "income");
-        distributeDailyMiningRoyalties(CurrentUser.username);
         saveUserWorld(); 
         updateHUD();
-        showToast(`🏆 ${m.name} finished! Mine SEALED for 24 hours!`, "success");
+        showToast(`🏆 ${m.name} tamamlandı! Maden 24 saat mühürlendi.`, "success");
         setTimeout(() => { document.getElementById('transit-overlay')?.classList.add('hidden'); switchTab('map'); renderAlpMapPins(); }, 800);
       }
     }
