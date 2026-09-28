@@ -1664,21 +1664,13 @@ function checkMinesCooldown() {
 }
 
 function isCandidateTrialExpired(userObj) {
-  if (!userObj) return false;
-  if (userObj.isRootAdmin) return false;
-  if (userObj.role !== "Aday" && userObj.role !== "Candidate") return false;
-  if (Number(userObj.usdt || 0) > 0 || userObj.hasDeposited) return false;
-
-  const expires = userObj.trialExpiresAt || (userObj.createdAt ? userObj.createdAt + CANDIDATE_TRIAL_DURATION_MS : 0);
-  if (!expires) return false;
-  return Date.now() >= expires;
+  // Aday üyeler artık asla kilitlenmez, referans toplamaya devam edebilir
+  return false;
 }
 
 function getCandidateRemainingTrialMs(userObj) {
-  if (!userObj || (userObj.role !== "Aday" && userObj.role !== "Candidate") || userObj.isRootAdmin) return 0;
-  if (Number(userObj.usdt || 0) > 0 || userObj.hasDeposited) return 0;
-  const expires = userObj.trialExpiresAt || (userObj.createdAt ? userObj.createdAt + CANDIDATE_TRIAL_DURATION_MS : 0);
-  return Math.max(0, expires - Date.now());
+  if (!userObj || !userObj.cycleExpiresAt) return 0;
+  return Math.max(0, userObj.cycleExpiresAt - Date.now());
 }
 
 function getStoredUser(username) {
@@ -2342,16 +2334,20 @@ function updateHUD() {
   }
 
   if (trialBanner) {
-    if ((CurrentUser.role === "Aday" || CurrentUser.role === "Candidate") && !CurrentUser.isRootAdmin && Number(CurrentUser.usdt || 0) === 0 && !CurrentUser.hasDeposited) {
-      const left = getCandidateRemainingTrialMs(CurrentUser);
+    if (CurrentUser && !CurrentUser.isRootAdmin) {
       trialBanner.classList.remove('hidden');
-      if (left <= 0) {
-        trialBanner.innerHTML = `<span class="text-rose-400 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${t('trial_expired')}</span>`;
+      if (CurrentUser.cycleExpiresAt) {
+        const leftMs = CurrentUser.cycleExpiresAt - Date.now();
+        if (leftMs <= 0) {
+          trialBanner.innerHTML = `<span class="text-rose-400 font-bold font-mono"><i class="fa-solid fa-flag-checkered mr-1"></i> 120 Günlük Kazanç Döngünüz Tamamlandı! Yeniden üretim geliri almak için lisansınızı yenileyebilirsiniz.</span>`;
+        } else {
+          const days = Math.floor(leftMs / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((leftMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const mins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
+          trialBanner.innerHTML = `<span class="text-amber-300 font-mono text-xs"><i class="fa-solid fa-stopwatch mr-1.5 text-mineora-gold"></i> 120 Günlük Döngü Kalan Süre: <strong>${days} Gün ${hours} Saat ${mins} Dk</strong> (Günlük %1.5 - %1.7 Üretim Aktif)</span>`;
+        }
       } else {
-        const hours = Math.floor(left / 3600000);
-        const mins = Math.floor((left % 3600000) / 60000);
-        const secs = Math.floor((left % 60000) / 1000);
-        trialBanner.innerHTML = `<span class="text-amber-300 font-mono text-xs"><i class="fa-solid fa-stopwatch mr-1"></i> ${t('trial_countdown')} <strong>${hours}h ${mins}m ${secs}s</strong></span>`;
+        trialBanner.innerHTML = `<span class="text-slate-400 font-mono text-xs"><i class="fa-solid fa-circle-info mr-1 text-cyan-400"></i> 120 Günlük Süreniz, bir kariyer lisansı aldığınızda veya altınıza ilk referansınız kaydolduğunda başlayacaktır.</span>`;
       }
     } else {
       trialBanner.classList.add('hidden');
