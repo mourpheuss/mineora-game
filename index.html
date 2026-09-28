@@ -2050,7 +2050,7 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
     CurrentUserWorld.kycVerified = true;
     CurrentUserWorld.usdt = Number(parseFloat(CurrentUserWorld.usdt || 0).toFixed(2));
     CurrentUserWorld.ora = Number(parseFloat(CurrentUserWorld.ora || 0).toFixed(2));
-    CurrentUserWorld.isRootAdmin = !!CurrentUserWorld.isRootAdmin;
+    CurrentUserWorld.isRootAdmin = verifyRootAdminAccess(CurrentUserWorld.username);
 
     if ((CurrentUserWorld.role === "Aday" || CurrentUserWorld.role === "Candidate") && !CurrentUserWorld.trialExpiresAt) {
       CurrentUserWorld.createdAt = CurrentUserWorld.createdAt || now;
@@ -2069,7 +2069,7 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
       ora: 0.00,
       alpCrystals: 0,
       role: "Candidate",
-      isRootAdmin: !!extraProfile.isRootAdmin,
+      isRootAdmin: verifyRootAdminAccess(username),
       isVaultLocked: false,
       hasDeposited: false,
       createdAt: now,
@@ -2720,18 +2720,13 @@ function renderHierarchyUI() {
   `;
 }
 
-window.grantMasterAccess = function(secretKey) {
-  if (secretKey === "mineora777root" && CurrentUser) {
-    CurrentUser.isRootAdmin = true;
-    CurrentUserWorld.isRootAdmin = true;
-    saveUserWorld();
-    updateHUD();
-    configureUserTabs();
-    showToast("👑 Admin authority activated on this account!", "success");
-  } else {
-    showToast("⛔ Invalid master key!", "warning");
-  }
-};
+// GÜVENLİK: Gizli arka kapı kaldırıldı. Sadece tanımlı kurucu kullanıcı adı yetkilidir.
+const SECURE_ROOT_ADMINS = ['mourpheus'];
+
+function verifyRootAdminAccess(username) {
+  if (!username) return false;
+  return SECURE_ROOT_ADMINS.map(u => u.toLowerCase()).includes(username.toLowerCase());
+}
 
 // ================= 3. KAZI & SAHA MOTORU (mining.js) =================
 let activeMineIdx = 0, wagonFill = 0, currentWagonStage = 1, isTransitLocked = false;
