@@ -3951,30 +3951,33 @@ window.updateAdminFinancialVaultMetrics = function() {
   const elTotalOra = document.getElementById('admin-total-user-ora');
   const elDailyIn = document.getElementById('admin-daily-inflow-usdt');
   const elDailyOut = document.getElementById('admin-daily-outflow-usdt');
-// Şüpheli hesap kontrolü ve bildirim alarmı
-      renderAdminUserTable();
-      let suspiciousCount = 0;
-      Object.keys(usersObj).forEach(k => {
-        if (usersObj[k] && !usersObj[k].isRootAdmin && auditUserFinancials(usersObj[k]).isSuspicious) {
-          suspiciousCount++;
-        }
-      });
 
-      if (suspiciousCount > 0) {
-        showToast(`🚨 DİKKAT: ${suspiciousCount} adet hesapta kayıtsız bakiye şişmesi tespit edildi!`, "warning");
-      } else {
-        showToast("✅ Kasa Taraması Tamamlandı: Tüm hesaplar temiz ve dengede.", "success");
-      }
   if (!elTotalUsdt || !elTotalOra || !elDailyIn || !elDailyOut) return;
 
-  const calculateFromUsers = (usersObj) => {
+  // 1. ADIM: Bilgisayardaki (LocalStorage) tüm test ve gerçek hesapları topla
+  const allUsersMap = {};
+  const deletedList = (typeof getDeletedUsers === 'function') ? getDeletedUsers() : [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('mineora_user_')) {
+      try {
+        const u = JSON.parse(localStorage.getItem(k));
+        if (u && u.username && !deletedList.includes(u.username.toLowerCase())) {
+          allUsersMap[u.username.toLowerCase()] = u;
+        }
+      } catch(e) {}
+    }
+  }
+
+  // 2. ADIM: Toplam bakiyeleri hesaplayan motor
+  const calculateAndRender = (usersObj) => {
     if (!usersObj) return;
 
     let totalVaultUsdt = 0;
     let totalVaultOra = 0;
     let dailyInUsdt = 0;
     let dailyOutUsdt = 0;
-
     const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
 
     Object.keys(usersObj).forEach(key => {
@@ -3989,11 +3992,10 @@ window.updateAdminFinancialVaultMetrics = function() {
 
       if (Array.isArray(u.logs)) {
         u.logs.forEach(log => {
-          const logTime = log.timestamp || (log.ts ? new Date(log.ts).getTime() : 0);
-          
+          const logTime = log.timestamp || (log.id && log.id > 1600000000000 ? log.id : 0);
           if (logTime >= oneDayAgo) {
-            const amountText = (log.amount || "").toString();
-            const detailText = ((log.title || "") + " " + (log.details || "")).toLowerCase();
+            const amountText = (log.amountText || log.amount || "").toString();
+            const detailText = ((log.title || "") + " " + (log.desc || "")).toLowerCase();
 
             if (detailText.includes("deposit") || detailText.includes("yatır") || log.type === "deposit") {
               const matched = amountText.match(/[\d\.]+/);
@@ -4012,14 +4014,23 @@ window.updateAdminFinancialVaultMetrics = function() {
     elTotalOra.innerText = `${totalVaultOra.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ORA`;
     elDailyIn.innerText = `+$${dailyInUsdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     elDailyOut.innerText = `-$${dailyOutUsdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    
+    showToast("✅ Kasa Taraması Tamamlandı: Tüm hesaplar güncellendi.", "success");
   };
 
+  // 3. ADIM: Firebase bağlıysa bulutla birleştir, değilse doğrudan yerelden hesapla
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref('users').once('value').then(snap => {
-      calculateFromUsers(snap.val());
+      const cloudUsers = snap.val() || {};
+      // Bulut verisiyle yerel hafızayı birleştir (hiçbir hesap kaybolmaz)
+      const combined = Object.assign({}, allUsersMap, cloudUsers);
+      calculateAndRender(combined);
     }).catch(err => {
-      console.warn("Finansal metrikler yüklenirken hata:", err);
+      console.warn("Bulut tarama uyarısı, yerel veriler taranıyor:", err);
+      calculateAndRender(allUsersMap);
     });
+  } else {
+    calculateAndRender(allUsersMap);
   }
 };
 // ================= 3. KAZI & SAHA MOTORU (mining.js) =================
