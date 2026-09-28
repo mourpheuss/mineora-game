@@ -5039,29 +5039,52 @@ function toggleHostMic() {
     btn.innerHTML = `<i class="fa-solid ${isMicActive ? 'fa-microphone' : 'fa-microphone-slash'}"></i> Mikrofon`;
   }
 }
-    // ================= EKRAN PAYLAŞIMI (KAMERA & EKRAN ARASI KESİNTİSİZ GEÇİŞ) =================
+    // ================= EKRAN PAYLAŞIMI (HATASIZ & TAM UYUMLU MOTOR) =================
 let isScreenSharing = false;
 let screenStream = null;
 
 async function toggleScreenShare() {
-  if (!activeLiveRoom || !CurrentUser) return;
+  if (!activeLiveRoom || !CurrentUser) {
+    showToast("⚠️ Canlı oda bilgisi bulunamadı.", "warning");
+    return;
+  }
+
   const isHost = (activeLiveRoom.host || '').trim().toLowerCase() === (CurrentUser.username || '').trim().toLowerCase();
-  if (!isHost) return;
+  if (!isHost) {
+    showToast("⚠️ Yalnızca yayıncı ekran paylaşımı yapabilir.", "warning");
+    return;
+  }
+
+  // 1. Cihaz / Tarayıcı Ekran Paylaşımı Desteği Kontrolü
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+    showToast("📱 Mobil cihazlar (telefon/tablet) tarayıcı üzerinden ekran paylaşımını desteklemez. Lütfen bilgisayardan (Chrome/Edge) deneyin.", "warning");
+    return;
+  }
 
   const btn = document.getElementById('btn-toggle-screen');
   const videoEl = document.getElementById('live-host-video');
 
   if (!isScreenSharing) {
     try {
-      // 1. Ekran / Sekme / Pencere paylaşım izni iste
-      screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: "always" },
-        audio: true // Sunumdaki sistem/video sesini de aktarır
-      });
+      // 2. Ekran Paylaşımını Başlat (Ses desteklenmezse çökmeyip sadece videoya geçer)
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+      } catch (audioErr) {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true
+        });
+      }
 
       const screenTrack = screenStream.getVideoTracks()[0];
+      if (!screenTrack) {
+        showToast("⚠️ Ekran video akışı alınamadı.", "warning");
+        return;
+      }
 
-      // 2. Yayındaki tüm bağlı izleyicilere kamerayı çıkarıp ekranı bas
+      // 3. Yayındaki tüm bağlı izleyicilere kamerayı çıkarıp ekran görüntüsünü aktar
       Object.keys(rtcPeerConnections).forEach(k => {
         const pc = rtcPeerConnections[k];
         if (pc) {
@@ -5072,25 +5095,30 @@ async function toggleScreenShare() {
         }
       });
 
-      // 3. Yayıncının kendi ekranındaki önizlemeyi güncelle
+      // 4. Yayıncının kendi ekranındaki videoyu güncelle ve oynat
       if (videoEl) {
         videoEl.srcObject = screenStream;
+        videoEl.play().catch(() => {});
       }
 
       isScreenSharing = true;
       if (btn) {
         btn.className = "px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-lg animate-pulse";
-        btn.innerHTML = `<i class="fa-solid fa-stop"></i> Ekranı Durdur`;
+        btn.innerHTML = `<i class="fa-solid fa-stop"></i> Paylaşımı Durdur`;
       }
       showToast("🖥️ Ekran paylaşımı başladı!", "success");
 
-      // Kullanıcı tarayıcının kendi üst çubuğundaki "Paylaşımı Durdur"a basarsa yakala
+      // Kullanıcı tarayıcının üstündeki mavi "Paylaşımı Durdur" çubuğuna basarsa otomatik yakala
       screenTrack.onended = () => {
         stopScreenShare();
       };
 
     } catch (err) {
-      console.warn("Ekran paylaşımı iptal edildi veya desteklenmiyor:", err);
+      if (err.name === 'NotAllowedError') {
+        showToast("ℹ️ Ekran seçimi iptal edildi.", "info");
+      } else {
+        showToast("⚠️ Ekran paylaşılamadı: " + (err.message || err.name), "warning");
+      }
     }
   } else {
     stopScreenShare();
@@ -5100,9 +5128,11 @@ async function toggleScreenShare() {
 function stopScreenShare() {
   if (!isScreenSharing) return;
 
-  // 1. Ekran akışını durdur
+  // 1. Ekran yakalamayı durdur
   if (screenStream) {
-    screenStream.getTracks().forEach(t => t.stop());
+    try {
+      screenStream.getTracks().forEach(t => t.stop());
+    } catch(e) {}
     screenStream = null;
   }
 
@@ -5118,10 +5148,11 @@ function stopScreenShare() {
     }
   });
 
-  // 3. Yayıncı ekranını tekrar kameraya çevir
+  // 3. Yayıncının ekranını kameraya geri çevir
   const videoEl = document.getElementById('live-host-video');
   if (videoEl && localMediaStream) {
     videoEl.srcObject = localMediaStream;
+    videoEl.play().catch(() => {});
   }
 
   isScreenSharing = false;
