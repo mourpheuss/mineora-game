@@ -1062,7 +1062,90 @@
       </div>
     </div>
   </div>
+<!-- MODAL: YAYIN LİSANSI SATIN ALMA -->
+  <div id="modal-stream-license" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-id-card"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-white">Yayıncı Lisansı Al / Durum</h3>
+            <span class="text-[10px] text-slate-400">Canlı yayın açabilmek için aktif lisans gereklidir.</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-stream-license')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
 
+      <div class="p-3 bg-mineora-bg rounded-2xl border border-mineora-border flex justify-between items-center font-mono">
+        <span class="text-slate-400 text-xs">Mevcut USDT Bakiyeniz:</span>
+        <strong id="license-modal-usdt" class="text-mineora-green text-sm font-bold">$0.00 USDT</strong>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-amber-500/40 space-y-3 flex flex-col justify-between text-center">
+          <div>
+            <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">7 GÜNLÜK</span>
+            <h4 class="text-white font-black text-base mt-2">Haftalık Lisans</h4>
+            <span class="text-2xl font-black font-mono text-mineora-gold block my-1">15 USDT</span>
+            <p class="text-[10px] text-slate-400">7 gün boyunca sınırsız canlı yayın hakkı.</p>
+          </div>
+          <button type="button" onclick="buyStreamLicense(7, 15)" class="w-full py-2.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow">
+            Satın Al (15$)
+          </button>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-mineora-bg border border-emerald-500/40 space-y-3 flex flex-col justify-between text-center shadow-lg">
+          <div>
+            <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">30 GÜNLÜK (VIP)</span>
+            <h4 class="text-white font-black text-base mt-2">Aylık Lisans</h4>
+            <span class="text-2xl font-black font-mono text-emerald-400 block my-1">30 USDT</span>
+            <p class="text-[10px] text-slate-400">30 gün boyunca kesintisiz sınırsız yayın.</p>
+          </div>
+          <button type="button" onclick="buyStreamLicense(30, 30)" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
+            Satın Al (30$)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: YAYINCIYA BAHŞİŞ GÖNDERME -->
+  <div id="modal-send-tip" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-sm bg-mineora-card border border-emerald-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs text-center">
+      <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl mx-auto border border-emerald-500/30">
+        <i class="fa-solid fa-gift"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-black text-white">Yayıncıya Bahşiş Gönder</h3>
+        <p class="text-[11px] text-slate-400 mt-1">Yayıncıya doğrudan USDT bahşişi yollayın.</p>
+      </div>
+
+      <div class="space-y-2 text-left">
+        <div class="flex justify-between items-center">
+          <label class="text-[10px] text-slate-400 font-bold">Bahşiş Miktarı (USDT)</label>
+          <span class="text-[10px] text-emerald-400 font-bold font-mono">Min: $3 - Maks: $100</span>
+        </div>
+        <input type="number" id="input-tip-amount" min="3" max="100" step="0.5" value="5" oninput="calculateTipBreakdown()" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-center text-white font-mono text-base font-bold outline-none focus:border-emerald-500">
+      </div>
+
+      <div class="p-3 bg-mineora-bg rounded-xl border border-mineora-border text-[11px] space-y-1 font-mono text-left">
+        <div class="flex justify-between text-slate-300">
+          <span>Yayıncıya Aktarılan (%98):</span>
+          <strong id="tip-preview-host" class="text-emerald-400 font-bold">$4.90 USDT</strong>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Oyun Kurucu Payı (%2):</span>
+          <strong id="tip-preview-vault" class="text-amber-400 font-bold">$0.10 USDT</strong>
+        </div>
+      </div>
+
+      <button type="button" onclick="executeSendTip()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">
+        Bahşişi Gönder
+      </button>
+    </div>
+  </div>
   <!-- MODAL: YENİ CANLI ODA KUR -->
   <div id="modal-create-live-room" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
