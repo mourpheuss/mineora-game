@@ -4074,6 +4074,7 @@ let isMicActive = true;
 let hasHandRaised = false;
 let isGhostAdminMode = false;
 let pendingPinRoomId = null;
+let isRoomLeaving = false;
 
 // Firebase Dinleyicileri
 let roomsRefListener = null;
@@ -4081,7 +4082,27 @@ let activeRoomRefListener = null;
 let chatRefListener = null;
 let hostSignalingBound = false;
 
-// STUN + TURN (Tek Tünel / Max-Bundle Protokolü ile CGNAT Delme)
+// Dijital Sessiz Ses Üreticisi (Söz Alma Esnasında Kanalın Kopmasını Önler)
+let silentAudioTrack = null;
+function getSilentAudioTrack() {
+  if (silentAudioTrack && silentAudioTrack.readyState === 'live') return silentAudioTrack;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const dest = ctx.createMediaStreamDestination();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001; // Sıfır duyulabilir ses
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start();
+    silentAudioTrack = dest.stream.getAudioTracks()[0];
+    return silentAudioTrack;
+  } catch(e) {
+    return null;
+  }
+}
+
+// STUN + TURN (Farklı Şehirler, Mobil 4G ve Ev İnterneti Geçişi)
 const rtcConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -4091,7 +4112,7 @@ const rtcConfig = {
     { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
     { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
   ],
-  bundlePolicy: "max-bundle", // PC & Ev internetinde video ve sesi tek portta birleştirir
+  bundlePolicy: "max-bundle",
   iceCandidatePoolSize: 10
 };
 
@@ -4100,12 +4121,17 @@ function sanitizeFbKey(key) {
   return key.toLowerCase().replace(/[\.\#\$\/\[\]\s]/g, '_');
 }
 
-// Mobil ve Masaüstü Tarayıcılarında Ses Kilidi Çözücü
-function unlockAudioPlayback() {
-  document.querySelectorAll('audio').forEach(a => a.play().catch(() => {}));
+// Genel Ses Kilidi Çözücü
+function unlockAllAudios() {
+  document.querySelectorAll('audio').forEach(a => {
+    a.muted = false;
+    a.play().catch(() => {});
+  });
+  const unmuter = document.getElementById('live-unmute-overlay');
+  if (unmuter) unmuter.remove();
 }
-document.addEventListener('click', unlockAudioPlayback, { once: true });
-document.addEventListener('touchstart', unlockAudioPlayback, { once: true });
+document.addEventListener('click', unlockAllAudios);
+document.addEventListener('touchstart', unlockAllAudios);
 
 // ================= METİN FİLTRESİ =================
 const INAPPROPRIATE_PATTERNS = [
@@ -4125,7 +4151,7 @@ function checkInappropriateContent(rawText) {
   return INAPPROPRIATE_PATTERNS.some(regex => regex.test(normalized) || regex.test(rawText.toLowerCase()));
 }
 
-// ================= LOBİ & ODA LİSTESİ =================
+// ================= LOBİ & ODA YÖNETİMİ =================
 function initLiveRoomsLobby() {
   const lobbyView = document.getElementById('live-lobby-view');
   const activeView = document.getElementById('live-room-active-view');
@@ -4180,7 +4206,7 @@ function renderLiveRoomsList(roomsData = null) {
               <span class="w-1.5 h-1.5 rounded-full ${isQuarantined ? 'bg-white' : 'bg-rose-500'}"></span> ${isQuarantined ? 'DONDURULDU' : 'CANLI'}
             </span>
             <div class="flex items-center gap-2 text-xs font-mono">
-              ${isTicketed ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-mineora-green border border-emerald-500/30 text-[10px] font-bold"><i class="fa-solid fa-ticket mr-1"></i>$${Number(room.ticketPrice).toFixed(2)}</span>` : ''}
+              ${isTicketed ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-mineora-green border border-emerald-500/30 text-[10px] font-bold">$${Number(room.ticketPrice).toFixed(2)}</span>` : ''}
               ${isLocked ? '<i class="fa-solid fa-lock text-amber-400" title="Şifreli"></i>' : ''}
               <span class="flex items-center gap-1 text-slate-400"><i class="fa-solid fa-eye text-slate-500"></i> ${viewerCount}</span>
             </div>
@@ -4210,7 +4236,7 @@ function renderLiveRoomsList(roomsData = null) {
   }
 }
 
-// ================= ODA OLUŞTURMA & KATILMA =================
+// ================= ODA OLUŞTURMA & GİRİŞ =================
 function openCreateRoomModal() {
   if (!CurrentUser) {
     showToast("⚠️ Canlı oda açmak için giriş yapmalısınız!", "warning");
@@ -4256,7 +4282,7 @@ async function handleCreateLiveRoomSubmit() {
   try {
     localMediaStream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } },
-      audio: { echoCancellation: true, noiseSuppression: true }
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     });
   } catch (err) {
     try {
@@ -4346,6 +4372,7 @@ function executeJoinRoom(room) {
 function enterRoomView(room, isHost) {
   activeLiveRoom = room;
   hasHandRaised = false;
+  isRoomLeaving = false;
 
   document.getElementById('live-lobby-view')?.classList.add('hidden');
   document.getElementById('live-room-active-view')?.classList.remove('hidden');
@@ -4365,17 +4392,27 @@ function enterRoomView(room, isHost) {
   const videoEl = document.getElementById('live-host-video');
   const placeholderEl = document.getElementById('live-video-placeholder');
 
+  // İzleyici için harici ses elementini hazırla (Tarayıcı sessize almasını önler)
+  let remoteAudioEl = document.getElementById('live-remote-host-audio');
+  if (!remoteAudioEl) {
+    remoteAudioEl = document.createElement('audio');
+    remoteAudioEl.id = 'live-remote-host-audio';
+    remoteAudioEl.autoplay = true;
+    remoteAudioEl.playsInline = true;
+    document.body.appendChild(remoteAudioEl);
+  }
+
   if (isHost && localMediaStream) {
     if (videoEl) {
       videoEl.srcObject = localMediaStream;
-      videoEl.muted = true;
+      videoEl.muted = true; // Kendi sesinin yankı yapmasını önler
       videoEl.play().catch(() => {});
     }
     if (placeholderEl) placeholderEl.classList.add('hidden');
   } else {
     if (videoEl) {
       videoEl.srcObject = null;
-      videoEl.muted = false;
+      videoEl.muted = true; // Video elementini sessiz başlat (Video donmasını engeller)
     }
     if (placeholderEl) placeholderEl.classList.remove('hidden');
   }
@@ -4390,16 +4427,19 @@ function enterRoomView(room, isHost) {
   }
 }
 
-// ANINDA ÇIKIŞ VE KUSURSUZ ODA İMHASI
+// ANINDA ÇIKIŞ VE KUSURSUZ ODA TEMİZLİĞİ
 function leaveCurrentRoom() {
+  if (isRoomLeaving) return;
+  isRoomLeaving = true;
+
   const roomToLeave = activeLiveRoom;
   activeLiveRoom = null;
 
-  // 1. Ekranı beklemeden derhal lobiye al
+  // 1. Ekranı derhal lobiye al
   document.getElementById('live-room-active-view')?.classList.add('hidden');
   document.getElementById('live-lobby-view')?.classList.remove('hidden');
 
-  // 2. Kamera ve mikrofon donanımını kapat
+  // 2. Kamera ve mikrofonu hemen kapat
   if (localMediaStream) {
     try {
       localMediaStream.getTracks().forEach(t => t.stop());
@@ -4407,12 +4447,16 @@ function leaveCurrentRoom() {
     localMediaStream = null;
   }
 
-  // 3. Ekrandaki ses ve video akışlarını durdur
+  // 3. Hoparlörleri durdur
   document.querySelectorAll('audio[id^="speaker-audio-"]').forEach(el => el.remove());
-  const videoEl = document.getElementById('live-host-video');
-  if (videoEl) {
-    videoEl.srcObject = null;
+  const rAudio = document.getElementById('live-remote-host-audio');
+  if (rAudio) {
+    rAudio.srcObject = null;
+    rAudio.remove();
   }
+
+  const videoEl = document.getElementById('live-host-video');
+  if (videoEl) videoEl.srcObject = null;
 
   // 4. WebRTC kanallarını kapat
   Object.keys(rtcPeerConnections).forEach(k => {
@@ -4446,12 +4490,12 @@ function leaveCurrentRoom() {
   }
 
   initLiveRoomsLobby();
-  showToast("Odadan çıkış yapıldı.", "info");
+  showToast("Yayından çıkıldı.", "info");
 }
 
-// ================= WEBRTC SİNYAL VE MEDYA AKTARIMI (PC & MOBİL %100 GEÇİŞ) =================
+// ================= WEBRTC SİNYAL & ÇİFT YÖNLÜ SES KÖPRÜSÜ =================
 
-// Yayıncı: Katılanları karşılar ve yayın akışını bağlar
+// Yayıncı: İzleyiciyi karşılar, kamera/mikrofonunu basar, izleyici sesini açar
 function listenToIncomingViewerSignalsOnce(roomId) {
   if (hostSignalingBound || !fbDb || !CurrentUser) return;
   hostSignalingBound = true;
@@ -4479,7 +4523,7 @@ function listenToIncomingViewerSignalsOnce(roomId) {
         }
       };
 
-      // Sahnedeki konuşmacının sesi geldiğinde çal
+      // İzleyicinin sesi geldiğinde yayıncının hoparlöründen çal
       pc.ontrack = (event) => {
         if (event.track && event.track.kind === 'audio') {
           let audioEl = document.getElementById(`speaker-audio-${viewerSafeKey}`);
@@ -4488,7 +4532,6 @@ function listenToIncomingViewerSignalsOnce(roomId) {
             audioEl.id = `speaker-audio-${viewerSafeKey}`;
             audioEl.autoplay = true;
             audioEl.playsInline = true;
-            audioEl.style.display = 'none';
             document.body.appendChild(audioEl);
           }
           audioEl.srcObject = new MediaStream([event.track]);
@@ -4507,21 +4550,19 @@ function listenToIncomingViewerSignalsOnce(roomId) {
         }
       });
 
-      // 1. Yayıncının kamerasını ve mikrofonunu PC'den akışa bağla (addTrack stream ID'yi eksiksiz iletir)
+      // Yayıncının mikrofonunu ve kamerasını ekle
       if (localMediaStream) {
         localMediaStream.getTracks().forEach(track => {
           pc.addTrack(track, localMediaStream);
         });
       }
 
-      // 2. İzleyicinin teklifini kaydet
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       for (const cand of candidateQueue) {
         await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
       }
       candidateQueue = [];
 
-      // 3. Cevap üret ve gönder
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -4533,7 +4574,7 @@ function listenToIncomingViewerSignalsOnce(roomId) {
   });
 }
 
-// İzleyici: Odaya bağlanır ve yayını alır
+// İzleyici: Odaya bağlanır, yayıncının ses ve görüntüsünü alır
 async function initViewerWebRTC(roomId) {
   if (!fbDb || !CurrentUser) return;
   const mySafeKey = sanitizeFbKey(CurrentUser.username);
@@ -4551,17 +4592,34 @@ async function initViewerWebRTC(roomId) {
   let candidateQueue = [];
   const videoEl = document.getElementById('live-host-video');
   const placeholderEl = document.getElementById('live-video-placeholder');
+  const remoteAudioEl = document.getElementById('live-remote-host-audio');
 
   pc.ontrack = (event) => {
-    if (event.streams && event.streams[0]) {
+    if (event.track.kind === 'video') {
       if (videoEl) {
-        videoEl.srcObject = event.streams[0];
-        videoEl.play().catch(() => {
-          videoEl.muted = true;
-          videoEl.play();
-        });
+        videoEl.srcObject = new MediaStream([event.track]);
+        videoEl.play().catch(() => {});
       }
       if (placeholderEl) placeholderEl.classList.add('hidden');
+    } else if (event.track.kind === 'audio') {
+      if (remoteAudioEl) {
+        remoteAudioEl.srcObject = new MediaStream([event.track]);
+        remoteAudioEl.muted = false;
+        remoteAudioEl.play().catch(() => {
+          // Tarayıcı autoplay engellerse ekrana büyük ses aç butonu koy
+          if (!document.getElementById('live-unmute-overlay')) {
+            const btn = document.createElement('button');
+            btn.id = 'live-unmute-overlay';
+            btn.className = 'absolute top-4 right-4 z-50 px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black shadow-2xl animate-bounce cursor-pointer flex items-center gap-1.5';
+            btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Sesi Aç';
+            btn.onclick = (e) => {
+              e.stopPropagation();
+              unlockAllAudios();
+            };
+            document.getElementById('live-room-active-view')?.appendChild(btn);
+          }
+        });
+      }
     }
   };
 
@@ -4571,9 +4629,13 @@ async function initViewerWebRTC(roomId) {
     }
   };
 
-  // Video alınır, ses ise söz hakkı ihtimaline karşı BAŞTAN iki yönlü (sendrecv) rezerve edilir
+  // KRİTİK: İzleyici bağlanırken ses kanalını dijital sessiz track ile başlatır.
+  // Bu sayede söz verildiğinde kanal hazır bekler ve ses milisaniyesinde yayıncıya ulaşır!
+  const dummyTrack = getSilentAudioTrack();
+  if (dummyTrack) {
+    pc.addTrack(dummyTrack, new MediaStream([dummyTrack]));
+  }
   pc.addTransceiver('video', { direction: 'recvonly' });
-  pc.addTransceiver('audio', { direction: 'sendrecv' });
 
   mySigRef.child('hostCandidates').on('child_added', async snap => {
     const cand = snap.val();
@@ -4606,10 +4668,11 @@ async function initViewerWebRTC(roomId) {
   });
 }
 
-// ================= SÖZ ALMA & SÖZÜ DİNLEME =================
+// ================= SÖZ ALMA & ANINDA SES AKTARIMI =================
 async function toggleRaiseHand() {
   if (!activeLiveRoom || !CurrentUser) return;
   hasHandRaised = !hasHandRaised;
+  unlockAllAudios();
 
   const btnText = document.getElementById('raise-hand-text');
   const btn = document.getElementById('btn-raise-hand');
@@ -4619,12 +4682,12 @@ async function toggleRaiseHand() {
     if (!localMediaStream) {
       try {
         localMediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true }
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
         localMediaStream.getAudioTracks().forEach(t => t.enabled = false);
       } catch (err) {
         hasHandRaised = false;
-        showToast("⚠️ Mikrofon izni verilmedi.", "warning");
+        showToast("⚠️ Mikrofon izni vermeden söz isteyemezsiniz.", "warning");
         return;
       }
     }
@@ -4654,7 +4717,7 @@ async function toggleRaiseHand() {
   }
 }
 
-// Söz verildiğinde mikrofon anında sendrecv kanalına bağlanır
+// Söz hakkı verildiğinde replaceTrack ile sesi anında karşıya basar
 async function checkSpeakerStatus(speakersObj) {
   if (!CurrentUser || !activeLiveRoom) return;
   const isHost = (activeLiveRoom.host || '').trim().toLowerCase() === (CurrentUser.username || '').trim().toLowerCase();
@@ -4668,10 +4731,10 @@ async function checkSpeakerStatus(speakersObj) {
     if (!localMediaStream) {
       try {
         localMediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true }
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
       } catch(e) {
-        showToast("⚠️ Mikrofon bulunamadı.", "warning");
+        showToast("⚠️ Mikrofon açılamadı.", "warning");
         return;
       }
     }
@@ -4679,17 +4742,19 @@ async function checkSpeakerStatus(speakersObj) {
     localMediaStream.getAudioTracks().forEach(t => t.enabled = true);
 
     if (pc && localMediaStream.getAudioTracks().length > 0) {
-      const audioSender = pc.getSenders().find(s => s.track === null || (s.track && s.track.kind === 'audio'));
+      const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
       if (audioSender) {
         await audioSender.replaceTrack(localMediaStream.getAudioTracks()[0]);
       }
     }
-    showToast("🎙️ Söz hakkı verildi! Mikrofonunuz canlı yayında!", "success");
+    showToast("🎙️ Söz verildi! Mikrofonunuz yayında!", "success");
   } else if (!isSpeakerNow && localMediaStream) {
+    // Söz alındığında sessiz köprüye geri dön
     if (pc) {
       const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (audioSender) {
-        await audioSender.replaceTrack(null);
+      const dummy = getSilentAudioTrack();
+      if (audioSender && dummy) {
+        await audioSender.replaceTrack(dummy);
       }
     }
     localMediaStream.getTracks().forEach(t => t.stop());
@@ -4737,6 +4802,7 @@ function renderSpeakerRequestsList(raisesObj) {
 
 function approveSpeakerRequest(uname) {
   if (!activeLiveRoom || !fbDb) return;
+  unlockAllAudios();
   const safe = sanitizeFbKey(uname);
   fbDb.ref(`liveRooms/${activeLiveRoom.id}/speakers/${safe}`).set(true);
   fbDb.ref(`liveRooms/${activeLiveRoom.id}/handRaises/${safe}`).remove();
@@ -4779,7 +4845,6 @@ function kickAndBanUserFromRoom(username) {
   showToast(`🚫 ${username} odadan atıldı ve engellendi!`, "warning");
 }
 
-// NET VE ANLAŞILIR SAHNE ARAYÜZÜ (Kafa karıştıran simgeler kaldırıldı)
 function renderStageSpeakers(speakersObj) {
   const container = document.getElementById('stage-speakers-list');
   const countEl = document.getElementById('stage-speakers-count');
@@ -4819,9 +4884,9 @@ function bindActiveRoomListeners(roomId, isHost) {
   activeRoomRefListener = fbDb.ref(`liveRooms/${roomId}`).on('value', snapshot => {
     const data = snapshot.val();
     
-    // Yayıncı odayı kapattığında izleyicilerin ekranını anında kapatır
+    // Yayıncı kapattığında izleyicinin ekranını kapatıp lobiye döndür
     if (!data) {
-      if (activeLiveRoom) {
+      if (activeLiveRoom && !isHost) {
         showToast("📢 Yayıncı canlı yayını sonlandırdı.", "info");
         leaveCurrentRoom();
       }
