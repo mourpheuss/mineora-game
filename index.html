@@ -761,6 +761,9 @@
                     <button type="button" id="btn-toggle-mic" onclick="toggleHostMic()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
                       <i class="fa-solid fa-microphone"></i> Mikrofon
                     </button>
+                    <button type="button" id="btn-toggle-screen" onclick="toggleScreenShare()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+  <i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş
+</button>
                   </div>
 
                   <div id="viewer-controls" class="flex items-center gap-2">
@@ -5035,6 +5038,99 @@ function toggleHostMic() {
       : "px-3 py-2 rounded-xl bg-rose-600/30 text-rose-400 border border-rose-500/40 font-bold flex items-center gap-1.5 cursor-pointer";
     btn.innerHTML = `<i class="fa-solid ${isMicActive ? 'fa-microphone' : 'fa-microphone-slash'}"></i> Mikrofon`;
   }
+}
+    // ================= EKRAN PAYLAŞIMI (KAMERA & EKRAN ARASI KESİNTİSİZ GEÇİŞ) =================
+let isScreenSharing = false;
+let screenStream = null;
+
+async function toggleScreenShare() {
+  if (!activeLiveRoom || !CurrentUser) return;
+  const isHost = (activeLiveRoom.host || '').trim().toLowerCase() === (CurrentUser.username || '').trim().toLowerCase();
+  if (!isHost) return;
+
+  const btn = document.getElementById('btn-toggle-screen');
+  const videoEl = document.getElementById('live-host-video');
+
+  if (!isScreenSharing) {
+    try {
+      // 1. Ekran / Sekme / Pencere paylaşım izni iste
+      screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: "always" },
+        audio: true // Sunumdaki sistem/video sesini de aktarır
+      });
+
+      const screenTrack = screenStream.getVideoTracks()[0];
+
+      // 2. Yayındaki tüm bağlı izleyicilere kamerayı çıkarıp ekranı bas
+      Object.keys(rtcPeerConnections).forEach(k => {
+        const pc = rtcPeerConnections[k];
+        if (pc) {
+          const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (videoSender) {
+            videoSender.replaceTrack(screenTrack);
+          }
+        }
+      });
+
+      // 3. Yayıncının kendi ekranındaki önizlemeyi güncelle
+      if (videoEl) {
+        videoEl.srcObject = screenStream;
+      }
+
+      isScreenSharing = true;
+      if (btn) {
+        btn.className = "px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-lg animate-pulse";
+        btn.innerHTML = `<i class="fa-solid fa-stop"></i> Ekranı Durdur`;
+      }
+      showToast("🖥️ Ekran paylaşımı başladı!", "success");
+
+      // Kullanıcı tarayıcının kendi üst çubuğundaki "Paylaşımı Durdur"a basarsa yakala
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+
+    } catch (err) {
+      console.warn("Ekran paylaşımı iptal edildi veya desteklenmiyor:", err);
+    }
+  } else {
+    stopScreenShare();
+  }
+}
+
+function stopScreenShare() {
+  if (!isScreenSharing) return;
+
+  // 1. Ekran akışını durdur
+  if (screenStream) {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+  }
+
+  // 2. İzleyicilere tekrar yayıncının kamerasını geri gönder
+  const camTrack = localMediaStream ? localMediaStream.getVideoTracks()[0] : null;
+  Object.keys(rtcPeerConnections).forEach(k => {
+    const pc = rtcPeerConnections[k];
+    if (pc && camTrack) {
+      const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (videoSender) {
+        videoSender.replaceTrack(camTrack);
+      }
+    }
+  });
+
+  // 3. Yayıncı ekranını tekrar kameraya çevir
+  const videoEl = document.getElementById('live-host-video');
+  if (videoEl && localMediaStream) {
+    videoEl.srcObject = localMediaStream;
+  }
+
+  isScreenSharing = false;
+  const btn = document.getElementById('btn-toggle-screen');
+  if (btn) {
+    btn.className = "px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer";
+    btn.innerHTML = `<i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş`;
+  }
+  showToast("📷 Kameraya geri dönüldü.", "info");
 }
 // ================= 8. YÖNETİCİ VE PROTOKOL MASASI (admin.js) =================
 const DEFAULT_ADMIN_PROTOCOL = {
