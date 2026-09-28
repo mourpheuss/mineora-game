@@ -3951,7 +3951,20 @@ window.updateAdminFinancialVaultMetrics = function() {
   const elTotalOra = document.getElementById('admin-total-user-ora');
   const elDailyIn = document.getElementById('admin-daily-inflow-usdt');
   const elDailyOut = document.getElementById('admin-daily-outflow-usdt');
+// Şüpheli hesap kontrolü ve bildirim alarmı
+      renderAdminUserTable();
+      let suspiciousCount = 0;
+      Object.keys(usersObj).forEach(k => {
+        if (usersObj[k] && !usersObj[k].isRootAdmin && auditUserFinancials(usersObj[k]).isSuspicious) {
+          suspiciousCount++;
+        }
+      });
 
+      if (suspiciousCount > 0) {
+        showToast(`🚨 DİKKAT: ${suspiciousCount} adet hesapta kayıtsız bakiye şişmesi tespit edildi!`, "warning");
+      } else {
+        showToast("✅ Kasa Taraması Tamamlandı: Tüm hesaplar temiz ve dengede.", "success");
+      }
   if (!elTotalUsdt || !elTotalOra || !elDailyIn || !elDailyOut) return;
 
   const calculateFromUsers = (usersObj) => {
@@ -7309,6 +7322,59 @@ function adminNukeLiveRoom(roomId, banUser) {
 
 // ================= KULLANICI RÖNTGENİ & YÖNETİMİ =================
 
+function auditUserFinancials(u) {
+  if (!u || u.isRootAdmin) return { isSuspicious: false, reasons: [] };
+
+  const reasons = [];
+  const currentOra = Number(parseFloat(u.ora || 0).toFixed(2));
+  const currentUsdt = Number(parseFloat(u.usdt || 0).toFixed(2));
+
+  // 1. Log Geçmişi vs Cüzdan Matematik Denetimi
+  let loggedOraIn = 0;
+  let loggedOraOut = 0;
+  let loggedUsdtIn = 0;
+  let loggedUsdtOut = 0;
+
+  if (Array.isArray(u.logs)) {
+    u.logs.forEach(l => {
+      const txt = (l.amountText || "").toString();
+      const numMatch = txt.match(/[\d\.]+/);
+      const val = numMatch ? parseFloat(numMatch[0]) : 0;
+
+      if (txt.includes('ORA')) {
+        if (txt.startsWith('+')) loggedOraIn += val;
+        if (txt.startsWith('-')) loggedOraOut += val;
+      } else if (txt.includes('USDT') || txt.includes('$')) {
+        if (txt.startsWith('+')) loggedUsdtIn += val;
+        if (txt.startsWith('-')) loggedUsdtOut += val;
+      }
+    });
+  }
+
+  const netExpectedOra = Number((loggedOraIn - loggedOraOut).toFixed(2));
+  const netExpectedUsdt = Number((loggedUsdtIn - loggedUsdtOut).toFixed(2));
+
+  // Logu olmayan +50 ORA'dan fazla kaçak varsa alarm ver
+  if (currentOra > 50 && (currentOra - netExpectedOra) > 50) {
+    reasons.push(`+${(currentOra - netExpectedOra).toFixed(0)} ORA Kayıtsız Kaçak`);
+  }
+
+  // Depozitsiz / İşlemsiz USDT artışı denetimi
+  if (currentUsdt > 20 && (currentUsdt - netExpectedUsdt) > 20) {
+    reasons.push(`+$${(currentUsdt - netExpectedUsdt).toFixed(2)} USDT Kayıtsız Kaçak`);
+  }
+
+  // Aday rolünde aşırı zenginlik denetimi
+  if ((u.role === 'Aday' || u.role === 'Candidate') && (currentOra > 150 || currentUsdt > 50)) {
+    reasons.push("Aday Hesaba Göre Anormal Yüksek Kasa");
+  }
+
+  return {
+    isSuspicious: reasons.length > 0,
+    reasons: reasons
+  };
+}
+
 function renderAdminUserTable() {
   const tbody = document.getElementById('admin-user-table-body');
   if (!tbody) return;
@@ -7322,7 +7388,6 @@ function renderAdminUserTable() {
     if (k && k.startsWith('mineora_user_')) {
       try {
         const u = JSON.parse(localStorage.getItem(k));
-        // Silinen kullanıcıları tabloya ASLA alma
         if (u && u.username && !deletedList.includes(u.username.toLowerCase())) {
           allUsers.push(u);
         }
@@ -7331,22 +7396,33 @@ function renderAdminUserTable() {
   }
 
   allUsers.forEach(u => {
+    const audit = auditUserFinancials(u);
     const tr = document.createElement('tr');
-    tr.className = "hover:bg-mineora-bg/60 transition notranslate";
+    tr.className = audit.isSuspicious 
+      ? "bg-rose-950/30 border-2 border-rose-500/80 transition notranslate animate-pulse" 
+      : "hover:bg-mineora-bg/60 transition notranslate";
     tr.setAttribute('translate', 'no');
+
     tr.innerHTML = `
-      <td class="py-3 px-4 font-bold text-white">${u.username} ${u.isRootAdmin ? '<span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : ''}</td>
+      <td class="py-3 px-4 font-bold text-white">
+        ${u.username} ${u.isRootAdmin ? '<span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : ''}
+        ${audit.isSuspicious ? `
+          <div class="mt-1 px-2 py-0.5 rounded bg-rose-600/30 border border-rose-500 text-rose-300 text-[9px] font-mono font-bold">
+            ⚠️ ŞÜPHELİ: ${audit.reasons.join(' • ')}
+          </div>
+        ` : ''}
+      </td>
       <td class="py-3 px-4 font-mono text-slate-400">${u.pass || '••••••'}</td>
       <td class="py-3 px-4 font-bold text-slate-300">${u.role || 'Candidate'}</td>
-      <td class="py-3 px-4 font-mono text-mineora-green font-bold">$${Number(u.usdt || 0).toFixed(2)}</td>
-      <td class="py-3 px-4 font-mono text-mineora-gold font-bold">${Number(u.ora || 0).toFixed(2)} ORA</td>
+      <td class="py-3 px-4 font-mono ${audit.isSuspicious ? 'text-rose-400 font-black' : 'text-mineora-green'} font-bold">$${Number(u.usdt || 0).toFixed(2)}</td>
+      <td class="py-3 px-4 font-mono ${audit.isSuspicious ? 'text-rose-400 font-black' : 'text-mineora-gold'} font-bold">${Number(u.ora || 0).toFixed(2)} ORA</td>
       <td class="py-3 px-4">
         ${u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>'}
       </td>
       <td class="py-3 px-4 text-right space-x-2 notranslate whitespace-nowrap" translate="no">
         ${!u.isRootAdmin ? `
-          <button type="button" onclick="toggleAdminVaultLock('${u.username}')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[11px] font-bold cursor-pointer">
-            ${u.isVaultLocked ? 'Kilidi Aç' : 'Kilitle'}
+          <button type="button" onclick="toggleAdminVaultLock('${u.username}')" class="px-2.5 py-1 rounded ${audit.isSuspicious ? 'bg-rose-600 hover:bg-rose-500 text-white font-black' : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-bold'} text-[11px] cursor-pointer">
+            ${u.isVaultLocked ? 'Kilidi Aç' : (audit.isSuspicious ? 'Acil Kilitle!' : 'Kilitle')}
           </button>
         ` : `
           <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Korumalı</span>
