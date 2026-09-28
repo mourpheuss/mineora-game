@@ -212,6 +212,10 @@
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div class="flex items-center justify-between w-full sm:w-auto gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
+<!-- MOBİL HAMBURGER MENÜ BUTONU (Sadece Telefonda Görünür) -->
+         <button type="button" onclick="toggleMobileMenu()" class="sm:hidden w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-mineora-gold text-xs flex items-center justify-center cursor-pointer shrink-0" title="Menü">
+           <i class="fa-solid fa-bars text-sm"></i>
+         </button>
             <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-mineora-gold flex items-center justify-center text-black font-black shadow-md shrink-0">
               <i class="fa-solid fa-mountain text-xs"></i>
             </div>
@@ -297,8 +301,19 @@
 
     <!-- ANA GÖVDE: SOL WEB3 SİDEBAR + İÇERİK SAHNESİ -->
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
-      <!-- SOL DİKEY SİDEBAR -->
-      <aside class="w-16 sm:w-60 bg-mineora-card/60 backdrop-blur-md border-r border-mineora-border flex flex-col justify-between p-2 sm:p-4 shrink-0 overflow-y-auto">
+<!-- MOBİL ARKA PLAN KARARTMASI (Tıklayınca Kapanır) -->
+   <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden sm:hidden transition-opacity"></div>
+
+   <!-- SOL DİKEY SİDEBAR (Mobilde Gizli Çekmece, Masaüstünde Sabit) -->
+   <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full sm:translate-x-0 sm:static sm:w-60 sm:bg-mineora-card/60 sm:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl sm:shadow-none">
+
+     <!-- Mobilde Çekmece Başlığı ve Kapat Butonu -->
+     <div class="flex sm:hidden items-center justify-between pb-3 mb-2 border-b border-mineora-border">
+       <span class="text-xs font-black text-mineora-gold uppercase tracking-wider font-cinzel">Mineora Menü</span>
+       <button type="button" onclick="toggleMobileMenu(false)" class="w-7 h-7 rounded-lg bg-mineora-input text-slate-400 hover:text-white flex items-center justify-center">
+         <i class="fa-solid fa-xmark text-sm"></i>
+       </button>
+     </div>     
         <div class="space-y-4">
           <!-- 1. Kategori: Madencilik Operasyonları -->
           <div class="space-y-1">
@@ -3566,14 +3581,33 @@ function updateHUD() {
   updateNotificationBadge();
   if (typeof renderAdminHUD === 'function') renderAdminHUD();
 }
+function toggleMobileMenu(forceState) {
+  const sidebar = document.getElementById('main-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!sidebar) return;
+  const isClosed = sidebar.classList.contains('-translate-x-full');
+  const shouldOpen = (typeof forceState === 'boolean') ? forceState : isClosed;
 
+  if (shouldOpen) {
+    sidebar.classList.remove('-translate-x-full');
+    sidebar.classList.add('translate-x-0');
+    if (backdrop) backdrop.classList.remove('hidden');
+  } else {
+    sidebar.classList.add('-translate-x-full');
+    sidebar.classList.remove('translate-x-0');
+    if (backdrop) backdrop.classList.add('hidden');
+  }
+}
+window.toggleMobileMenu = toggleMobileMenu;
 function switchTab(tTab) {
+  if (typeof toggleMobileMenu === 'function') toggleMobileMenu(false);
+
   const isBoss = CurrentUser && !!CurrentUser.isRootAdmin;
   if (tTab === 'boss' && !isBoss) { 
     showToast("⛔ Access restricted!", "warning"); 
     tTab = 'career'; 
   }
-
+  
   const allTabs = ['boss', 'owner', 'home', 'map', 'cave', 'crash', 'colony', 'live', 'p2p', 'stake', 'career', 'settings'];
   allTabs.forEach(tab => {
     const secEl = document.getElementById(`sec-${tab}`);
