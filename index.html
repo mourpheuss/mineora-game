@@ -588,16 +588,130 @@
         <!-- 1) REFERANS VE TAKIM MASASI -->
         <section id="sec-owner" class="hidden space-y-6"></section>
 
-        <!-- 2) GENEL BAKIŞ -->
-        <section id="sec-home" class="hidden space-y-6 max-w-4xl mx-auto">
-          <div class="p-8 rounded-3xl bg-mineora-card border border-mineora-gold/40 text-center space-y-4 shadow-2xl">
-            <h2 class="text-2xl font-black text-white" data-i18n="home_title">Welcome to the Mining Ecosystem!</h2>
-            <p class="text-sm text-slate-300 max-w-xl mx-auto leading-relaxed" data-i18n="home_desc">
-              Acquire ORA assets from the P2P EXCHANGE to enter mining tunnels, and select your career path from the Select Career tab.
+        <!-- 2) GENEL BAKIŞ & EKOSİSTEM REHBERİ -->
+        <section id="sec-home" class="hidden space-y-6 max-w-5xl mx-auto">
+          <!-- Üst Karşılama Kartı -->
+          <div class="p-6 sm:p-8 rounded-3xl bg-mineora-card border border-mineora-gold/40 text-center space-y-3 shadow-2xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-mineora-gold/15 border border-mineora-gold/30 text-mineora-gold text-[11px] font-black uppercase tracking-wider">
+              <i class="fa-solid fa-compass"></i> Mineora Protokol Haritası
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-white">Hangi Bölüm Ne İşe Yarar?</h2>
+            <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              Ekosistemde kazanç sağlayan <strong class="text-emerald-400">zorunlu üretim motoru</strong> ile keyifli vakit geçirmeniz için tasarlanan <strong class="text-cyan-400">eğlence modüllerini</strong> buradan inceleyebilirsiniz.
             </p>
           </div>
-        </section>
 
+          <!-- Modül Kartları Izgarası -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- 1. MADEN KAZISI: ZORUNLU KAZANÇ MOTORU -->
+            <div class="p-5 rounded-3xl bg-mineora-card border-2 border-emerald-500/50 shadow-xl space-y-3 relative overflow-hidden">
+              <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg font-black border border-emerald-500/30">
+                    <i class="fa-solid fa-person-digging"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white">Maden Sahnesi & Kazı</h3>
+                    <span class="text-[10px] text-slate-400">Günlük Emtia Üretim Alanı</span>
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[10px] font-black uppercase">
+                  Zorunlu Gelir Motoru
+                </span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Platformun kalbidir. 120 günlük kariyer lisansınızdan günlük kazancınızı alabilmek için <strong>her gün bu sahaya girip kazma vurarak vagonları doldurmanız gerekir.</strong> Vagonlar yüzeye sevk edildiğinde ORA kazanırsınız.
+              </p>
+              <div class="p-2.5 rounded-xl bg-mineora-bg border border-emerald-500/20 text-[11px] text-emerald-200/90 font-mono flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                <span>Kazandığınız ORA'lar doğrudan P2P Borsa'da USDT'ye çevrilir.</span>
+              </div>
+            </div>
+
+            <!-- 2. P2P BORSA & STAKE: NAKİT & TAHVİL MERKEZİ -->
+            <div class="p-5 rounded-3xl bg-mineora-card border border-amber-500/40 shadow-xl space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-lg font-black border border-amber-500/30">
+                    <i class="fa-solid fa-handshake"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white">P2P Borsa & ORA Bank</h3>
+                    <span class="text-[10px] text-slate-400">Finans & Likidite Merkezi</span>
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono text-[10px] font-black uppercase">
+                  Nakit Çıkış Alanı
+                </span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Madenden çıkardığınız ORA'ları diğer madencilere <strong>1 ORA = 0.10 USDT</strong> sabit fiyat dengesiyle satarak cüzdanınıza anında nakit USDT çekebilirsiniz. Dileyenler ORA'larını vadeli banka kasalarında kilitleyip getiri elde edebilir.
+              </p>
+              <div class="p-2.5 rounded-xl bg-mineora-bg border border-amber-500/20 text-[11px] text-amber-200/90 font-mono flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-amber-400"></i>
+                <span>Otomatik akıllı emanet (escrow) sistemiyle işlem güvencesi.</span>
+              </div>
+            </div>
+
+            <!-- 3. MADEN ASANSÖRÜ (CRASH): EĞLENCE & ŞANS -->
+            <div class="p-5 rounded-3xl bg-mineora-card border border-cyan-500/40 shadow-xl space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg font-black border border-cyan-500/30">
+                    <i class="fa-solid fa-elevator"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white">Maden Asansörü (Crash)</h3>
+                    <span class="text-[10px] text-slate-400">Derin Şaft Tahliyesi</span>
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono text-[10px] font-black uppercase">
+                  Tamamen Eğlence
+                </span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Maden kazarken nadiren hediye olarak çıkan <strong>Alp Kristalleri</strong> bilet olarak kullanılır. <strong>Cüzdanınızdaki ORA'lar asla riske girmez (Sıfır Kayıp Riski).</strong> Halat kopmadan inip tahliye olursanız ekstra ORA çarpanı kazanırsınız. Zorunlu değildir.
+              </p>
+              <div class="p-2.5 rounded-xl bg-mineora-bg border border-cyan-500/20 text-[11px] text-cyan-200/90 font-mono flex items-center gap-2">
+                <i class="fa-solid fa-ticket text-cyan-400"></i>
+                <span>Halat kopsa dahi ORA cüzdanınız eksilmez, yalnızca bilet kristal gider.</span>
+              </div>
+            </div>
+
+            <!-- 4. ALP KOLONİSİ: ŞEHİR & PRESTİJ -->
+            <div class="p-5 rounded-3xl bg-mineora-card border border-rose-500/40 shadow-xl space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg font-black border border-rose-500/30">
+                    <i class="fa-solid fa-mountain-city"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white">Alp Kolonisi (SimCity)</h3>
+                    <span class="text-[10px] text-slate-400">İzometrik Vadi Simülasyonu</span>
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-[10px] font-black uppercase">
+                  Eğlence & Prestij
+                </span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Dağ yamacında madencilere ev, fırın, karakol ve ticaret hanı kurduğunuz bir strateji dünyasıdır. <strong>Sistemden dışarı ORA dağıtmaz;</strong> kazandığınız ORA'ları yakarak arazinizi genişletmenizi, anıtınızı büyütmenizi ve Holding sıralamasında prestij elde etmenizi sağlar.
+              </p>
+              <div class="p-2.5 rounded-xl bg-mineora-bg border border-rose-500/20 text-[11px] text-rose-200/90 font-mono flex items-center gap-2">
+                <i class="fa-solid fa-fire text-amber-500"></i>
+                <span>Ekonomiyi enflasyona sokmaz; ekosistemin yakım (burn) motorudur.</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Alt Uyarı Notu -->
+          <div class="p-4 rounded-2xl bg-mineora-card/60 border border-mineora-border text-center text-xs text-slate-400">
+            💡 <strong>Özetle:</strong> Nakit kazanç ve USDT çekimi için her gün <strong>Maden Sahnesi</strong>'ni ziyaret etmeniz yeterlidir. Diğer tüm oyunlar madencilik serüveninizi zenginleştirmek için tasarlanmış ek modüllerdir.
+          </div>
+        </section>
         <!-- 3) SAHA HARİTASI -->
         <section id="sec-map" class="hidden space-y-4">
           <div class="p-4 rounded-2xl bg-mineora-card border border-mineora-border flex justify-between items-center">
