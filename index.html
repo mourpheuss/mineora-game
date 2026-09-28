@@ -1882,6 +1882,7 @@ function distributeFourDepthCommission(buyerUser, costOra) {
   if (!buyerUser || !buyerUser.referral_chain || buyerUser.referral_chain.length === 0) return;
   const chain = buyerUser.referral_chain;
   const rates = [0.10, 0.07, 0.05, 0.03];
+  const CYCLE_120_DAYS_MS = 120 * 24 * 60 * 60 * 1000;
 
   for (let i = 0; i < rates.length; i++) {
     const sponsorIndex = chain.length - 1 - i;
@@ -1893,14 +1894,23 @@ function distributeFourDepthCommission(buyerUser, costOra) {
 
     const rate = rates[i];
     const commissionOra = Number((costOra * rate).toFixed(2));
-    const tierName = `${i + 1}. Tier Commission (%${(rate * 100).toFixed(0)})`;
+    const tierName = `${i + 1}. Kademe Referans Geliri (%${(rate * 100).toFixed(0)})`;
+
+    // Rol almayan Aday veya süresi başlamamış üyenin 120 günlük döngüsü ilk komisyonda başlar
+    if (!sponsorObj.cycleExpiresAt || sponsorObj.cycleExpiresAt < Date.now()) {
+      sponsorObj.cycleExpiresAt = Date.now() + CYCLE_120_DAYS_MS;
+      sponsorObj.cycleStartedAt = Date.now();
+      addUserNotificationLog(sponsorObj, "120 Günlük Döngü Başladı", "İlk referans komisyonunuzla birlikte 120 günlük kazanç süreniz aktif edildi.", "", "info");
+    }
 
     sponsorObj.ora = Number(((sponsorObj.ora || 0) + commissionOra).toFixed(2));
-    addUserNotificationLog(sponsorObj, tierName, `${buyerUser.username} upgraded role.`, `+${commissionOra.toFixed(2)} ORA`, "commission");
+    addUserNotificationLog(sponsorObj, tierName, `${buyerUser.username} lisans aldı.`, `+${commissionOra.toFixed(2)} ORA`, "commission");
     saveStoredUser(sponsorObj);
 
     if (CurrentUser && CurrentUser.username.toLowerCase() === sponsorObj.username.toLowerCase()) {
       CurrentUser.ora = sponsorObj.ora;
+      CurrentUser.cycleExpiresAt = sponsorObj.cycleExpiresAt;
+      CurrentUser.cycleStartedAt = sponsorObj.cycleStartedAt;
       CurrentUser.logs = sponsorObj.logs;
       updateHUD();
     }
@@ -2420,12 +2430,19 @@ function upgradeRole(role, costUsdt) {
   const currentOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
 
   if (currentOra < costOra) {
-    showToast(`⚠️ Insufficient ORA! '${role}' role requires ${costUsdt} USDT equivalent (${costOra} ORA).`, "warning");
+    showToast(`⚠️ Yetersiz ORA! '${role}' rolü için ${costUsdt} USDT değerinde (${costOra} ORA) gereklidir.`, "warning");
     return;
   }
+
+  const CYCLE_120_DAYS_MS = 120 * 24 * 60 * 60 * 1000;
   CurrentUser.ora = Number((currentOra - costOra).toFixed(2));
   CurrentUser.role = role;
-  addUserNotificationLog(CurrentUser, "Role Upgrade", `Upgraded to ${role}.`, `-${costOra.toFixed(2)} ORA`, "upgrade");
+  
+  // 120 Günlük Lisans Sayacını Başlat
+  CurrentUser.cycleExpiresAt = Date.now() + CYCLE_120_DAYS_MS;
+  CurrentUser.cycleStartedAt = Date.now();
+
+  addUserNotificationLog(CurrentUser, "Rol Yükseltildi", `${role} lisansı alındı. 120 günlük üretim döngünüz başladı.`, `-${costOra.toFixed(2)} ORA`, "upgrade");
 
   if (role === "Holding Owner" || role === "Şirket Sahibi") {
     if (!CurrentUser.companyRefCode) CurrentUser.companyRefCode = `HOLD-${CurrentUser.username.toUpperCase()}-999`;
@@ -2437,7 +2454,7 @@ function upgradeRole(role, costUsdt) {
   saveUserWorld();
   updateHUD();
   configureUserTabs();
-  showToast(`🎉 Role successfully updated to '${role}'!`, "success");
+  showToast(`🎉 '${role}' lisansı aktif edildi! 120 günlük üretim döngünüz başladı.`, "success");
 }
 
 function handlePasswordChange() {
