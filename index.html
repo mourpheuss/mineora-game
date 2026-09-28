@@ -4547,24 +4547,91 @@ function getRoleBadgeStyle(role) {
   }
 }
 
+// 3 Saatte Bir Otomatik Başlık Değiştiren Bot Canlı Odalar Motoru
+function getRotatingMockLiveRooms() {
+  const block3h = Math.floor(Date.now() / (3 * 60 * 60 * 1000));
+  const minuteFluctuation = Math.floor(Date.now() / (4 * 60 * 1000));
+
+  const titlePoolA = [
+    "VIP Maden Sahipleri: 120 Günlük Döngü Analizi",
+    "Alp 4. Vardiya Holding Koordinasyon Brifingi",
+    "Avrupa Madenciler Konseyi - Haftalık Kapanış",
+    "Derin Damar Lojistik & Sevk Değerlendirmesi",
+    "Goldpeak Tepe Damarı Genişletme Oturumu",
+    "Cenevre Madencilik Ağı - Özel İstişare Masası"
+  ];
+
+  const titlePoolB = [
+    "Holding Liderleri Gizli Meclisi (Yalnızca Davetliler)",
+    "Kapalı Devre Filo Yönetimi & Ekip Stratejisi",
+    "İsviçre Maden Konsorsiyumu Olağan Toplantısı",
+    "Alp Kristalleri & Asansör Sevk Güvenliği",
+    "Özel Fon & Holding Ortakları Oturumu",
+    "2. Bölge Magmatik Hat Sevk İncelemesi"
+  ];
+
+  const titlePoolC = [
+    "Maden Sahibi Özel Eğitim & Kasa Yönetimi",
+    "Yatırımcı Masası: Küresel Emtia Standartları",
+    "Alpha Mining Syndicate - Private Strategy",
+    "Bölge Müfettişleri & Saha Operasyon Masası",
+    "Derin Şaft Koordinasyon & Kurtarma Planı",
+    "Holding İcra Kurulu: Gece Vardiyası Raporu"
+  ];
+
+  const title1 = titlePoolA[block3h % titlePoolA.length];
+  const title2 = titlePoolB[(block3h + 2) % titlePoolB.length];
+  const title3 = titlePoolC[(block3h + 4) % titlePoolC.length];
+
+  const viewers1 = 22 + ((block3h * 5 + minuteFluctuation * 2) % 17);
+  const viewers2 = 31 + ((block3h * 7 + minuteFluctuation * 3) % 21);
+  const viewers3 = 14 + ((block3h * 3 + minuteFluctuation) % 12);
+
+  return {
+    "mock_room_vip_1": {
+      id: "mock_room_vip_1",
+      title: title1,
+      host: "Vanguard_Holding",
+      hostRole: "Holding Owner",
+      ticketPrice: 5.00,
+      hasPin: true,
+      isMock: true,
+      viewers: Object.fromEntries(Array.from({length: viewers1}, (_, i) => [`bot_v1_${i}`, true]))
+    },
+    "mock_room_vip_2": {
+      id: "mock_room_vip_2",
+      title: title2,
+      host: "Alpine_Baron",
+      hostRole: "Mine Owner",
+      ticketPrice: 0,
+      hasPin: true,
+      isMock: true,
+      viewers: Object.fromEntries(Array.from({length: viewers2}, (_, i) => [`bot_v2_${i}`, true]))
+    },
+    "mock_room_vip_3": {
+      id: "mock_room_vip_3",
+      title: title3,
+      host: "Helvetia_Apex",
+      hostRole: "Holding Owner",
+      ticketPrice: 10.00,
+      hasPin: true,
+      isMock: true,
+      viewers: Object.fromEntries(Array.from({length: viewers3}, (_, i) => [`bot_v3_${i}`, true]))
+    }
+  };
+}
+
 function renderLiveRoomsList(roomsData = null) {
   const grid = document.getElementById('live-rooms-grid');
   if (!grid) return;
 
-  const renderRooms = (roomsObj) => {
+  const renderRooms = (realRoomsObj) => {
     grid.innerHTML = "";
-    if (!roomsObj || Object.keys(roomsObj).length === 0) {
-      grid.innerHTML = `
-        <div class="col-span-full p-8 text-center bg-mineora-card/50 rounded-2xl border border-mineora-border text-xs text-slate-500 notranslate" translate="no">
-          <i class="fa-solid fa-tower-broadcast text-3xl mb-2 text-slate-600 block"></i>
-          Şu anda aktif canlı yayın odası bulunmuyor. Kendi ekibiniz için bir oda kurun!
-        </div>
-      `;
-      return;
-    }
+    const mockRooms = getRotatingMockLiveRooms();
+    const allRooms = Object.assign({}, mockRooms, realRoomsObj || {});
 
-    Object.keys(roomsObj).forEach(roomId => {
-      const room = roomsObj[roomId];
+    Object.keys(allRooms).forEach(roomId => {
+      const room = allRooms[roomId];
       if (!room || !room.host) return;
 
       const isLocked = !!room.hasPin;
@@ -4584,7 +4651,7 @@ function renderLiveRoomsList(roomsData = null) {
             </span>
             <div class="flex items-center gap-2 text-xs font-mono">
               ${isTicketed ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-mineora-green border border-emerald-500/30 text-[10px] font-bold"><i class="fa-solid fa-ticket mr-1"></i>$${Number(room.ticketPrice).toFixed(2)}</span>` : '<span class="text-slate-500 text-[10px]">Ücretsiz</span>'}
-              ${isLocked ? '<i class="fa-solid fa-lock text-amber-400" title="Şifreli"></i>' : ''}
+              ${isLocked ? '<i class="fa-solid fa-lock text-amber-400" title="Kilitli / VIP"></i>' : ''}
               <span class="flex items-center gap-1 text-slate-400"><i class="fa-solid fa-eye text-slate-500"></i> ${viewerCount}</span>
             </div>
           </div>
@@ -4600,7 +4667,7 @@ function renderLiveRoomsList(roomsData = null) {
         </div>
 
         <button type="button" onclick="attemptJoinRoom('${roomId}')" class="w-full py-2.5 rounded-xl ${isTicketed ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white' : 'bg-mineora-input hover:bg-rose-600 hover:text-white text-slate-200'} font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow">
-          <i class="fa-solid fa-right-to-bracket"></i> ${isTicketed ? `Bilet Al ($${Number(room.ticketPrice).toFixed(2)})` : 'Odaya Katıl'}
+          <i class="fa-solid fa-lock text-amber-400"></i> ${isTicketed ? `Biletli VIP Giriş ($${Number(room.ticketPrice).toFixed(2)})` : 'Kilitli Odaya Katıl'}
         </button>
       `;
       grid.appendChild(card);
@@ -4610,7 +4677,9 @@ function renderLiveRoomsList(roomsData = null) {
   if (roomsData !== null && typeof roomsData === 'object') {
     renderRooms(roomsData);
   } else if (typeof fbDb !== 'undefined' && fbDb) {
-    fbDb.ref('liveRooms').once('value').then(snap => renderRooms(snap.val())).catch(() => {});
+    fbDb.ref('liveRooms').once('value').then(snap => renderRooms(snap.val())).catch(() => renderRooms({}));
+  } else {
+    renderRooms({});
   }
 }
 
