@@ -4065,7 +4065,7 @@ function renderCrashCanvasLoop() {
 
   crashFrame = requestAnimationFrame(renderCrashCanvasLoop);
 }
-// ================= 10. CANLI YAYIN, ÇİFT YÖNLÜ SES & ŞEHİRLERARASI WEBRTC MOTORU (live.js) =================
+// ================= 10. CANLI YAYIN, SES & YÖNETİM MOTORU (live.js) =================
 let activeLiveRoom = null;
 let localMediaStream = null;
 let rtcPeerConnections = {}; // targetKey -> RTCPeerConnection
@@ -4074,7 +4074,6 @@ let isMicActive = true;
 let hasHandRaised = false;
 let isGhostAdminMode = false;
 let pendingPinRoomId = null;
-let pendingTicketRoom = null;
 
 // Firebase Dinleyicileri
 let roomsRefListener = null;
@@ -4082,11 +4081,12 @@ let activeRoomRefListener = null;
 let chatRefListener = null;
 let hostSignalingBound = false;
 
-// STUN + AKTİF TURN SUNUCULARI (CGNAT & Farklı Şehirler Arası Kesin Geçiş)
+// STUN + TURN (Farklı Şehirler, Mobil 4G ve Ev İnterneti Geçişi)
 const rtcConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
     { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
     { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
     { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
@@ -4098,6 +4098,16 @@ function sanitizeFbKey(key) {
   if (!key) return "anon";
   return key.toLowerCase().replace(/[\.\#\$\/\[\]\s]/g, '_');
 }
+
+// Mobil ve Masaüstü Ses Kilidini Açıcı (Autoplay Fix)
+function unlockAudioPlayback() {
+  const audioEl = document.getElementById('live-stage-audio');
+  if (audioEl) {
+    audioEl.play().catch(() => {});
+  }
+}
+document.addEventListener('click', unlockAudioPlayback, { once: true });
+document.addEventListener('touchstart', unlockAudioPlayback, { once: true });
 
 // ================= METİN FİLTRESİ =================
 const INAPPROPRIATE_PATTERNS = [
@@ -4117,7 +4127,7 @@ function checkInappropriateContent(rawText) {
   return INAPPROPRIATE_PATTERNS.some(regex => regex.test(normalized) || regex.test(rawText.toLowerCase()));
 }
 
-// ================= LOBİ & ODA YÖNETİMİ =================
+// ================= LOBİ & ODA LİSTESİ =================
 function initLiveRoomsLobby() {
   const lobbyView = document.getElementById('live-lobby-view');
   const activeView = document.getElementById('live-room-active-view');
@@ -4172,7 +4182,7 @@ function renderLiveRoomsList(roomsData = null) {
               <span class="w-1.5 h-1.5 rounded-full ${isQuarantined ? 'bg-white' : 'bg-rose-500'}"></span> ${isQuarantined ? 'DONDURULDU' : 'CANLI'}
             </span>
             <div class="flex items-center gap-2 text-xs font-mono">
-              ${isTicketed ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-mineora-green border border-emerald-500/30 text-[10px] font-bold"><i class="fa-solid fa-ticket mr-1"></i>$${Number(room.ticketPrice).toFixed(2)}</span>` : ''}
+              ${isTicketed ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-mineora-green border border-emerald-500/30 text-[10px] font-bold">$${Number(room.ticketPrice).toFixed(2)}</span>` : ''}
               ${isLocked ? '<i class="fa-solid fa-lock text-amber-400" title="Şifreli"></i>' : ''}
               <span class="flex items-center gap-1 text-slate-400"><i class="fa-solid fa-eye text-slate-500"></i> ${viewerCount}</span>
             </div>
@@ -4202,7 +4212,7 @@ function renderLiveRoomsList(roomsData = null) {
   }
 }
 
-// ================= ODA KURMA & YAYIN BAŞLATMA =================
+// ================= ODA OLUŞTURMA & KATILMA =================
 function openCreateRoomModal() {
   if (!CurrentUser) {
     showToast("⚠️ Canlı oda açmak için giriş yapmalısınız!", "warning");
@@ -4240,13 +4250,15 @@ async function handleCreateLiveRoomSubmit() {
     createdAt: Date.now(),
     isQuarantined: false,
     viewers: { [hostSafeKey]: true },
-    speakers: { [hostSafeKey]: true }
+    speakers: { [hostSafeKey]: true },
+    banned: {}
   };
   if (pin) roomData.pin = pin;
 
   try {
+    // 480p standart çözünürlük: Türkiye upload sınırlarında donmayı %100 engeller
     localMediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } },
       audio: { echoCancellation: true, noiseSuppression: true }
     });
   } catch (err) {
@@ -4280,6 +4292,12 @@ function attemptJoinRoom(roomId) {
     if (!room) {
       showToast("⛔ Bu oda artık mevcut değil!", "warning");
       renderLiveRoomsList();
+      return;
+    }
+
+    const mySafeKey = sanitizeFbKey(CurrentUser.username);
+    if (room.banned && room.banned[mySafeKey]) {
+      showToast("🚫 Bu odadan yayıncı tarafından engellendiniz!", "warning");
       return;
     }
 
@@ -4324,10 +4342,11 @@ function executeJoinRoom(room) {
   enterRoomView(room, isHost);
 }
 
-// ================= ODA EKRANI & SES GÜVENLİĞİ =================
+// ================= ODA GÖRÜNÜMÜ & WEBRTC BAĞLANTISI =================
 function enterRoomView(room, isHost) {
   activeLiveRoom = room;
   hasHandRaised = false;
+  unlockAudioPlayback();
 
   document.getElementById('live-lobby-view')?.classList.add('hidden');
   document.getElementById('live-room-active-view')?.classList.remove('hidden');
@@ -4413,9 +4432,9 @@ function leaveCurrentRoom() {
   showToast(isHost ? "🛑 Canlı yayın sonlandırıldı." : "Odadan ayrıldınız.", "info");
 }
 
-// ================= WEBRTC SİNYALİZASYON (DONMA VE SES SORUNU ÇÖZÜLDÜ) =================
+// ================= WEBRTC SİNYAL MOTORU =================
 
-// Yayıncı: Gelen izleyici bağlantısını kurar
+// Yayıncı: Katılanları dinler, görüntüyü aktarır, söz alanın sesini çalar
 function listenToIncomingViewerSignalsOnce(roomId) {
   if (hostSignalingBound || !fbDb || !CurrentUser) return;
   hostSignalingBound = true;
@@ -4430,7 +4449,6 @@ function listenToIncomingViewerSignalsOnce(roomId) {
       const offer = offerSnap.val();
       if (!offer) return;
 
-      // Eğer eski bağlantı varsa kapatıp yenisini aç (Renegotiation / Söz hakkı için şarttır)
       if (rtcPeerConnections[viewerSafeKey]) {
         try { rtcPeerConnections[viewerSafeKey].close(); } catch(e) {}
       }
@@ -4438,14 +4456,13 @@ function listenToIncomingViewerSignalsOnce(roomId) {
       const pc = new RTCPeerConnection(rtcConfig);
       rtcPeerConnections[viewerSafeKey] = pc;
 
-      // 1. ICE adaylarını izleyiciye gönder
       pc.onicecandidate = (event) => {
         if (event.candidate) {
           viewerNodeSnap.ref.child('hostCandidates').push(event.candidate.toJSON());
         }
       };
 
-      // 2. Sahnedeki izleyicinin sesini doğrudan DOM audio üzerinden çal (Mobil video encoderını dondurmaz!)
+      // Sahnedeki konuşmacının sesi geldiğinde çal (Mobil video dondurmasını engeller)
       pc.ontrack = (event) => {
         if (event.track && event.track.kind === 'audio') {
           let audioEl = document.getElementById(`speaker-audio-${viewerSafeKey}`);
@@ -4458,14 +4475,10 @@ function listenToIncomingViewerSignalsOnce(roomId) {
             document.body.appendChild(audioEl);
           }
           audioEl.srcObject = new MediaStream([event.track]);
-          audioEl.play().catch(() => {
-            // Autoplay engeli olursa ilk tıklamada sesi aç
-            document.addEventListener('click', () => audioEl.play(), { once: true });
-          });
+          audioEl.play().catch(() => {});
         }
       };
 
-      // 3. İzleyicinin adaylarını tamponla
       viewerNodeSnap.ref.child('viewerCandidates').on('child_added', async cSnap => {
         const c = cSnap.val();
         if (c) {
@@ -4477,21 +4490,19 @@ function listenToIncomingViewerSignalsOnce(roomId) {
         }
       });
 
-      // 4. Uzak teklifi kaydet
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       for (const cand of candidateQueue) {
         await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
       }
       candidateQueue = [];
 
-      // 5. Yayıncının kamera ve mikrofonunu izleyiciye bas
+      // Yayıncının kamerasını ve mikrofonunu karşıya bas
       if (localMediaStream) {
         localMediaStream.getTracks().forEach(track => {
           pc.addTrack(track, localMediaStream);
         });
       }
 
-      // 6. Cevap üret ve gönder
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -4503,7 +4514,7 @@ function listenToIncomingViewerSignalsOnce(roomId) {
   });
 }
 
-// İzleyici: Odaya bağlanır ve yayını izler
+// İzleyici: Odaya bağlanır
 async function initViewerWebRTC(roomId) {
   if (!fbDb || !CurrentUser) return;
   const mySafeKey = sanitizeFbKey(CurrentUser.username);
@@ -4548,7 +4559,7 @@ async function initViewerWebRTC(roomId) {
     }
   };
 
-  // Eğer söz hakkı verilmişse mikrofonu doğrudan kanala ekle
+  // Eğer söz hakkı verilmişse mikrofonu doğrudan kanala bağla
   if (localMediaStream && localMediaStream.getAudioTracks().length > 0) {
     localMediaStream.getAudioTracks().forEach(t => {
       t.enabled = true;
@@ -4590,10 +4601,11 @@ async function initViewerWebRTC(roomId) {
   });
 }
 
-// ================= SÖZ ALMA & YAYINA BAĞLANMA =================
+// ================= SÖZ ALMA & VERME =================
 async function toggleRaiseHand() {
   if (!activeLiveRoom || !CurrentUser) return;
   hasHandRaised = !hasHandRaised;
+  unlockAudioPlayback();
 
   const btnText = document.getElementById('raise-hand-text');
   const btn = document.getElementById('btn-raise-hand');
@@ -4638,7 +4650,6 @@ async function toggleRaiseHand() {
   }
 }
 
-// Söz hakkı verildiğinde çalışan taze el sıkışma motoru
 async function checkSpeakerStatus(speakersObj) {
   if (!CurrentUser || !activeLiveRoom) return;
   const isHost = activeLiveRoom.host.toLowerCase() === CurrentUser.username.toLowerCase();
@@ -4660,7 +4671,6 @@ async function checkSpeakerStatus(speakersObj) {
     }
 
     localMediaStream.getAudioTracks().forEach(t => t.enabled = true);
-    // Mikrofon eklendiği için bağlantıyı tazeleyip sesi karşıya aktar
     await initViewerWebRTC(activeLiveRoom.id);
     showToast("🎙️ Söz hakkı verildi! Sesiniz canlı yayında!", "success");
 
@@ -4711,6 +4721,7 @@ function renderSpeakerRequestsList(raisesObj) {
 
 function approveSpeakerRequest(uname) {
   if (!activeLiveRoom || !fbDb) return;
+  unlockAudioPlayback();
   const safe = sanitizeFbKey(uname);
   fbDb.ref(`liveRooms/${activeLiveRoom.id}/speakers/${safe}`).set(true);
   fbDb.ref(`liveRooms/${activeLiveRoom.id}/handRaises/${safe}`).remove();
@@ -4730,6 +4741,31 @@ function revokeSpeakerPermission(uname) {
   showToast(`🛑 ${uname} söz hakkı alındı.`, "info");
 }
 
+// ================= YAYINCININ KULLANICIYI ODADAN ATMA (BAN) YETKİSİ =================
+function kickAndBanUserFromRoom(username) {
+  if (!activeLiveRoom || !fbDb || !CurrentUser) return;
+  const isHost = activeLiveRoom.host.toLowerCase() === CurrentUser.username.toLowerCase();
+  if (!isHost) return;
+
+  const targetSafe = sanitizeFbKey(username);
+  if (targetSafe === sanitizeFbKey(CurrentUser.username)) {
+    showToast("⚠️ Kendi kendinizi banlayamazsınız!", "warning");
+    return;
+  }
+
+  const ok = confirm(`'${username}' adlı kullanıcıyı yayından atmak ve odaya tekrar girişini engellemek istiyor musunuz?`);
+  if (!ok) return;
+
+  // Odadan at, sözünü kes, banlılar listesine ekle
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/banned/${targetSafe}`).set(true);
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/viewers/${targetSafe}`).remove();
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/speakers/${targetSafe}`).remove();
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/handRaises/${targetSafe}`).remove();
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/signaling/${targetSafe}`).remove();
+
+  showToast(`🚫 ${username} odadan atıldı ve banlandı!`, "warning");
+}
+
 function renderStageSpeakers(speakersObj) {
   const container = document.getElementById('stage-speakers-list');
   const countEl = document.getElementById('stage-speakers-count');
@@ -4740,15 +4776,22 @@ function renderStageSpeakers(speakersObj) {
   if (countEl) countEl.innerText = `${speakers.length} Konuşmacı`;
 
   speakers.forEach(uname => {
+    const isMe = CurrentUser && uname.toLowerCase() === CurrentUser.username.toLowerCase();
+    const isHost = activeLiveRoom && activeLiveRoom.host.toLowerCase() === CurrentUser?.username.toLowerCase();
+    const isThisUserHost = activeLiveRoom && activeLiveRoom.host.toLowerCase() === uname.toLowerCase();
+
     const badge = document.createElement('div');
     badge.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-mineora-bg border border-mineora-border text-xs text-slate-200 font-bold shadow notranslate";
     badge.setAttribute('translate', 'no');
     badge.innerHTML = `
       <i class="fa-solid fa-microphone text-mineora-gold text-[10px] animate-pulse"></i>
       <span>${uname}</span>
-      ${(activeLiveRoom && activeLiveRoom.host.toLowerCase() === CurrentUser?.username.toLowerCase() && uname.toLowerCase() !== CurrentUser?.username.toLowerCase()) ? `
-        <button type="button" onclick="revokeSpeakerPermission('${uname}')" class="ml-1 text-slate-500 hover:text-rose-400 cursor-pointer" title="Sözü Geri Al">
-          <i class="fa-solid fa-xmark"></i>
+      ${(isHost && !isThisUserHost) ? `
+        <button type="button" onclick="revokeSpeakerPermission('${uname}')" class="ml-1 text-slate-400 hover:text-amber-400 cursor-pointer" title="Sözü Geri Al">
+          <i class="fa-solid fa-microphone-slash"></i>
+        </button>
+        <button type="button" onclick="kickAndBanUserFromRoom('${uname}')" class="ml-1 text-slate-400 hover:text-rose-500 cursor-pointer" title="Odadan At & Banla">
+          <i class="fa-solid fa-ban"></i>
         </button>
       ` : ''}
     `;
@@ -4765,6 +4808,16 @@ function bindActiveRoomListeners(roomId, isHost) {
     if (!data) {
       leaveCurrentRoom();
       return;
+    }
+
+    // Ban kontrolü: Eğer bu kullanıcı banlandıysa anında odadan dışarı at
+    if (!isHost && CurrentUser) {
+      const mySafeKey = sanitizeFbKey(CurrentUser.username);
+      if (data.banned && data.banned[mySafeKey]) {
+        leaveCurrentRoom();
+        showToast("🚫 Yayıncı sizi bu canlı yayından uzaklaştırdı!", "warning");
+        return;
+      }
     }
 
     const viewerNum = data.viewers ? Object.keys(data.viewers).length : 0;
@@ -4838,6 +4891,9 @@ function appendChatMessage(msg) {
   if (!container || !msg) return;
 
   const isMe = CurrentUser && CurrentUser.username.toLowerCase() === (msg.sender || "").toLowerCase();
+  const isHost = activeLiveRoom && activeLiveRoom.host.toLowerCase() === CurrentUser?.username.toLowerCase();
+  const isSenderHost = activeLiveRoom && activeLiveRoom.host.toLowerCase() === (msg.sender || "").toLowerCase();
+
   const div = document.createElement('div');
   div.className = "notranslate p-2 rounded-xl text-xs " + (isMe ? 'bg-rose-500/10 border border-rose-500/20' : 'bg-mineora-bg border border-mineora-border');
   div.setAttribute('translate', 'no');
@@ -4845,8 +4901,17 @@ function appendChatMessage(msg) {
 
   div.innerHTML = `
     <div class="flex items-center justify-between text-[10px] text-slate-400 mb-0.5 font-mono">
-      <span class="font-bold ${isMe ? 'text-rose-400' : 'text-mineora-gold'}">${msg.sender} <span class="text-slate-500 font-normal">(${msg.role})</span></span>
-      <span>${msg.time || ''}</span>
+      <span class="font-bold ${isMe ? 'text-rose-400' : 'text-mineora-gold'}">
+        ${msg.sender} <span class="text-slate-500 font-normal">(${msg.role})</span>
+      </span>
+      <div class="flex items-center gap-1.5">
+        <span>${msg.time || ''}</span>
+        ${(isHost && !isSenderHost) ? `
+          <button type="button" onclick="kickAndBanUserFromRoom('${msg.sender}')" class="text-rose-500 hover:text-rose-400 font-bold ml-1 cursor-pointer" title="Kullanıcıyı Yayından At">
+            <i class="fa-solid fa-ban"></i>
+          </button>
+        ` : ''}
+      </div>
     </div>
     <p class="text-slate-200 break-words leading-relaxed notranslate" translate="no">${msg.text}</p>
   `;
@@ -4889,7 +4954,6 @@ function toggleHostMic() {
     btn.innerHTML = `<i class="fa-solid ${isMicActive ? 'fa-microphone' : 'fa-microphone-slash'}"></i> Mikrofon`;
   }
 }
-
 // ================= KASA VE USDT TRANSFERLERİ =================
 function creditAdminMasterVaultUsdt(amount) {
   const amt = Number(parseFloat(amount) || 0);
