@@ -4160,7 +4160,22 @@ function creditUserUsdt(username, amount, logTitle, logDesc) {
     saveUserWorld();
     updateHUD();
   } else if (typeof fbDb !== 'undefined' && fbDb) {
-    fbDb.ref(`users/${uKey}`).once('value').then(snap => {       const uData = snap.val();       if (uData) {         uData.usdt = Number(((uData.usdt \vert{}\vert{} 0) + amt).toFixed(2));         if (!uData.logs) uData.logs = [];         uData.logs.unshift({           id: Date.now() + Math.floor(Math.random() * 1000),           title: logTitle,           desc: logDesc,           amountText: `+$${amt.toFixed(2)} USDT`,           type: "income",           time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),           date: new Date().toLocaleDateString('en-US'),           read: false         });         fbDb.ref(`users/${uKey}`).set(uData);
+    fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+      const uData = snap.val();
+      if (uData) {
+        uData.usdt = Number(((uData.usdt || 0) + amt).toFixed(2));
+        if (!uData.logs) uData.logs = [];
+        uData.logs.unshift({
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          title: logTitle,
+          desc: logDesc,
+          amountText: `+$${amt.toFixed(2)} USDT`,
+          type: "income",
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          date: new Date().toLocaleDateString('en-US'),
+          read: false
+        });
+        fbDb.ref(`users/${uKey}`).set(uData);
       }
     });
   }
