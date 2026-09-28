@@ -684,9 +684,14 @@
                   <p class="text-xs text-slate-400">Sesli/görüntülü strateji toplantıları yapın veya ekiplerinizin odalarına katılın.</p>
                 </div>
               </div>
-              <button type="button" onclick="openCreateRoomModal()" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-black text-xs transition shadow-xl shadow-rose-600/20 flex items-center gap-2 cursor-pointer">
-                <i class="fa-solid fa-plus"></i> Canlı Oda Kur
-              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="openStreamLicenseModal()" class="px-4 py-3 rounded-2xl bg-mineora-input hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-2 cursor-pointer shadow">
+                  <i class="fa-solid fa-id-card text-mineora-gold"></i> Yayın Lisansı Al / Durum
+                </button>
+                <button type="button" onclick="openCreateRoomModal()" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-black text-xs transition shadow-xl shadow-rose-600/20 flex items-center gap-2 cursor-pointer">
+                  <i class="fa-solid fa-plus"></i> Canlı Oda Kur
+                </button>
+              </div>
             </div>
 
             <!-- Aktif Oda Kartları Listesi -->
