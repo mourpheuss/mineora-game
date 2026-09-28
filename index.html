@@ -5827,9 +5827,13 @@ function renderAdminUserTable() {
         ${u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>'}
       </td>
       <td class="py-3 px-4 text-right space-x-2 notranslate whitespace-nowrap" translate="no">
-        <button type="button" onclick="toggleAdminVaultLock('${u.username}')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[11px] font-bold cursor-pointer">
-          ${u.isVaultLocked ? 'Kilidi Aç' : 'Kilitle'}
-        </button>
+        ${!u.isRootAdmin ? `
+          <button type="button" onclick="toggleAdminVaultLock('${u.username}')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[11px] font-bold cursor-pointer">
+            ${u.isVaultLocked ? 'Kilidi Aç' : 'Kilitle'}
+          </button>
+        ` : `
+          <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Korumalı</span>
+        `}
         <button type="button" onclick="openAdminModifyUserModal('${u.username}')" class="px-2.5 py-1 rounded bg-cyan-600/30 text-cyan-300 hover:bg-cyan-600/50 text-[11px] font-bold cursor-pointer">
           Düzenle
         </button>
@@ -5894,6 +5898,13 @@ function deleteAdminUser(username) {
 function toggleAdminVaultLock(username) {
   const u = getStoredUser(username);
   if (!u) return;
+
+  // GÜVENLİK: Admin kendini veya başka bir root admini asla kilitleyemez!
+  if (u.isRootAdmin || (CurrentUser && u.username.toLowerCase() === CurrentUser.username.toLowerCase())) {
+    showToast("⛔ Yönetici ve kurucu hesapların kasası kilitlenemez!", "warning");
+    return;
+  }
+
   u.isVaultLocked = !u.isVaultLocked;
   saveStoredUser(u);
   renderAdminUserTable();
