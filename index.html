@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="dark notranslate" translate="no">
 <head>
@@ -304,73 +305,73 @@
    <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden sm:hidden transition-opacity"></div>
 
    <!-- SOL DİKEY SİDEBAR (Mobilde Gizli Çekmece, Masaüstünde Sabit) -->
-   <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full sm:translate-x-0 sm:static sm:w-60 sm:bg-mineora-card/60 sm:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl sm:shadow-none">
+      <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full sm:translate-x-0 sm:static sm:w-60 sm:bg-mineora-card/60 sm:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl sm:shadow-none">
+        
+        <!-- Mobilde Çekmece Başlığı ve Kapat Butonu -->
+        <div class="flex sm:hidden items-center justify-between pb-3 mb-2 border-b border-mineora-border">
+          <span class="text-xs font-black text-mineora-gold uppercase tracking-wider font-cinzel">Mineora Menü</span>
+          <button type="button" onclick="toggleMobileMenu(false)" class="w-7 h-7 rounded-lg bg-mineora-input text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>     
 
-     <!-- Mobilde Çekmece Başlığı ve Kapat Butonu -->
-     <div class="flex sm:hidden items-center justify-between pb-3 mb-2 border-b border-mineora-border">
-       <span class="text-xs font-black text-mineora-gold uppercase tracking-wider font-cinzel">Mineora Menü</span>
-       <button type="button" onclick="toggleMobileMenu(false)" class="w-7 h-7 rounded-lg bg-mineora-input text-slate-400 hover:text-white flex items-center justify-center">
-         <i class="fa-solid fa-xmark text-sm"></i>
-       </button>
-     </div>     
         <div class="space-y-4">
           <!-- 1. Kategori: Madencilik Operasyonları -->
           <div class="space-y-1">
-            <span class="hidden sm:block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Mining Operations</span>
+            <span class="block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Mining Operations</span>
             <button type="button" onclick="switchTab('cave')" id="tab-btn-cave" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-mineora-gold text-black shadow-md shadow-mineora-gold/20 transition cursor-pointer">
               <i class="fa-solid fa-person-digging w-4 text-center"></i>
-              <span data-i18n="tab_cave" class="hidden sm:inline">Mining Stage</span>
+              <span data-i18n="tab_cave">Mining Stage</span>
             </button>
             <button type="button" onclick="switchTab('map')" id="tab-btn-map" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer">
               <i class="fa-solid fa-map w-4 text-center"></i>
-              <span data-i18n="tab_map" class="hidden sm:inline">Alpine Map</span>
+              <span data-i18n="tab_map">Alpine Map</span>
             </button>
             <button type="button" onclick="switchTab('crash')" id="tab-btn-crash" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 transition cursor-pointer">
               <i class="fa-solid fa-elevator w-4 text-center animate-pulse"></i>
-              <span data-i18n="tab_crash" class="hidden sm:inline">Elevator (Crash)</span>
+              <span data-i18n="tab_crash">Elevator (Crash)</span>
             </button>
-<!-- ALP KOLONİSİ MENÜ BUTONU -->
             <button type="button" onclick="switchTab('colony')" id="tab-btn-colony" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 transition cursor-pointer">
               <i class="fa-solid fa-mountain-city w-4 text-center"></i>
-              <span class="hidden sm:inline">Alp Kolonisi</span>
+              <span>Alp Kolonisi</span>
             </button>
             <button type="button" onclick="switchTab('live')" id="tab-btn-live" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition cursor-pointer">
               <i class="fa-solid fa-tower-broadcast w-4 text-center animate-pulse"></i>
-              <span class="hidden sm:inline">Live Rooms</span>
+              <span>Live Rooms</span>
             </button>
             <button type="button" onclick="switchTab('home')" id="tab-btn-home" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer">
               <i class="fa-solid fa-house w-4 text-center"></i>
-              <span data-i18n="tab_home" class="hidden sm:inline">Overview</span>
+              <span data-i18n="tab_home">Overview</span>
             </button>
           </div>
 
           <!-- 2. Kategori: Finans & Borsa -->
           <div class="space-y-1">
-            <span class="hidden sm:block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Reserve & Trade</span>
+            <span class="block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Reserve & Trade</span>
             <button type="button" onclick="switchTab('p2p')" id="tab-btn-p2p" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition cursor-pointer">
               <i class="fa-solid fa-handshake w-4 text-center"></i>
-              <span data-i18n="tab_p2p" class="hidden sm:inline">P2P Exchange</span>
+              <span data-i18n="tab_p2p">P2P Exchange</span>
             </button>
             <button type="button" onclick="switchTab('stake')" id="tab-btn-stake" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition cursor-pointer">
               <i class="fa-solid fa-vault w-4 text-center"></i>
-              <span data-i18n="tab_stake" class="hidden sm:inline">ORA Bank (Stake)</span>
+              <span data-i18n="tab_stake">ORA Bank (Stake)</span>
             </button>
           </div>
 
           <!-- 3. Kategori: Filo & Profil -->
           <div class="space-y-1">
-            <span class="hidden sm:block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Fleet & Profile</span>
+            <span class="block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Fleet & Profile</span>
             <button type="button" onclick="switchTab('owner')" id="tab-btn-owner" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer">
               <i class="fa-solid fa-sitemap w-4 text-center text-mineora-gold"></i>
-              <span id="tab-owner-text" data-i18n="tab_owner" class="hidden sm:inline">Team Network</span>
+              <span id="tab-owner-text" data-i18n="tab_owner">Team Network</span>
             </button>
             <button type="button" onclick="switchTab('career')" id="tab-btn-career" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-purple-300 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition cursor-pointer">
               <i class="fa-solid fa-ranking-star w-4 text-center"></i>
-              <span data-i18n="tab_career" class="hidden sm:inline">Select Career</span>
+              <span data-i18n="tab_career">Select Career</span>
             </button>
             <button type="button" onclick="switchTab('settings')" id="tab-btn-settings" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 transition cursor-pointer">
               <i class="fa-solid fa-key w-4 text-center text-cyan-400"></i>
-              <span data-i18n="tab_settings" class="hidden sm:inline">Change Password</span>
+              <span data-i18n="tab_settings">Change Password</span>
             </button>
           </div>
         </div>
@@ -379,11 +380,10 @@
         <div class="pt-3 border-t border-mineora-border/50">
           <button type="button" onclick="switchTab('boss')" id="tab-btn-boss" style="display:none;" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition cursor-pointer">
             <i class="fa-solid fa-crown w-4 text-center"></i>
-            <span data-i18n="tab_boss" class="hidden sm:inline">Admin Desk</span>
+            <span data-i18n="tab_boss">Admin Desk</span>
           </button>
         </div>
       </aside>
-
       <!-- İÇERİK SAHNESİ -->
       <main class="flex-1 p-3 sm:p-6 overflow-y-auto">
         <!-- 0) KURUCU PATRON MASASI -->
