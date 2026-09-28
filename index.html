@@ -212,7 +212,7 @@
         <div class="flex items-center justify-between w-full sm:w-auto gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
 <!-- MOBİL HAMBURGER MENÜ BUTONU (Sadece Telefonda Görünür) -->
-         <button type="button" onclick="toggleMobileMenu()" class="sm:hidden w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-mineora-gold text-xs flex items-center justify-center cursor-pointer shrink-0" title="Menü">
+         <button type="button" onclick="toggleMobileMenu()" class="lg:hidden w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-mineora-gold text-xs flex items-center justify-center cursor-pointer shrink-0" title="Menü">
            <i class="fa-solid fa-bars text-sm"></i>
          </button>
             <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-mineora-gold flex items-center justify-center text-black font-black shadow-md shrink-0">
@@ -301,13 +301,12 @@
     <!-- ANA GÖVDE: SOL WEB3 SİDEBAR + İÇERİK SAHNESİ -->
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
 <!-- MOBİL ARKA PLAN KARARTMASI (Tıklayınca Kapanır) -->
-   <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden sm:hidden transition-opacity"></div>
-
-   <!-- SOL DİKEY SİDEBAR (Mobilde Gizli Çekmece, Masaüstünde Sabit) -->
-      <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full sm:translate-x-0 sm:static sm:w-60 sm:bg-mineora-card/60 sm:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl sm:shadow-none">
+   <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity"></div>
+<!-- SOL DİKEY SİDEBAR (Mobilde & Tablette Gizli Çekmece, Geniş Ekranda Sabit) -->
+      <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:bg-mineora-card/60 lg:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
         
         <!-- Mobilde Çekmece Başlığı ve Kapat Butonu -->
-        <div class="flex sm:hidden items-center justify-between pb-3 mb-2 border-b border-mineora-border">
+        <div class="flex lg:hidden items-center justify-between pb-3 mb-2 border-b border-mineora-border">
           <span class="text-xs font-black text-mineora-gold uppercase tracking-wider font-cinzel">Mineora Menü</span>
           <button type="button" onclick="toggleMobileMenu(false)" class="w-7 h-7 rounded-lg bg-mineora-input text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">
             <i class="fa-solid fa-xmark text-sm"></i>
@@ -383,7 +382,7 @@
           </button>
         </div>
       </aside>
-      <!-- İÇERİK SAHNESİ -->
+         <!-- İÇERİK SAHNESİ -->
       <main class="flex-1 p-3 sm:p-6 overflow-y-auto">
         <!-- 0) KURUCU PATRON MASASI -->
         <section id="sec-boss" style="display:none;" class="space-y-6">
