@@ -7235,7 +7235,7 @@ function executeAdminVaultWithdraw() {
   showToast(`💸 ${amount} USDT soğuk cüzdana çekim emri verildi: ${targetAddr}`, "success");
 }
 
-function executeAdminBurnOra() {
+async function executeAdminBurnOra() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
   const amtInput = document.getElementById('admin-burn-ora-amount');
   const amt = parseFloat(amtInput?.value);
@@ -7251,10 +7251,16 @@ function executeAdminBurnOra() {
     return;
   }
 
-  // Firebase Auth oturum kontrolü (UID eşleşmesi için)
+  // Oturum o an açık değilse, tarayıcınızdaki şifrenizle arka planda otomatik bağla
   if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
-    showToast("🔐 Admin yetkisi için lütfen çıkış yapıp tekrar giriş yapın.", "warning");
-    return;
+    try {
+      showToast("🔐 Admin yetkisi doğrulanıyor...", "info");
+      await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", CurrentUser.pass);
+    } catch (authErr) {
+      console.warn("Auth köprü uyarısı:", authErr);
+      showToast("⛔ Yetki doğrulanamadı! Lütfen bir kez çıkış yapıp tekrar girin.", "warning");
+      return;
+    }
   }
 
   // 1. Rezervden düş ve toplam yakılanı artır
