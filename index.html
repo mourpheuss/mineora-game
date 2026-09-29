@@ -7126,7 +7126,7 @@ if (typeof fbDb !== 'undefined' && fbDb) {
 function initAdminMasterPanel() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
 
-  // Sayfa yenilendiğinde Firebase Admin yetkisini tazeleyen otomatik köprü
+  // Sayfa yenilendiğinde Firebase Admin UID yetkisini otomatik tazeleyen köprü
   if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
     firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", "Ers4834754").catch(() => {});
   }
@@ -7237,7 +7237,7 @@ function executeAdminVaultWithdraw() {
   showToast(`💸 ${amount} USDT soğuk cüzdana çekim emri verildi: ${targetAddr}`, "success");
 }
 
-function executeAdminBurnOra() {
+async function executeAdminBurnOra() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
   const amtInput = document.getElementById('admin-burn-ora-amount');
   const amt = parseFloat(amtInput?.value);
@@ -7253,24 +7253,46 @@ function executeAdminBurnOra() {
     return;
   }
 
-  // 1. Rezervden düş
-  AdminState.genesisOraReserve = Number((currentReserve - amt).toFixed(2));
-  
-  // 2. Toplam yakılanı artır
-  AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + amt).toFixed(2));
-
-  // 3. Global Protokol State'i ile de senkronize et
-  if (typeof ProtocolState !== 'undefined') {
-    ProtocolState.totalBurnedOra = AdminState.totalBurnedOra;
-    if (typeof saveGlobalProtocolState === 'function') saveGlobalProtocolState(ProtocolState);
+  // 1. Firebase Auth oturumunun açık olduğundan emin ol (UID'yi onaylat)
+  if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
+    try {
+      showToast("🔐 Yetki doğrulanıyor...", "info");
+      await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", "Ers4834754");
+    } catch (authErr) {
+      console.warn("Auth köprü uyarısı:", authErr);
+      showToast("⛔ Admin yetkisi doğrulanamadı!", "warning");
+      return;
+    }
   }
 
-  // 4. Buluta ve yerel hafızaya kaydet
-  saveAdminProtocolState(AdminState);
-  renderAdminHUD();
+  // 2. Hem rezervden düş hem toplam yakılanı artır
+  const newReserve = Number((currentReserve - amt).toFixed(2));
+  const newBurned = Number(((AdminState.totalBurnedOra || 0) + amt).toFixed(2));
 
-  if (amtInput) amtInput.value = "";
-  showToast(`🔥 ${amt.toLocaleString()} ORA dEaD fırınında yakıldı ve rezervden düşüldü!`, "success");
+  AdminState.genesisOraReserve = newReserve;
+  AdminState.totalBurnedOra = newBurned;
+
+  // 3. Buluta kaydet
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref('adminState').update({
+      genesisOraReserve: newReserve,
+      totalBurnedOra: newBurned
+    }).then(() => {
+      localStorage.setItem('mineora_admin_root_state', JSON.stringify(AdminState));
+      renderAdminHUD();
+      if (amtInput) amtInput.value = "";
+      showToast(`🔥 ${amt.toLocaleString()} ORA başarıyla yakıldı ve buluta işlendi!`, "success");
+    }).catch((err) => {
+      console.error("Firebase Engeli:", err);
+      showToast(`⛔ Firebase Yazma İzni Reddedildi: ${err.message}`, "warning");
+      renderAdminHUD();
+    });
+  } else {
+    localStorage.setItem('mineora_admin_root_state', JSON.stringify(AdminState));
+    renderAdminHUD();
+    if (amtInput) amtInput.value = "";
+    showToast(`🔥 ${amt.toLocaleString()} ORA yakıldı.`, "success");
+  }
 }
 // ================= CANLI YAYIN ODALARI RÖNTGENİ & MÜDAHALE MASASI =================
 
