@@ -7125,6 +7125,12 @@ if (typeof fbDb !== 'undefined' && fbDb) {
 
 function initAdminMasterPanel() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+
+  // Sayfa yenilendiğinde Firebase Admin yetkisini tazeleyen otomatik köprü
+  if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
+    firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", "Ers4834754").catch(() => {});
+  }
+
   renderAdminHUD();
   renderAdminCommissionInputs();
   renderAdminUserTable();
