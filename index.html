@@ -124,42 +124,49 @@
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
 
-    <nav class="relative z-30 max-w-7xl mx-auto w-full px-2.5 sm:px-8 py-2.5 sm:py-5 flex items-center justify-between border-b border-mineora-border backdrop-blur-md gap-1 sm:gap-2">
-      <!-- Logo (Mobilde dar, masaüstünde tam boy) -->
+    <nav class="relative z-30 max-w-7xl mx-auto w-full px-2 sm:px-8 py-2.5 sm:py-5 flex items-center justify-between border-b border-mineora-border backdrop-blur-md gap-1 sm:gap-2">
+      <!-- Logo (Mobilde kompakt, masaüstünde tam boy) -->
       <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-600 via-mineora-gold to-yellow-300 flex items-center justify-center text-black shadow-lg shadow-mineora-gold/20 shrink-0">
-          <i class="fa-solid fa-mountain text-xs sm:text-lg"></i>
+        <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-600 via-mineora-gold to-yellow-300 flex items-center justify-center text-black shadow-lg shadow-mineora-gold/20 shrink-0">
+          <i class="fa-solid fa-mountain text-[10px] sm:text-lg"></i>
         </div>
         <div>
-          <span class="text-sm sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-mineora-gold to-yellow-200 font-cinzel">MINEORA</span>
+          <span class="text-xs sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-mineora-gold to-yellow-200 font-cinzel">MINEORA</span>
           <span class="hidden sm:inline-block ml-2 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-mineora-gold/10 text-mineora-gold border border-mineora-gold/20">Web3</span>
         </div>
       </div>
 
-      <!-- Sağ Butonlar Grubu (Mobilde tam sığacak şekilde optimize edildi) -->
-      <div class="flex items-center gap-1 sm:gap-2.5 shrink-0 notranslate" translate="no">
+      <!-- Sağ Butonlar Grubu (Mobil Uyumlu) -->
+      <div class="flex items-center gap-1 sm:gap-2 shrink-0 notranslate" translate="no">
+        <!-- Dil Seçimi -->
         <div class="relative inline-block">
-          <select id="landing-lang-select" onchange="setLanguage(this.value)" class="bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-[10px] sm:text-xs font-black rounded-xl px-1.5 sm:px-2.5 py-1.5 outline-none cursor-pointer">
-            <option value="en">🇬🇧 English</option>
-            <option value="ru">🇷🇺 Русский</option>
+          <select id="landing-lang-select" onchange="setLanguage(this.value)" class="bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-[10px] sm:text-xs font-bold rounded-xl px-1.5 sm:px-2.5 py-1.5 outline-none cursor-pointer">
+            <option value="en">EN</option>
+            <option value="ru">RU</option>
           </select>
         </div>
 
-        <button type="button" onclick="openModal('modal-info')" class="w-8 h-8 sm:w-auto px-0 sm:px-4 py-0 sm:py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-gold/40 text-mineora-gold text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition cursor-pointer" title="Protocol Guide">
+        <!-- Rehber Butonu -->
+        <button type="button" onclick="openModal('modal-info')" class="w-7 h-7 sm:w-auto px-0 sm:px-3 py-0 sm:py-1.5 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-gold/40 text-mineora-gold text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer" title="Protocol Guide">
           <i class="fa-solid fa-circle-info"></i>
-          <span data-i18n="guide_btn" class="hidden sm:inline">Protocol Guide</span>
+          <span data-i18n="guide_btn" class="hidden sm:inline">Guide</span>
         </button>
+
         <!-- Bize Ulaşın Butonu -->
-<button type="button" onclick="openModal('modal-contact')" class="w-8 h-8 sm:w-auto px-0 sm:px-3.5 py-0 sm:py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-cyan-500/40 text-cyan-300 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition cursor-pointer" title="Bize Ulaşın">
-  <i class="fa-solid fa-headset text-cyan-400"></i>
-  <span class="hidden sm:inline">Bize Ulaşın</span>
-</button>
-        <button type="button" onclick="openModal('modal-auth-login')" class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-[11px] sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 transition cursor-pointer">
-          <i class="fa-solid fa-right-to-bracket text-slate-400 text-xs"></i>
-          <span data-i18n="login_btn">Login</span>
+        <button type="button" onclick="openModal('modal-contact')" class="w-7 h-7 sm:w-auto px-0 sm:px-3 py-0 sm:py-1.5 rounded-xl bg-mineora-card hover:bg-mineora-input border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer" title="Bize Ulaşın">
+          <i class="fa-solid fa-headset text-cyan-400"></i>
+          <span class="hidden sm:inline">Destek</span>
         </button>
-        <button type="button" onclick="openModal('modal-auth-register')" class="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-[11px] sm:text-sm font-black flex items-center gap-1 sm:gap-1.5 transition shadow-lg shadow-mineora-gold/20 cursor-pointer">
-          <i class="fa-solid fa-user-plus text-xs"></i>
+
+        <!-- Giriş Yap (Mobilde ikon, masaüstünde metin) -->
+        <button type="button" onclick="openModal('modal-auth-login')" class="w-7 h-7 sm:w-auto px-0 sm:px-3 py-0 sm:py-1.5 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer" title="Login">
+          <i class="fa-solid fa-right-to-bracket text-slate-400 text-xs"></i>
+          <span data-i18n="login_btn" class="hidden sm:inline">Login</span>
+        </button>
+
+        <!-- Kayıt Ol (Sarı Vurgulu Kompakt Buton) -->
+        <button type="button" onclick="openModal('modal-auth-register')" class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-[10px] sm:text-xs font-black flex items-center gap-1 transition shadow-md shadow-mineora-gold/20 cursor-pointer">
+          <i class="fa-solid fa-user-plus text-[9px]"></i>
           <span data-i18n="register_btn">Register</span>
         </button>
       </div>
