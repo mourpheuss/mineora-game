@@ -149,6 +149,11 @@
           <i class="fa-solid fa-circle-info"></i>
           <span data-i18n="guide_btn" class="hidden sm:inline">Protocol Guide</span>
         </button>
+        <!-- Bize Ulaşın Butonu -->
+<button type="button" onclick="openModal('modal-contact')" class="w-8 h-8 sm:w-auto px-0 sm:px-3.5 py-0 sm:py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-cyan-500/40 text-cyan-300 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition cursor-pointer" title="Bize Ulaşın">
+  <i class="fa-solid fa-headset text-cyan-400"></i>
+  <span class="hidden sm:inline">Bize Ulaşın</span>
+</button>
         <button type="button" onclick="openModal('modal-auth-login')" class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-[11px] sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 transition cursor-pointer">
           <i class="fa-solid fa-right-to-bracket text-slate-400 text-xs"></i>
           <span data-i18n="login_btn">Login</span>
@@ -540,7 +545,18 @@
                 </h3>
                 <div id="admin-deposit-queue-list" class="space-y-2"></div>
               </div>
-
+<!-- GELEN İLETİŞİM & DESTEK MESAJLARI -->
+<div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/40 space-y-3 mt-4">
+  <div class="flex justify-between items-center">
+    <h3 class="text-sm font-black text-white flex items-center gap-2">
+      <i class="fa-solid fa-inbox text-cyan-400"></i> Gelen Ziyaretçi & Destek Mesajları
+    </h3>
+    <button type="button" onclick="renderAdminContactMessages()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
+      <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
+    </button>
+  </div>
+  <div id="admin-contact-messages-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+</div>
               <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 space-y-3">
                 <h3 class="text-sm font-black text-white flex items-center gap-2">
                   <i class="fa-solid fa-arrow-up text-amber-400"></i> Oyuncu USDT Çekim Onay Masası
@@ -2689,6 +2705,44 @@
       </button>
     </div>
   </div>
+  <!-- MODAL: BİZE ULAŞIN / İLETİŞİM FORMU -->
+<div id="modal-contact" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+  <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+    <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-base border border-cyan-500/30">
+          <i class="fa-solid fa-envelope-open-text"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-black text-white">Mineora Destek & İletişim</h3>
+          <span class="text-[10px] text-slate-400">Sorularınızı ve iş birliği taleplerinizi iletin</span>
+        </div>
+      </div>
+      <button type="button" onclick="closeModal('modal-contact')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+
+    <div class="space-y-3">
+      <div>
+        <label class="text-[10px] text-slate-400 font-bold block mb-1">Adınız / Kullanıcı Adınız</label>
+        <input type="text" id="contact-name" placeholder="Adınız veya rumuzunuz" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none focus:border-cyan-400">
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 font-bold block mb-1">İletişim Adresiniz (E-posta veya Telegram)</label>
+        <input type="text" id="contact-reach" placeholder="Örn: ornek@gmail.com veya @telegramkullanici" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none focus:border-cyan-400">
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 font-bold block mb-1">Merak Ettiğiniz / İletmek İstediğiniz Konu</label>
+        <textarea id="contact-message" rows="4" placeholder="Mesajınızı buraya yazın..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none focus:border-cyan-400"></textarea>
+      </div>
+
+      <button type="button" onclick="submitContactMessage()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-black text-xs transition shadow-xl shadow-cyan-600/20 flex items-center justify-center gap-2 cursor-pointer">
+        <i class="fa-solid fa-paper-plane"></i> Mesajı Gönder
+      </button>
+    </div>
+  </div>
+</div>
 
   <!-- BİRLEŞTİRİLMİŞ JAVASCRIPT MOTORLARI BAŞLANGICI -->
   <script>
@@ -7723,7 +7777,91 @@ function renderAdminGlobalHierarchy() {
   if (!treeEl) return;
   treeEl.innerHTML = `<div class="p-4 bg-mineora-card rounded-xl text-xs text-slate-400 notranslate" translate="no">Hiyerarşi haritası senkronize.</div>`;
 }
+// ================= İLETİŞİM & DESTEK FORMU MOTORU =================
+function submitContactMessage() {
+  const name = document.getElementById('contact-name')?.value.trim();
+  const reach = document.getElementById('contact-reach')?.value.trim();
+  const msg = document.getElementById('contact-message')?.value.trim();
 
+  if (!reach || !msg) {
+    showToast("⚠️ Lütfen iletişim adresinizi ve mesajınızı doldurun!", "warning");
+    return;
+  }
+
+  const msgId = `msg_${Date.now()}`;
+  const payload = {
+    id: msgId,
+    name: name || (CurrentUser ? CurrentUser.username : "Ziyaretçi"),
+    reach: reach,
+    message: msg,
+    createdAt: Date.now(),
+    dateStr: new Date().toLocaleString('tr-TR'),
+    isRegistered: !!CurrentUser
+  };
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref(`contactMessages/${msgId}`).set(payload).then(() => {
+      closeModal('modal-contact');
+      document.getElementById('contact-reach').value = "";
+      document.getElementById('contact-message').value = "";
+      showToast("✉️ Mesajınız iletildi! En kısa sürede dönüş yapılacaktır.", "success");
+    }).catch(err => {
+      console.error("Mesaj gönderme hatası:", err);
+      showToast("⚠️ Mesaj iletilemedi, lütfen tekrar deneyin.", "warning");
+    });
+  } else {
+    showToast("⚠️ Veritabanı bağlantısı kurulamadı.", "warning");
+  }
+}
+
+function renderAdminContactMessages() {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  const container = document.getElementById('admin-contact-messages-list');
+  if (!container) return;
+
+  fbDb.ref('contactMessages').once('value').then(snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+
+    if (!data) {
+      container.innerHTML = `<div class="p-4 text-center text-slate-500 text-xs">Henüz gelen bir ziyaretçi mesajı yok.</div>`;
+      return;
+    }
+
+    const messages = Object.values(data).sort((a, b) => b.createdAt - a.createdAt);
+    messages.forEach(m => {
+      const card = document.createElement('div');
+      card.className = "p-3.5 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-2 text-xs";
+      card.innerHTML = `
+        <div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="font-black text-white">${m.name}</span>
+            <span class="px-2 py-0.5 rounded text-[9px] font-bold ${m.isRegistered ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-300'}">
+              ${m.isRegistered ? 'Kayıtlı Üye' : 'Ziyaretçi'}
+            </span>
+            <span class="text-cyan-400 font-mono text-[11px]"><i class="fa-solid fa-address-book mr-1"></i>${m.reach}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] text-slate-500 font-mono">${m.dateStr || ''}</span>
+            <button type="button" onclick="deleteAdminContactMessage('${m.id}')" class="px-2 py-1 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white transition cursor-pointer text-[10px] font-bold">
+              <i class="fa-solid fa-trash-can"></i> Sil
+            </button>
+          </div>
+        </div>
+        <p class="text-slate-300 leading-relaxed break-words whitespace-pre-wrap">${m.message}</p>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function deleteAdminContactMessage(msgId) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  fbDb.ref(`contactMessages/${msgId}`).remove().then(() => {
+    renderAdminContactMessages();
+    showToast("🗑️ Mesaj silindi.", "info");
+  });
+}
 // ================= 9. ANA BAŞLATICI MOTORU (main.js) =================
 window.addEventListener('DOMContentLoaded', () => {
   if (typeof autoMigrateReferralLineage === 'function') {
