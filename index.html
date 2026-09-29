@@ -7313,8 +7313,8 @@ function renderAdminLiveRoomsMonitor() {
     monitorContainer.className = 'p-5 rounded-2xl bg-mineora-bg border border-rose-500/40 space-y-4';
 
     const globalTreeCard = document.getElementById('admin-global-hierarchy-tree')?.parentElement;
-    if (globalTreeCard) {
-      secBoss.querySelector('.p-6')?.insertBefore(monitorContainer, globalTreeCard);
+    if (globalTreeCard && globalTreeCard.parentElement) {
+      globalTreeCard.parentElement.insertBefore(monitorContainer, globalTreeCard);
     } else {
       secBoss.querySelector('.p-6')?.appendChild(monitorContainer);
     }
