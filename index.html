@@ -7233,16 +7233,39 @@ function executeAdminVaultWithdraw() {
 
 function executeAdminBurnOra() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
-  const amt = parseFloat(document.getElementById('admin-burn-ora-amount')?.value);
-  if (!amt || amt <= 0) { showToast("⚠️ Miktar girin!", "warning"); return; }
+  const amtInput = document.getElementById('admin-burn-ora-amount');
+  const amt = parseFloat(amtInput?.value);
 
+  if (!amt || amt <= 0) { 
+    showToast("⚠️ Lütfen yakılacak geçerli bir ORA miktarı girin!", "warning"); 
+    return; 
+  }
+
+  const currentReserve = Number(AdminState.genesisOraReserve || 1000000000);
+  if (amt > currentReserve) {
+    showToast("⛔ Yakılmak istenen miktar kalan rezervden büyük olamaz!", "warning");
+    return;
+  }
+
+  // 1. Rezervden düş
+  AdminState.genesisOraReserve = Number((currentReserve - amt).toFixed(2));
+  
+  // 2. Toplam yakılanı artır
   AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + amt).toFixed(2));
+
+  // 3. Global Protokol State'i ile de senkronize et
+  if (typeof ProtocolState !== 'undefined') {
+    ProtocolState.totalBurnedOra = AdminState.totalBurnedOra;
+    if (typeof saveGlobalProtocolState === 'function') saveGlobalProtocolState(ProtocolState);
+  }
+
+  // 4. Buluta ve yerel hafızaya kaydet
   saveAdminProtocolState(AdminState);
   renderAdminHUD();
-  document.getElementById('admin-burn-ora-amount').value = "";
-  showToast(`🔥 ${amt.toLocaleString()} ORA dEaD fırınında yakıldı!`, "success");
-}
 
+  if (amtInput) amtInput.value = "";
+  showToast(`🔥 ${amt.toLocaleString()} ORA dEaD fırınında yakıldı ve rezervden düşüldü!`, "success");
+}
 // ================= CANLI YAYIN ODALARI RÖNTGENİ & MÜDAHALE MASASI =================
 
 function renderAdminLiveRoomsMonitor() {
