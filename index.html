@@ -3590,18 +3590,12 @@ window.handleLogin = function() {
         closeModal('modal-auth-login');
         enterGame();
         if (u.toLowerCase() === 'mourpheus') {
-          firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", "Ers4834754").catch(err => console.warn("Admin Auth köprü uyarısı:", err));
+          firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", p)
+            .then(() => {
+              console.log("✅ Firebase Admin Auth yetkisi başarıyla alındı.");
+            })
+            .catch(err => console.warn("Admin Auth köprü uyarısı:", err));
         }
-        showToast(`👋 Welcome ${CurrentUser.username}!`, "success");
-      } else {
-        checkLocalUserLogin(u, p, storageKey);
-      }
-    }).catch(() => { checkLocalUserLogin(u, p, storageKey); });
-  } else {
-    checkLocalUserLogin(u, p, storageKey);
-  }
-};
-
 function checkLocalUserLogin(u, p, storageKey) {
   const userRecord = localStorage.getItem(storageKey);
   if (userRecord) {
@@ -7126,11 +7120,6 @@ if (typeof fbDb !== 'undefined' && fbDb) {
 function initAdminMasterPanel() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
 
-  // Sayfa yenilendiğinde Firebase Admin UID yetkisini otomatik tazeleyen köprü
-  if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
-    firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", "Ers4834754").catch(() => {});
-  }
-
   renderAdminHUD();
   renderAdminCommissionInputs();
   renderAdminUserTable();
@@ -7237,7 +7226,7 @@ function executeAdminVaultWithdraw() {
   showToast(`💸 ${amount} USDT soğuk cüzdana çekim emri verildi: ${targetAddr}`, "success");
 }
 
-async function executeAdminBurnOra() {
+function executeAdminBurnOra() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
   const amtInput = document.getElementById('admin-burn-ora-amount');
   const amt = parseFloat(amtInput?.value);
@@ -7253,24 +7242,24 @@ async function executeAdminBurnOra() {
     return;
   }
 
-  // 1. Firebase Auth oturumunun açık olduğundan emin ol (UID'yi onaylat)
+  // Firebase Auth oturum kontrolü (UID eşleşmesi için)
   if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
-    try {
-      showToast("🔐 Yetki doğrulanıyor...", "info");
-      await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", "Ers4834754");
-    } catch (authErr) {
-      console.warn("Auth köprü uyarısı:", authErr);
-      showToast("⛔ Admin yetkisi doğrulanamadı!", "warning");
-      return;
-    }
+    showToast("🔐 Admin yetkisi için lütfen çıkış yapıp tekrar giriş yapın.", "warning");
+    return;
   }
 
-  // 2. Hem rezervden düş hem toplam yakılanı artır
+  // 1. Rezervden düş ve toplam yakılanı artır
   const newReserve = Number((currentReserve - amt).toFixed(2));
   const newBurned = Number(((AdminState.totalBurnedOra || 0) + amt).toFixed(2));
 
   AdminState.genesisOraReserve = newReserve;
   AdminState.totalBurnedOra = newBurned;
+
+  // 2. Global state ile eşitle
+  if (typeof ProtocolState !== 'undefined') {
+    ProtocolState.totalBurnedOra = newBurned;
+    if (typeof saveGlobalProtocolState === 'function') saveGlobalProtocolState(ProtocolState);
+  }
 
   // 3. Buluta kaydet
   if (typeof fbDb !== 'undefined' && fbDb) {
@@ -7281,7 +7270,7 @@ async function executeAdminBurnOra() {
       localStorage.setItem('mineora_admin_root_state', JSON.stringify(AdminState));
       renderAdminHUD();
       if (amtInput) amtInput.value = "";
-      showToast(`🔥 ${amt.toLocaleString()} ORA başarıyla yakıldı ve buluta işlendi!`, "success");
+      showToast(`🔥 ${amt.toLocaleString()} ORA başarıyla yakıldı ve rezervden düşüldü!`, "success");
     }).catch((err) => {
       console.error("Firebase Engeli:", err);
       showToast(`⛔ Firebase Yazma İzni Reddedildi: ${err.message}`, "warning");
@@ -7291,7 +7280,7 @@ async function executeAdminBurnOra() {
     localStorage.setItem('mineora_admin_root_state', JSON.stringify(AdminState));
     renderAdminHUD();
     if (amtInput) amtInput.value = "";
-    showToast(`🔥 ${amt.toLocaleString()} ORA yakıldı.`, "success");
+    showToast(`🔥 ${amt.toLocaleString()} ORA yakıldı (Yerel).`, "success");
   }
 }
 // ================= CANLI YAYIN ODALARI RÖNTGENİ & MÜDAHALE MASASI =================
