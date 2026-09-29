@@ -1217,48 +1217,48 @@
             <!-- OYUN CANVAS -->
             <canvas id="colonyCanvas" class="w-full h-full block"></canvas>
 
-            <!-- ALT İNŞAAT BAR -->
-            <footer class="absolute bottom-2 sm:bottom-4 left-0 right-0 z-20 pointer-events-none px-2 flex justify-center">
-              <div class="pointer-events-auto max-w-full overflow-x-auto no-scrollbar flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-1.5 sm:p-2 rounded-2xl shadow-2xl">
-                <button onclick="ColonyEngine.selectBuild('road')" id="btn-build-road" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+            <!-- ALT İNŞAAT BAR (MOBİL UYUMLU & ANDROID TUŞLARINDAN YUKARIDA) -->
+            <footer class="absolute bottom-5 sm:bottom-6 left-0 right-0 z-20 pointer-events-none px-2 flex justify-center">
+              <div class="pointer-events-auto max-w-full overflow-x-auto no-scrollbar flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-700/90 p-2 rounded-2xl shadow-2xl touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+                <button type="button" onclick="ColonyEngine.selectBuild('road')" id="btn-build-road" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-road text-amber-300"></i><span>Yol</span>
                 </button>
                 <div class="h-6 w-px bg-slate-700 mx-0.5 flex-shrink-0"></div>
-                <button onclick="ColonyEngine.selectBuild('house')" id="btn-build-house" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('house')" id="btn-build-house" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-house text-amber-400"></i><span>Ev</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('school')" id="btn-build-school" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('school')" id="btn-build-school" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-graduation-cap text-indigo-400"></i><span>Okul</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('market')" id="btn-build-market" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('market')" id="btn-build-market" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-scale-balanced text-emerald-400"></i><span>Pazar</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('expedition')" id="btn-build-expedition" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('expedition')" id="btn-build-expedition" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-person-hiking text-cyan-400"></i><span>Keşif</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('monument')" id="btn-build-monument" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-950/60 text-cyan-300 text-xs font-bold border border-cyan-700/60 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('monument')" id="btn-build-monument" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-cyan-950/60 text-cyan-300 text-xs font-bold border border-cyan-700/60 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-monument text-cyan-400"></i><span>Anıt</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('silo')" id="btn-build-silo" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('silo')" id="btn-build-silo" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-boxes-stacked text-orange-400"></i><span>Silo</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('generator')" id="btn-build-generator" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('generator')" id="btn-build-generator" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-industry text-amber-500"></i><span>Fırın</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('tower')" id="btn-build-tower" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('tower')" id="btn-build-tower" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-shield-halved text-rose-400"></i><span>Karakol</span>
                 </button>
                 <div class="h-6 w-px bg-slate-700 mx-0.5 flex-shrink-0"></div>
-                <button onclick="ColonyEngine.startMoveMode()" id="btn-tool-move" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-950/40 text-blue-300 text-xs font-bold border border-blue-800/50 active:scale-95 transition" title="Binayı Taşı">
+                <button type="button" onclick="ColonyEngine.startMoveMode()" id="btn-tool-move" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-950/40 text-blue-300 text-xs font-bold border border-blue-800/50 active:scale-95 transition touch-manipulation cursor-pointer" title="Binayı Taşı">
                   <i class="fa-solid fa-arrows-up-down-left-right"></i><span>Taşı</span>
                 </button>
-                <button onclick="ColonyEngine.selectBuild('demolish')" id="btn-build-demolish" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-950/40 text-rose-300 text-xs font-bold border border-rose-800/50 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.selectBuild('demolish')" id="btn-build-demolish" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-rose-950/40 text-rose-300 text-xs font-bold border border-rose-800/50 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-hammer"></i><span>Yık</span>
                 </button>
-                <button onclick="ColonyEngine.expandMapPrompt()" class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-950/50 text-cyan-300 text-xs font-bold border border-cyan-700/50 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.expandMapPrompt()" class="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-cyan-950/50 text-cyan-300 text-xs font-bold border border-cyan-700/50 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-up-right-and-down-left-from-center"></i><span>Genişlet</span>
                 </button>
-                <button onclick="ColonyEngine.resetCamera()" title="Odaklan" class="flex-shrink-0 p-2 rounded-xl bg-slate-800 text-slate-300 text-xs border border-slate-700 active:scale-95 transition">
+                <button type="button" onclick="ColonyEngine.resetCamera()" title="Odaklan" class="flex-shrink-0 p-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs border border-slate-700 active:scale-95 transition touch-manipulation cursor-pointer">
                   <i class="fa-solid fa-crosshairs"></i>
                 </button>
               </div>
@@ -1882,18 +1882,30 @@
 
             function setupEvents() {
               window.addEventListener('resize', resize);
+              if (canvas) canvas.style.touchAction = 'none';
+
+              // --- BİLGİSAYAR FARE OLAYLARI ---
               canvas.addEventListener('mousedown', (e) => {
-                if (e.button === 0) { camera.isDragging = true; camera.dragStartX = e.clientX - camera.x; camera.dragStartY = e.clientY - camera.y; }
+                if (e.button === 0) { 
+                  camera.isDragging = true; 
+                  camera.dragStartX = e.clientX - camera.x; 
+                  camera.dragStartY = e.clientY - camera.y; 
+                }
               });
               window.addEventListener('mousemove', (e) => {
-                if (camera.isDragging) { camera.x = e.clientX - camera.dragStartX; camera.y = e.clientY - camera.dragStartY; }
+                if (camera.isDragging) { 
+                  camera.x = e.clientX - camera.dragStartX; 
+                  camera.y = e.clientY - camera.dragStartY; 
+                }
                 const rect = canvas.getBoundingClientRect();
                 hoveredTile = screenToIso(e.clientX - rect.left, e.clientY - rect.top);
               });
               window.addEventListener('mouseup', () => { camera.isDragging = false; });
-              canvas.addEventListener('click', (e) => {
+
+              // --- TIKLAMA / DOKUNMA İŞLEYİCİSİ ---
+              function handleGridTapAt(clientX, clientY) {
                 const rect = canvas.getBoundingClientRect();
-                const coord = screenToIso(e.clientX - rect.left, e.clientY - rect.top);
+                const coord = screenToIso(clientX - rect.left, clientY - rect.top);
                 const tile = grid[`${coord.x}_${coord.y}`];
                 if (!tile) return;
 
@@ -1910,6 +1922,109 @@
                   showToast("Bina yeni yerine taşındı.", "fa-arrows-up-down-left-right");
                   return;
                 }
+
+                if (tile.readyHarvest) {
+                  ColonyAudio.playHarvest();
+                  if (tile.readyHarvest === 'emerald') cityState.emerald += 1;
+                  else cityState.wood += 5;
+                  tile.readyHarvest = null;
+                  updateCityLogic();
+                  showToast("Kaynak toplandı!");
+                  return;
+                }
+
+                if (activeBuildType === 'demolish') {
+                  if (tile.building && tile.building.type === 'hq') { showToast("Ana Karargah yıkılamaz!", "fa-shield-halved"); return; }
+                  ColonyAudio.playDemolish();
+                  tile.building = null; tile.hasRoad = false;
+                  updateCityLogic();
+                  closeSheet();
+                  showToast("Bölge temizlendi.");
+                  return;
+                }
+
+                if (activeBuildType === 'road') {
+                  if (!tile.building && tile.terrain !== 'lake_water' && tile.terrain !== 'mountain_rock') {
+                    tile.hasRoad = true;
+                    ColonyAudio.playBuild();
+                    updateCityLogic();
+                  }
+                  return;
+                }
+
+                if (activeBuildType && !tile.building && !tile.hasRoad) {
+                  ColonyAudio.playBuild();
+                  tile.building = { type: activeBuildType, name: activeBuildType, lvl: 1, underConstruction: false };
+                  updateCityLogic();
+                  showToast("İnşaat tamamlandı!");
+                  return;
+                }
+
+                if (tile.building) {
+                  ColonyAudio.playClick();
+                  if (tile.building.type === 'market') { ColonyEngine.toggleMarketModal(); return; }
+                  if (tile.building.type === 'expedition') { ColonyEngine.toggleExpeditionModal(); return; }
+                  openBuildingSheet(tile);
+                } else {
+                  closeSheet();
+                }
+              }
+
+              canvas.addEventListener('click', (e) => {
+                if (touchHasMoved) return;
+                handleGridTapAt(e.clientX, e.clientY);
+              });
+
+              // --- MOBİL DOKUNMATİK DESTEĞİ (HARİTA KAYDIRMA & ZOOM) ---
+              let touchStartX = 0, touchStartY = 0;
+              let touchHasMoved = false;
+              let initialPinchDist = 0;
+              let initialZoom = 1;
+
+              canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                  touchHasMoved = false;
+                  touchStartX = e.touches[0].clientX;
+                  touchStartY = e.touches[0].clientY;
+                  camera.dragStartX = touchStartX - camera.x;
+                  camera.dragStartY = touchStartY - camera.y;
+                } else if (e.touches.length === 2) {
+                  // İki parmakla yakınlaştır/uzaklaştır
+                  const dx = e.touches[0].clientX - e.touches[1].clientX;
+                  const dy = e.touches[0].clientY - e.touches[1].clientY;
+                  initialPinchDist = Math.hypot(dx, dy);
+                  initialZoom = camera.zoom;
+                }
+              }, { passive: false });
+
+              canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // Sayfanın kaymasını engeller, haritayı kaydırır
+                if (e.touches.length === 1) {
+                  const curX = e.touches[0].clientX;
+                  const curY = e.touches[0].clientY;
+                  if (Math.hypot(curX - touchStartX, curY - touchStartY) > 5) {
+                    touchHasMoved = true;
+                  }
+                  camera.x = curX - camera.dragStartX;
+                  camera.y = curY - camera.dragStartY;
+                } else if (e.touches.length === 2 && initialPinchDist > 0) {
+                  touchHasMoved = true;
+                  const dx = e.touches[0].clientX - e.touches[1].clientX;
+                  const dy = e.touches[0].clientY - e.touches[1].clientY;
+                  const currentDist = Math.hypot(dx, dy);
+                  const scale = currentDist / initialPinchDist;
+                  camera.zoom = Math.min(1.8, Math.max(0.55, initialZoom * scale));
+                }
+              }, { passive: false });
+
+              canvas.addEventListener('touchend', (e) => {
+                if (!touchHasMoved && e.changedTouches.length > 0) {
+                  const t = e.changedTouches[0];
+                  handleGridTapAt(t.clientX, t.clientY);
+                }
+                setTimeout(() => { touchHasMoved = false; }, 80);
+              });
+            }
 
                 if (tile.readyHarvest) {
                   ColonyAudio.playHarvest();
