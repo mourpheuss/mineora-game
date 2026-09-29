@@ -3596,6 +3596,15 @@ window.handleLogin = function() {
             })
             .catch(err => console.warn("Admin Auth köprü uyarısı:", err));
         }
+        showToast(`👋 Welcome ${CurrentUser.username}!`, "success");
+      } else {
+        checkLocalUserLogin(u, p, storageKey);
+      }
+    }).catch(() => { checkLocalUserLogin(u, p, storageKey); });
+  } else {
+    checkLocalUserLogin(u, p, storageKey);
+  }
+};
 function checkLocalUserLogin(u, p, storageKey) {
   const userRecord = localStorage.getItem(storageKey);
   if (userRecord) {
