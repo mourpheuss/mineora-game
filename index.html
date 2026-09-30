@@ -569,13 +569,17 @@
   </div>
   <div id="admin-contact-messages-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
 </div>
-              <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 space-y-3">
-                <h3 class="text-sm font-black text-white flex items-center gap-2">
-                  <i class="fa-solid fa-arrow-up text-amber-400"></i> Oyuncu USDT Çekim Onay Masası
-                </h3>
+             <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 space-y-3">
+                <div class="flex justify-between items-center">
+                  <h3 class="text-sm font-black text-white flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-up text-amber-400"></i> Oyuncu USDT Çekim Onay Masası
+                  </h3>
+                  <button type="button" onclick="renderAdminWithdrawalQueue()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
+                  </button>
+                </div>
                 <div id="admin-withdrawal-queue-list" class="space-y-2"></div>
               </div>
-            </div>
 
             <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3">
               <div class="flex justify-between items-center">
@@ -7889,9 +7893,125 @@ function rejectDepositOrder(depId) {
   });
 }
 
-// ================= CANLI BEP-20 ÇEKİM VE ONAY MOTORU =================
+// ================= CANLI BEP-20 YATIRMA & ÇEKİM ONAY KUYRUKLARI MOTORU =================
+
+// --- 1. YATIRMA İŞLEMLERİ ---
+function queueDepositForAdminApproval(username, amount, txid) {
+  if (!fbDb) {
+    showToast("⚠️ Veritabanı bağlantısı yok!", "warning");
+    return;
+  }
+  const depId = `dep_${Date.now()}`;
+  const payload = {
+    id: depId,
+    username: username,
+    amount: Number(parseFloat(amount).toFixed(2)),
+    txid: txid,
+    date: new Date().toLocaleString('tr-TR'),
+    status: 'pending'
+  };
+
+  fbDb.ref(`depositQueue/${depId}`).set(payload).then(() => {
+    console.log("✅ Yatırma talebi Firebase'e yazıldı:", payload);
+  }).catch(err => {
+    console.error("Yatırma yazma hatası:", err);
+    showToast("⛔ Bildirim gönderilemedi: " + err.message, "warning");
+  });
+}
+
+function renderAdminDepositQueue() {
+  const container = document.getElementById('admin-deposit-queue-list');
+  if (!container || !fbDb) return;
+
+  fbDb.ref('depositQueue').on('value', snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+
+    if (!data) {
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
+      return;
+    }
+
+    const items = Object.values(data).filter(d => d.status === 'pending');
+    if (items.length === 0) {
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
+      return;
+    }
+
+    items.forEach(d => {
+      const card = document.createElement('div');
+      card.className = "p-3 rounded-xl bg-mineora-card border border-emerald-500/40 flex items-center justify-between text-xs";
+      card.innerHTML = `
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-2">
+            <strong class="text-white">${d.username}</strong>
+            <span class="text-emerald-400 font-mono font-black">+$${d.amount.toFixed(2)} USDT</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono block break-all">TxID: ${d.txid}</span>
+          <span class="text-[9px] text-slate-500 font-mono">${d.date}</span>
+        </div>
+        <div class="flex gap-1.5 shrink-0 ml-2">
+          <button type="button" onclick="approveDepositOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
+            Onayla
+          </button>
+          <button type="button" onclick="rejectDepositOrder('${d.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">
+            Reddet
+          </button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function approveDepositOrder(depId, username, amount) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  const uKey = username.toLowerCase();
+
+  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+    const uData = snap.val();
+    if (uData) {
+      uData.usdt = Number(((uData.usdt || 0) + amount).toFixed(2));
+      if (!uData.logs) uData.logs = [];
+      uData.logs.unshift({
+        id: Date.now(),
+        title: "BEP-20 USDT Yüklendi",
+        desc: "Yatırma bildiriminiz onaylandı ve bakiyenize aktarıldı.",
+        amountText: `+$${amount.toFixed(2)} USDT`,
+        type: "income",
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString('tr-TR'),
+        read: false
+      });
+
+      fbDb.ref(`users/${uKey}`).set(uData);
+      fbDb.ref(`depositQueue/${depId}`).remove();
+
+      if (CurrentUser.username.toLowerCase() === uKey) {
+        CurrentUser.usdt = uData.usdt;
+        saveUserWorld();
+        updateHUD();
+      }
+
+      if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
+      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT yüklendi!`, "success");
+    }
+  });
+}
+
+function rejectDepositOrder(depId) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
+    showToast("Yatırma bildirimi reddedildi.", "info");
+  });
+}
+
+// --- 2. ÇEKİM İŞLEMLERİ ---
 function queueWithdrawalForAdminApproval(username, amount, targetAddr) {
-  if (!fbDb) return;
+  if (!fbDb) {
+    showToast("⚠️ Veritabanı bağlantısı yok!", "warning");
+    return;
+  }
   const withId = `with_${Date.now()}`;
   const payload = {
     id: withId,
@@ -7945,7 +8065,7 @@ function renderAdminWithdrawalQueue() {
           <button type="button" onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
             Gönderildi (Kapat)
           </button>
-          <button type="button" onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer" title="Reddet ve Parayı İade Et">
+          <button type="button" onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer" title="İade Et">
             İade Et
           </button>
         </div>
@@ -7958,7 +8078,7 @@ function renderAdminWithdrawalQueue() {
 function approveWithdrawalOrder(withId, username, amount) {
   if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
   fbDb.ref(`withdrawalQueue/${withId}`).remove().then(() => {
-    showToast(`✅ ${username} adlı kullanıcının $${amount} USDT çekimi onaylandı.`, "success");
+    showToast(`✅ ${username} adlı kullanıcının $${amount} USDT çekimi tamamlandı olarak işaretlendi.`, "success");
   });
 }
 
@@ -7980,7 +8100,7 @@ function rejectWithdrawalOrder(withId, username, amount) {
         saveUserWorld();
         updateHUD();
       }
-      showToast(`↩️ Çekim iptal edildi, $${amount} USDT kullanıcıya iade edildi.`, "info");
+      showToast(`↩️ Çekim iptal edildi, $${amount} USDT hesaba iade edildi.`, "info");
     }
   });
 }
