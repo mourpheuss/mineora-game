@@ -8145,21 +8145,32 @@ function renderAdminWithdrawalQueue() {
 
     items.forEach(d => {
       const card = document.createElement('div');
-      card.className = "p-3 rounded-xl bg-mineora-card border border-amber-500/40 flex items-center justify-between text-xs";
+      card.className = "p-3 rounded-xl bg-mineora-card border border-amber-500/40 flex flex-col gap-2.5 text-xs shadow-md";
       card.innerHTML = `
-        <div class="space-y-0.5">
+        <!-- Üst Satır: Kullanıcı, Tutar ve Tarih -->
+        <div class="flex items-center justify-between border-b border-mineora-border/60 pb-1.5">
           <div class="flex items-center gap-2">
-            <strong class="text-white">${d.username}</strong>
-            <span class="text-amber-400 font-mono font-black">-$${d.amount.toFixed(2)} USDT</span>
+            <strong class="text-white text-sm">${d.username}</strong>
+            <span class="text-amber-400 font-mono font-black text-sm">-$${d.amount.toFixed(2)} USDT</span>
           </div>
-          <span class="text-[10px] text-cyan-400 font-mono block break-all"><i class="fa-solid fa-wallet mr-1"></i>${d.targetAddress}</span>
-          <span class="text-[9px] text-slate-500 font-mono">${d.date}</span>
+          <span class="text-[10px] text-slate-500 font-mono">${d.date}</span>
         </div>
-        <div class="flex gap-1.5 shrink-0 ml-2">
-          <button type="button" onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
+
+        <!-- Orta Satır: Tek Tıkla Kopyalanabilir Adres Kutusu -->
+        <div class="flex items-center gap-2 bg-mineora-bg p-2 rounded-xl border border-mineora-border">
+          <i class="fa-solid fa-wallet text-cyan-400 shrink-0"></i>
+          <span class="text-[11px] text-cyan-300 font-mono select-all truncate flex-1" title="${d.targetAddress}">${d.targetAddress}</span>
+          <button type="button" onclick="navigator.clipboard.writeText('${d.targetAddress}'); showToast('📋 Cüzdan adresi kopyalandı!', 'success');" class="px-2.5 py-1 bg-cyan-600/30 hover:bg-cyan-600 text-cyan-300 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer transition shrink-0 flex items-center gap-1">
+            <i class="fa-solid fa-copy"></i> Kopyala
+          </button>
+        </div>
+
+        <!-- Alt Satır: İşlem Butonları -->
+        <div class="flex gap-2 pt-0.5">
+          <button type="button" onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow transition text-center">
             Gönderildi (Kapat)
           </button>
-          <button type="button" onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer" title="İade Et">
+          <button type="button" onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer transition text-center" title="Reddet ve Parayı İade Et">
             İade Et
           </button>
         </div>
