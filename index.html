@@ -4685,9 +4685,8 @@ function startElevatorDispatch() {
     }
   }, 1000);
 }
-// ================= 4. BEP-20 / NOWPAYMENTS CÜZDAN MOTORU (wallet.js) =================
+// ================= 4. BEP-20 ŞAHSİ TRUST WALLET MOTORU (wallet.js) =================
 let isWalletProcessing = false;
-const NOWPAYMENTS_API_KEY = "101Y7VW-THAMMMS-P2AJF28-H1V76AX";
 const MASTER_TRUST_WALLET_BEP20 = "0x9bCaE8db59621D8A3345405D92ECA803c9D6C431";
 
 function setWalletTab(tab) {
@@ -4712,58 +4711,15 @@ function setWalletTab(tab) {
   }
 }
 
-async function getOrCreateUserDepositAddress(username) {
-  if (!username) return MASTER_TRUST_WALLET_BEP20;
-
-  if (CurrentUser && CurrentUser.bep20DepositAddress) {
-    return CurrentUser.bep20DepositAddress;
-  }
-
-  try {
-    const response = await fetch("https://api.nowpayments.io/v1/payment", {
-      method: "POST",
-      headers: {
-        "x-api-key": NOWPAYMENTS_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        price_amount: 10,
-        price_currency: "usd",
-        pay_currency: "usdtbsc",
-        order_id: `DEP_${username}_${Date.now()}`,
-        order_description: `Mineora Deposit - ${username}`
-      })
-    });
-
-    const data = await response.json();
-    if (data && data.pay_address) {
-      if (CurrentUser) {
-        CurrentUser.bep20DepositAddress = data.pay_address;
-        CurrentUser.lastPaymentId = data.payment_id;
-        if (typeof saveUserWorld === 'function') saveUserWorld();
-      }
-      return data.pay_address;
-    }
-  } catch (err) {
-    console.warn("NOWPayments automated address warning, master vault used:", err);
-  }
-
-  return MASTER_TRUST_WALLET_BEP20;
-}
-
-async function renderQrCode() {
+function renderQrCode() {
   const box = document.getElementById('qrcode-container');
   const addrBox = document.getElementById('wallet-trc20-box');
   if (!box) return;
-  box.innerHTML = "<div class='text-xs text-slate-500 py-8 flex items-center justify-center animate-pulse'>Generating Secure BEP-20 (BSC) Address...</div>";
-
-  const username = CurrentUser ? CurrentUser.username : "";
-  const dedicatedAddr = await getOrCreateUserDepositAddress(username);
 
   box.innerHTML = "";
   if (typeof QRCode !== 'undefined') {
     new QRCode(box, {
-      text: dedicatedAddr,
+      text: MASTER_TRUST_WALLET_BEP20,
       width: 140, height: 140,
       colorDark: "#0b0e11", colorLight: "#ffffff",
       correctLevel: QRCode.CorrectLevel.H
@@ -4771,17 +4727,13 @@ async function renderQrCode() {
   }
 
   if (addrBox) {
-    addrBox.value = dedicatedAddr;
+    addrBox.value = MASTER_TRUST_WALLET_BEP20;
   }
 }
 
 function copyWalletAddress() {
-  const addrBox = document.getElementById('wallet-trc20-box');
-  const target = addrBox?.value || CurrentUser?.bep20DepositAddress || MASTER_TRUST_WALLET_BEP20;
-  if (!target) return;
-  
-  navigator.clipboard.writeText(target).then(() => {
-    showToast("📋 Dedicated BNB Chain (BEP-20) deposit address copied!", "success");
+  navigator.clipboard.writeText(MASTER_TRUST_WALLET_BEP20).then(() => {
+    showToast("📋 BNB Chain (BEP-20) cüzdan adresi kopyalandı!", "success");
   });
 }
 
@@ -4799,42 +4751,36 @@ function submitDepositReceipt() {
   let txid = txidInput?.value.trim();
 
   if (isNaN(amt) || amt < 10) { 
-    showToast("⚠️ Minimum deposit settlement is 10 USDT!", "warning"); 
+    showToast("⚠️ Minimum yatırım bildirimi 10 USDT'dir!", "warning"); 
     return; 
   }
 
   if (!txid) {
-    txid = `BSC-AUTO-${Date.now().toString(36).toUpperCase()}`;
-  }
-
-  const existingDeposits = (typeof AdminState !== 'undefined' && AdminState.pendingDeposits) ? AdminState.pendingDeposits : [];
-  if (existingDeposits.some(d => d.txid && d.txid.toLowerCase() === txid.toLowerCase())) {
-    showToast("⛔ This transfer identifier is already queued!", "warning"); 
-    return; 
+    showToast("⚠️ Lütfen borsadan aldığınız TxID (İşlem Kodu) bilgisini girin!", "warning");
+    return;
   }
 
   isWalletProcessing = true;
-  const dedicatedAddr = CurrentUser.bep20DepositAddress || MASTER_TRUST_WALLET_BEP20;
 
   if (typeof queueDepositForAdminApproval === 'function') {
-    queueDepositForAdminApproval(CurrentUser.username, amt, `${txid} [BEP-20 Target: ${dedicatedAddr.slice(0, 6)}...${dedicatedAddr.slice(-4)}]`);
+    queueDepositForAdminApproval(CurrentUser.username, amt, txid);
   }
   
   if (amtInput) amtInput.value = "";
   if (txidInput) txidInput.value = "";
   closeModal('modal-wallet');
-  showToast(`⏳ $${amt.toFixed(2)} USDT deposit notification sent. Funds will credit upon network validation.`, "info");
+  showToast(`⏳ $${amt.toFixed(2)} USDT yatırma bildiriminiz alındı. Blokzincir kontrolünden sonra bakiyenize yansıtılacaktır.`, "info");
   setTimeout(() => { isWalletProcessing = false; }, 1000);
 }
 
 function executeWithdrawal() {
   if (!CurrentUser) return;
   if (CurrentUser.isVaultLocked) { 
-    showToast("⛔ Vault locked accounts cannot withdraw. Contact support desk.", "warning"); 
+    showToast("⛔ Kasası kilitli hesaplar çekim yapamaz.", "warning"); 
     return; 
   }
   if (isWalletProcessing) { 
-    showToast("⏳ Processing request, please wait...", "info"); 
+    showToast("⏳ İşlem yürütülüyor, lütfen bekleyin...", "info"); 
     return; 
   }
 
@@ -4845,19 +4791,19 @@ function executeWithdrawal() {
   const amt = parseFloat(amtInput?.value);
   const pwd = pwdInput?.value.trim();
 
-  if (isNaN(amt) || amt <= 0) { showToast("⚠️ Enter valid withdrawal amount!", "warning"); return; }
-  if (amt < 10) { showToast("⚠️ Minimum withdrawal is 10 USDT!", "warning"); return; }
+  if (isNaN(amt) || amt <= 0) { showToast("⚠️ Geçerli bir çekim tutarı girin!", "warning"); return; }
+  if (amt < 10) { showToast("⚠️ Minimum çekim tutarı 10 USDT'dir!", "warning"); return; }
   
-  const isValidAddress = (targetAddr && targetAddr.startsWith('0x') && targetAddr.length === 42) || (targetAddr && targetAddr.startsWith('T') && targetAddr.length >= 30);
+  const isValidAddress = (targetAddr && targetAddr.startsWith('0x') && targetAddr.length === 42);
   if (!targetAddr || !isValidAddress) { 
-    showToast("⚠️ Enter a valid BNB Chain (BEP-20) address starting with '0x'!", "warning"); 
+    showToast("⚠️ '0x' ile başlayan geçerli bir BEP-20 cüzdan adresi girin!", "warning"); 
     return; 
   }
 
   const currentUsdt = Number(CurrentUser.usdt) || 0;
-  if (amt > currentUsdt) { showToast(`⚠️ Insufficient balance! Current USDT: $${currentUsdt.toFixed(2)}`, "warning"); return; }
-  if (!pwd) { showToast("⚠️ Confirm account password for security!", "warning"); return; }
-  if (pwd !== CurrentUser.pass) { showToast("❌ Incorrect password! Request aborted.", "warning"); return; }
+  if (amt > currentUsdt) { showToast(`⚠️ Yetersiz bakiye! Mevcut USDT: $${currentUsdt.toFixed(2)}`, "warning"); return; }
+  if (!pwd) { showToast("⚠️ Güvenlik için hesap şifrenizi girin!", "warning"); return; }
+  if (pwd !== CurrentUser.pass) { showToast("❌ Hatalı şifre!", "warning"); return; }
 
   isWalletProcessing = true;
   CurrentUser.usdt = Number((currentUsdt - amt).toFixed(2));
@@ -4873,10 +4819,9 @@ function executeWithdrawal() {
   if (pwdInput) pwdInput.value = "";
 
   closeModal('modal-wallet');
-  showToast(`🔒 $${amt.toFixed(2)} USDT withdrawal queued. Funds will be sent to your wallet.`, "success");
+  showToast(`🔒 $${amt.toFixed(2)} USDT çekim talebiniz sıraya alındı.`, "success");
   setTimeout(() => { isWalletProcessing = false; }, 1000);
 }
-
 // ================= 5. BORSA TAKAS / P2P MOTORU (p2p.js) =================
 function getP2pOrders() {
   const saved = localStorage.getItem('mineora_global_p2p_orders');
@@ -7197,8 +7142,8 @@ function initAdminMasterPanel() {
   renderAdminDepositQueue();
   renderAdminWithdrawalQueue();
   renderAdminLiveRoomsMonitor();
+  renderAdminContactMessages();
 }
-
 function renderAdminHUD() {
   const oraResEl = document.getElementById('admin-master-ora-reserve');
   const usdtVaultEl = document.getElementById('admin-master-usdt-vault');
@@ -7765,24 +7710,117 @@ function handleAdminCreateUserSubmit() {
   showToast(`🎉 ${u} kullanıcısı oluşturuldu!`, "success");
 }
 
-// ================= YATIRMA VE ÇEKİM KUYRUKLARI =================
+// ================= YATIRMA VE ÇEKİM KUYRUKLARI MOTORU =================
+function queueDepositForAdminApproval(username, amount, txid) {
+  if (!fbDb) return;
+  const depId = `dep_${Date.now()}`;
+  const payload = {
+    id: depId,
+    username: username,
+    amount: Number(parseFloat(amount).toFixed(2)),
+    txid: txid,
+    date: new Date().toLocaleString('tr-TR'),
+    status: 'pending'
+  };
+
+  fbDb.ref(`depositQueue/${depId}`).set(payload).then(() => {
+    if (typeof renderAdminDepositQueue === 'function') renderAdminDepositQueue();
+  });
+}
 
 function renderAdminDepositQueue() {
   const container = document.getElementById('admin-deposit-queue-list');
-  if (!container) return;
-  container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
+  if (!container || !fbDb || !CurrentUser || !CurrentUser.isRootAdmin) return;
+
+  fbDb.ref('depositQueue').once('value').then(snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+
+    if (!data) {
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
+      return;
+    }
+
+    const items = Object.values(data).filter(d => d.status === 'pending');
+    if (items.length === 0) {
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
+      return;
+    }
+
+    items.forEach(d => {
+      const card = document.createElement('div');
+      card.className = "p-3 rounded-xl bg-mineora-card border border-emerald-500/40 flex items-center justify-between text-xs";
+      card.innerHTML = `
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-2">
+            <strong class="text-white">${d.username}</strong>
+            <span class="text-emerald-400 font-mono font-black">+$${d.amount.toFixed(2)} USDT</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono block break-all">TxID: ${d.txid}</span>
+          <span class="text-[9px] text-slate-500 font-mono">${d.date}</span>
+        </div>
+        <div class="flex gap-1.5 shrink-0 ml-2">
+          <button type="button" onclick="approveDepositOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
+            Onayla
+          </button>
+          <button type="button" onclick="rejectDepositOrder('${d.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">
+            Reddet
+          </button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function approveDepositOrder(depId, username, amount) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  const uKey = username.toLowerCase();
+
+  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+    const uData = snap.val();
+    if (uData) {
+      uData.usdt = Number(((uData.usdt || 0) + amount).toFixed(2));
+      if (!uData.logs) uData.logs = [];
+      uData.logs.unshift({
+        id: Date.now(),
+        title: "BEP-20 USDT Yüklendi",
+        desc: "Yatırma bildiriminiz onaylandı ve bakiyenize aktarıldı.",
+        amountText: `+$${amount.toFixed(2)} USDT`,
+        type: "income",
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString('tr-TR'),
+        read: false
+      });
+
+      fbDb.ref(`users/${uKey}`).set(uData);
+      fbDb.ref(`depositQueue/${depId}`).remove();
+
+      if (CurrentUser.username.toLowerCase() === uKey) {
+        CurrentUser.usdt = uData.usdt;
+        saveUserWorld();
+        updateHUD();
+      }
+
+      renderAdminDepositQueue();
+      if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
+      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT başarıyla yüklendi!`, "success");
+    }
+  });
+}
+
+function rejectDepositOrder(depId) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
+    renderAdminDepositQueue();
+    showToast("Bildirim reddedildi ve listeden kaldırıldı.", "info");
+  });
 }
 
 function renderAdminWithdrawalQueue() {
   const container = document.getElementById('admin-withdrawal-queue-list');
   if (!container) return;
   container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen USDT çekim talebi yok.</div>`;
-}
-
-function renderAdminGlobalHierarchy() {
-  const treeEl = document.getElementById('admin-global-hierarchy-tree');
-  if (!treeEl) return;
-  treeEl.innerHTML = `<div class="p-4 bg-mineora-card rounded-xl text-xs text-slate-400 notranslate" translate="no">Hiyerarşi haritası senkronize.</div>`;
 }
 // ================= İLETİŞİM & DESTEK FORMU MOTORU =================
 function submitContactMessage() {
