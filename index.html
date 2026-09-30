@@ -554,65 +554,82 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 space-y-3">
-                <div class="flex justify-between items-center">
-                  <h3 class="text-sm font-black text-white flex items-center gap-2">
-                    <i class="fa-solid fa-arrow-down text-emerald-400"></i> Borsadan USDT Yatırma Onay Masası
+            <!-- 1. BÖLÜM: 3'LÜ CANLI ONAY VE OPERASYON MASALARI -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              
+              <!-- 1) Yatırma Masası -->
+              <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 flex flex-col justify-between space-y-3">
+                <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
+                  <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-down text-emerald-400"></i> Yatırma Masası
                   </h3>
-                  <button type="button" onclick="renderAdminDepositQueue()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
+                  <button type="button" onclick="renderAdminDepositQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
                     <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
                   </button>
                 </div>
-                <div id="admin-deposit-queue-list" class="space-y-2"></div>
-              </div>
-<!-- GELEN İLETİŞİM & DESTEK MESAJLARI -->
-<div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/40 space-y-3 mt-4">
-  <div class="flex justify-between items-center">
-    <h3 class="text-sm font-black text-white flex items-center gap-2">
-      <i class="fa-solid fa-inbox text-cyan-400"></i> Gelen Ziyaretçi & Destek Mesajları
-    </h3>
-    <button type="button" onclick="renderAdminContactMessages()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
-      <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
-    </button>
-  </div>
-  <div id="admin-contact-messages-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
-</div>
-             <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 space-y-3">
-                <div class="flex justify-between items-center">
-                  <h3 class="text-sm font-black text-white flex items-center gap-2">
-                    <i class="fa-solid fa-arrow-up text-amber-400"></i> Oyuncu USDT Çekim Onay Masası
-                  </h3>
-                  <button type="button" onclick="renderAdminWithdrawalQueue()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
-                  </button>
-                </div>
-                <div id="admin-withdrawal-queue-list" class="space-y-2"></div>
+                <div id="admin-deposit-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
 
-            <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3">
-              <div class="flex justify-between items-center">
-                <h3 class="text-sm font-black text-white flex items-center gap-2">
-                  <i class="fa-solid fa-users-viewfinder text-cyan-400"></i> Sistem Kullanıcı Röntgen Listesi
-                </h3>
-                <button type="button" onclick="renderAdminUserTable()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
-                  <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
+              <!-- 2) Çekim Masası -->
+              <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 flex flex-col justify-between space-y-3">
+                <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
+                  <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-up text-amber-400"></i> Çekim Masası
+                  </h3>
+                  <button type="button" onclick="renderAdminWithdrawalQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
+                  </button>
+                </div>
+                <div id="admin-withdrawal-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
+              </div>
+
+              <!-- 3) Gelen Destek Mesajları -->
+              <div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/40 flex flex-col justify-between space-y-3">
+                <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
+                  <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-inbox text-cyan-400"></i> Destek Mesajları
+                  </h3>
+                  <button type="button" onclick="renderAdminContactMessages()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
+                  </button>
+                </div>
+                <div id="admin-contact-messages-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
+              </div>
+
+            </div>
+
+            <!-- 2. BÖLÜM: SİSTEM KULLANICI RÖNTGEN LİSTESİ (TAM GENİŞLİK / FULL WIDTH) -->
+            <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3 w-full shadow-xl">
+              <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-users-viewfinder"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white">Sistem Kullanıcı Röntgen Listesi</h3>
+                    <span class="text-[10px] text-slate-400">Tüm oyuncuların hesap güvenliği, bakiyeleri ve acil kilit müdahalesi</span>
+                  </div>
+                </div>
+                <button type="button" onclick="renderAdminUserTable()" class="px-3 py-1.5 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-rotate-right"></i> Yenile
                 </button>
               </div>
+
+              <!-- Tablo Konteyneri: Masaüstünde tam yayılır, mobilde kaydırılabilir -->
               <div class="overflow-x-auto rounded-xl border border-mineora-border">
-                <table class="w-full text-left text-xs">
-                  <thead class="bg-black/40 text-slate-400 uppercase text-[10px]">
+                <table class="w-full text-left text-xs min-w-[750px]">
+                  <thead class="bg-black/50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-mineora-border">
                     <tr>
-                      <th class="py-3 px-4">Kullanıcı</th>
-                      <th class="py-3 px-4">Giriş Şifresi</th>
-                      <th class="py-3 px-4">Rol / Süre Durumu</th>
-                      <th class="py-3 px-4">USDT Kasası</th>
-                      <th class="py-3 px-4">ORA Kasası</th>
-                      <th class="py-3 px-4">Kasa Kilidi</th>
-                      <th class="py-3 px-4 text-right">İşlem</th>
+                      <th class="py-3.5 px-4">Kullanıcı</th>
+                      <th class="py-3.5 px-4">Giriş Şifresi</th>
+                      <th class="py-3.5 px-4">Rol / Durum</th>
+                      <th class="py-3.5 px-4">USDT Kasası</th>
+                      <th class="py-3.5 px-4">ORA Kasası</th>
+                      <th class="py-3.5 px-4">Kasa Kilidi</th>
+                      <th class="py-3.5 px-4 text-right">İşlem</th>
                     </tr>
                   </thead>
-                  <tbody id="admin-user-table-body" class="divide-y border-mineora-border"></tbody>
+                  <tbody id="admin-user-table-body" class="divide-y divide-mineora-border/60 text-slate-200"></tbody>
                 </table>
               </div>
             </div>
