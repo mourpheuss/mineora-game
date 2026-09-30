@@ -5081,15 +5081,29 @@ function cancelP2pOrder(orderId) {
   setTimeout(() => { isP2pProcessing = false; }, 600);
 }
 
+// --- P2P BOT ANA ŞALTERİ ---
+// İleride üye sayısı arttığında botları tamamen kapatmak için burayı 'false' yapmanız yeterlidir:
+const ENABLE_P2P_BOTS = true; 
+
 function renderP2pOrders() {
   const tbody = document.getElementById('p2p-order-list');
   if (!tbody) return;
   tbody.innerHTML = "";
 
   const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
-  const botOrders = getActiveBotOrders();
-  const allCombinedOrders = [...globalP2pOrders, ...botOrders];
-  const filtered = allCombinedOrders.filter(o => o.side === targetSide && o.oraAmount > 0);
+
+  // 1) Gerçek kullanıcıların aktif emirlerini filtrele (En yeni emir en üstte)
+  const realUserOrders = globalP2pOrders
+    .filter(o => o.side === targetSide && o.oraAmount > 0 && !o.isBot)
+    .sort((a, b) => (b.id || 0) - (a.id || 0));
+
+  // 2) Bot emirlerini al (Eğer şalter açıksa)
+  const botOrders = ENABLE_P2P_BOTS 
+    ? getActiveBotOrders().filter(o => o.side === targetSide && o.oraAmount > 0)
+    : [];
+
+  // 3) ÖNCELİK KURALI: Gerçek kullanıcılar DAİMA en üstte, botlar her zaman altta listelenir!
+  const filtered = [...realUserOrders, ...botOrders];
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">Bu yönde aktif emir bulunmuyor.</td></tr>`;
@@ -5098,19 +5112,26 @@ function renderP2pOrders() {
 
   filtered.forEach(order => {
     const isMyOrder = CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase();
+    const isRealUser = !order.isBot;
     const tr = document.createElement('tr');
-    tr.className = "hover:bg-mineora-bg/50 transition border-b border-mineora-border/40 text-xs";
+    
+    // Gerçek kullanıcı emirlerine hafif altın sarısı parlama efekti vererek öne çıkaralım
+    tr.className = isRealUser 
+      ? "hover:bg-mineora-bg/70 bg-amber-500/[0.03] transition border-b border-amber-500/20 text-xs" 
+      : "hover:bg-mineora-bg/50 transition border-b border-mineora-border/40 text-xs opacity-90";
+
     const btnClass = p2pFilter === 'buy' ? "bg-mineora-green hover:opacity-90 text-white" : "bg-rose-600 hover:opacity-90 text-white";
     const btnText = p2pFilter === 'buy' ? "USDT Öde & ORA Al" : "ORA Gönder & USDT Al";
 
     tr.innerHTML = `
       <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-mineora-input flex items-center justify-center text-mineora-gold text-xs font-black">
-          ${order.merchant.charAt(0).toUpperCase()}
+        <div class="w-7 h-7 rounded-lg ${isRealUser ? 'bg-amber-500/20 text-mineora-gold border border-amber-500/40' : 'bg-mineora-input text-slate-400'} flex items-center justify-center text-xs font-black shrink-0">
+          ${isRealUser ? '<i class="fa-solid fa-user text-[11px]"></i>' : order.merchant.charAt(0).toUpperCase()}
         </div>
         <div>
-          <span>${order.merchant}</span>
+          <span class="${isRealUser ? 'text-amber-200 font-extrabold' : 'text-slate-300'}">${order.merchant}</span>
           ${isMyOrder ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SİZİN EMRİNİZ</span>` : ''}
+          ${isRealUser && !isMyOrder ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[8px] font-mono border border-emerald-500/30">Oyuncu</span>` : ''}
           ${order.isBot ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-[8px] font-mono border border-cyan-500/20">Doğrulanmış Tüccar</span>` : ''}
         </div>
       </td>
