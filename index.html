@@ -4857,7 +4857,7 @@ function executeWithdrawal() {
   showToast(`🔒 $${amt.toFixed(2)} USDT çekim talebiniz sıraya alındı.`, "success");
   setTimeout(() => { isWalletProcessing = false; }, 1000);
 }
-// ================= 5. BORSA TAKAS / P2P MOTORU (p2p.js) =================
+// ================= 5. BORSA TAKAS / P2P & LİKİDİTE BOTU MOTORU =================
 function getP2pOrders() {
   const saved = localStorage.getItem('mineora_global_p2p_orders');
   if (saved) { try { return JSON.parse(saved); } catch(e) {} }
@@ -4875,6 +4875,47 @@ let p2pFilter = 'buy';
 let p2pCreateSide = 'buy';
 let activeP2pOrder = null;
 let isP2pProcessing = false;
+
+// --- DİNAMİK PİYASA YAPICI BOT MOTORU ---
+const P2P_BOT_NAMES = [
+  "Zurich_Capital", "Helvetia_Vault", "AlpMiner_77", "NordicOre_GmbH",
+  "Klaus_S", "Geneva_Desk", "Matterhorn_P2P", "StGallen_Node", "Eiger_Reserve"
+];
+
+function generateSimulatedBotOrders() {
+  const simulated = [];
+  const baseTime = Date.now();
+
+  // 1) BOT SATIŞ EMİRLERİ (Kullanıcılar USDT verip ORA Alabilir)
+  const sellAmounts = [250, 500, 1200, 2500, 5000, 10000];
+  sellAmounts.forEach((amt, idx) => {
+    simulated.push({
+      id: 90000000 + idx,
+      isBot: true,
+      side: 'sell',
+      merchant: P2P_BOT_NAMES[idx % P2P_BOT_NAMES.length],
+      price: 0.1000,
+      oraAmount: amt,
+      usdtAmount: Number((amt * 0.1000).toFixed(2))
+    });
+  });
+
+  // 2) BOT ALIŞ EMİRLERİ (Kullanıcılar ORA satıp USDT Alabilir)
+  const buyAmounts = [150, 400, 850, 1500, 3000];
+  buyAmounts.forEach((amt, idx) => {
+    simulated.push({
+      id: 91000000 + idx,
+      isBot: true,
+      side: 'buy',
+      merchant: P2P_BOT_NAMES[(idx + 4) % P2P_BOT_NAMES.length],
+      price: 0.1000,
+      oraAmount: amt,
+      usdtAmount: Number((amt * 0.1000).toFixed(2))
+    });
+  });
+
+  return simulated;
+}
 
 function setP2pFilter(filter) {
   p2pFilter = filter;
@@ -4921,13 +4962,13 @@ function calculateP2pCreatePreview() {
 
 function submitP2pOrder() {
   if (!CurrentUser) return;
-  if (isP2pProcessing) { showToast("⏳ Processing request...", "info"); return; }
+  if (isP2pProcessing) { showToast("⏳ İşlem yapılıyor...", "info"); return; }
 
   const price = parseFloat(document.getElementById('p2p-create-price')?.value);
   const oraAmt = parseFloat(document.getElementById('p2p-create-amount')?.value);
 
   if (isNaN(price) || price <= 0 || isNaN(oraAmt) || oraAmt <= 0) {
-    showToast("⚠️ Enter valid price and ORA quantity!", "warning");
+    showToast("⚠️ Geçerli bir fiyat ve ORA miktarı girin!", "warning");
     return;
   }
 
@@ -4936,10 +4977,10 @@ function submitP2pOrder() {
   const currentUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
 
   if (p2pCreateSide === 'sell') {
-    if (oraAmt > currentOra) { showToast(`⚠️ Insufficient ORA to sell! Available: ${currentOra.toFixed(2)} ORA`, "warning"); return; }
+    if (oraAmt > currentOra) { showToast(`⚠️ Yetersiz ORA! Mevcut: ${currentOra.toFixed(2)} ORA`, "warning"); return; }
     CurrentUser.ora = Number((currentOra - oraAmt).toFixed(2));
   } else {
-    if (totalUsdt > currentUsdt) { showToast(`⚠️ Insufficient USDT for buy offer! Required: $${totalUsdt.toFixed(2)} USDT`, "warning"); return; }
+    if (totalUsdt > currentUsdt) { showToast(`⚠️ Yetersiz USDT! Gerekli: $${totalUsdt.toFixed(2)} USDT`, "warning"); return; }
     CurrentUser.usdt = Number((currentUsdt - totalUsdt).toFixed(2));
   }
 
@@ -4948,13 +4989,13 @@ function submitP2pOrder() {
   updateHUD();
 
   globalP2pOrders.unshift({
-    id: Date.now(), side: p2pCreateSide, merchant: CurrentUser.username, price: price, oraAmount: oraAmt, usdtAmount: totalUsdt
+    id: Date.now(), isBot: false, side: p2pCreateSide, merchant: CurrentUser.username, price: price, oraAmount: oraAmt, usdtAmount: totalUsdt
   });
 
   saveP2pOrders(globalP2pOrders);
   closeModal('modal-p2p-create');
   renderP2pOrders();
-  showToast("📋 Offer listed on P2P book and funds locked in escrow!", "success");
+  showToast("📋 Teklifiniz P2P tahtasına eklendi ve emanete (escrow) alındı!", "success");
   setTimeout(() => { isP2pProcessing = false; }, 800);
 }
 
@@ -4965,17 +5006,17 @@ function cancelP2pOrder(orderId) {
   const order = globalP2pOrders[idx];
 
   if (order.merchant.toLowerCase() !== CurrentUser.username.toLowerCase()) {
-    showToast("⛔ You can only cancel your own offers!", "warning");
+    showToast("⛔ Yalnızca kendi emirlerinizi iptal edebilirsiniz!", "warning");
     return;
   }
 
   isP2pProcessing = true;
   if (order.side === 'sell') {
     CurrentUser.ora = Number(((CurrentUser.ora || 0) + order.oraAmount).toFixed(2));
-    showToast(`↩️ Offer cancelled! Refunded ${order.oraAmount.toFixed(2)} ORA.`, "info");
+    showToast(`↩️ Emir iptal edildi! ${order.oraAmount.toFixed(2)} ORA iade edildi.`, "info");
   } else {
     CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + order.usdtAmount).toFixed(2));
-    showToast(`↩️ Offer cancelled! Refunded $${order.usdtAmount.toFixed(2)} USDT.`, "info");
+    showToast(`↩️ Emir iptal edildi! $${order.usdtAmount.toFixed(2)} USDT iade edildi.`, "info");
   }
 
   globalP2pOrders.splice(idx, 1);
@@ -4990,10 +5031,14 @@ function renderP2pOrders() {
   tbody.innerHTML = "";
 
   const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
-  const filtered = globalP2pOrders.filter(o => o.side === targetSide && o.oraAmount > 0);
+  
+  // Gerçek emirler ile bot emirlerini harmanla
+  const botOrders = generateSimulatedBotOrders();
+  const allCombinedOrders = [...globalP2pOrders, ...botOrders];
+  const filtered = allCombinedOrders.filter(o => o.side === targetSide && o.oraAmount > 0);
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">No active orders in this direction.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">Bu yönde aktif emir bulunmuyor.</td></tr>`;
     return;
   }
 
@@ -5002,7 +5047,7 @@ function renderP2pOrders() {
     const tr = document.createElement('tr');
     tr.className = "hover:bg-mineora-bg/50 transition border-b border-mineora-border/40 text-xs";
     const btnClass = p2pFilter === 'buy' ? "bg-mineora-green hover:opacity-90 text-white" : "bg-rose-600 hover:opacity-90 text-white";
-    const btnText = p2pFilter === 'buy' ? (currentLang === 'ru' ? "Оплатить USDT & Получить ORA" : "Pay USDT & Get ORA") : (currentLang === 'ru' ? "Отправить ORA & Получить USDT" : "Send ORA & Get USDT");
+    const btnText = p2pFilter === 'buy' ? "USDT Öde & ORA Al" : "ORA Gönder & USDT Al";
 
     tr.innerHTML = `
       <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
@@ -5011,7 +5056,8 @@ function renderP2pOrders() {
         </div>
         <div>
           <span>${order.merchant}</span>
-          ${isMyOrder ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">${currentLang === 'ru' ? 'ВАШ ОРДЕР' : 'YOUR OFFER'}</span>` : ''}
+          ${isMyOrder ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SİZİN EMRİNİZ</span>` : ''}
+          ${order.isBot ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-[8px] font-mono border border-cyan-500/20">Doğrulanmış Tüccar</span>` : ''}
         </div>
       </td>
       <td class="py-3.5 px-4 font-mono font-bold text-white">$${order.price.toFixed(4)} USDT</td>
@@ -5022,10 +5068,10 @@ function renderP2pOrders() {
       <td class="py-3.5 px-4 text-right">
         ${isMyOrder ? `
           <button type="button" onclick="cancelP2pOrder(${order.id})" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 transition cursor-pointer">
-            <i class="fa-solid fa-ban mr-1"></i> ${currentLang === 'ru' ? 'Отмена' : 'Cancel'}
+            <i class="fa-solid fa-ban mr-1"></i> İptal
           </button>
         ` : `
-          <button type="button" onclick="openP2pTradeModal(${order.id})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ${btnClass}">
+          <button type="button" onclick="openP2pTradeModal(${order.id},${!!order.isBot})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ${btnClass}">
             ${btnText}
           </button>
         `}
@@ -5035,13 +5081,19 @@ function renderP2pOrders() {
   });
 }
 
-function openP2pTradeModal(orderId) {
-  const order = globalP2pOrders.find(o => o.id === orderId);
+function openP2pTradeModal(orderId, isBotOrder = false) {
+  let order = null;
+  if (isBotOrder) {
+    order = generateSimulatedBotOrders().find(o => o.id === orderId);
+  } else {
+    order = globalP2pOrders.find(o => o.id === orderId);
+  }
+
   if (!order) return;
   activeP2pOrder = order;
 
   if (CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase()) {
-    showToast("⚠️ You cannot trade against your own offer!", "warning");
+    showToast("⚠️ Kendi emrinizle işlem yapamazsınız!", "warning");
     return;
   }
 
@@ -5052,13 +5104,7 @@ function openP2pTradeModal(orderId) {
   const inputOra = document.getElementById('p2p-trade-input-ora');
   const btn = document.getElementById('p2p-trade-btn-confirm');
 
-  if (title) {
-    if (currentLang === 'ru') {
-      title.innerText = isBuy ? `Купить ORA за USDT (${order.merchant})` : `Продать ORA за USDT (${order.merchant})`;
-    } else {
-      title.innerText = isBuy ? `Buy ORA with USDT (${order.merchant})` : `Sell ORA for USDT (${order.merchant})`;
-    }
-  }
+  if (title) title.innerText = isBuy ? `ORA Satın Al (${order.merchant})` : `ORA Sat (${order.merchant})`;
   if (merchant) merchant.innerText = order.merchant;
   if (price) price.innerText = `$${order.price.toFixed(4)} USDT`;
   if (inputOra) inputOra.value = order.oraAmount;
@@ -5067,9 +5113,7 @@ function openP2pTradeModal(orderId) {
     btn.className = isBuy 
       ? "w-full py-3.5 rounded-xl bg-mineora-green text-white font-black text-xs hover:opacity-90 transition cursor-pointer" 
       : "w-full py-3.5 rounded-xl bg-rose-600 text-white font-black text-xs hover:opacity-90 transition cursor-pointer";
-    btn.innerText = isBuy 
-      ? (currentLang === 'ru' ? "Оплатить USDT и Получить ORA" : "Pay USDT and Receive ORA")
-      : (currentLang === 'ru' ? "Отправить ORA и Получить USDT" : "Send ORA and Receive USDT");
+    btn.innerText = isBuy ? "USDT Öde ve ORA Al" : "ORA Gönder ve USDT Al";
   }
 
   openModal('modal-p2p-trade');
@@ -5077,11 +5121,11 @@ function openP2pTradeModal(orderId) {
 
 function confirmP2pTrade() {
   if (!CurrentUser || !activeP2pOrder) return;
-  if (isP2pProcessing) { showToast("⏳ Processing settlement...", "info"); return; }
+  if (isP2pProcessing) { showToast("⏳ İşlem yürütülüyor...", "info"); return; }
 
   const amtOra = parseFloat(document.getElementById('p2p-trade-input-ora')?.value);
   if (isNaN(amtOra) || amtOra <= 0 || amtOra > activeP2pOrder.oraAmount) { 
-    showToast("⚠️ Invalid quantity or exceeds offer bounds!", "warning"); 
+    showToast("⚠️ Geçersiz miktar veya emir limitini aşıyor!", "warning"); 
     return; 
   }
 
@@ -5092,19 +5136,110 @@ function confirmP2pTrade() {
   const feeUsdt = Number(((rawUsdt * feeUsdtPercent) / 100).toFixed(2));
   const burnOra = Number(((amtOra * feeOraPercent) / 100).toFixed(2));
 
+  isP2pProcessing = true;
+
+  // ================= 1. DURUM: KULLANICI BOTTAN ORA ALIYOR (USDT Verir -> ORA Alır) =================
+  if (activeP2pOrder.isBot && p2pFilter === 'buy') {
+    const totalUsdt = Number((rawUsdt + feeUsdt).toFixed(2));
+    const myUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
+
+    if (myUsdt < totalUsdt) {
+      showToast(`⚠️ Yetersiz USDT! Gereken: $${totalUsdt.toFixed(2)} USDT`, "warning");
+      isP2pProcessing = false;
+      return;
+    }
+
+    // 1 Milyarlık Rezerv Kontrolü
+    const masterReserve = Number(AdminState.genesisOraReserve || 1000000000);
+    if (masterReserve < amtOra) {
+      showToast("⛔ Master ORA rezervi yetersiz!", "warning");
+      isP2pProcessing = false;
+      return;
+    }
+
+    // A) Kullanıcıdan USDT düş, ORA ver
+    CurrentUser.usdt = Number((myUsdt - totalUsdt).toFixed(2));
+    CurrentUser.ora = Number(((CurrentUser.ora || 0) + (amtOra - burnOra)).toFixed(2));
+
+    // B) Alınan USDT Kurucu Kasasına geçer, ORA 1 Milyar Genesis Rezervinden Düşer!
+    AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) + rawUsdt + feeUsdt).toFixed(2));
+    AdminState.genesisOraReserve = Number((masterReserve - amtOra).toFixed(2));
+    AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + burnOra).toFixed(2));
+
+    saveAdminProtocolState(AdminState);
+    if (typeof ProtocolState !== 'undefined') {
+      ProtocolState.adminVaultUsdt = AdminState.masterVaultUsdt;
+      ProtocolState.totalBurnedOra = AdminState.totalBurnedOra;
+      saveGlobalProtocolState(ProtocolState);
+    }
+
+    addUserNotificationLog(CurrentUser, "P2P ORA Alımı", `${activeP2pOrder.merchant} firmasından $${totalUsdt.toFixed(2)} USDT karşılığı ${amtOra} ORA alındı.`, `+${(amtOra - burnOra).toFixed(2)} ORA`, "income");
+
+    saveUserWorld();
+    updateHUD();
+    closeModal('modal-p2p-trade');
+    renderP2pOrders();
+    showToast(`✅ ${(amtOra - burnOra).toFixed(2)} ORA cüzdanınıza yansıtıldı! (${amtOra} ORA rezervden tahsis edildi)`, "success");
+    setTimeout(() => { isP2pProcessing = false; }, 800);
+    return;
+  }
+
+  // ================= 2. DURUM: KULLANICI BOTA ORA SATIYOR (ORA Verir -> USDT Alır) =================
+  if (activeP2pOrder.isBot && p2pFilter === 'sell') {
+    const myOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
+    if (myOra < amtOra) {
+      showToast(`⚠️ Satmak için yetersiz ORA! Mevcut: ${myOra.toFixed(2)} ORA`, "warning");
+      isP2pProcessing = false;
+      return;
+    }
+
+    const netUsdt = Number((rawUsdt - feeUsdt).toFixed(2));
+    const vaultUsdt = Number(AdminState.masterVaultUsdt || 0);
+
+    if (vaultUsdt < netUsdt) {
+      showToast(`⚠️ Likidite havuzu şu anda bu tutarı karşılayamıyor. Lütfen daha düşük miktar deneyin.`, "warning");
+      isP2pProcessing = false;
+      return;
+    }
+
+    // A) Kullanıcıdan ORA kes, USDT ver
+    CurrentUser.ora = Number((myOra - amtOra).toFixed(2));
+    CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + netUsdt).toFixed(2));
+
+    // B) Kurucu kasasından USDT ödenir, alınan ORA yakıma veya rezerve aktarılır
+    AdminState.masterVaultUsdt = Number((vaultUsdt - netUsdt).toFixed(2));
+    AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + amtOra).toFixed(2));
+
+    saveAdminProtocolState(AdminState);
+    if (typeof ProtocolState !== 'undefined') {
+      ProtocolState.adminVaultUsdt = AdminState.masterVaultUsdt;
+      ProtocolState.totalBurnedOra = AdminState.totalBurnedOra;
+      saveGlobalProtocolState(ProtocolState);
+    }
+
+    addUserNotificationLog(CurrentUser, "P2P ORA Satışı", `${amtOra} ORA satıldı, $${netUsdt.toFixed(2)} USDT cüzdana eklendi.`, `+$${netUsdt.toFixed(2)} USDT`, "income");
+
+    saveUserWorld();
+    updateHUD();
+    closeModal('modal-p2p-trade');
+    renderP2pOrders();
+    showToast(`✅ $${netUsdt.toFixed(2)} USDT cüzdanınıza yansıtıldı! (${amtOra} ORA yakım fırınına gönderildi)`, "success");
+    setTimeout(() => { isP2pProcessing = false; }, 800);
+    return;
+  }
+
+  // ================= 3. DURUM: GERÇEK KULLANICILAR ARASI TAKAS (P2P ESCROW) =================
   const merchantKey = `mineora_user_${activeP2pOrder.merchant.toLowerCase()}`;
   let merchantObj = null;
   try { merchantObj = JSON.parse(localStorage.getItem(merchantKey)); } catch(e) {}
 
-  if (!merchantObj) { showToast("⚠️ Merchant record unavailable!", "warning"); return; }
-
-  isP2pProcessing = true;
+  if (!merchantObj) { showToast("⚠️ Tüccar hesabı bulunamadı!", "warning"); isP2pProcessing = false; return; }
 
   if (p2pFilter === 'buy') {
     const totalUsdt = Number((rawUsdt + feeUsdt).toFixed(2));
     const myUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
     if (myUsdt < totalUsdt) {
-      showToast(`⚠️ Insufficient USDT! Required: $${totalUsdt.toFixed(2)} USDT`, "warning");
+      showToast(`⚠️ Yetersiz USDT! Gerekli: $${totalUsdt.toFixed(2)} USDT`, "warning");
       isP2pProcessing = false;
       return;
     }
@@ -5113,11 +5248,11 @@ function confirmP2pTrade() {
     CurrentUser.ora = Number(((CurrentUser.ora || 0) + (amtOra - burnOra)).toFixed(2));
     merchantObj.usdt = Number(((merchantObj.usdt || 0) + rawUsdt).toFixed(2));
     saveStoredUser(merchantObj);
-    showToast(`✅ Trade settled! ${(amtOra - burnOra).toFixed(2)} ORA credited to wallet.`, "success");
+    showToast(`✅ İşlem tamamlandı! ${(amtOra - burnOra).toFixed(2)} ORA cüzdanınıza aktarıldı.`, "success");
   } else {
     const myOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
     if (myOra < amtOra) {
-      showToast(`⚠️ Insufficient ORA to sell! Available: ${myOra.toFixed(2)} ORA`, "warning");
+      showToast(`⚠️ Satmak için yetersiz ORA! Mevcut: ${myOra.toFixed(2)} ORA`, "warning");
       isP2pProcessing = false;
       return;
     }
@@ -5127,19 +5262,7 @@ function confirmP2pTrade() {
     CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + netUsdt).toFixed(2));
     merchantObj.ora = Number(((merchantObj.ora || 0) + (amtOra - burnOra)).toFixed(2));
     saveStoredUser(merchantObj);
-    showToast(`✅ Trade settled! $${netUsdt.toFixed(2)} USDT credited to wallet.`, "success");
-  }
-
-  if (typeof ProtocolState !== 'undefined') {
-    ProtocolState.adminVaultUsdt = Number(((ProtocolState.adminVaultUsdt || 0) + feeUsdt).toFixed(2));
-    ProtocolState.totalBurnedOra = Number(((ProtocolState.totalBurnedOra || 0) + burnOra).toFixed(2));
-    saveGlobalProtocolState(ProtocolState);
-  }
-
-  if (typeof AdminState !== 'undefined') {
-    AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) + feeUsdt).toFixed(2));
-    AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + burnOra).toFixed(2));
-    if (typeof saveAdminProtocolState === 'function') saveAdminProtocolState(AdminState);
+    showToast(`✅ İşlem tamamlandı! $${netUsdt.toFixed(2)} USDT cüzdanınıza aktarıldı.`, "success");
   }
 
   activeP2pOrder.oraAmount = Number((activeP2pOrder.oraAmount - amtOra).toFixed(2));
@@ -5151,20 +5274,6 @@ function confirmP2pTrade() {
   saveP2pOrders(globalP2pOrders);
   saveUserWorld(); updateHUD(); closeModal('modal-p2p-trade'); renderP2pOrders();
   setTimeout(() => { isP2pProcessing = false; }, 800);
-}
-
-if (typeof fbDb !== 'undefined' && fbDb) {
-  try {
-    fbDb.ref('p2pOrders').on('value', snapshot => {
-      const val = snapshot.val();
-      if (val) {
-        globalP2pOrders = val;
-        localStorage.setItem('mineora_global_p2p_orders', JSON.stringify(val));
-        const p2pSec = document.getElementById('sec-p2p');
-        if (p2pSec && !p2pSec.classList.contains('hidden')) renderP2pOrders();
-      }
-    });
-  } catch(e) {}
 }
 
 // ================= 6. ORA BANKASI / STAKE MOTORU (stake.js) =================
