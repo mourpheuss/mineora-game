@@ -7752,11 +7752,21 @@ function queueDepositForAdminApproval(username, amount, txid) {
   });
 }
 
-function renderAdminDepositQueue() {
+// ================= CANLI BEP-20 YATIRMA VE ONAY MOTORU =================
+async function renderAdminDepositQueue() {
   const container = document.getElementById('admin-deposit-queue-list');
   if (!container || !fbDb) return;
 
-  // Canlı dinleyici (.on) sayesinde sayfa yenilemeden talep anında ekrana düşer
+  // 1. Eğer admin oturumu henüz bağlanmadıysa arka planda bağla
+  if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser && CurrentUser && CurrentUser.isRootAdmin) {
+    try {
+      await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", CurrentUser.pass);
+    } catch(e) {
+      console.warn("Auth otomatik bağlantı uyarısı:", e);
+    }
+  }
+
+  // 2. Veritabanından talepleri çek
   fbDb.ref('depositQueue').on('value', snap => {
     const data = snap.val();
     container.innerHTML = "";
@@ -7795,41 +7805,9 @@ function renderAdminDepositQueue() {
       `;
       container.appendChild(card);
     });
-  });
-}
-
-function approveDepositOrder(depId, username, amount) {
-  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
-  const uKey = username.toLowerCase();
-
-  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
-    const uData = snap.val();
-    if (uData) {
-      uData.usdt = Number(((uData.usdt || 0) + amount).toFixed(2));
-      if (!uData.logs) uData.logs = [];
-      uData.logs.unshift({
-        id: Date.now(),
-        title: "BEP-20 USDT Yüklendi",
-        desc: "Yatırma bildiriminiz onaylandı ve bakiyenize aktarıldı.",
-        amountText: `+$${amount.toFixed(2)} USDT`,
-        type: "income",
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('tr-TR'),
-        read: false
-      });
-
-      fbDb.ref(`users/${uKey}`).set(uData);
-      fbDb.ref(`depositQueue/${depId}`).remove();
-
-      if (CurrentUser.username.toLowerCase() === uKey) {
-        CurrentUser.usdt = uData.usdt;
-        saveUserWorld();
-        updateHUD();
-      }
-
-      if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
-      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT yüklendi!`, "success");
-    }
+  }, err => {
+    console.warn("Kuyruk okuma izni engeli:", err);
+    container.innerHTML = `<div class="p-3 text-center text-amber-400 text-xs">⚠️ Admin yetkisi bekleniyor. Lütfen sağ üstten çıkış yapıp tekrar giriş yapın.</div>`;
   });
 }
 
