@@ -4876,15 +4876,71 @@ let p2pCreateSide = 'buy';
 let activeP2pOrder = null;
 let isP2pProcessing = false;
 
-// --- DİNAMİK PİYASA YAPICI BOT MOTORU ---
-const P2P_BOT_NAMES = [
-  "Zurich_Capital", "Helvetia_Vault", "AlpMiner_77", "NordicOre_GmbH",
-  "Klaus_S", "Geneva_Desk", "Matterhorn_P2P", "StGallen_Node", "Eiger_Reserve"
+// --- DİNAMİK PİYASA YAPICI (MARKET MAKER) BOT MOTORU ---
+const BOT_FIRST_NAMES = [
+  "Lukas", "Stefan", "Hans", "Marc", "Reto", "Urs", "Beat", "Matthias",
+  "Elena", "Sven", "Felix", "Niklaus", "Florian", "Fabian", "Marco", "Claudio", "Thomas", "Andreas"
+];
+const BOT_TAGS = [
+  "ZH", "CH", "OTC", "Trade", "Miner", "Hold", "Cap", "Vault", "Alps", "Berg", "Node", "Swiss"
 ];
 
+// 5 dakikada bir otomatik değişen dinamik bot emirleri (Min: $10 / Maks: $5000)
 function generateSimulatedBotOrders() {
   const simulated = [];
-  const baseTime = Date.now();
+  // Her 5 dakikada bir (300.000 ms) yeni bir zaman bloğu hesaplanır
+  const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
+
+  // 10 USDT'den 5.000 USDT'ye kadar kademeli ORA paketleri
+  const tieredPackages = [
+    { usdt: 10,   ora: 100 },
+    { usdt: 25,   ora: 250 },
+    { usdt: 50,   ora: 500 },
+    { usdt: 100,  ora: 1000 },
+    { usdt: 250,  ora: 2500 },
+    { usdt: 500,  ora: 5000 },
+    { usdt: 1000, ora: 10000 },
+    { usdt: 2500, ora: 25000 },
+    { usdt: 3500, ora: 35000 },
+    { usdt: 5000, ora: 50000 }
+  ];
+
+  // İsmi her 5 dakikada bir deterministik şekilde değiştiren algoritma
+  function getDynamicBotName(index, salt) {
+    const fIdx = (timeBlock + index * 3 + salt) % BOT_FIRST_NAMES.length;
+    const tIdx = (timeBlock * 2 + index + salt * 2) % BOT_TAGS.length;
+    const num = ((timeBlock + index * 7) % 89) + 10;
+    return `${BOT_FIRST_NAMES[fIdx]}_${BOT_TAGS[tIdx]}${num}`;
+  }
+
+  // 1) BOT SATIŞ EMİRLERİ (Üyeler USDT verip ORA Alabilir -> ORA Rezervden Düşer)
+  tieredPackages.forEach((pkg, idx) => {
+    simulated.push({
+      id: 90000000 + idx,
+      isBot: true,
+      side: 'sell',
+      merchant: getDynamicBotName(idx, 1),
+      price: 0.1000,
+      oraAmount: pkg.ora,
+      usdtAmount: pkg.usdt
+    });
+  });
+
+  // 2) BOT ALIŞ EMİRLERİ (Üyeler ORA satıp USDT Alabilir -> Kurucu Kasasından Karşılanır)
+  tieredPackages.forEach((pkg, idx) => {
+    simulated.push({
+      id: 91000000 + idx,
+      isBot: true,
+      side: 'buy',
+      merchant: getDynamicBotName(idx, 7),
+      price: 0.1000,
+      oraAmount: pkg.ora,
+      usdtAmount: pkg.usdt
+    });
+  });
+
+  return simulated;
+}
 
   // 1) BOT SATIŞ EMİRLERİ (Kullanıcılar USDT verip ORA Alabilir)
   const sellAmounts = [250, 500, 1200, 2500, 5000, 10000];
