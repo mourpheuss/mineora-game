@@ -7728,11 +7728,36 @@ function queueDepositForAdminApproval(username, amount, txid) {
   });
 }
 
+// ================= CANLI BEP-20 YATIRMA VE ONAY MOTORU =================
+function queueDepositForAdminApproval(username, amount, txid) {
+  if (!fbDb) {
+    showToast("⚠️ Veritabanı bağlantısı yok!", "warning");
+    return;
+  }
+  const depId = `dep_${Date.now()}`;
+  const payload = {
+    id: depId,
+    username: username,
+    amount: Number(parseFloat(amount).toFixed(2)),
+    txid: txid,
+    date: new Date().toLocaleString('tr-TR'),
+    status: 'pending'
+  };
+
+  fbDb.ref(`depositQueue/${depId}`).set(payload).then(() => {
+    console.log("✅ Bildirim Firebase'e yazıldı:", payload);
+  }).catch(err => {
+    console.error("Yazma hatası:", err);
+    showToast("⛔ Bildirim gönderilemedi: " + err.message, "warning");
+  });
+}
+
 function renderAdminDepositQueue() {
   const container = document.getElementById('admin-deposit-queue-list');
-  if (!container || !fbDb || !CurrentUser || !CurrentUser.isRootAdmin) return;
+  if (!container || !fbDb) return;
 
-  fbDb.ref('depositQueue').once('value').then(snap => {
+  // Canlı dinleyici (.on) sayesinde sayfa yenilemeden talep anında ekrana düşer
+  fbDb.ref('depositQueue').on('value', snap => {
     const data = snap.val();
     container.innerHTML = "";
 
@@ -7802,13 +7827,18 @@ function approveDepositOrder(depId, username, amount) {
         updateHUD();
       }
 
-      renderAdminDepositQueue();
       if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
-      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT başarıyla yüklendi!`, "success");
+      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT yüklendi!`, "success");
     }
   });
 }
 
+function rejectDepositOrder(depId) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
+    showToast("Bildirim reddedildi.", "info");
+  });
+}
 function rejectDepositOrder(depId) {
   if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
   fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
