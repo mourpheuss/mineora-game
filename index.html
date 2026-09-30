@@ -7715,25 +7715,28 @@ function handleAdminCreateUserSubmit() {
   showToast(`🎉 ${u} kullanıcısı oluşturuldu!`, "success");
 }
 
-// ================= YATIRMA VE ÇEKİM KUYRUKLARI MOTORU =================
-function queueDepositForAdminApproval(username, amount, txid) {
-  if (!fbDb) return;
-  const depId = `dep_${Date.now()}`;
-  const payload = {
-    id: depId,
-    username: username,
-    amount: Number(parseFloat(amount).toFixed(2)),
-    txid: txid,
-    date: new Date().toLocaleString('tr-TR'),
-    status: 'pending'
-  };
+// ================= CANLI BEP-20 YATIRMA VE ONAY MOTORU =================
+let lastAuthErrorMessage = "";
 
-  fbDb.ref(`depositQueue/${depId}`).set(payload).then(() => {
-    if (typeof renderAdminDepositQueue === 'function') renderAdminDepositQueue();
-  });
+async function ensureAdminAuthConnection(customPassword = null) {
+  if (typeof firebase === 'undefined' || !firebase.auth) return false;
+  if (firebase.auth().currentUser) return true;
+
+  const passToTry = customPassword || (CurrentUser ? CurrentUser.pass : null);
+  if (!passToTry) return false;
+
+  try {
+    await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", passToTry);
+    console.log("✅ Firebase Admin oturumu doğrulandı.");
+    lastAuthErrorMessage = "";
+    return true;
+  } catch (err) {
+    console.warn("Firebase Auth Hatası:", err);
+    lastAuthErrorMessage = err.code || err.message;
+    return false;
+  }
 }
 
-// ================= CANLI BEP-20 YATIRMA VE ONAY MOTORU =================
 function queueDepositForAdminApproval(username, amount, txid) {
   if (!fbDb) {
     showToast("⚠️ Veritabanı bağlantısı yok!", "warning");
@@ -7757,21 +7760,15 @@ function queueDepositForAdminApproval(username, amount, txid) {
   });
 }
 
-// ================= CANLI BEP-20 YATIRMA VE ONAY MOTORU =================
 async function renderAdminDepositQueue() {
   const container = document.getElementById('admin-deposit-queue-list');
   if (!container || !fbDb) return;
 
-  // 1. Eğer admin oturumu henüz bağlanmadıysa arka planda bağla
-  if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser && CurrentUser && CurrentUser.isRootAdmin) {
-    try {
-      await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", CurrentUser.pass);
-    } catch(e) {
-      console.warn("Auth otomatik bağlantı uyarısı:", e);
-    }
+  // Oturum kapalıysa arka planda bağlanmayı dene
+  if (CurrentUser && CurrentUser.isRootAdmin && !firebase.auth().currentUser) {
+    await ensureAdminAuthConnection();
   }
 
-  // 2. Veritabanından talepleri çek
   fbDb.ref('depositQueue').on('value', snap => {
     const data = snap.val();
     container.innerHTML = "";
@@ -7811,8 +7808,77 @@ async function renderAdminDepositQueue() {
       container.appendChild(card);
     });
   }, err => {
-    console.warn("Kuyruk okuma izni engeli:", err);
-    container.innerHTML = `<div class="p-3 text-center text-amber-400 text-xs">⚠️ Admin yetkisi bekleniyor. Lütfen sağ üstten çıkış yapıp tekrar giriş yapın.</div>`;
+    // Erişim engellenirse doğrudan kutu içinden şifre girip bağlanma kutusu sun
+    const errText = lastAuthErrorMessage || err.code || "auth/denied";
+    container.innerHTML = `
+      <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center space-y-2">
+        <div class="text-amber-300 text-xs font-bold">
+          ⚠️ Firebase Oturumu Doğrulanamadı (${errText})
+        </div>
+        <p class="text-[10px] text-slate-400">ersinulasduzyol@gmail.com şifrenizi girerek yetkiyi açabilirsiniz:</p>
+        <div class="flex gap-1.5 max-w-xs mx-auto pt-1">
+          <input type="password" id="input-manual-admin-auth-pass" placeholder="Firebase Şifreniz" class="flex-1 bg-mineora-bg border border-mineora-border rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400">
+          <button type="button" onclick="handleManualAdminAuthConnect()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-lg cursor-pointer">
+            Bağlan
+          </button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+window.handleManualAdminAuthConnect = async function() {
+  const pass = document.getElementById('input-manual-admin-auth-pass')?.value.trim();
+  if (!pass) {
+    showToast("⚠️ Lütfen şifrenizi girin!", "warning");
+    return;
+  }
+  showToast("🔐 Bağlanılıyor...", "info");
+  const success = await ensureAdminAuthConnection(pass);
+  if (success) {
+    if (CurrentUser) CurrentUser.pass = pass;
+    saveUserWorld();
+    showToast("✅ Firebase yetkisi alındı!", "success");
+    renderAdminDepositQueue();
+    if (typeof renderAdminContactMessages === 'function') renderAdminContactMessages();
+  } else {
+    showToast(`❌ Giriş başarısız: ${lastAuthErrorMessage}`, "warning");
+    renderAdminDepositQueue();
+  }
+};
+
+function approveDepositOrder(depId, username, amount) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  const uKey = username.toLowerCase();
+
+  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+    const uData = snap.val();
+    if (uData) {
+      uData.usdt = Number(((uData.usdt || 0) + amount).toFixed(2));
+      if (!uData.logs) uData.logs = [];
+      uData.logs.unshift({
+        id: Date.now(),
+        title: "BEP-20 USDT Yüklendi",
+        desc: "Yatırma bildiriminiz onaylandı ve bakiyenize aktarıldı.",
+        amountText: `+$${amount.toFixed(2)} USDT`,
+        type: "income",
+        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString('tr-TR'),
+        read: false
+      });
+
+      fbDb.ref(`users/${uKey}`).set(uData);
+      fbDb.ref(`depositQueue/${depId}`).remove();
+
+      if (CurrentUser.username.toLowerCase() === uKey) {
+        CurrentUser.usdt = uData.usdt;
+        saveUserWorld();
+        updateHUD();
+      }
+
+      if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
+      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT yüklendi!`, "success");
+    }
   });
 }
 
@@ -7820,13 +7886,6 @@ function rejectDepositOrder(depId) {
   if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
   fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
     showToast("Bildirim reddedildi.", "info");
-  });
-}
-function rejectDepositOrder(depId) {
-  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
-  fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
-    renderAdminDepositQueue();
-    showToast("Bildirim reddedildi ve listeden kaldırıldı.", "info");
   });
 }
 
