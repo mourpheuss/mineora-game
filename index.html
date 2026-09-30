@@ -2754,7 +2754,34 @@
     </div>
   </div>
 </div>
+<!-- MODAL: YATIRMA / ÇEKİM / MESAJLAR GENİŞ İNCELEME PENCERESİ -->
+  <div id="modal-queue-expanded" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2">
+          <div id="expanded-modal-icon" class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-list-check"></i>
+          </div>
+          <div>
+            <h3 id="expanded-modal-title" class="text-base font-black text-white">Detaylı İnceleme Masası</h3>
+            <span class="text-[10px] text-slate-400">Tüm talepleri geniş ekranda denetleyin ve işlem yapın</span>
+          </div>
+        </div>
+        
+        <!-- Sekmeler Arası Hızlı Geçiş -->
+        <div class="flex items-center gap-1.5 bg-mineora-bg p-1 rounded-xl border border-mineora-border">
+          <button type="button" onclick="openQueueDetailModal('deposit')" id="exp-tab-dep" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer">Yatırmalar</button>
+          <button type="button" onclick="openQueueDetailModal('withdraw')" id="exp-tab-with" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer">Çekimler</button>
+          <button type="button" onclick="openQueueDetailModal('contact')" id="exp-tab-msg" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer">Mesajlar</button>
+        </div>
 
+        <button type="button" onclick="closeModal('modal-queue-expanded')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Genişletilmiş Liste Alanı -->
+      <div id="expanded-queue-container" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+    </div>
+  </div>
   <!-- BİRLEŞTİRİLMİŞ JAVASCRIPT MOTORLARI BAŞLANGICI -->
   <script>
 // ================= 1. DİL SÖZLÜĞÜ VE YÖNETİMİ (Lang.js) =================
@@ -8535,12 +8562,12 @@ function submitContactMessage() {
   }
 }
 
-function renderAdminContactMessages() {
+window.renderAdminContactMessages = function() {
   if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
   const container = document.getElementById('admin-contact-messages-list');
   if (!container) return;
 
-  fbDb.ref('contactMessages').once('value').then(snap => {
+  fbDb.ref('contactMessages').on('value', snap => {
     const data = snap.val();
     container.innerHTML = "";
 
@@ -8549,39 +8576,237 @@ function renderAdminContactMessages() {
       return;
     }
 
-    const messages = Object.values(data).sort((a, b) => b.createdAt - a.createdAt);
+    const messages = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     messages.forEach(m => {
       const card = document.createElement('div');
-      card.className = "p-3.5 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-2 text-xs";
+      card.className = "p-3 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-2 text-xs shadow";
       card.innerHTML = `
-        <div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">
-          <div class="flex items-center gap-2">
-            <span class="font-black text-white">${m.name}</span>
-            <span class="px-2 py-0.5 rounded text-[9px] font-bold ${m.isRegistered ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-300'}">
-              ${m.isRegistered ? 'Kayıtlı Üye' : 'Ziyaretçi'}
+        <!-- Üst Başlık: İsim, Rol ve Tarih -->
+        <div class="flex items-center justify-between border-b border-mineora-border/60 pb-1.5">
+          <div class="flex items-center gap-1.5">
+            <strong class="text-white text-xs">${m.name}</strong>
+            <span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${m.isRegistered ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-300'}">
+              ${m.isRegistered ? 'Üye' : 'Ziyaretçi'}
             </span>
-            <span class="text-cyan-400 font-mono text-[11px]"><i class="fa-solid fa-address-book mr-1"></i>${m.reach}</span>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] text-slate-500 font-mono">${m.dateStr || ''}</span>
-            <button type="button" onclick="deleteAdminContactMessage('${m.id}')" class="px-2 py-1 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white transition cursor-pointer text-[10px] font-bold">
-              <i class="fa-solid fa-trash-can"></i> Sil
-            </button>
-          </div>
+          <span class="text-[9px] text-slate-500 font-mono">${m.dateStr || ''}</span>
         </div>
-        <p class="text-slate-300 leading-relaxed break-words whitespace-pre-wrap">${m.message}</p>
+
+        <!-- İletişim Bilgisi ve Sil Butonu -->
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-cyan-400 font-mono text-[11px] truncate flex-1" title="${m.reach}">
+            <i class="fa-solid fa-address-book mr-1"></i>${m.reach}
+          </span>
+          <button type="button" onclick="deleteAdminContactMessage('${m.id}')" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white transition cursor-pointer text-[10px] font-bold shrink-0 flex items-center gap-1">
+            <i class="fa-solid fa-trash-can"></i> Sil
+          </button>
+        </div>
+
+        <!-- Mesaj Gövdesi -->
+        <p class="text-slate-300 leading-relaxed break-words whitespace-pre-wrap bg-mineora-bg p-2 rounded-lg border border-mineora-border/40 text-[11px]">${m.message}</p>
+      `;
+      container.appendChild(card);
+    });
+
+    const expModal = document.getElementById('modal-queue-expanded');
+    if (expModal && !expModal.classList.contains('hidden') && currentExpandedTab === 'contact') {
+      renderExpandedContactMessages(messages);
+    }
+  });
+};
+
+window.deleteAdminContactMessage = function(msgId) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const ok = confirm("Bu destek mesajını kalıcı olarak silmek istiyor musunuz?");
+  if (!ok) return;
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref(`contactMessages/${msgId}`).remove().then(() => {
+      showToast("🗑️ Mesaj başarıyla silindi.", "info");
+      renderAdminContactMessages();
+    }).catch(err => {
+      console.error("Silme hatası:", err);
+      showToast("⛔ Silme izni reddedildi: " + err.message, "warning");
+    });
+  }
+};
+
+// ================= 3 MASAYI GENİŞLETİLMİŞ AÇILIR PENCEREDE GÖSTERME MOTORU =================
+let currentExpandedTab = 'deposit';
+
+window.openQueueDetailModal = function(tab) {
+  currentExpandedTab = tab;
+  const modal = document.getElementById('modal-queue-expanded');
+  const title = document.getElementById('expanded-modal-title');
+  const icon = document.getElementById('expanded-modal-icon');
+
+  ['dep', 'with', 'msg'].forEach(t => {
+    const btn = document.getElementById(`exp-tab-${t}`);
+    if (btn) btn.className = "px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer";
+  });
+
+  if (tab === 'deposit') {
+    const b = document.getElementById('exp-tab-dep');
+    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-emerald-600 text-white cursor-pointer";
+    title.innerText = "Yatırma Talepleri (Geniş İnceleme Masası)";
+    icon.innerHTML = `<i class="fa-solid fa-arrow-down text-emerald-400"></i>`;
+    renderExpandedDeposits();
+  } else if (tab === 'withdraw') {
+    const b = document.getElementById('exp-tab-with');
+    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-amber-500 text-black cursor-pointer";
+    title.innerText = "Çekim Talepleri (Geniş İnceleme Masası)";
+    icon.innerHTML = `<i class="fa-solid fa-arrow-up text-amber-400"></i>`;
+    renderExpandedWithdrawals();
+  } else {
+    const b = document.getElementById('exp-tab-msg');
+    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-cyan-600 text-white cursor-pointer";
+    title.innerText = "Destek & Ziyaretçi Mesajları (Geniş Okuma Masası)";
+    icon.innerHTML = `<i class="fa-solid fa-inbox text-cyan-400"></i>`;
+    renderExpandedContactMessages();
+  }
+
+  openModal('modal-queue-expanded');
+};
+
+function renderExpandedDeposits() {
+  const container = document.getElementById('expanded-queue-container');
+  if (!container || !fbDb) return;
+
+  fbDb.ref('depositQueue').once('value').then(snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+    const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="p-8 text-center text-slate-500 text-sm">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
+      return;
+    }
+
+    items.forEach(d => {
+      const card = document.createElement('div');
+      card.className = "p-4 rounded-2xl bg-mineora-bg border border-emerald-500/40 flex flex-wrap items-center justify-between gap-4 text-xs shadow-lg";
+      card.innerHTML = `
+        <div class="space-y-1">
+          <div class="flex items-center gap-3">
+            <strong class="text-white text-base font-bold">${d.username}</strong>
+            <span class="text-emerald-400 font-mono font-black text-base">+$${d.amount.toFixed(2)} USDT</span>
+          </div>
+          <div class="text-slate-300 font-mono text-xs flex items-center gap-2">
+            <span>TxID:</span>
+            <span class="text-cyan-300 select-all">${d.txid}</span>
+            <button type="button" onclick="navigator.clipboard.writeText('${d.txid}'); showToast('TxID kopyalandı!', 'success');" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-copy"></i></button>
+          </div>
+          <span class="text-[10px] text-slate-500 font-mono">${d.date}</span>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="approveDepositOrder('${d.id}', '${d.username}', ${d.amount}); renderExpandedDeposits();" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">
+            Onayla & Yükle
+          </button>
+          <button type="button" onclick="rejectDepositOrder('${d.id}'); renderExpandedDeposits();" class="px-4 py-2.5 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">
+            Reddet
+          </button>
+        </div>
       `;
       container.appendChild(card);
     });
   });
 }
 
-function deleteAdminContactMessage(msgId) {
-  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
-  fbDb.ref(`contactMessages/${msgId}`).remove().then(() => {
-    renderAdminContactMessages();
-    showToast("🗑️ Mesaj silindi.", "info");
+function renderExpandedWithdrawals() {
+  const container = document.getElementById('expanded-queue-container');
+  if (!container || !fbDb) return;
+
+  fbDb.ref('withdrawalQueue').once('value').then(snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+    const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="p-8 text-center text-slate-500 text-sm">Bekleyen USDT çekim talebi yok.</div>`;
+      return;
+    }
+
+    items.forEach(d => {
+      const card = document.createElement('div');
+      card.className = "p-4 rounded-2xl bg-mineora-bg border border-amber-500/40 flex flex-col gap-3 text-xs shadow-lg";
+      card.innerHTML = `
+        <div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">
+          <div class="flex items-center gap-3">
+            <strong class="text-white text-base">${d.username}</strong>
+            <span class="text-amber-400 font-mono font-black text-base">-$${d.amount.toFixed(2)} USDT</span>
+          </div>
+          <span class="text-slate-400 font-mono text-xs">${d.date}</span>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 bg-mineora-card p-3 rounded-xl border border-mineora-border">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <i class="fa-solid fa-wallet text-cyan-400 text-base"></i>
+            <span class="text-cyan-300 font-mono text-xs select-all truncate">${d.targetAddress}</span>
+          </div>
+          <button type="button" onclick="navigator.clipboard.writeText('${d.targetAddress}'); showToast('📋 Cüzdan adresi kopyalandı!', 'success');" class="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-copy"></i> Adresi Kopyala
+          </button>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-1">
+          <button type="button" onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount}); renderExpandedWithdrawals();" class="px-4 py-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">
+            İade Et (İptal)
+          </button>
+          <button type="button" onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount}); renderExpandedWithdrawals();" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">
+            Gönderildi Olarak Kapat
+          </button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
   });
+}
+
+function renderExpandedContactMessages(cachedMessages = null) {
+  const container = document.getElementById('expanded-queue-container');
+  if (!container || !fbDb) return;
+
+  const displayList = (messages) => {
+    container.innerHTML = "";
+    if (!messages || messages.length === 0) {
+      container.innerHTML = `<div class="p-8 text-center text-slate-500 text-sm">Gelen bir ziyaretçi veya destek mesajı yok.</div>`;
+      return;
+    }
+
+    messages.forEach(m => {
+      const card = document.createElement('div');
+      card.className = "p-4 rounded-2xl bg-mineora-bg border border-cyan-500/30 flex flex-col gap-3 text-xs shadow-lg";
+      card.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between border-b border-mineora-border/60 pb-2">
+          <div class="flex items-center gap-2">
+            <strong class="text-white text-sm font-bold">${m.name}</strong>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.isRegistered ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-300'}">
+              ${m.isRegistered ? 'Kayıtlı Üye' : 'Ziyaretçi'}
+            </span>
+            <span class="text-cyan-400 font-mono text-xs ml-2"><i class="fa-solid fa-address-book mr-1"></i>${m.reach}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-slate-500 font-mono text-[11px]">${m.dateStr || ''}</span>
+            <button type="button" onclick="deleteAdminContactMessage('${m.id}')" class="px-3 py-1 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white transition cursor-pointer text-xs font-bold">
+              <i class="fa-solid fa-trash-can mr-1"></i> Sil
+            </button>
+          </div>
+        </div>
+        <p class="text-slate-200 text-xs leading-relaxed break-words whitespace-pre-wrap bg-mineora-card p-3 rounded-xl border border-mineora-border/60">${m.message}</p>
+      `;
+      container.appendChild(card);
+    });
+  };
+
+  if (cachedMessages) {
+    displayList(cachedMessages);
+  } else {
+    fbDb.ref('contactMessages').once('value').then(snap => {
+      const data = snap.val();
+      const messages = data ? Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)) : [];
+      displayList(messages);
+    });
+  }
 }
 // ================= 9. ANA BAŞLATICI MOTORU (main.js) =================
 window.addEventListener('DOMContentLoaded', () => {
