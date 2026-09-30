@@ -7889,10 +7889,100 @@ function rejectDepositOrder(depId) {
   });
 }
 
+// ================= CANLI BEP-20 ÇEKİM VE ONAY MOTORU =================
+function queueWithdrawalForAdminApproval(username, amount, targetAddr) {
+  if (!fbDb) return;
+  const withId = `with_${Date.now()}`;
+  const payload = {
+    id: withId,
+    username: username,
+    amount: Number(parseFloat(amount).toFixed(2)),
+    targetAddress: targetAddr,
+    date: new Date().toLocaleString('tr-TR'),
+    status: 'pending'
+  };
+
+  fbDb.ref(`withdrawalQueue/${withId}`).set(payload).then(() => {
+    console.log("✅ Çekim talebi Firebase'e yazıldı:", payload);
+  }).catch(err => {
+    console.error("Çekim yazma hatası:", err);
+    showToast("⛔ Çekim talebi iletilemedi: " + err.message, "warning");
+  });
+}
+
 function renderAdminWithdrawalQueue() {
   const container = document.getElementById('admin-withdrawal-queue-list');
-  if (!container) return;
-  container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen USDT çekim talebi yok.</div>`;
+  if (!container || !fbDb) return;
+
+  fbDb.ref('withdrawalQueue').on('value', snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+
+    if (!data) {
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen USDT çekim talebi yok.</div>`;
+      return;
+    }
+
+    const items = Object.values(data).filter(d => d.status === 'pending');
+    if (items.length === 0) {
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen USDT çekim talebi yok.</div>`;
+      return;
+    }
+
+    items.forEach(d => {
+      const card = document.createElement('div');
+      card.className = "p-3 rounded-xl bg-mineora-card border border-amber-500/40 flex items-center justify-between text-xs";
+      card.innerHTML = `
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-2">
+            <strong class="text-white">${d.username}</strong>
+            <span class="text-amber-400 font-mono font-black">-$${d.amount.toFixed(2)} USDT</span>
+          </div>
+          <span class="text-[10px] text-cyan-400 font-mono block break-all"><i class="fa-solid fa-wallet mr-1"></i>${d.targetAddress}</span>
+          <span class="text-[9px] text-slate-500 font-mono">${d.date}</span>
+        </div>
+        <div class="flex gap-1.5 shrink-0 ml-2">
+          <button type="button" onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
+            Gönderildi (Kapat)
+          </button>
+          <button type="button" onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer" title="Reddet ve Parayı İade Et">
+            İade Et
+          </button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+function approveWithdrawalOrder(withId, username, amount) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  fbDb.ref(`withdrawalQueue/${withId}`).remove().then(() => {
+    showToast(`✅ ${username} adlı kullanıcının $${amount} USDT çekimi onaylandı.`, "success");
+  });
+}
+
+function rejectWithdrawalOrder(withId, username, amount) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
+  const ok = confirm(`${username} kullanıcısının çekim talebini reddedip $${amount} USDT tutarı hesabına geri iade etmek istiyor musunuz?`);
+  if (!ok) return;
+
+  const uKey = username.toLowerCase();
+  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+    const uData = snap.val();
+    if (uData) {
+      uData.usdt = Number(((uData.usdt || 0) + amount).toFixed(2));
+      fbDb.ref(`users/${uKey}`).set(uData);
+      fbDb.ref(`withdrawalQueue/${withId}`).remove();
+
+      if (CurrentUser.username.toLowerCase() === uKey) {
+        CurrentUser.usdt = uData.usdt;
+        saveUserWorld();
+        updateHUD();
+      }
+      showToast(`↩️ Çekim iptal edildi, $${amount} USDT kullanıcıya iade edildi.`, "info");
+    }
+  });
 }
 // ================= İLETİŞİM & DESTEK FORMU MOTORU =================
 function submitContactMessage() {
