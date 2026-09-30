@@ -4196,18 +4196,38 @@ window.updateAdminFinancialVaultMetrics = function() {
     calculateAndRender(allUsersMap);
   }
 };
-// ================= 3. KAZI & SAHA MOTORU (mining.js) =================
+// ================= 3. KAZI & SAHA MOTORU (CİNEMATİK GRAFİK SÜRÜMÜ) =================
 let activeMineIdx = 0, wagonFill = 0, currentWagonStage = 1, isTransitLocked = false;
 let powerBarValue = 0, powerBarDirection = 1, powerBarSpeed = 2.4, powerBarInterval = null;
-let isSwinging = false, swingFrame = 0, lanternSway = 0;
-let rockParticles = [], mCanvas, mCtx, mFrame;
+let isSwinging = false, swingFrame = 0, lanternSway = 0, lanternFlicker = 1;
+let rockParticles = [], ambientDust = [], mCanvas, mCtx, mFrame;
+
+// Ortamdaki süzülen altın ve mağara tozlarını başlat
+function initAmbientDust(w, h) {
+  ambientDust = [];
+  for (let i = 0; i < 45; i++) {
+    ambientDust.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: Math.random() * 1.8 + 0.5,
+      speedX: (Math.random() - 0.5) * 0.4,
+      speedY: Math.random() * 0.3 + 0.1,
+      opacity: Math.random() * 0.6 + 0.2,
+      pulse: Math.random() * Math.PI
+    });
+  }
+}
 
 function initMineCanvas() {
   mCanvas = document.getElementById('mine-canvas');
   if (!mCanvas) return;
   mCtx = mCanvas.getContext('2d');
-  mCanvas.width = mCanvas.clientWidth || 800;
-  mCanvas.height = mCanvas.clientHeight || 450;
+  const w = mCanvas.clientWidth || 800;
+  const h = mCanvas.clientHeight || 450;
+  mCanvas.width = w;
+  mCanvas.height = h;
+
+  initAmbientDust(w, h);
   cancelAnimationFrame(mFrame);
   renderMineLoop();
   startPowerBarLoop();
@@ -4259,12 +4279,12 @@ function performMiningStrike() {
     const crystalDropChance = isSweetSpot ? 0.08 : 0.03;
     if (Math.random() < crystalDropChance) {
       CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
-      showToast("💎 Rare Alp Crystal extracted! (+1 Elevator Ticket)", "success");
+      showToast("💎 Nadir Alp Kristali Çıkarıldı! (+1 Asansör Bileti)", "success");
     }
 
     if (wagonFill >= 100 && currentWagonStage === 2 && (CurrentUser.alpCrystals || 0) === 0) {
       CurrentUser.alpCrystals = 1;
-      showToast("💎 Obtained 1 Alp Crystal from deep reserve vein!", "success");
+      showToast("💎 Derin damardan 1 Alp Kristali elde edildi!", "success");
     }
 
     const wagonFillEl = document.getElementById('wagon-fill-text');
@@ -4272,7 +4292,7 @@ function performMiningStrike() {
 
     if (rewardOra > 0) {
       showFloatingReward(
-        isSweetSpot ? `⚡ CRITICAL HIT! +${rewardOra.toFixed(2)} ORA` : `+${rewardOra.toFixed(2)} ORA`,
+        isSweetSpot ? `⚡ KRİTİK VURUŞ! +${rewardOra.toFixed(2)} ORA` : `+${rewardOra.toFixed(2)} ORA`,
         isSweetSpot ? "#facc15" : "#0ecb81"
       );
     }
@@ -4281,25 +4301,46 @@ function performMiningStrike() {
     saveUserWorld();
 
     if (wagonFill >= 100) setTimeout(() => triggerWagonFull(), 400);
-  }, 120);
+  }, 110);
 
-  setTimeout(() => { isSwinging = false; swingFrame = 0; }, 300);
+  setTimeout(() => { isSwinging = false; swingFrame = 0; }, 290);
 }
 
 function spawnRockDebris(isCritical) {
   const w = mCanvas ? mCanvas.width : 800;
   const h = mCanvas ? mCanvas.height : 450;
-  const strikeX = w * 0.36;
+  const strikeX = w * 0.35;
   const strikeY = h * 0.58;
 
-  const count = isCritical ? 18 : 8;
+  // 1. Şok Dalgası / Kaya Parçaları
+  const count = isCritical ? 24 : 12;
   for (let i = 0; i < count; i++) {
     rockParticles.push({
+      type: 'rock',
       x: strikeX, y: strikeY,
-      vx: (Math.random() * 6 + 2), vy: -(Math.random() * 5 + 2),
+      vx: (Math.random() * 8 + 2),
+      vy: -(Math.random() * 6 + 2),
       size: Math.random() * 5 + 3,
-      color: Math.random() < 0.6 ? '#f59e0b' : '#78350f',
-      life: 25
+      color: Math.random() < 0.5 ? '#eab308' : (Math.random() < 0.8 ? '#78350f' : '#cbd5e1'),
+      rot: Math.random() * Math.PI,
+      vRot: (Math.random() - 0.5) * 0.3,
+      life: 28, maxLife: 28
+    });
+  }
+
+  // 2. Akkor Kıvılcımlar (Sparks)
+  const sparkCount = isCritical ? 35 : 16;
+  for (let i = 0; i < sparkCount; i++) {
+    const angle = (Math.random() * 0.8 - 0.4) * Math.PI;
+    const spd = Math.random() * 9 + 4;
+    rockParticles.push({
+      type: 'spark',
+      x: strikeX, y: strikeY,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd - 2,
+      size: Math.random() * 2.5 + 1.5,
+      color: Math.random() < 0.6 ? '#fef08a' : '#f97316',
+      life: 18, maxLife: 18
     });
   }
 
@@ -4310,415 +4351,355 @@ function spawnRockDebris(isCritical) {
   }
 }
 
+// ================= GELİŞMİŞ SİNEMATİK ÇİZİM DÖNGÜSÜ =================
 function renderMineLoop() {
   const sec = document.getElementById('sec-cave');
   if (!mCtx || !sec || sec.classList.contains('hidden')) return;
 
   const w = mCanvas.width, h = mCanvas.height;
-  mCtx.fillStyle = '#06080b';
+
+  // 1. DERİN MAĞARA ARKA PLANI & ATMOSFERİK SİS
+  const caveBg = mCtx.createRadialGradient(w * 0.4, h * 0.4, 20, w * 0.5, h * 0.5, w * 0.8);
+  caveBg.addColorStop(0, '#151118');
+  caveBg.addColorStop(0.5, '#0c0a0e');
+  caveBg.addColorStop(1, '#030304');
+  mCtx.fillStyle = caveBg;
   mCtx.fillRect(0, 0, w, h);
 
-  mCtx.fillStyle = '#17120e';
+  // 2. TAVAN SARKITLARI (STALACTITES) VE KAYA ÇIKINTILARI
+  mCtx.fillStyle = '#080709';
   mCtx.beginPath();
-  mCtx.moveTo(0, 0); mCtx.lineTo(w * 0.42, 0); mCtx.lineTo(w * 0.36, h); mCtx.lineTo(0, h);
-  mCtx.closePath(); mCtx.fill();
-
-  mCtx.strokeStyle = '#f59e0b';
-  mCtx.lineWidth = 3;
-  mCtx.beginPath();
-  mCtx.moveTo(w * 0.22, h * 0.2); mCtx.lineTo(w * 0.34, h * 0.45); mCtx.lineTo(w * 0.28, h * 0.75);
-  mCtx.stroke();
-
-  lanternSway = Math.sin(Date.now() / 600) * 8;
-  const lanternX = w * 0.52 + lanternSway, lanternY = 85;
-  mCtx.strokeStyle = '#334155'; mCtx.lineWidth = 2;
-  mCtx.beginPath(); mCtx.moveTo(w * 0.52, 0); mCtx.lineTo(lanternX, lanternY - 14);
-  mCtx.stroke();
-  mCtx.fillStyle = '#fef08a'; mCtx.beginPath(); mCtx.arc(lanternX, lanternY, 9, 0, Math.PI * 2); mCtx.fill();
-
-  const roomLight = mCtx.createRadialGradient(lanternX, lanternY, 5, lanternX, lanternY, 260);
-  roomLight.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
-  roomLight.addColorStop(0.5, 'rgba(245, 158, 11, 0.12)');
-  roomLight.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  mCtx.fillStyle = roomLight;
-  mCtx.fillRect(0, 0, w, h);
-
-  mCtx.fillStyle = '#0f172a';
-  mCtx.fillRect(0, h - 35, w, 35);
-  mCtx.strokeStyle = '#475569'; mCtx.lineWidth = 4;
-  mCtx.beginPath(); mCtx.moveTo(w * 0.40, h - 25); mCtx.lineTo(w, h - 25); mCtx.stroke();
-
-  const wagonX = w * 0.72, wagonY = h - 68, wagonW = 100, wagonH = 50;
-  mCtx.fillStyle = '#334155';
-  mCtx.beginPath();
-  mCtx.arc(wagonX + 22, wagonY + wagonH + 2, 9, 0, Math.PI * 2);
-  mCtx.arc(wagonX + wagonW - 22, wagonY + wagonH + 2, 9, 0, Math.PI * 2);
+  mCtx.moveTo(0, 0);
+  mCtx.lineTo(w * 0.15, h * 0.12);
+  mCtx.lineTo(w * 0.22, 0);
+  mCtx.lineTo(w * 0.38, h * 0.16);
+  mCtx.lineTo(w * 0.45, 0);
+  mCtx.lineTo(w * 0.65, h * 0.11);
+  mCtx.lineTo(w * 0.75, 0);
+  mCtx.lineTo(w, h * 0.08);
+  mCtx.lineTo(w, 0);
+  mCtx.closePath();
   mCtx.fill();
 
-  mCtx.fillStyle = '#1e293b';
-  mCtx.fillRect(wagonX, wagonY, wagonW, wagonH);
-  mCtx.strokeStyle = '#64748b'; mCtx.lineWidth = 3;
-  mCtx.strokeRect(wagonX, wagonY, wagonW, wagonH);
+  // 3. SOL KAYA CEPHESİ VE ALTIN/KRİSTAL DAMARI
+  const rockGrad = mCtx.createLinearGradient(0, 0, w * 0.42, 0);
+  rockGrad.addColorStop(0, '#1c1713');
+  rockGrad.addColorStop(0.7, '#2b2119');
+  rockGrad.addColorStop(1, '#18120d');
 
-  if (wagonFill > 0) {
-    const fillH = (wagonFill / 100) * 32;
-    mCtx.fillStyle = currentWagonStage === 2 ? '#c084fc' : '#f59e0b';
+  mCtx.fillStyle = rockGrad;
+  mCtx.beginPath();
+  mCtx.moveTo(0, 0);
+  mCtx.lineTo(w * 0.42, 0);
+  mCtx.bezierCurveTo(w * 0.39, h * 0.35, w * 0.45, h * 0.65, w * 0.35, h);
+  mCtx.lineTo(0, h);
+  mCtx.closePath();
+  mCtx.fill();
+
+  // Kaya Üzerindeki Derin Çatlaklar (Texture Shading)
+  mCtx.strokeStyle = 'rgba(0,0,0,0.55)';
+  mCtx.lineWidth = 3;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.12, h * 0.15); mCtx.lineTo(w * 0.28, h * 0.38); mCtx.lineTo(w * 0.22, h * 0.7);
+  mCtx.moveTo(w * 0.28, h * 0.38); mCtx.lineTo(w * 0.34, h * 0.48);
+  mCtx.stroke();
+
+  // Parlayan Zengin Altın ve Kristal Damarı (Damar Işıltısı)
+  const veinGlow = (Math.sin(Date.now() / 400) * 0.2) + 0.8;
+  mCtx.save();
+  mCtx.strokeStyle = currentWagonStage === 2 ? `rgba(192, 132, 252, ${veinGlow})` : `rgba(245, 158, 11, ${veinGlow})`;
+  mCtx.lineWidth = 4;
+  mCtx.shadowColor = currentWagonStage === 2 ? '#c084fc' : '#f59e0b';
+  mCtx.shadowBlur = 12;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.24, h * 0.22);
+  mCtx.lineTo(w * 0.33, h * 0.42);
+  mCtx.lineTo(w * 0.29, h * 0.68);
+  mCtx.stroke();
+
+  // Damar üzerindeki parlak cevher nodülleri
+  const noduleColor = currentWagonStage === 2 ? '#e9d5ff' : '#fef08a';
+  [{ x: w * 0.24, y: h * 0.22 }, { x: w * 0.33, y: h * 0.42 }, { x: w * 0.31, y: h * 0.55 }].forEach(nd => {
+    mCtx.fillStyle = noduleColor;
     mCtx.beginPath();
-    mCtx.moveTo(wagonX + 5, wagonY + 10);
-    mCtx.quadraticCurveTo(wagonX + wagonW / 2, wagonY - fillH, wagonX + wagonW - 5, wagonY + 10);
+    mCtx.arc(nd.x, nd.y, 4, 0, Math.PI * 2);
     mCtx.fill();
+  });
+  mCtx.restore();
+
+  // 4. DİNAMİK ASMA GAZ FENERİ (VOLUMETRIC LIGHT & SWAY)
+  lanternSway = Math.sin(Date.now() / 700) * 6;
+  lanternFlicker = 0.94 + Math.random() * 0.12; // Gerçek alev titremesi
+  const lanternX = w * 0.52 + lanternSway, lanternY = 82;
+
+  // Fener Asma Zinciri
+  mCtx.strokeStyle = '#475569';
+  mCtx.lineWidth = 2;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.52, 0);
+  mCtx.lineTo(lanternX, lanternY - 14);
+  mCtx.stroke();
+
+  // Fenerin Yaydığı Devasa Sıcak Ortam Işığı
+  const lanternLight = mCtx.createRadialGradient(lanternX, lanternY, 4, lanternX, lanternY, 280 * lanternFlicker);
+  lanternLight.addColorStop(0, 'rgba(254, 215, 170, 0.48)');
+  lanternLight.addColorStop(0.35, 'rgba(245, 158, 11, 0.16)');
+  lanternLight.addColorStop(0.7, 'rgba(180, 83, 9, 0.05)');
+  lanternLight.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  mCtx.fillStyle = lanternLight;
+  mCtx.fillRect(0, 0, w, h);
+
+  // Fenerin Metal Kafesi ve Camı
+  mCtx.fillStyle = '#0f172a';
+  mCtx.fillRect(lanternX - 9, lanternY - 14, 18, 5); // Üst kapak
+  mCtx.fillStyle = '#fef08a';
+  mCtx.beginPath();
+  mCtx.arc(lanternX, lanternY, 7, 0, Math.PI * 2);
+  mCtx.fill();
+  mCtx.strokeStyle = '#78350f';
+  mCtx.lineWidth = 1.5;
+  mCtx.strokeRect(lanternX - 8, lanternY - 10, 16, 20);
+
+  // 5. ZEMİN, AHŞAP TRAVERSLER VE ÇELİK RAYLAR
+  const groundY = h - 35;
+  mCtx.fillStyle = '#0b0c10';
+  mCtx.fillRect(0, groundY, w, 35);
+
+  // Zemin Taşları ve Gölgelendirme
+  mCtx.fillStyle = 'rgba(255,255,255,0.03)';
+  mCtx.fillRect(0, groundY, w, 2);
+
+  // Ray Ahşapları (Traversler)
+  mCtx.fillStyle = '#271b13';
+  for (let rx = w * 0.36; rx < w; rx += 28) {
+    mCtx.fillRect(rx, groundY + 8, 16, 18);
+    mCtx.fillStyle = '#170f0a';
+    mCtx.fillRect(rx + 13, groundY + 8, 3, 18); // Ahşap gölgesi
+    mCtx.fillStyle = '#271b13';
   }
 
-  const minerX = w * 0.44, minerY = h - 110;
+  // Çelik Raylar (Üstü Işık Yansıtan Çift Hat)
+  mCtx.strokeStyle = '#475569';
+  mCtx.lineWidth = 4;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.35, groundY + 12); mCtx.lineTo(w, groundY + 12);
+  mCtx.moveTo(w * 0.35, groundY + 22); mCtx.lineTo(w, groundY + 22);
+  mCtx.stroke();
+  // Ray Çelik Yansıması (Specular)
+  mCtx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
+  mCtx.lineWidth = 1.5;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.35, groundY + 11); mCtx.lineTo(w, groundY + 11);
+  mCtx.stroke();
+
+  // 6. PERÇİNLİ AĞIR MADEN VAGONU (REALISTIC MINECART)
+  const wagonX = w * 0.70, wagonY = groundY - 48, wagonW = 110, wagonH = 46;
+
+  // Çift Katmanlı Döküm Çelik Tekerlekler
+  [-1, 1].forEach(dir => {
+    const wheelCenterX = (dir === -1) ? (wagonX + 24) : (wagonX + wagonW - 24);
+    const wheelCenterY = wagonY + wagonH + 5;
+
+    mCtx.fillStyle = '#0f172a';
+    mCtx.beginPath(); mCtx.arc(wheelCenterX, wheelCenterY, 11, 0, Math.PI * 2); mCtx.fill();
+    mCtx.fillStyle = '#334155';
+    mCtx.beginPath(); mCtx.arc(wheelCenterX, wheelCenterY, 8, 0, Math.PI * 2); mCtx.fill();
+    mCtx.fillStyle = '#cbd5e1';
+    mCtx.beginPath(); mCtx.arc(wheelCenterX, wheelCenterY, 3, 0, Math.PI * 2); mCtx.fill();
+  });
+
+  // Vagon İçi Doluluk Cevher Tepeciği
+  if (wagonFill > 0) {
+    const fillRatio = wagonFill / 100;
+    const oreHeight = fillRatio * 32;
+
+    mCtx.save();
+    mCtx.fillStyle = currentWagonStage === 2 ? '#9333ea' : '#d97706';
+    mCtx.beginPath();
+    mCtx.moveTo(wagonX + 6, wagonY + 6);
+    mCtx.quadraticCurveTo(wagonX + wagonW / 2, wagonY - oreHeight, wagonX + wagonW - 6, wagonY + 6);
+    mCtx.fill();
+
+    // Cevher Külçe Dokuları ve Parıltıları
+    const nuggetCount = Math.floor(fillRatio * 14);
+    for (let ni = 0; ni < nuggetCount; ni++) {
+      const nx = wagonX + 18 + (ni * 5.8);
+      const ny = wagonY - (Math.sin(ni * 0.45) * oreHeight * 0.65) + 3;
+      mCtx.fillStyle = currentWagonStage === 2 ? '#c084fc' : '#fbbf24';
+      mCtx.fillRect(nx, ny, 4, 4);
+    }
+    mCtx.restore();
+  }
+
+  // Vagon Gövdesi (Eğimli Ağır Çelik Hazne)
+  mCtx.fillStyle = '#1e293b';
+  mCtx.beginPath();
+  mCtx.moveTo(wagonX, wagonY);
+  mCtx.lineTo(wagonX + wagonW, wagonY);
+  mCtx.lineTo(wagonX + wagonW - 10, wagonY + wagonH);
+  mCtx.lineTo(wagonX + 10, wagonY + wagonH);
+  mCtx.closePath();
+  mCtx.fill();
+
+  // Vagon Perçin ve Kuşakları
+  mCtx.strokeStyle = '#475569';
+  mCtx.lineWidth = 3;
+  mCtx.stroke();
+  mCtx.fillStyle = '#64748b';
+  mCtx.fillRect(wagonX + wagonW / 2 - 3, wagonY, 6, wagonH);
+
+  // 7. MADENCİ VE DİNAMİK VURUŞ ANİMASYONU
+  const minerX = w * 0.43, minerY = groundY - 82;
   mCtx.save();
   mCtx.translate(minerX, minerY);
 
-  mCtx.fillStyle = '#0f172a';
-  mCtx.fillRect(-12, 50, 10, 35);
-  mCtx.fillRect(4, 50, 10, 35);
-
-  mCtx.fillStyle = '#ea580c';
-  mCtx.fillRect(-14, 15, 28, 38);
-
-  mCtx.fillStyle = '#fdba74';
-  mCtx.beginPath(); mCtx.arc(0, 4, 11, 0, Math.PI * 2); mCtx.fill();
-
-  mCtx.fillStyle = '#facc15';
-  mCtx.beginPath(); mCtx.arc(0, 0, 13, Math.PI, 0); mCtx.fill();
-
-  mCtx.fillStyle = '#ffffff';
-  mCtx.fillRect(-14, -4, 6, 6);
-
-  const headlampBeam = mCtx.createRadialGradient(-14, -2, 2, -130, 10, 160);
-  headlampBeam.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
-  headlampBeam.addColorStop(0.3, 'rgba(254, 240, 138, 0.4)');
-  headlampBeam.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  mCtx.fillStyle = headlampBeam;
+  // Zemin Gölgesi
+  mCtx.fillStyle = 'rgba(0,0,0,0.65)';
   mCtx.beginPath();
-  mCtx.moveTo(-14, -2); mCtx.lineTo(-180, -60);
-  mCtx.lineTo(-180, 80);
-  mCtx.closePath(); mCtx.fill();
+  mCtx.ellipse(0, 80, 24, 7, 0, 0, Math.PI * 2);
+  mCtx.fill();
 
+  // Çizmeler ve Pantolon
+  mCtx.fillStyle = '#0f172a';
+  mCtx.fillRect(-14, 48, 11, 34);
+  mCtx.fillRect(3, 48, 11, 34);
+  mCtx.fillStyle = '#334155';
+  mCtx.fillRect(-15, 74, 13, 8); // Sol çizme
+  mCtx.fillRect(2, 74, 13, 8);  // Sağ çizme
+
+  // Madenci Ceketi & Emniyet Yeleği (Yansıtıcı Şeritli)
+  mCtx.fillStyle = '#c2410c'; // Koyu turuncu ceket
+  mCtx.fillRect(-16, 14, 32, 38);
+  mCtx.fillStyle = '#facc15'; // Fosforlu şerit
+  mCtx.fillRect(-16, 28, 32, 6);
+
+  // Madenci Yüzü & Baret
+  mCtx.fillStyle = '#fdba74';
+  mCtx.beginPath(); mCtx.arc(0, 3, 11, 0, Math.PI * 2); mCtx.fill();
+  mCtx.fillStyle = '#eab308'; // Sarı baret
+  mCtx.beginPath(); mCtx.arc(0, -2, 13, Math.PI, 0); mCtx.fill();
+  mCtx.fillRect(-15, -4, 30, 4); // Baret siperliği
+
+  // Kafa Lambası ve Güçlü Sis Işık Huzmesi (Headlamp Beam)
+  const lampBeam = mCtx.createRadialGradient(-14, -2, 2, -140, 20, 180);
+  lampBeam.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  lampBeam.addColorStop(0.25, 'rgba(254, 240, 138, 0.45)');
+  lampBeam.addColorStop(0.7, 'rgba(254, 240, 138, 0.08)');
+  lampBeam.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  mCtx.fillStyle = lampBeam;
+  mCtx.beginPath();
+  mCtx.moveTo(-14, -2);
+  mCtx.lineTo(-190, -50);
+  mCtx.lineTo(-190, 90);
+  mCtx.closePath();
+  mCtx.fill();
+
+  // MADENCİ KOLLARI VE KAZMA HAREKETİ
   mCtx.save();
-  let handleStartX, handleStartY, handleEndX, handleEndY, headCenterX, headCenterY, headAngle;
+  let hx1, hy1, hx2, hy2, headX, headY, headRot;
 
   if (swingFrame === 0) {
-    handleStartX = -4; handleStartY = 24; handleEndX = -30; handleEndY = 6;
-    headCenterX = -30; headCenterY = 6; headAngle = -0.5;
-    mCtx.strokeStyle = '#ea580c'; mCtx.lineWidth = 6;
-    mCtx.beginPath(); mCtx.moveTo(-6, 20); mCtx.lineTo(-14, 24); mCtx.stroke();
+    // Hazırda bekleyiş
+    hx1 = -4; hy1 = 20; hx2 = -32; hy2 = 8;
+    headX = -32; headY = 8; headRot = -0.4;
   } else if (swingFrame === 1) {
-    handleStartX = -2; handleStartY = 18; handleEndX = 22; handleEndY = -32;
-    headCenterX = 22; headCenterY = -32; headAngle = 0.8;
-    mCtx.strokeStyle = '#ea580c'; mCtx.lineWidth = 6;
-    mCtx.beginPath(); mCtx.moveTo(-6, 18); mCtx.lineTo(6, 4); mCtx.stroke();
+    // Geriye yaylanma (Kaldırma)
+    hx1 = -2; hy1 = 16; hx2 = 24; hy2 = -34;
+    headX = 24; headY = -34; headRot = 0.85;
   } else {
-    handleStartX = -4; handleStartY = 24; handleEndX = -58; handleEndY = 36;
-    headCenterX = -58; headCenterY = 36; headAngle = -1.6;
-    mCtx.strokeStyle = '#ea580c'; mCtx.lineWidth = 6;
-    mCtx.beginPath(); mCtx.moveTo(-6, 20); mCtx.lineTo(-28, 28); mCtx.stroke();
+    // Darbe Anı (Kuvvetli İndiriş)
+    hx1 = -4; hy1 = 20; hx2 = -60; hy2 = 38;
+    headX = -60; headY = 38; headRot = -1.65;
+
+    // Vuruş Anı Rüzgar / Hız İzi (Motion Blur Arc)
+    mCtx.strokeStyle = 'rgba(254, 240, 138, 0.45)';
+    mCtx.lineWidth = 3;
+    mCtx.beginPath();
+    mCtx.arc(0, 0, 68, -0.2, 0.9);
+    mCtx.stroke();
   }
 
-  mCtx.strokeStyle = '#854d0e';
-  mCtx.lineWidth = 4;
+  // Ahşap Kazma Sapı
+  mCtx.strokeStyle = '#78350f';
+  mCtx.lineWidth = 5;
   mCtx.lineCap = 'round';
   mCtx.beginPath();
-  mCtx.moveTo(handleStartX, handleStartY); mCtx.lineTo(handleEndX, handleEndY);
+  mCtx.moveTo(hx1, hy1);
+  mCtx.lineTo(hx2, hy2);
   mCtx.stroke();
 
+  // Çift Taraflı Dövme Çelik Kazma Başı
   mCtx.save();
-  mCtx.translate(headCenterX, headCenterY);
-  mCtx.rotate(headAngle);
-
+  mCtx.translate(headX, headY);
+  mCtx.rotate(headRot);
   mCtx.fillStyle = '#94a3b8';
-  mCtx.strokeStyle = '#cbd5e1';
-  mCtx.lineWidth = 1.5;
+  mCtx.strokeStyle = '#f8fafc';
+  mCtx.lineWidth = 1.2;
   mCtx.beginPath();
-  mCtx.moveTo(-22, -4); mCtx.lineTo(0, -6);
-  mCtx.lineTo(22, -4);
-  mCtx.lineTo(26, 0);
-  mCtx.lineTo(20, 2);
-  mCtx.lineTo(0, 4);
-  mCtx.lineTo(-20, 2);
-  mCtx.lineTo(-26, 0);
+  mCtx.moveTo(-24, -3);
+  mCtx.lineTo(0, -5);
+  mCtx.lineTo(24, -3);
+  mCtx.lineTo(28, 0);
+  mCtx.lineTo(22, 3);
+  mCtx.lineTo(0, 5);
+  mCtx.lineTo(-22, 3);
+  mCtx.lineTo(-28, 0);
   mCtx.closePath();
   mCtx.fill();
   mCtx.stroke();
-
-  mCtx.fillStyle = '#475569';
-  mCtx.fillRect(-4, -6, 8, 12);
   mCtx.restore();
 
+  // Madencinin Elleri
   mCtx.fillStyle = '#451a03';
-  mCtx.beginPath(); mCtx.arc(handleStartX, handleStartY, 4.5, 0, Math.PI * 2);
-  mCtx.fill();
-
-  mCtx.restore();
+  mCtx.beginPath(); mCtx.arc(hx1, hy1, 4.5, 0, Math.PI * 2); mCtx.fill();
   mCtx.restore();
 
+  mCtx.restore(); // Madenci translate bitişi
+
+  // 8. SÜZÜLEN IŞIKLI MAĞARA TOZLARI (AMBIENT DUST MOTES)
+  ambientDust.forEach(d => {
+    d.x += d.speedX;
+    d.y += d.speedY;
+    d.pulse += 0.03;
+    if (d.y > h) d.y = -5;
+    if (d.x > w) d.x = 0;
+    if (d.x < 0) d.x = w;
+
+    const alpha = (Math.sin(d.pulse) * 0.3 + 0.5) * d.opacity;
+    mCtx.fillStyle = `rgba(254, 240, 138, ${alpha})`;
+    mCtx.beginPath();
+    mCtx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    mCtx.fill();
+  });
+
+  // 9. DARBE VE KAYA PARÇACIKLARININ GÜNCELLENMESİ
   for (let i = rockParticles.length - 1; i >= 0; i--) {
     const p = rockParticles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.life--;
-    mCtx.fillStyle = p.color;
-    mCtx.fillRect(p.x, p.y, p.size, p.size);
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+
+    if (p.type === 'spark') {
+      p.vy += 0.15; // Kıvılcım yerçekimi
+      mCtx.fillStyle = p.color;
+      mCtx.beginPath();
+      mCtx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+      mCtx.fill();
+    } else {
+      p.vy += 0.38; // Kaya yerçekimi
+      p.rot += p.vRot;
+      mCtx.save();
+      mCtx.translate(p.x, p.y);
+      mCtx.rotate(p.rot);
+      mCtx.fillStyle = p.color;
+      mCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      mCtx.restore();
+    }
+
     if (p.life <= 0) rockParticles.splice(i, 1);
   }
 
   mFrame = requestAnimationFrame(renderMineLoop);
-}
-
-let mapCooldownTimer = null;
-function renderAlpMapPins() {
-  const c = document.getElementById('alp-map-container');
-  if (!c || !CurrentUser) return;
-  c.querySelectorAll('.mine-pin').forEach(p => p.remove());
-  const coords = [
-    { top: '55%', left: '15%' }, { top: '40%', left: '35%' },
-    { top: '28%', left: '55%' }, { top: '60%', left: '75%' }, { top: '20%', left: '85%' }
-  ];
-
-  const now = Date.now();
-  CurrentUser.mines.forEach((mine, idx) => {
-    const p = coords[idx];
-    const isDep = mine.depleted;
-    let timeRemainingText = "";
-
-    if (isDep && mine.sealedAt) {
-      const leftMs = Math.max(0, COOLDOWN_24H_MS - (now - mine.sealedAt));
-      const leftHours = Math.floor(leftMs / (1000 * 60 * 60));
-      const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
-      const leftSecs = Math.floor((leftMs % (1000 * 60)) / 1000);
-      timeRemainingText = `${leftHours}h ${leftMins}m ${leftSecs}s`;
-    }
-
-    let icon = isDep ? 'fa-lock' : 'fa-gem';
-    let bg = isDep 
-      ? 'bg-mineora-card text-rose-500 border-rose-500/40 cursor-not-allowed opacity-80' 
-      : 'bg-mineora-gold text-black border-yellow-200 hover:scale-110 shadow-xl cursor-pointer';
-      
-    let badge = isDep 
-      ? `<span class="mt-1 px-2 py-0.5 rounded bg-mineora-red/90 text-white text-[9px] font-mono font-bold flex items-center gap-1 shadow"><i class="fa-solid fa-clock"></i> ${timeRemainingText}</span>`
-      : `<span class="mt-1 px-2.5 py-1 rounded-xl bg-mineora-card/90 border border-mineora-gold/40 text-[11px] font-black text-mineora-gold shadow-lg">${idx+1}. ${mine.name.split(' ')[0]}</span>`;
-
-    const btn = document.createElement('button');
-    btn.className = `mine-pin absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition transform z-20`;
-    btn.style.top = p.top; btn.style.left = p.left;
-    btn.onclick = () => selectMine(idx);
-    btn.innerHTML = `<div class="w-12 h-12 rounded-2xl ${bg} flex items-center justify-center font-black border-2 text-lg"><i class="fa-solid ${icon}"></i></div>${badge}`;
-    c.appendChild(btn);
-  });
-
-  if (!mapCooldownTimer) {
-    mapCooldownTimer = setInterval(() => {
-      const secMap = document.getElementById('sec-map');
-      if (secMap && !secMap.classList.contains('hidden')) {
-        checkMinesCooldown();
-        renderAlpMapPins();
-        updateHUD();
-      }
-    }, 1000);
-  }
-}
-
-function selectMine(idx) {
-  if (!CurrentUser) return;
-
-  if (typeof isCandidateTrialExpired === 'function' && isCandidateTrialExpired(CurrentUser)) {
-    showToast(`⛔ ${t('trial_expired')}`, "warning");
-    return;
-  }
-
-  checkMinesCooldown();
-  const m = CurrentUser.mines[idx];
-  if (m.depleted) {
-    const now = Date.now();
-    const leftMs = Math.max(0, COOLDOWN_24H_MS - (now - (m.sealedAt || now)));
-    const leftHours = Math.floor(leftMs / (1000 * 60 * 60));
-    const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
-    showToast(`⏳ This mine is sealed! Remaining cooldown: ${leftHours} hours ${leftMins} minutes.`, "warning");
-    return;
-  }
-
-  activeMineIdx = idx; wagonFill = 0; currentWagonStage = 1; isTransitLocked = false; rockParticles = [];
-  document.getElementById('transit-overlay')?.classList.add('hidden');
-  document.getElementById('active-mine-title').innerText = m.name;
-  document.getElementById('active-mine-mineral').innerText = `Mineral: ${m.mineral}`;
-  document.getElementById('wagon-round-indicator').innerText = "Wagon Stage: 1 / 2";
-  document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
-  switchTab('cave');
-  showToast(`⛏️ Entered ${m.name}! Strike the ore to fill the wagon.`, "info");
-}
-
-function showFloatingReward(text, color = '#f0b90b') {
-  const container = document.getElementById('floating-text-container');
-  if (!container) return;
-  const el = document.createElement('div');
-  el.className = 'absolute font-black font-mono text-xs floating-text drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]';
-  el.style.left = '44%'; el.style.top = '40%'; el.style.color = color; el.innerText = text;
-  container.appendChild(el);
-  setTimeout(() => el.remove(), 900);
-}
-
-function triggerWagonFull() {
-  isTransitLocked = true;
-  document.getElementById('transit-overlay')?.classList.remove('hidden');
-  document.getElementById('transit-timer-box')?.classList.add('hidden');
-  document.getElementById('btn-dispatch-wagon')?.classList.remove('hidden');
-
-  if (currentWagonStage === 1) {
-    document.getElementById('transit-title').innerText = "1st Wagon Full!";
-    document.getElementById('transit-desc').innerText = "Dispatch the 1st wagon to the elevator. It will be pulled to the surface in 15 seconds while an empty wagon is lowered.";
-    document.getElementById('btn-dispatch-text').innerText = "Dispatch 1st Wagon (15s Transit)";
-  } else {
-    document.getElementById('transit-title').innerText = "2nd Wagon Full & Mine Depleted!";
-    document.getElementById('transit-desc').innerText = "Dispatch the final wagon (5s transit). Daily payouts will distribute and this mine will be sealed for 24 hours.";
-    document.getElementById('btn-dispatch-text').innerText = "Dispatch Final Wagon (5s Transit & Seal)";
-  }
-}
-
-function distributeDailyMiningRoyalties(workerUsername) {
-  if (!CurrentUser || !CurrentUser.referredBy) return;
-  const leader = typeof findUserByRefCode === 'function' ? findUserByRefCode(CurrentUser.referredBy) : null;
-  if (!leader) return;
-
-  let mineOwner = null, companyOwner = null;
-  if (leader.role === "Maden Sahibi" || leader.role === "Mine Owner") {
-    mineOwner = leader;
-    if (mineOwner.referredBy && typeof findUserByRefCode === 'function') {
-      const top = findUserByRefCode(mineOwner.referredBy);
-      if (top && (top.role === "Şirket Sahibi" || top.role === "Holding Owner")) companyOwner = top;
-    }
-  } else if (leader.role === "Şirket Sahibi" || leader.role === "Holding Owner") {
-    companyOwner = leader;
-  } else if ((leader.role === "İşçi Madenci" || leader.role === "Worker Miner") && leader.referredBy) {
-    const parent = typeof findUserByRefCode === 'function' ? findUserByRefCode(leader.referredBy) : null;
-    if (parent && (parent.role === "Maden Sahibi" || parent.role === "Mine Owner")) {
-      mineOwner = parent;
-      if (mineOwner.referredBy) {
-        const top = findUserByRefCode(mineOwner.referredBy);
-        if (top && (top.role === "Şirket Sahibi" || top.role === "Holding Owner")) companyOwner = top;
-      }
-    } else if (parent && (parent.role === "Şirket Sahibi" || parent.role === "Holding Owner")) {
-      companyOwner = parent;
-    }
-  }
-
-  const todayStr = new Date().toDateString();
-  if (mineOwner) {
-    const MINE_DAILY_CAP = 150.00, intendedAmount = 1.50;
-    if (mineOwner.lastRoyaltyDate !== todayStr) { mineOwner.lastRoyaltyDate = todayStr; mineOwner.dailyRoyaltiesEarned = 0.00; }
-    const currentEarned = Number(mineOwner.dailyRoyaltiesEarned || 0);
-    const payable = Math.min(intendedAmount, Math.max(0, MINE_DAILY_CAP - currentEarned));
-    const overflowToBurn = Number((intendedAmount - payable).toFixed(2));
-
-    if (payable > 0) {
-      mineOwner.ora = Number(((mineOwner.ora || 0) + payable).toFixed(2));
-      mineOwner.dailyRoyaltiesEarned = Number((currentEarned + payable).toFixed(2));
-      addUserNotificationLog(mineOwner, "Daily Mine Royalties", `${workerUsername} finished extraction shift.`, `+${payable.toFixed(2)} ORA`, "income");
-    }
-    if (overflowToBurn > 0 && typeof registerProtocolSystemBurn === 'function') {
-      registerProtocolSystemBurn(overflowToBurn, `Mine Owner (${mineOwner.username}) Daily Cap Overflow`);
-    }
-    if (mineOwner.workers) {
-      const w = mineOwner.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
-      if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
-    }
-    saveStoredUser(mineOwner);
-  }
-
-  if (companyOwner) {
-    const COMP_DAILY_CAP = 750.00, intendedCompAmount = 0.50;
-    if (companyOwner.lastRoyaltyDate !== todayStr) { companyOwner.lastRoyaltyDate = todayStr; companyOwner.dailyRoyaltiesEarned = 0.00; }
-    const currentCompEarned = Number(companyOwner.dailyRoyaltiesEarned || 0);
-    const payableComp = Math.min(intendedCompAmount, Math.max(0, COMP_DAILY_CAP - currentCompEarned));
-    const overflowCompToBurn = Number((intendedCompAmount - payableComp).toFixed(2));
-
-    if (payableComp > 0) {
-      companyOwner.ora = Number(((companyOwner.ora || 0) + payableComp).toFixed(2));
-      companyOwner.dailyRoyaltiesEarned = Number((currentCompEarned + payableComp).toFixed(2));
-      addUserNotificationLog(companyOwner, "Holding Fleet Royalties", `${workerUsername} finished shift.`, `+${payableComp.toFixed(2)} ORA`, "income");
-    }
-    if (overflowCompToBurn > 0 && typeof registerProtocolSystemBurn === 'function') {
-      registerProtocolSystemBurn(overflowCompToBurn, `Holding Owner (${companyOwner.username}) Daily Cap Overflow`);
-    }
-    if (mineOwner && companyOwner.minesOwned) {
-      const ocak = companyOwner.minesOwned.find(m => m.ownerUsername.toLowerCase() === mineOwner.username.toLowerCase());
-      if (ocak && ocak.workers) {
-        const w = ocak.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
-        if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
-      }
-    } else if (companyOwner.workers) {
-      const w = companyOwner.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
-      if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
-    }
-    saveStoredUser(companyOwner);
-  }
-}
-
-function startElevatorDispatch() {
-  document.getElementById('btn-dispatch-wagon')?.classList.add('hidden');
-  document.getElementById('transit-timer-box')?.classList.remove('hidden');
-  let countdown = (currentWagonStage === 1) ? 15 : 5;
-  const timerText = document.getElementById('transit-countdown');
-  const subText = document.getElementById('transit-subtext');
-  if (timerText) timerText.innerText = countdown;
-
-  if (currentWagonStage === 1) {
-    if (subText) subText.innerText = "1st Wagon loaded onto elevator, ascending to surface...";
-    showToast("🚀 1st Wagon in transit, ascending (15s)...", "info");
-  } else {
-    if (subText) subText.innerText = "Final wagon ascending, mine is sealing...";
-    showToast("⚡ Final evacuation started (5s)...", "info");
-  }
-
-  const iv = setInterval(() => {
-    countdown--;
-    if (timerText) timerText.innerText = countdown;
-    if (countdown <= 0) {
-      clearInterval(iv);
-      if (currentWagonStage === 1) {
-        currentWagonStage = 2; wagonFill = 0; isTransitLocked = false; rockParticles = [];
-        document.getElementById('transit-overlay')?.classList.add('hidden');
-        document.getElementById('wagon-fill-text').innerText = "0%";
-        document.getElementById('wagon-round-indicator').innerText = "Wagon Stage: 2 / 2 (Deep Vein)";
-        showToast("✅ 1st Wagon emptied! 2nd wagon ready, resume mining!", "success");
-      } else {
-        const m = CurrentUser.mines[activeMineIdx];
-        m.depleted = true; m.sealedAt = Date.now(); m.hp = 0; wagonFill = 0;
-
-        // 120 Günlük Süre Kontrolü
-        const isCycleActive = CurrentUser.cycleExpiresAt && Date.now() < CurrentUser.cycleExpiresAt;
-        const role = CurrentUser.role || "Candidate";
-
-        let baseCostOra = 0;
-        if (role === "Worker Miner" || role === "İşçi Madenci") baseCostOra = 1000;       // $100
-        else if (role === "Mine Owner" || role === "Maden Sahibi") baseCostOra = 10000;    // $1,000
-        else if (role === "Holding Owner" || role === "Şirket Sahibi") baseCostOra = 50000;// $5,000
-
-        let earnedOra = 0;
-        let randomPercent = 0;
-
-        if (baseCostOra > 0 && isCycleActive) {
-          // Günlük %1.50 ile %1.70 arası rastgele oran
-          randomPercent = Number((1.50 + Math.random() * 0.20).toFixed(2));
-          earnedOra = Number(((baseCostOra * randomPercent) / 100).toFixed(2));
-          CurrentUser.ora = Number(((CurrentUser.ora || 0) + earnedOra).toFixed(2));
-          showToast(`💰 Günlük Üretim Geliri (%${randomPercent}): +${earnedOra.toFixed(2)} ORA!`, "success");
-          addUserNotificationLog(CurrentUser, "Günlük Maden Üretimi", `${m.name} kazısı tamamlandı (%${randomPercent} getiri).`, `+${earnedOra.toFixed(2)} ORA`, "income");
-        } else if (!isCycleActive && baseCostOra > 0) {
-          showToast("⚠️ 120 günlük lisans süreniz doldu! Yeniden üretim geliri almak için lisansınızı yenileyin.", "warning");
-        } else {
-          showToast("⛏️ Kazı tamamlandı! Madenden üretim geliri almak için bir kariyer lisansı edinin.", "info");
-        }
-
-        saveUserWorld(); 
-        updateHUD();
-        distributeDailyMiningRoyalties(CurrentUser.username);
-        showToast(`🏆 ${m.name} tamamlandı! Maden 24 saat mühürlendi.`, "success");
-        setTimeout(() => { document.getElementById('transit-overlay')?.classList.add('hidden'); switchTab('map'); renderAlpMapPins(); }, 800);
-      }
-    }
-  }, 1000);
 }
 // ================= 4. BEP-20 ŞAHSİ TRUST WALLET MOTORU (wallet.js) =================
 let isWalletProcessing = false;
