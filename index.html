@@ -396,27 +396,7 @@
       </aside>
          <!-- İÇERİK SAHNESİ -->
       <main class="flex-1 p-3 sm:p-6 overflow-y-auto">
-        <!-- 0) KURUCU PATRON MASASI -->
-        <section id="sec-boss" style="display:none;" class="space-y-6">
-          <div class="p-6 rounded-3xl bg-mineora-card border border-rose-500/40 shadow-2xl space-y-6">
-            
-            <!-- CANLI FIREBASE ADMIN DURUM PANELİ -->
-            <div id="admin-auth-status-bar" class="p-4 rounded-2xl bg-slate-900 border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div class="flex items-center gap-2.5">
-                <span id="auth-status-dot" class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
-                <div>
-                  <strong id="auth-status-title" class="text-white block">Firebase Admin Yetkisi: Kontrol Ediliyor...</strong>
-                  <span id="auth-status-desc" class="text-[10px] text-slate-400 font-mono">ersinulasduzyol@gmail.com</span>
-                </div>
-              </div>
-              <div id="auth-login-controls" class="flex items-center gap-2">
-                <input type="password" id="admin-auth-direct-pass" placeholder="Firebase Şifresi" class="bg-mineora-bg border border-mineora-border rounded-xl px-3 py-1.5 text-white font-mono text-xs outline-none focus:border-emerald-500">
-                <button type="button" onclick="executeDirectAdminAuthLogin()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
-                  Yetkiyi Aç
-                </button>
-              </div>
-            </div>
-
+        <!-- ÜST BAŞLIK VE HESAPLA / TARA BUTONU -->
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-4">
               <div class="flex items-center gap-3">
                 <div class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-2xl font-black">
@@ -427,134 +407,56 @@
                   <span class="text-xs text-slate-400">Rezerv Protokolü & Dinamik Emtia Havuzu</span>
                 </div>
               </div>
-<!-- CANLI FİNANSAL KASA & NAKİT AKIŞ RÖNTGENİ -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
-        <!-- 1. Toplam Oyuncu USDT -->
-        <div class="p-4 rounded-2xl bg-mineora-card border border-emerald-500/30 shadow-lg">
-          <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
-            <span>Kullanıcı Kasaları (USDT)</span>
-            <i class="fa-solid fa-vault text-emerald-400"></i>
-          </div>
-          <div class="text-xl font-black font-mono text-emerald-400" id="admin-total-user-usdt">$0.00</div>
-          <span class="text-[9px] text-slate-500">Tüm üyelerin şahsi toplamı</span>
-        </div>
 
-        <!-- 2. Toplam Oyuncu ORA -->
-        <div class="p-4 rounded-2xl bg-mineora-card border border-amber-500/30 shadow-lg">
-          <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
-            <span>Kullanıcı Kasaları (ORA)</span>
-            <i class="fa-solid fa-coins text-amber-400"></i>
-          </div>
-          <div class="text-xl font-black font-mono text-amber-300" id="admin-total-user-ora">0.00 ORA</div>
-          <span class="text-[9px] text-slate-500">Dolaşımdaki toplam maden</span>
-        </div>
-
-        <!-- 3. Günlük USDT Girişi -->
-        <div class="p-4 rounded-2xl bg-mineora-card border border-cyan-500/30 shadow-lg">
-          <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
-            <span>Günlük Giriş (24s)</span>
-            <i class="fa-solid fa-arrow-down-left-bracket text-cyan-400"></i>
-          </div>
-          <div class="text-xl font-black font-mono text-cyan-300" id="admin-daily-inflow-usdt">+$0.00</div>
-          <span class="text-[9px] text-cyan-500/80">Son 24 saat yatırılan USDT</span>
-        </div>
-
-        <!-- 4. Günlük USDT Çıkışı -->
-        <div class="p-4 rounded-2xl bg-mineora-card border border-rose-500/30 shadow-lg">
-          <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
-            <span>Günlük Çıkış (24s)</span>
-            <i class="fa-solid fa-arrow-up-right-bracket text-rose-400"></i>
-          </div>
-          <div class="text-xl font-black font-mono text-rose-400" id="admin-daily-outflow-usdt">-$0.00</div>
-          <span class="text-[9px] text-rose-500/80">Son 24 saat çekilen USDT</span>
-        </div>
-      </div>
-            <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-gold/50 shadow-xl space-y-3">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-black text-white flex items-center gap-2">
-                  <i class="fa-solid fa-paper-plane text-mineora-gold"></i> Master ORA Rezervinden Cüzdana Doğrudan Transfer (Mint & Grant)
-                </h3>
-                <span class="text-[10px] text-mineora-gold font-mono uppercase bg-mineora-gold/10 px-2 py-0.5 rounded border border-mineora-gold/20 font-bold">1 Milyar Rezervden Düşer</span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label class="text-slate-400 text-[10px] block font-bold mb-1">Hedef Kullanıcı Adı</label>
-                  <input type="text" id="admin-grant-target-user" placeholder="Kullanıcı adı" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-mineora-gold">
-                </div>
-                <div>
-                  <label class="text-slate-400 text-[10px] block font-bold mb-1">Aktarılacak ORA Miktarı</label>
-                  <input type="number" step="any" id="admin-grant-ora-amount" placeholder="Örn: 50000" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-mineora-gold font-mono text-xs outline-none focus:border-mineora-gold font-bold">
-                </div>
-                <div class="flex items-end">
-                  <button type="button" onclick="executeAdminDirectOraTransfer()" class="w-full py-2.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs transition cursor-pointer shadow-lg shadow-mineora-gold/20 flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-coins"></i> ORA Transferini Gerçekleştir
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 notranslate" translate="no">
-              <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/40 space-y-2">
-                <span class="text-slate-400 text-xs font-bold block uppercase">Kalan Master Genesis ORA Rezervi</span>
-                <strong id="admin-master-ora-reserve" class="text-2xl font-black text-mineora-gold font-mono block">1,000,000,000 ORA</strong>
-              </div>
-
-              <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-green/40 space-y-2">
-                <span class="text-slate-400 text-xs font-bold block uppercase">Kurucu USDT Ana Kasası</span>
-                <strong id="admin-master-usdt-vault" class="text-2xl font-black text-mineora-green font-mono block">$0.00 USDT</strong>
-                <div class="flex gap-2 pt-1">
-                  <input type="text" id="admin-vault-withdraw-addr" placeholder="Hedef BEP-20 Adresi (0x...)" class="w-2/3 bg-mineora-input border border-mineora-border rounded-xl px-2 py-1 text-[11px] text-white font-mono">
-                  <input type="number" id="admin-vault-withdraw-amt" placeholder="USDT" class="w-1/3 bg-mineora-input border border-mineora-border rounded-xl px-2 py-1 text-[11px] text-white font-mono">
-                </div>
-                <button type="button" onclick="executeAdminVaultWithdraw()" class="w-full py-1.5 rounded-xl bg-mineora-green/20 hover:bg-mineora-green/30 text-mineora-green font-bold text-xs border border-mineora-green/30 cursor-pointer">
-                  Soğuk Cüzdana Çek
+              <!-- KAYIP OLAN KASAYI TARA VE KULLANICI EKLE BUTONLARI -->
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="updateAdminFinancialVaultMetrics()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer transition">
+                  <i class="fa-solid fa-calculator text-sm"></i> Kasayı Hesapla / Tara
                 </button>
-              </div>
-
-              <div class="p-4 bg-mineora-bg rounded-2xl border border-rose-500/40 space-y-2">
-                <span class="text-slate-400 text-xs font-bold block uppercase">Manuel ORA Yakım Fırını (dEaD)</span>
-                <strong id="admin-total-burned-display" class="text-2xl font-black text-rose-500 font-mono fire-pulse block">0 ORA</strong>
-                <div class="flex gap-2 pt-1">
-                  <input type="number" id="admin-burn-ora-amount" placeholder="Yakılacak ORA" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2 py-1 text-[11px] text-white font-mono">
-                  <button type="button" onclick="executeAdminBurnOra()" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs whitespace-nowrap cursor-pointer">Yak (Burn)</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/30 space-y-4">
-              <div class="flex justify-between items-center">
-                <h3 class="text-sm font-black text-white flex items-center gap-2">
-                  <i class="fa-solid fa-sliders text-cyan-400"></i> Komisyon ve Çıkış Vergisi Parametreleri
-                </h3>
-                <button type="button" onclick="updateAdminCommissionSettings()" class="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition cursor-pointer">
-                  Oranları Kaydet
+                <button type="button" onclick="openModal('modal-admin-create-user')" class="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 shadow cursor-pointer">
+                  <i class="fa-solid fa-user-plus"></i> Kullanıcı Ekle
                 </button>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 text-xs notranslate" translate="no">
-                <div class="p-3 bg-mineora-card rounded-xl border border-mineora-border space-y-1">
-                  <label class="text-slate-400 text-[10px] block font-bold">P2P USDT Komisyonu (%)</label>
-                  <input type="number" step="0.1" id="admin-set-p2p-usdt" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-white font-mono text-xs outline-none">
-                </div>
-                <div class="p-3 bg-mineora-card rounded-xl border border-mineora-border space-y-1">
-                  <label class="text-slate-400 text-[10px] block font-bold">P2P ORA Yakım Oranı (%)</label>
-                  <input type="number" step="0.1" id="admin-set-p2p-ora" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-white font-mono text-xs outline-none">
-                </div>
-                <div class="p-3 bg-mineora-card rounded-xl border border-rose-500/30 space-y-1">
-                  <label class="text-slate-400 text-[10px] block font-bold">0 - 7 Gün Çekim (%)</label>
-                  <input type="number" step="0.1" id="admin-set-tax-t1" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-rose-400 font-mono text-xs outline-none">
-                </div>
-                <div class="p-3 bg-mineora-card rounded-xl border border-amber-500/30 space-y-1">
-                  <label class="text-slate-400 text-[10px] block font-bold">8 - 29 Gün Çekim (%)</label>
-                  <input type="number" step="0.1" id="admin-set-tax-t2" class="w-full bg-mineora-bg border border-amber-500/30 rounded-lg px-2 py-1 text-amber-300 font-mono text-xs outline-none">
-                </div>
-                <div class="p-3 bg-mineora-card rounded-xl border border-mineora-green/30 space-y-1">
-                  <label class="text-slate-400 text-[10px] block font-bold">30+ Gün Çekim (%)</label>
-                  <input type="number" step="0.1" id="admin-set-tax-t3" class="w-full bg-mineora-bg border border-mineora-border rounded-lg px-2 py-1 text-mineora-green font-mono text-xs outline-none">
-                </div>
+                <span class="px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs font-black">Root Yetkisi Aktif</span>
               </div>
             </div>
 
-            <!-- 1. BÖLÜM: 3'LÜ CANLI ONAY VE OPERASYON MASALARI -->
+            <!-- CANLI FİNANSAL KASA & NAKİT AKIŞ RÖNTGENİ -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
+              <div class="p-4 rounded-2xl bg-mineora-card border border-emerald-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Kullanıcı Kasaları (USDT)</span>
+                  <i class="fa-solid fa-vault text-emerald-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-emerald-400" id="admin-total-user-usdt">$0.00</div>
+                <span class="text-[9px] text-slate-500">Tüm üyelerin şahsi toplamı</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-mineora-card border border-amber-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Kullanıcı Kasaları (ORA)</span>
+                  <i class="fa-solid fa-coins text-amber-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-amber-300" id="admin-total-user-ora">0.00 ORA</div>
+                <span class="text-[9px] text-slate-500">Dolaşımdaki toplam maden</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-mineora-card border border-cyan-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Günlük Giriş (24s)</span>
+                  <i class="fa-solid fa-arrow-down-left-bracket text-cyan-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-cyan-300" id="admin-daily-inflow-usdt">+$0.00</div>
+                <span class="text-[9px] text-cyan-500/80">Son 24 saat yatırılan USDT</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-mineora-card border border-rose-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Günlük Çıkış (24s)</span>
+                  <i class="fa-solid fa-arrow-up-right-bracket text-rose-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-rose-400" id="admin-daily-outflow-usdt">-$0.00</div>
+                <span class="text-[9px] text-rose-500/80">Son 24 saat çekilen USDT</span>
+              </div>
+            </div>
+
+            <!-- 1. BÖLÜM: 3'LÜ CANLI OPERASYON MASASI (GENİŞLETME BUTONLU) -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
               
               <!-- 1) Yatırma Masası -->
@@ -563,9 +465,14 @@
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
                     <i class="fa-solid fa-arrow-down text-emerald-400"></i> Yatırma Masası
                   </h3>
-                  <button type="button" onclick="renderAdminDepositQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
-                  </button>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="openQueueDetailModal('deposit')" class="px-2.5 py-1 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-[11px] font-bold cursor-pointer transition flex items-center gap-1">
+                      <i class="fa-solid fa-up-right-and-down-left-from-center"></i> Genişlet
+                    </button>
+                    <button type="button" onclick="renderAdminDepositQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
+                      <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                  </div>
                 </div>
                 <div id="admin-deposit-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
@@ -576,9 +483,14 @@
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
                     <i class="fa-solid fa-arrow-up text-amber-400"></i> Çekim Masası
                   </h3>
-                  <button type="button" onclick="renderAdminWithdrawalQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
-                  </button>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="openQueueDetailModal('withdraw')" class="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/30 text-[11px] font-bold cursor-pointer transition flex items-center gap-1">
+                      <i class="fa-solid fa-up-right-and-down-left-from-center"></i> Genişlet
+                    </button>
+                    <button type="button" onclick="renderAdminWithdrawalQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
+                      <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                  </div>
                 </div>
                 <div id="admin-withdrawal-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
@@ -589,9 +501,14 @@
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
                     <i class="fa-solid fa-inbox text-cyan-400"></i> Destek Mesajları
                   </h3>
-                  <button type="button" onclick="renderAdminContactMessages()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
-                  </button>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="openQueueDetailModal('contact')" class="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-black border border-cyan-500/30 text-[11px] font-bold cursor-pointer transition flex items-center gap-1">
+                      <i class="fa-solid fa-up-right-and-down-left-from-center"></i> Genişlet
+                    </button>
+                    <button type="button" onclick="renderAdminContactMessages()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer transition">
+                      <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                  </div>
                 </div>
                 <div id="admin-contact-messages-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
