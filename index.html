@@ -4886,57 +4886,91 @@ const BOT_TAGS = [
   "ZH", "CH", "OTC", "Trade", "Miner", "Hold", "Cap", "Vault", "Alps", "Berg", "Node", "Swiss"
 ];
 
-function generateSimulatedBotOrders() {
-  const simulated = [];
+// 5 dakikalık canlı hafızalı bot emirleri (Satın alınınca kaybolur)
+function getActiveBotOrders() {
   const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
+  let cache = null;
+  try {
+    cache = JSON.parse(localStorage.getItem('mineora_bot_p2p_cache') || 'null');
+  } catch(e) {}
 
-  const tieredPackages = [
-    { usdt: 10,   ora: 100 },
-    { usdt: 25,   ora: 250 },
-    { usdt: 50,   ora: 500 },
-    { usdt: 100,  ora: 1000 },
-    { usdt: 250,  ora: 2500 },
-    { usdt: 500,  ora: 5000 },
-    { usdt: 1000, ora: 10000 },
-    { usdt: 2500, ora: 25000 },
-    { usdt: 3500, ora: 35000 },
-    { usdt: 5000, ora: 50000 }
-  ];
+  // 5 dakika dolmuşsa veya hafıza boşsa yeni emir listesi üret
+  if (!cache || cache.timeBlock !== timeBlock || !Array.isArray(cache.orders)) {
+    const freshOrders = [];
+    const tieredPackages = [
+      { usdt: 10,   ora: 100 },
+      { usdt: 25,   ora: 250 },
+      { usdt: 50,   ora: 500 },
+      { usdt: 100,  ora: 1000 },
+      { usdt: 250,  ora: 2500 },
+      { usdt: 500,  ora: 5000 },
+      { usdt: 1000, ora: 10000 },
+      { usdt: 2500, ora: 25000 },
+      { usdt: 3500, ora: 35000 },
+      { usdt: 5000, ora: 50000 }
+    ];
 
-  function getDynamicBotName(index, salt) {
-    const fIdx = (timeBlock + index * 3 + salt) % BOT_FIRST_NAMES.length;
-    const tIdx = (timeBlock * 2 + index + salt * 2) % BOT_TAGS.length;
-    const num = ((timeBlock + index * 7) % 89) + 10;
-    return `${BOT_FIRST_NAMES[fIdx]}_${BOT_TAGS[tIdx]}${num}`;
+    function getDynamicBotName(index, salt) {
+      const fIdx = (timeBlock + index * 3 + salt) % BOT_FIRST_NAMES.length;
+      const tIdx = (timeBlock * 2 + index + salt * 2) % BOT_TAGS.length;
+      const num = ((timeBlock + index * 7) % 89) + 10;
+      return `${BOT_FIRST_NAMES[fIdx]}_${BOT_TAGS[tIdx]}${num}`;
+    }
+
+    // Satış Emirleri (Kullanıcı USDT öder, ORA alır)
+    tieredPackages.forEach((pkg, idx) => {
+      freshOrders.push({
+        id: 90000000 + idx,
+        isBot: true,
+        side: 'sell',
+        merchant: getDynamicBotName(idx, 1),
+        price: 0.1000,
+        oraAmount: pkg.ora,
+        usdtAmount: pkg.usdt
+      });
+    });
+
+    // Alış Emirleri (Kullanıcı ORA satar, USDT alır)
+    tieredPackages.forEach((pkg, idx) => {
+      freshOrders.push({
+        id: 91000000 + idx,
+        isBot: true,
+        side: 'buy',
+        merchant: getDynamicBotName(idx, 7),
+        price: 0.1000,
+        oraAmount: pkg.ora,
+        usdtAmount: pkg.usdt
+      });
+    });
+
+    cache = { timeBlock: timeBlock, orders: freshOrders };
+    localStorage.setItem('mineora_bot_p2p_cache', JSON.stringify(cache));
   }
 
-  // 1) BOT SATIŞ EMİRLERİ (Üyeler USDT verip ORA Alabilir -> ORA Rezervden Düşer)
-  tieredPackages.forEach((pkg, idx) => {
-    simulated.push({
-      id: 90000000 + idx,
-      isBot: true,
-      side: 'sell',
-      merchant: getDynamicBotName(idx, 1),
-      price: 0.1000,
-      oraAmount: pkg.ora,
-      usdtAmount: pkg.usdt
-    });
-  });
+  return cache.orders;
+}
 
-  // 2) BOT ALIŞ EMİRLERİ (Üyeler ORA satıp USDT Alabilir -> Kurucu Kasasından Karşılanır)
-  tieredPackages.forEach((pkg, idx) => {
-    simulated.push({
-      id: 91000000 + idx,
-      isBot: true,
-      side: 'buy',
-      merchant: getDynamicBotName(idx, 7),
-      price: 0.1000,
-      oraAmount: pkg.ora,
-      usdtAmount: pkg.usdt
-    });
-  });
+// Satın alınan bot emrini hafızadan silen veya düşüren fonksiyon
+function consumeBotOrder(orderId, filledOra) {
+  const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
+  let cache = null;
+  try {
+    cache = JSON.parse(localStorage.getItem('mineora_bot_p2p_cache') || 'null');
+  } catch(e) {}
 
-  return simulated;
+  if (!cache || cache.timeBlock !== timeBlock || !Array.isArray(cache.orders)) return;
+
+  const idx = cache.orders.findIndex(o => o.id === orderId);
+  if (idx !== -1) {
+    cache.orders[idx].oraAmount = Number((cache.orders[idx].oraAmount - filledOra).toFixed(2));
+    cache.orders[idx].usdtAmount = Number((cache.orders[idx].oraAmount * cache.orders[idx].price).toFixed(2));
+
+    // Emir tamamen alındıysa listeden yok et
+    if (cache.orders[idx].oraAmount <= 0.001) {
+      cache.orders.splice(idx, 1);
+    }
+    localStorage.setItem('mineora_bot_p2p_cache', JSON.stringify(cache));
+  }
 }
 
 function setP2pFilter(filter) {
@@ -5053,7 +5087,7 @@ function renderP2pOrders() {
   tbody.innerHTML = "";
 
   const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
-  const botOrders = generateSimulatedBotOrders();
+  const botOrders = getActiveBotOrders();
   const allCombinedOrders = [...globalP2pOrders, ...botOrders];
   const filtered = allCombinedOrders.filter(o => o.side === targetSide && o.oraAmount > 0);
 
@@ -5104,7 +5138,7 @@ function renderP2pOrders() {
 function openP2pTradeModal(orderId, isBotOrder = false) {
   let order = null;
   if (isBotOrder) {
-    order = generateSimulatedBotOrders().find(o => o.id === orderId);
+    order = getActiveBotOrders().find(o => o.id === orderId);
   } else {
     order = globalP2pOrders.find(o => o.id === orderId);
   }
@@ -5192,6 +5226,9 @@ function confirmP2pTrade() {
 
     addUserNotificationLog(CurrentUser, "P2P ORA Alımı", `${activeP2pOrder.merchant} firmasından $${totalUsdt.toFixed(2)} USDT karşılığı ${amtOra} ORA alındı.`, `+${(amtOra - burnOra).toFixed(2)} ORA`, "income");
 
+    // Satın alınan bot emrini hafızadan sil
+    consumeBotOrder(activeP2pOrder.id, amtOra);
+
     saveUserWorld();
     updateHUD();
     closeModal('modal-p2p-trade');
@@ -5233,6 +5270,9 @@ function confirmP2pTrade() {
     }
 
     addUserNotificationLog(CurrentUser, "P2P ORA Satışı", `${amtOra} ORA satıldı, $${netUsdt.toFixed(2)} USDT cüzdana eklendi.`, `+$${netUsdt.toFixed(2)} USDT`, "income");
+
+    // Satılan bot emrini hafızadan sil
+    consumeBotOrder(activeP2pOrder.id, amtOra);
 
     saveUserWorld();
     updateHUD();
