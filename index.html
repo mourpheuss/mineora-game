@@ -547,9 +547,14 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 space-y-3">
-                <h3 class="text-sm font-black text-white flex items-center gap-2">
-                  <i class="fa-solid fa-arrow-down text-emerald-400"></i> Borsadan USDT Yatırma Onay Masası
-                </h3>
+                <div class="flex justify-between items-center">
+                  <h3 class="text-sm font-black text-white flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-down text-emerald-400"></i> Borsadan USDT Yatırma Onay Masası
+                  </h3>
+                  <button type="button" onclick="renderAdminDepositQueue()" class="px-3 py-1 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Yenile
+                  </button>
+                </div>
                 <div id="admin-deposit-queue-list" class="space-y-2"></div>
               </div>
 <!-- GELEN İLETİŞİM & DESTEK MESAJLARI -->
