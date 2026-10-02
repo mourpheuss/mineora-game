@@ -4455,7 +4455,62 @@ function startElevatorDispatch() {
   }, 1000);
 }
 
-// 2. Global Ekosistem Hiyerarşisi Çizici (Admin panelini kilitleyen eksik fonksiyon giderildi)
+addUserNotificationLog(CurrentUser, "Maden Kazısı Tamamlandı", `${m.name} vardiyası tamamlandı (+%0.3 getiri).`, `+${earnedOra.toFixed(2)} ORA`, "income");
+                showToast(`💰 Maden Tamamlandı! +${earnedOra.toFixed(2)} ORA cüzdanınıza yansıtıldı. (5 maden toplamı: Günlük %1.5)`, "success");
+              } else {
+                showToast("⚠️ 120 günlük lisans süreniz dolduğu için bu kazıdan ORA üretilmedi.", "warning");
+              }
+            } else if (role === "Maden Sahibi" || role === "Mine Owner" || role === "Holding Owner" || role === "Şirket Sahibi") {
+              showToast("⛏️ Teftiş kazısı tamamlandı! İşletme sahipleri kazıdan ORA almaz, kazançları işçi filolarından gelir.", "info");
+            } else {
+              // Aday üye
+              showToast("⛏️ Kazı tamamlandı! Aday üyeler ORA üretemez. ORA geliri için Kariyer Seçimi'nden lisans almalısınız.", "info");
+            }
+
+            saveUserWorld();
+            updateHUD();
+
+            if (typeof window.distributeDailyMiningRoyalties === 'function') {
+              window.distributeDailyMiningRoyalties(CurrentUser.username);
+            }
+
+            setTimeout(() => {
+              document.getElementById('transit-overlay')?.classList.add('hidden');
+              switchTab('map');
+              renderAlpMapPins();
+            }, 800);
+          }
+        }
+      }, 1000);
+    }
+
+// ================= YARDIMCI FİLO VE HİYERARŞİ FONKSİYONLARI =================
+
+// 1. Filo Primi Dağıtımı
+window.distributeDailyMiningRoyalties = function(minerUsername) {
+  if (!minerUsername) return;
+  const miner = (typeof getStoredUser === 'function' ? getStoredUser(minerUsername) : null) || CurrentUser;
+  if (!miner || !miner.referredBy) return;
+
+  const sponsor = (typeof findUserByRefCode === 'function') ? findUserByRefCode(miner.referredBy) : null;
+  if (!sponsor) return;
+
+  const role = sponsor.role || "";
+  if (role === "Mine Owner" || role === "Maden Sahibi" || role === "Holding Owner" || role === "Şirket Sahibi") {
+    const royaltyOra = 0.30;
+    sponsor.ora = Number(((sponsor.ora || 0) + royaltyOra).toFixed(2));
+    if (typeof addUserNotificationLog === 'function') {
+      addUserNotificationLog(sponsor, "Filo Madencilik Primi", `${miner.username} adlı madenciniz vardiyasını tamamladı.`, `+${royaltyOra.toFixed(2)} ORA`, "commission");
+    }
+    if (typeof saveStoredUser === 'function') saveStoredUser(sponsor);
+    if (CurrentUser && CurrentUser.username.toLowerCase() === sponsor.username.toLowerCase()) {
+      CurrentUser.ora = sponsor.ora;
+      if (typeof updateHUD === 'function') updateHUD();
+    }
+  }
+};
+
+// 2. Global Ekosistem Hiyerarşisi Çizici
 function renderAdminGlobalHierarchy() {
   const container = document.getElementById('admin-global-hierarchy-tree');
   if (!container || !CurrentUser || !CurrentUser.isRootAdmin) return;
@@ -4483,7 +4538,7 @@ function renderAdminGlobalHierarchy() {
   let html = '<div class="space-y-2 max-h-72 overflow-y-auto pr-1 notranslate" translate="no">';
   allUsers.forEach(u => {
     const sponsorName = u.referredBy || (u.referral_chain && u.referral_chain.length > 0 ? u.referral_chain[u.referral_chain.length - 1] : "Doğrudan Kayıt");
-    const roleBadge = typeof getRoleBadgeStyle === 'function' ? getRoleBadgeStyle(u.role) : { bg: "bg-slate-700 text-slate-300", icon: "fa-user" };
+    const roleBadge = (typeof getRoleBadgeStyle === 'function') ? getRoleBadgeStyle(u.role) : { bg: "bg-slate-700 text-slate-300", icon: "fa-user" };
     html += `
       <div class="p-3 rounded-xl bg-mineora-card border border-mineora-border flex items-center justify-between text-xs">
         <div class="flex items-center gap-2.5">
@@ -4508,32 +4563,7 @@ function renderAdminGlobalHierarchy() {
   html += '</div>';
   container.innerHTML = html;
 }
-
-            addUserNotificationLog(CurrentUser, "Maden Kazısı Tamamlandı", `${m.name} vardiyası tamamlandı (+%0.3 getiri).`, `+${earnedOra.toFixed(2)} ORA`, "income");
-            showToast(`💰 Maden Tamamlandı! +${earnedOra.toFixed(2)} ORA cüzdanınıza yansıtıldı. (5 maden toplamı: Günlük %1.5)`, "success");
-          } else {
-            showToast("⚠️ 120 günlük lisans süreniz dolduğu için bu kazıdan ORA üretilmedi.", "warning");
-          }
-        } else if (role === "Maden Sahibi" || role === "Mine Owner" || role === "Holding Owner" || role === "Şirket Sahibi") {
-          showToast("⛏️ Teftiş kazısı tamamlandı! İşletme sahipleri kazıdan ORA almaz, kazançları işçi filolarından gelir.", "info");
-        } else {
-          // Aday üye
-          showToast("⛏️ Kazı tamamlandı! Aday üyeler ORA üretemez. ORA geliri için Kariyer Seçimi'nden lisans almalısınız.", "info");
-        }
-
-        saveUserWorld();
-        updateHUD();
-        distributeDailyMiningRoyalties(CurrentUser.username);
-
-        setTimeout(() => {
-          document.getElementById('transit-overlay')?.classList.add('hidden');
-          switchTab('map');
-          renderAlpMapPins();
-        }, 800);
-      }
-    }
-  }, 1000);
-}
+window.renderAdminGlobalHierarchy = renderAdminGlobalHierarchy;
 
 // Master rezervden düşüm köprüsü
 function deductMinedOraFromMasterReserve(amount) {
