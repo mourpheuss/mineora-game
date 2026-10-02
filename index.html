@@ -8471,7 +8471,6 @@ function rejectDepositOrder(depId) {
 
 // --- 1. YATIRMA İŞLEMLERİ ---
 function queueDepositForAdminApproval(username, amount, txid) {
-...
 function rejectDepositOrder(depId) {
   if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
   fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
