@@ -8351,183 +8351,9 @@ function handleAdminCreateUserSubmit() {
   showToast(`🎉 ${u} kullanıcısı oluşturuldu!`, "success");
 }
 
-// ================= CANLI BEP-20 YATIRMA VE ONAY MOTORU =================
-let lastAuthErrorMessage = "";
+// ================= PROTOKOL HİYERARŞİ, FİLO VE ÇEKİM KUYRUKLARI =================
 
-async function ensureAdminAuthConnection(customPassword = null) {
-  if (typeof firebase === 'undefined' || !firebase.auth) return false;
-  if (firebase.auth().currentUser) return true;
-
-  const passToTry = customPassword || (CurrentUser ? CurrentUser.pass : null);
-  if (!passToTry) return false;
-
-  try {
-    await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", passToTry);
-    console.log("✅ Firebase Admin oturumu doğrulandı.");
-    lastAuthErrorMessage = "";
-    return true;
-  } catch (err) {
-    console.warn("Firebase Auth Hatası:", err);
-    lastAuthErrorMessage = err.code || err.message;
-    return false;
-  }
-}
-
-function queueDepositForAdminApproval(username, amount, txid) {
-  if (!fbDb) {
-    showToast("⚠️ Veritabanı bağlantısı yok!", "warning");
-    return;
-  }
-  const depId = `dep_${Date.now()}`;
-  const payload = {
-    id: depId,
-    username: username,
-    amount: Number(parseFloat(amount).toFixed(2)),
-    txid: txid,
-    date: new Date().toLocaleString('tr-TR'),
-    status: 'pending'
-  };
-
-  fbDb.ref(`depositQueue/${depId}`).set(payload).then(() => {
-    console.log("✅ Bildirim Firebase'e yazıldı:", payload);
-  }).catch(err => {
-    console.error("Yazma hatası:", err);
-    showToast("⛔ Bildirim gönderilemedi: " + err.message, "warning");
-  });
-}
-
-async function renderAdminDepositQueue() {
-  const container = document.getElementById('admin-deposit-queue-list');
-  if (!container || !fbDb) return;
-
-  // Oturum kapalıysa arka planda bağlanmayı dene
-  if (CurrentUser && CurrentUser.isRootAdmin && !firebase.auth().currentUser) {
-    await ensureAdminAuthConnection();
-  }
-
-  fbDb.ref('depositQueue').on('value', snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-
-    if (!data) {
-      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
-      return;
-    }
-
-    const items = Object.values(data).filter(d => d.status === 'pending');
-    if (items.length === 0) {
-      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
-      return;
-    }
-
-    items.forEach(d => {
-      const card = document.createElement('div');
-      card.className = "p-3 rounded-xl bg-mineora-card border border-emerald-500/40 flex items-center justify-between text-xs";
-      card.innerHTML = `
-        <div class="space-y-0.5">
-          <div class="flex items-center gap-2">
-            <strong class="text-white">${d.username}</strong>
-            <span class="text-emerald-400 font-mono font-black">+$${d.amount.toFixed(2)} USDT</span>
-          </div>
-          <span class="text-[10px] text-slate-400 font-mono block break-all">TxID: ${d.txid}</span>
-          <span class="text-[9px] text-slate-500 font-mono">${d.date}</span>
-        </div>
-        <div class="flex gap-1.5 shrink-0 ml-2">
-          <button type="button" onclick="approveDepositOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
-            Onayla
-          </button>
-          <button type="button" onclick="rejectDepositOrder('${d.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">
-            Reddet
-          </button>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  }, err => {
-    // Erişim engellenirse doğrudan kutu içinden şifre girip bağlanma kutusu sun
-    const errText = lastAuthErrorMessage || err.code || "auth/denied";
-    container.innerHTML = `
-      <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center space-y-2">
-        <div class="text-amber-300 text-xs font-bold">
-          ⚠️ Firebase Oturumu Doğrulanamadı (${errText})
-        </div>
-        <p class="text-[10px] text-slate-400">ersinulasduzyol@gmail.com şifrenizi girerek yetkiyi açabilirsiniz:</p>
-        <div class="flex gap-1.5 max-w-xs mx-auto pt-1">
-          <input type="password" id="input-manual-admin-auth-pass" placeholder="Firebase Şifreniz" class="flex-1 bg-mineora-bg border border-mineora-border rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400">
-          <button type="button" onclick="handleManualAdminAuthConnect()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-lg cursor-pointer">
-            Bağlan
-          </button>
-        </div>
-      </div>
-    `;
-  });
-}
-
-window.handleManualAdminAuthConnect = async function() {
-  const pass = document.getElementById('input-manual-admin-auth-pass')?.value.trim();
-  if (!pass) {
-    showToast("⚠️ Lütfen şifrenizi girin!", "warning");
-    return;
-  }
-  showToast("🔐 Bağlanılıyor...", "info");
-  const success = await ensureAdminAuthConnection(pass);
-  if (success) {
-    if (CurrentUser) CurrentUser.pass = pass;
-    saveUserWorld();
-    showToast("✅ Firebase yetkisi alındı!", "success");
-    renderAdminDepositQueue();
-    if (typeof renderAdminContactMessages === 'function') renderAdminContactMessages();
-  } else {
-    showToast(`❌ Giriş başarısız: ${lastAuthErrorMessage}`, "warning");
-    renderAdminDepositQueue();
-  }
-};
-
-function approveDepositOrder(depId, username, amount) {
-  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
-  const uKey = username.toLowerCase();
-
-  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
-    const uData = snap.val();
-    if (uData) {
-      uData.usdt = Number(((uData.usdt || 0) + amount).toFixed(2));
-      if (!uData.logs) uData.logs = [];
-      uData.logs.unshift({
-        id: Date.now(),
-        title: "BEP-20 USDT Yüklendi",
-        desc: "Yatırma bildiriminiz onaylandı ve bakiyenize aktarıldı.",
-        amountText: `+$${amount.toFixed(2)} USDT`,
-        type: "income",
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('tr-TR'),
-        read: false
-      });
-
-      fbDb.ref(`users/${uKey}`).set(uData);
-      fbDb.ref(`depositQueue/${depId}`).remove();
-
-      if (CurrentUser.username.toLowerCase() === uKey) {
-        CurrentUser.usdt = uData.usdt;
-        saveUserWorld();
-        updateHUD();
-      }
-
-      if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
-      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT yüklendi!`, "success");
-    }
-  });
-}
-
-function rejectDepositOrder(depId) {
-  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
-  fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
-    showToast("Bildirim reddedildi.", "info");
-  });
-}
-
-// ================= CANLI BEP-20 YATIRMA & ÇEKİM ONAY KUYRUKLARI MOTORU =================
-
-// 1. EKSİK MADEN TAMAMLAMA FİLO PRİMİ MOTORU (2. Vagon Hatasını Önler)
+// 1. Filo Primi Dağıtımı (2. Vagon Tamamlandığında Çalışır)
 function distributeDailyMiningRoyalties(minerUsername) {
   if (!minerUsername) return;
   const miner = (typeof getStoredUser === 'function' ? getStoredUser(minerUsername) : null) || CurrentUser;
@@ -8552,7 +8378,7 @@ function distributeDailyMiningRoyalties(minerUsername) {
 }
 window.distributeDailyMiningRoyalties = distributeDailyMiningRoyalties;
 
-// 2. EKSİK GLOBAL HİYERARŞİ AĞACI ÇİZİCİ (Admin Masası Kilitlenmesini Önler)
+// 2. Global Ekosistem Hiyerarşisi Çizici (Admin Paneli Ağacı)
 function renderAdminGlobalHierarchy() {
   const container = document.getElementById('admin-global-hierarchy-tree');
   if (!container || !CurrentUser || !CurrentUser.isRootAdmin) return;
@@ -8607,7 +8433,7 @@ function renderAdminGlobalHierarchy() {
 }
 window.renderAdminGlobalHierarchy = renderAdminGlobalHierarchy;
 
-// 3. CANLI ODA GİRİŞ MOTORU (Mock Odalarda Hata Vermesini Önler)
+// 3. Canlı Oda Giriş Kontrolü
 window.attemptJoinRoom = function(roomId) {
   if (!CurrentUser) {
     showToast("⚠️ Odaya katılmak için giriş yapmalısınız!", "warning");
@@ -8651,7 +8477,7 @@ window.attemptJoinRoom = function(roomId) {
   }
 };
 
-// 4. ÇEKİM İŞLEMLERİ KUYRUĞU (USDT BEP-20 Çekim & Onay Motoru)
+// 4. BEP-20 USDT Çekim Kuyruğu ve Onay Fonksiyonları
 function queueWithdrawalForAdminApproval(username, amount, targetAddr) {
   if (!fbDb) {
     showToast("⚠️ Veritabanı bağlantısı yok!", "warning");
