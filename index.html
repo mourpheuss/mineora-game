@@ -4429,6 +4429,29 @@ function startElevatorDispatch() {
     }
   }, 1000);
 }
+    // Filo Madencilik Primi Dağıtım Fonksiyonu
+function distributeDailyMiningRoyalties(minerUsername) {
+  if (!minerUsername) return;
+  const miner = (typeof getStoredUser === 'function' ? getStoredUser(minerUsername) : null) || CurrentUser;
+  if (!miner || !miner.referredBy) return;
+
+  const sponsor = (typeof findUserByRefCode === 'function') ? findUserByRefCode(miner.referredBy) : null;
+  if (!sponsor) return;
+
+  const role = sponsor.role || "";
+  if (role === "Mine Owner" || role === "Maden Sahibi" || role === "Holding Owner" || role === "Şirket Sahibi") {
+    const royaltyOra = 0.30;
+    sponsor.ora = Number(((sponsor.ora || 0) + royaltyOra).toFixed(2));
+    if (typeof addUserNotificationLog === 'function') {
+      addUserNotificationLog(sponsor, "Filo Madencilik Primi", `${miner.username} adlı madenciniz vardiyasını tamamladı.`, `+${royaltyOra.toFixed(2)} ORA`, "commission");
+    }
+    if (typeof saveStoredUser === 'function') saveStoredUser(sponsor);
+    if (CurrentUser && CurrentUser.username.toLowerCase() === sponsor.username.toLowerCase()) {
+      CurrentUser.ora = sponsor.ora;
+      if (typeof updateHUD === 'function') updateHUD();
+    }
+  }
+}
 
 // Master rezervden düşüm köprüsü
 function deductMinedOraFromMasterReserve(amount) {
@@ -6579,17 +6602,26 @@ async function handleCreateLiveRoomSubmit() {
   showToast(`🎉 '${title}' canlı yayın odası açıldı!`, "success");
 }
 
-// ================= BİLET ÖDEME (%70 Yayıncı / %30 Kurucu) =================
 function attemptJoinRoom(roomId) {
   if (!CurrentUser) {
     showToast("⚠️ Odaya katılmak için giriş yapmalısınız!", "warning");
     return;
   }
 
+  // Sanal (Mock) VIP holding odaları için bilgilendirme
+  const mockRooms = (typeof getRotatingMockLiveRooms === 'function') ? getRotatingMockLiveRooms() : null;
+  if (mockRooms && mockRooms[roomId]) {
+    const mock = mockRooms[roomId];
+    if (mock.hasPin) {
+      showToast(`🔒 '${mock.title}' kapalı devre VIP Holding meclisidir. Yalnızca davetli holding sahipleri katılabilir.`, "info");
+      return;
+    }
+  }
+
   const proceed = (room) => {
     if (!room) {
       showToast("⛔ Bu oda artık mevcut değil!", "warning");
-      renderLiveRoomsList();
+      if (typeof renderLiveRoomsList === 'function') renderLiveRoomsList();
       return;
     }
 
@@ -6611,7 +6643,9 @@ function attemptJoinRoom(roomId) {
   };
 
   if (typeof fbDb !== 'undefined' && fbDb) {
-    fbDb.ref(`liveRooms/${roomId}`).once('value').then(snap => proceed(snap.val()));
+    fbDb.ref(`liveRooms/${roomId}`).once('value').then(snap => proceed(snap.val())).catch(() => proceed(null));
+  } else {
+    proceed(null);
   }
 }
 
@@ -7628,6 +7662,59 @@ if (typeof firebase !== 'undefined' && firebase.auth) {
     }
   });
 }
+   // Global Ekosistem Hiyerarşi Ağacı (Admin Paneli İçin)
+function renderAdminGlobalHierarchy() {
+  const container = document.getElementById('admin-global-hierarchy-tree');
+  if (!container || !CurrentUser || !CurrentUser.isRootAdmin) return;
+
+  const allUsers = [];
+  const deletedList = (typeof getDeletedUsers === 'function') ? getDeletedUsers() : [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('mineora_user_')) {
+      try {
+        const u = JSON.parse(localStorage.getItem(k));
+        if (u && u.username && !deletedList.includes(u.username.toLowerCase())) {
+          allUsers.push(u);
+        }
+      } catch(e) {}
+    }
+  }
+
+  if (allUsers.length === 0) {
+    container.innerHTML = `<div class="p-4 text-center text-slate-500 text-xs notranslate" translate="no">Sistemde henüz kayıtlı kullanıcı yok.</div>`;
+    return;
+  }
+
+  let html = '<div class="space-y-2 max-h-72 overflow-y-auto pr-1 notranslate" translate="no">';
+  allUsers.forEach(u => {
+    const sponsorName = u.referredBy || (u.referral_chain && u.referral_chain.length > 0 ? u.referral_chain[u.referral_chain.length - 1] : "Doğrudan Kayıt");
+    const roleBadge = (typeof getRoleBadgeStyle === 'function') ? getRoleBadgeStyle(u.role) : { bg: "bg-slate-700 text-slate-300", icon: "fa-user" };
+    html += `
+      <div class="p-3 rounded-xl bg-mineora-card border border-mineora-border flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-mineora-input flex items-center justify-center font-bold text-white text-[11px]">
+            ${u.username.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <strong class="text-white">${u.username}</strong>
+              <span class="px-1.5 py-0.5 rounded text-[8px] border font-mono ${roleBadge.bg}">${u.role || 'Candidate'}</span>
+            </div>
+            <span class="text-[10px] text-slate-400">Sponsor: <span class="text-cyan-300 font-mono">${sponsorName}</span></span>
+          </div>
+        </div>
+        <div class="text-right font-mono text-[11px]">
+          <span class="text-mineora-gold font-bold block">${Number(u.ora || 0).toFixed(2)} ORA</span>
+          <span class="text-mineora-green">$${Number(u.usdt || 0).toFixed(2)} USDT</span>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+} 
 function initAdminMasterPanel() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
 
@@ -8384,108 +8471,7 @@ function rejectDepositOrder(depId) {
 
 // --- 1. YATIRMA İŞLEMLERİ ---
 function queueDepositForAdminApproval(username, amount, txid) {
-  if (!fbDb) {
-    showToast("⚠️ Veritabanı bağlantısı yok!", "warning");
-    return;
-  }
-  const depId = `dep_${Date.now()}`;
-  const payload = {
-    id: depId,
-    username: username,
-    amount: Number(parseFloat(amount).toFixed(2)),
-    txid: txid,
-    date: new Date().toLocaleString('tr-TR'),
-    status: 'pending'
-  };
-
-  fbDb.ref(`depositQueue/${depId}`).set(payload).then(() => {
-    console.log("✅ Yatırma talebi Firebase'e yazıldı:", payload);
-  }).catch(err => {
-    console.error("Yatırma yazma hatası:", err);
-    showToast("⛔ Bildirim gönderilemedi: " + err.message, "warning");
-  });
-}
-
-function renderAdminDepositQueue() {
-  const container = document.getElementById('admin-deposit-queue-list');
-  if (!container || !fbDb) return;
-
-  fbDb.ref('depositQueue').on('value', snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-
-    if (!data) {
-      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
-      return;
-    }
-
-    const items = Object.values(data).filter(d => d.status === 'pending');
-    if (items.length === 0) {
-      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs notranslate" translate="no">Bekleyen BEP-20 yatırma bildirimi yok.</div>`;
-      return;
-    }
-
-    items.forEach(d => {
-      const card = document.createElement('div');
-      card.className = "p-3 rounded-xl bg-mineora-card border border-emerald-500/40 flex items-center justify-between text-xs";
-      card.innerHTML = `
-        <div class="space-y-0.5">
-          <div class="flex items-center gap-2">
-            <strong class="text-white">${d.username}</strong>
-            <span class="text-emerald-400 font-mono font-black">+$${d.amount.toFixed(2)} USDT</span>
-          </div>
-          <span class="text-[10px] text-slate-400 font-mono block break-all">TxID: ${d.txid}</span>
-          <span class="text-[9px] text-slate-500 font-mono">${d.date}</span>
-        </div>
-        <div class="flex gap-1.5 shrink-0 ml-2">
-          <button type="button" onclick="approveDepositOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow">
-            Onayla
-          </button>
-          <button type="button" onclick="rejectDepositOrder('${d.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">
-            Reddet
-          </button>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  });
-}
-
-function approveDepositOrder(depId, username, amount) {
-  if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
-  const uKey = username.toLowerCase();
-
-  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
-    const uData = snap.val();
-    if (uData) {
-      uData.usdt = Number(((uData.usdt || 0) + amount).toFixed(2));
-      if (!uData.logs) uData.logs = [];
-      uData.logs.unshift({
-        id: Date.now(),
-        title: "BEP-20 USDT Yüklendi",
-        desc: "Yatırma bildiriminiz onaylandı ve bakiyenize aktarıldı.",
-        amountText: `+$${amount.toFixed(2)} USDT`,
-        type: "income",
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('tr-TR'),
-        read: false
-      });
-
-      fbDb.ref(`users/${uKey}`).set(uData);
-      fbDb.ref(`depositQueue/${depId}`).remove();
-
-      if (CurrentUser.username.toLowerCase() === uKey) {
-        CurrentUser.usdt = uData.usdt;
-        saveUserWorld();
-        updateHUD();
-      }
-
-      if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
-      showToast(`✅ ${username} hesabına $${amount.toFixed(2)} USDT yüklendi!`, "success");
-    }
-  });
-}
-
+...
 function rejectDepositOrder(depId) {
   if (!CurrentUser || !CurrentUser.isRootAdmin || !fbDb) return;
   fbDb.ref(`depositQueue/${depId}`).remove().then(() => {
