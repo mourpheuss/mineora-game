@@ -4345,7 +4345,31 @@ function triggerWagonFull() {
   }
 }
 
-// Asansör Sayacı (1. Vagon = 15s / 2. Vagon = 5s) ve Rol Kazanç Dağıtımı
+// 1. Filo Primi Dağıtım Fonksiyonu (Hemen çağrının üstünde tanımlandı)
+window.distributeDailyMiningRoyalties = function(minerUsername) {
+  if (!minerUsername) return;
+  const miner = (typeof getStoredUser === 'function' ? getStoredUser(minerUsername) : null) || CurrentUser;
+  if (!miner || !miner.referredBy) return;
+
+  const sponsor = (typeof findUserByRefCode === 'function') ? findUserByRefCode(miner.referredBy) : null;
+  if (!sponsor) return;
+
+  const role = sponsor.role || "";
+  if (role === "Mine Owner" || role === "Maden Sahibi" || role === "Holding Owner" || role === "Şirket Sahibi") {
+    const royaltyOra = 0.30;
+    sponsor.ora = Number(((sponsor.ora || 0) + royaltyOra).toFixed(2));
+    if (typeof addUserNotificationLog === 'function') {
+      addUserNotificationLog(sponsor, "Filo Madencilik Primi", `${miner.username} adlı madenciniz vardiyasını tamamladı.`, `+${royaltyOra.toFixed(2)} ORA`, "commission");
+    }
+    if (typeof saveStoredUser === 'function') saveStoredUser(sponsor);
+    if (CurrentUser && CurrentUser.username.toLowerCase() === sponsor.username.toLowerCase()) {
+      CurrentUser.ora = sponsor.ora;
+      if (typeof updateHUD === 'function') updateHUD();
+    }
+  }
+};
+
+// 2. Asansör Sayacı (1. Vagon = 15s / 2. Vagon = 5s) ve Rol Kazanç Dağıtımı
 function startElevatorDispatch() {
   document.getElementById('btn-dispatch-wagon')?.classList.add('hidden');
   document.getElementById('transit-timer-box')?.classList.remove('hidden');
@@ -4395,36 +4419,40 @@ function startElevatorDispatch() {
         // ROL BAZLI KAZANÇ KONTROLÜ
         if (role === "Worker Miner" || role === "İşçi Madenci") {
           if (isCycleActive) {
-            // İşçi Madenci: 1000 ORA lisansının günlük %1.5'i = 15 ORA. (5 Maden = Maden başı 3.00 ORA)
             const earnedOra = 3.00;
             CurrentUser.ora = Number(((CurrentUser.ora || 0) + earnedOra).toFixed(2));
 
-            // Rezervden düş
             if (typeof deductMinedOraFromMasterReserve === 'function') {
               deductMinedOraFromMasterReserve(earnedOra);
             }
-            // 1. Maden tamamlama filo primi (Eksik fonksiyon giderildi)
-function distributeDailyMiningRoyalties(minerUsername) {
-  if (!minerUsername) return;
-  const miner = (typeof getStoredUser === 'function' ? getStoredUser(minerUsername) : null) || CurrentUser;
-  if (!miner || !miner.referredBy) return;
 
-  const sponsor = typeof findUserByRefCode === 'function' ? findUserByRefCode(miner.referredBy) : null;
-  if (!sponsor) return;
+            addUserNotificationLog(CurrentUser, "Maden Kazısı Tamamlandı", `${m.name} vardiyası tamamlandı (+%0.3 getiri).`, `+${earnedOra.toFixed(2)} ORA`, "income");
+            showToast(`💰 Maden Tamamlandı! +${earnedOra.toFixed(2)} ORA cüzdanınıza yansıtıldı.`, "success");
+          } else {
+            showToast("⚠️ 120 günlük lisans süreniz dolduğu için bu kazıdan ORA üretilmedi.", "warning");
+          }
+        } else if (role === "Maden Sahibi" || role === "Mine Owner" || role === "Holding Owner" || role === "Şirket Sahibi") {
+          showToast("⛏️ Teftiş kazısı tamamlandı! İşletme sahipleri kazıdan ORA almaz, kazançları işçi filolarından gelir.", "info");
+        } else {
+          showToast("⛏️ Kazı tamamlandı! Aday üyeler ORA üretemez. ORA geliri için Kariyer Seçimi'nden lisans almalısınız.", "info");
+        }
 
-  const role = sponsor.role || "";
-  if (role === "Mine Owner" || role === "Maden Sahibi" || role === "Holding Owner" || role === "Şirket Sahibi") {
-    const royaltyOra = 0.30;
-    sponsor.ora = Number(((sponsor.ora || 0) + royaltyOra).toFixed(2));
-    if (typeof addUserNotificationLog === 'function') {
-      addUserNotificationLog(sponsor, "Filo Madencilik Primi", `${miner.username} adlı madenciniz vardiyasını tamamladı.`, `+${royaltyOra.toFixed(2)} ORA`, "commission");
+        saveUserWorld();
+        updateHUD();
+
+        // Güvenli Çağrı (Hata fırlatmasını %100 engeller)
+        if (typeof window.distributeDailyMiningRoyalties === 'function') {
+          window.distributeDailyMiningRoyalties(CurrentUser.username);
+        }
+
+        setTimeout(() => {
+          document.getElementById('transit-overlay')?.classList.add('hidden');
+          switchTab('map');
+          renderAlpMapPins();
+        }, 800);
+      }
     }
-    if (typeof saveStoredUser === 'function') saveStoredUser(sponsor);
-    if (CurrentUser && CurrentUser.username.toLowerCase() === sponsor.username.toLowerCase()) {
-      CurrentUser.ora = sponsor.ora;
-      if (typeof updateHUD === 'function') updateHUD();
-    }
-  }
+  }, 1000);
 }
 
 // 2. Global Ekosistem Hiyerarşisi Çizici (Admin panelini kilitleyen eksik fonksiyon giderildi)
