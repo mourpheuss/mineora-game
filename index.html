@@ -9019,6 +9019,180 @@ setInterval(() => {
     if (typeof updateNotificationBadge === 'function') updateNotificationBadge();
   }
 }, 1000);
+    // ================= KULLANICI LOG DEFTERİ & MANİPÜLASYON ENGELİ MOTORU =================
+
+// 1. F12 VE MANİPÜLASYON DEFANS MOTORU (saveStoredUser geliştirildi)
+const originalSaveStoredUser = window.saveStoredUser;
+window.saveStoredUser = function(userObj) {
+  if (!userObj || !userObj.username) return;
+
+  if (!userObj.isRootAdmin) {
+    const currentOra = Number(parseFloat(userObj.ora || 0).toFixed(2));
+    const currentUsdt = Number(parseFloat(userObj.usdt || 0).toFixed(2));
+
+    let loggedNetOra = 0;
+    let loggedNetUsdt = 0;
+    if (Array.isArray(userObj.logs)) {
+      userObj.logs.forEach(l => {
+        const txt = (l.amountText || "").toString();
+        const m = txt.match(/[\d\.]+/);
+        const val = m ? parseFloat(m[0]) : 0;
+        if (txt.includes('ORA')) {
+          if (txt.startsWith('+')) loggedNetOra += val;
+          if (txt.startsWith('-')) loggedNetOra -= val;
+        } else if (txt.includes('USDT') || txt.includes('$')) {
+          if (txt.startsWith('+')) loggedNetUsdt += val;
+          if (txt.startsWith('-')) loggedNetUsdt -= val;
+        }
+      });
+    }
+
+    const oraGap = currentOra - loggedNetOra;
+    const usdtGap = currentUsdt - loggedNetUsdt;
+
+    if (oraGap > 50 || usdtGap > 20) {
+      if (!userObj.isVaultLocked) {
+        userObj.isVaultLocked = true;
+        console.warn("🚨 GÜVENLİK İHLALİ: " + userObj.username + " hesabında logsuz bakiye tespit edildi. Kasa kilitlendi.");
+      }
+    }
+  }
+
+  const uKey = userObj.username.toLowerCase();
+  localStorage.setItem("mineora_user_" + uKey, JSON.stringify(userObj));
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref('users/' + uKey).set(userObj).catch(() => {});
+  }
+};
+
+// 2. LOGLARI İNCELEME MODALI AÇICI (DETAYLI RÖNTGEN)
+window.openAdminUserLogsModal = function(username) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const u = getStoredUser(username);
+  if (!u) {
+    showToast("⚠️ Kullanıcı bulunamadı!", "warning");
+    return;
+  }
+
+  document.getElementById('audit-target-username').innerText = u.username;
+  const cardsContainer = document.getElementById('audit-summary-cards');
+  const alertBar = document.getElementById('audit-alert-bar');
+  const tbody = document.getElementById('audit-logs-table-body');
+  const countEl = document.getElementById('audit-log-count');
+
+  const logs = Array.isArray(u.logs) ? u.logs : [];
+  if (countEl) countEl.innerText = logs.length;
+
+  let totalMinedOra = 0;
+  let totalCommissionOra = 0;
+  let totalSpentOra = 0;
+  let loggedInUsdt = 0;
+  let loggedOutUsdt = 0;
+
+  logs.forEach(l => {
+    const txt = (l.amountText || "").toString();
+    const m = txt.match(/[\d\.]+/);
+    const val = m ? parseFloat(m[0]) : 0;
+    const desc = ((l.title || "") + " " + (l.desc || "")).toLowerCase();
+
+    if (txt.includes('ORA')) {
+      if (txt.startsWith('+')) {
+        if (desc.includes('maden') || desc.includes('vardiya')) totalMinedOra += val;
+        else if (desc.includes('referans') || desc.includes('komisyon')) totalCommissionOra += val;
+      } else if (txt.startsWith('-')) {
+        totalSpentOra += val;
+      }
+    } else if (txt.includes('USDT') || txt.includes('$')) {
+      if (txt.startsWith('+')) loggedInUsdt += val;
+      if (txt.startsWith('-')) loggedOutUsdt += val;
+    }
+  });
+
+  const curOra = Number(parseFloat(u.ora || 0).toFixed(2));
+  const curUsdt = Number(parseFloat(u.usdt || 0).toFixed(2));
+  const netLoggedOra = Number((totalMinedOra + totalCommissionOra - totalSpentOra).toFixed(2));
+  const netLoggedUsdt = Number((loggedInUsdt - loggedOutUsdt).toFixed(2));
+
+  const oraDiscrepancy = Number((curOra - netLoggedOra).toFixed(2));
+  const usdtDiscrepancy = Number((curUsdt - netLoggedUsdt).toFixed(2));
+  const hasLeak = (oraDiscrepancy > 10 || usdtDiscrepancy > 5);
+
+  cardsContainer.innerHTML = '<div class="p-3 rounded-2xl bg-mineora-bg border border-mineora-border">'
+    + '<span class="text-[10px] text-slate-400 block font-bold">MEVCUT CÜZDAN</span>'
+    + '<strong class="text-mineora-gold text-sm block">' + curOra + ' ORA</strong>'
+    + '<strong class="text-mineora-green text-xs">$' + curUsdt + ' USDT</strong>'
+    + '</div>'
+    + '<div class="p-3 rounded-2xl bg-mineora-bg border border-emerald-500/30">'
+    + '<span class="text-[10px] text-slate-400 block font-bold">MEŞRU ÜRETİM (LOG)</span>'
+    + '<strong class="text-emerald-400 text-sm block">+' + totalMinedOra.toFixed(2) + ' Kazı</strong>'
+    + '<span class="text-[10px] text-cyan-300">+' + totalCommissionOra.toFixed(2) + ' Ref Geliri</span>'
+    + '</div>'
+    + '<div class="p-3 rounded-2xl bg-mineora-bg border border-rose-500/30">'
+    + '<span class="text-[10px] text-slate-400 block font-bold">HARCANAN / ÇIKAN</span>'
+    + '<strong class="text-rose-400 text-sm block">-' + totalSpentOra.toFixed(2) + ' ORA</strong>'
+    + '<span class="text-[10px] text-slate-400">Çekim: -$' + loggedOutUsdt.toFixed(2) + '</span>'
+    + '</div>'
+    + '<div class="p-3 rounded-2xl bg-mineora-bg border ' + (hasLeak ? 'border-rose-500 bg-rose-950/20' : 'border-emerald-500/30') + '">'
+    + '<span class="text-[10px] text-slate-400 block font-bold">KAÇAK / FARK</span>'
+    + '<strong class="' + (hasLeak ? 'text-rose-500 animate-pulse' : 'text-emerald-400') + ' text-sm block">' + (oraDiscrepancy > 0 ? '+' : '') + oraDiscrepancy + ' ORA</strong>'
+    + '<strong class="' + (hasLeak ? 'text-rose-500' : 'text-emerald-400') + ' text-xs">' + (usdtDiscrepancy > 0 ? '+$' : '$') + usdtDiscrepancy + ' USDT</strong>'
+    + '</div>';
+
+  if (hasLeak) {
+    alertBar.className = "p-3 rounded-2xl bg-rose-950/40 border border-rose-500 text-rose-300 flex items-center justify-between gap-3 text-xs";
+    alertBar.innerHTML = '<div class="flex items-center gap-2">'
+      + '<i class="fa-solid fa-triangle-exclamation text-base text-rose-400"></i>'
+      + '<span><strong>Şüpheli Hesap:</strong> Cüzdanda log kaydı bulunmayan <strong>+' + oraDiscrepancy + ' ORA</strong> veya <strong>+$' + usdtDiscrepancy + ' USDT</strong> kaçak tespit edildi!</span>'
+      + '</div>'
+      + '<button type="button" onclick="correctTamperedUserBalance(\'' + u.username + '\', ' + netLoggedOra + ', ' + netLoggedUsdt + ')" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow whitespace-nowrap">'
+      + 'Kaçak Bakiyeyi Düzelt & Eşitle</button>';
+    alertBar.classList.remove('hidden');
+  } else {
+    alertBar.className = "p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2 text-xs";
+    alertBar.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i> <span>Tüm işlemler log kayıtlarıyla birebir tutarlı. Hesap güvenli.</span>';
+    alertBar.classList.remove('hidden');
+  }
+
+  if (logs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Bu kullanıcıya ait log kaydı bulunmuyor.</td></tr>';
+  } else {
+    tbody.innerHTML = logs.map(l => {
+      const isPos = (l.amountText || "").startsWith('+');
+      return '<tr class="hover:bg-mineora-bg/60 transition">'
+        + '<td class="py-2.5 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">' + (l.date || '-') + ' ' + (l.time || '') + '</td>'
+        + '<td class="py-2.5 px-3 font-bold text-white whitespace-nowrap">'
+        + '<span class="px-2 py-0.5 rounded text-[9px] uppercase ' + (isPos ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30') + '">'
+        + (l.type || 'işlem') + '</span></td>'
+        + '<td class="py-2.5 px-3 text-slate-300"><strong>' + (l.title || '-') + '</strong>'
+        + '<span class="text-slate-400 block text-[10px]">' + (l.desc || '') + '</span></td>'
+        + '<td class="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap ' + (isPos ? 'text-emerald-400' : 'text-rose-400') + '">'
+        + (l.amountText || '-') + '</td></tr>';
+    }).join('');
+  }
+
+  openModal('modal-admin-user-logs');
+};
+
+// 3. KAÇAK BAKİYEYİ LOGLARA GÖRE DÜZELTME FONKSİYONU
+window.correctTamperedUserBalance = function(username, targetOra, targetUsdt) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const ok = confirm("'" + username + "' adlı kullanıcının cüzdanındaki kaçak bakiyeyi silip, yalnızca meşru kazancı olan " + targetOra + " ORA ve $" + targetUsdt + " USDT seviyesine çekmek istiyor musunuz?");
+  if (!ok) return;
+
+  const u = getStoredUser(username);
+  if (!u) return;
+
+  u.ora = Math.max(0, targetOra);
+  u.usdt = Math.max(0, targetUsdt);
+  u.isVaultLocked = true;
+
+  addUserNotificationLog(u, "Bakiye Düzeltmesi (Admin)", "Kayıtsız bakiye tespit edildiği için cüzdan meşru üretim seviyesine çekildi.", "-" + (u.ora - targetOra).toFixed(2) + " ORA", "alert");
+
+  saveStoredUser(u);
+  openAdminUserLogsModal(username);
+  if (typeof renderAdminUserTable === 'function') renderAdminUserTable();
+  showToast("✅ " + username + " hesabındaki kaçak bakiye temizlendi ve loglarla eşitlendi!", "success");
+};
   </script>
 </body>
 </html>
