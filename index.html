@@ -5223,7 +5223,7 @@ window.submitP2pOrder = function() {
   const oraAmt = parseFloat(document.getElementById('p2p-create-amount')?.value);
 
   if (isNaN(price) || price <= 0 || isNaN(oraAmt) || oraAmt <= 0) {
-    showToast("⚠️️ Geçerli bir fiyat ve ORA miktarı girin!", "warning");
+    showToast("⚠️ Geçerli bir fiyat ve ORA miktarı girin!", "warning");
     return;
   }
 
@@ -5248,13 +5248,14 @@ window.submitP2pOrder = function() {
     id: orderId,
     isBot: false,
     side: p2pCreateSide,
-    merchant: CurrentUser.username,
+    merchant: CurrentUser.username.trim(),
     price: price,
     oraAmount: oraAmt,
     usdtAmount: totalUsdt,
     createdAt: Date.now()
   };
 
+  if (!realP2pOrdersMap) realP2pOrdersMap = {};
   realP2pOrdersMap[orderId] = newOrder;
   saveLocalRealP2pOrders(realP2pOrdersMap);
 
@@ -5267,40 +5268,79 @@ window.submitP2pOrder = function() {
   closeModal('modal-p2p-create');
   renderP2pOrders();
   showToast("📋 İlanınız oluşturuldu, emanete (escrow) alındı ve listeye eklendi!", "success");
-  setTimeout(() => { isP2pProcessing = false; }, 800);
+  setTimeout(() => { isP2pProcessing = false; }, 600);
 };
 
-// Gerçek Kullanıcı İlanını İptal Etme
+// Gerçek Kullanıcı İlanını İptal Etme (Kesin Eşleştirme ve Anında İade)
 window.cancelP2pOrder = function(orderId) {
-  if (!CurrentUser || isP2pProcessing) return;
-  const order = realP2pOrdersMap[orderId];
-  if (!order) return;
+  if (!CurrentUser) {
+    showToast("⚠️ Lütfen önce giriş yapın!", "warning");
+    return;
+  }
+  if (isP2pProcessing) {
+    showToast("⏳ İşlem yürütülüyor, lütfen bekleyin...", "info");
+    return;
+  }
 
-  if (order.merchant.toLowerCase() !== CurrentUser.username.toLowerCase()) {
+  // Hem doğrudan key hem de nesne/dizi içi id üzerinden ilanı bul
+  let targetKey = orderId;
+  let order = (realP2pOrdersMap && realP2pOrdersMap[targetKey]) ? realP2pOrdersMap[targetKey] : null;
+
+  if (!order && realP2pOrdersMap) {
+    for (let k in realP2pOrdersMap) {
+      const item = realP2pOrdersMap[k];
+      if (item && (item.id === orderId || String(k) === String(orderId))) {
+        order = item;
+        targetKey = k;
+        break;
+      }
+    }
+  }
+
+  if (!order) {
+    showToast("⚠️ İlan bulunamadı veya daha önce iptal edilmiş!", "warning");
+    renderP2pOrders();
+    return;
+  }
+
+  const myUsername = (CurrentUser.username || "").trim().toLowerCase();
+  const merchantUsername = (order.merchant || "").trim().toLowerCase();
+
+  if (myUsername !== merchantUsername && !CurrentUser.isRootAdmin) {
     showToast("⛔ Yalnızca kendi ilanlarınızı iptal edebilirsiniz!", "warning");
     return;
   }
 
   isP2pProcessing = true;
+
+  // İade işlemi: Satış ilanıysa ORA'yı, Alış ilanıysa USDT'yi hesaba geri yükle
   if (order.side === 'sell') {
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + order.oraAmount).toFixed(2));
-    showToast(`↩️ İlan iptal edildi! ${order.oraAmount.toFixed(2)} ORA kasanıza iade edildi.`, "info");
+    const refundOra = Number(order.oraAmount || 0);
+    CurrentUser.ora = Number(((CurrentUser.ora || 0) + refundOra).toFixed(2));
+    showToast(`↩️ İlan iptal edildi! ${refundOra.toFixed(2)} ORA kasanıza iade edildi.`, "success");
   } else {
-    CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + order.usdtAmount).toFixed(2));
-    showToast(`↩️ İlan iptal edildi! $${order.usdtAmount.toFixed(2)} USDT kasanıza iade edildi.`, "info");
+    const refundUsdt = Number(order.usdtAmount || 0);
+    CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + refundUsdt).toFixed(2));
+    showToast(`↩️ İlan iptal edildi! $${refundUsdt.toFixed(2)} USDT kasanıza iade edildi.`, "success");
   }
 
-  delete realP2pOrdersMap[orderId];
+  // Hafızadan sil
+  if (realP2pOrdersMap) {
+    delete realP2pOrdersMap[targetKey];
+    delete realP2pOrdersMap[orderId];
+  }
   saveLocalRealP2pOrders(realP2pOrdersMap);
 
+  // Buluttan sil
   if (typeof fbDb !== 'undefined' && fbDb) {
-    fbDb.ref(`p2pOrders/${orderId}`).remove();
+    fbDb.ref(`p2pOrders/${targetKey}`).remove();
+    if (targetKey !== orderId) fbDb.ref(`p2pOrders/${orderId}`).remove();
   }
 
   saveUserWorld();
   updateHUD();
   renderP2pOrders();
-  setTimeout(() => { isP2pProcessing = false; }, 600);
+  setTimeout(() => { isP2pProcessing = false; }, 400);
 };
 
 window.renderP2pOrders = function() {
@@ -5308,10 +5348,58 @@ window.renderP2pOrders = function() {
   if (!tbody) return;
   tbody.innerHTML = "";
 
+  const myUsername = (CurrentUser?.username || "").trim().toLowerCase();
   const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
 
-  const realUserOrders = Object.values(realP2pOrdersMap || {})
-    .filter(o => o && o.side === targetSide && Number(o.oraAmount) > 0 && !o.isBot)
+  const allRealOrders = Object.values(realP2pOrdersMap || {}).filter(o => o && Number(o.oraAmount) > 0 && !o.isBot);
+  
+  // 1) Kullanıcının kendi aktif ilanları (Sayfanın hangi sekmesinde olursa olsun en üstte gösterilir)
+  const myOpenOrders = allRealOrders.filter(o => (o.merchant || "").trim().toLowerCase() === myUsername);
+
+  let myOrdersContainer = document.getElementById('p2p-my-orders-banner');
+  if (!myOrdersContainer) {
+    myOrdersContainer = document.createElement('div');
+    myOrdersContainer.id = 'p2p-my-orders-banner';
+    const tableParent = tbody.closest('.rounded-3xl');
+    if (tableParent && tableParent.parentElement) {
+      tableParent.parentElement.insertBefore(myOrdersContainer, tableParent);
+    }
+  }
+
+  if (myOpenOrders.length > 0) {
+    myOrdersContainer.className = "mb-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/40 space-y-2.5 notranslate";
+    myOrdersContainer.innerHTML = `
+      <div class="flex items-center justify-between border-b border-amber-500/20 pb-2">
+        <span class="text-xs font-black text-amber-300 flex items-center gap-2">
+          <i class="fa-solid fa-list-check"></i> Sizin Aktif P2P İlanlarınız (${myOpenOrders.length})
+        </span>
+        <span class="text-[10px] text-slate-400">İlanınızı dilediğiniz an tek tıkla iptal edip varlıklarınızı geri alabilirsiniz.</span>
+      </div>
+      <div class="space-y-2">
+        ${myOpenOrders.map(mo => `
+          <div class="flex items-center justify-between bg-mineora-bg/90 p-2.5 rounded-xl border border-mineora-border text-xs font-mono">
+            <div class="flex items-center gap-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${mo.side === 'sell' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}">
+                ${mo.side === 'sell' ? 'ORA Satış Emri' : 'ORA Alış Emri'}
+              </span>
+              <strong class="text-mineora-gold">${Number(mo.oraAmount).toLocaleString()} ORA</strong>
+              <span class="text-slate-400">($${Number(mo.usdtAmount).toFixed(2)} USDT)</span>               <span class="text-slate-500 text-[11px]">Birim: $${Number(mo.price).toFixed(4)}</span>
+            </div>
+            <button type="button" onclick="cancelP2pOrder('${mo.id}')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-ban"></i> İlanı İptal Et & İade Al
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    myOrdersContainer.className = "hidden";
+    myOrdersContainer.innerHTML = "";
+  }
+
+  // 2) Genel Tablo Listesi (Tüm İlanlar)
+  const realUserOrders = allRealOrders
+    .filter(o => o.side === targetSide)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   const botOrders = ENABLE_P2P_BOTS 
@@ -5326,10 +5414,8 @@ window.renderP2pOrders = function() {
   }
 
   combinedList.forEach(order => {
-    const isMyOrder = CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase();
+    const isMyOrder = (myUsername && (order.merchant || '').trim().toLowerCase() === myUsername);
     const tr = document.createElement('tr');
-    
-    // Tüm satırlar birebir aynı stilde görünür
     tr.className = "hover:bg-mineora-bg/60 transition border-b border-mineora-border/60 text-xs";
 
     const btnClass = p2pFilter === 'buy' ? "bg-mineora-green hover:opacity-90 text-white" : "bg-rose-600 hover:opacity-90 text-white";
@@ -5352,7 +5438,7 @@ window.renderP2pOrders = function() {
       </td>
       <td class="py-3.5 px-4 text-right">
         ${isMyOrder ? `
-          <button type="button" onclick="cancelP2pOrder('${order.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/40 transition cursor-pointer">
+          <button type="button" onclick="cancelP2pOrder('${order.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition cursor-pointer">
             <i class="fa-solid fa-ban mr-1"></i> İptal Et
           </button>
         ` : `
@@ -5364,6 +5450,56 @@ window.renderP2pOrders = function() {
     `;
     tbody.appendChild(tr);
   });
+};
+
+window.openP2pTradeModal = function(orderId, isBotOrder = false) {
+  let order = null;
+  if (isBotOrder) {
+    order = getActiveBotOrders().find(o => o.id === orderId);
+  } else {
+    order = (realP2pOrdersMap && realP2pOrdersMap[orderId]) ? realP2pOrdersMap[orderId] : null;
+    if (!order && realP2pOrdersMap) {
+      order = Object.values(realP2pOrdersMap).find(o => o && (o.id === orderId || String(o.id) === String(orderId)));
+    }
+  }
+
+  if (!order) {
+    showToast("⚠️ İlan bulunamadı!", "warning");
+    return;
+  }
+
+  // Kendi ilanına yanlışlıkla basarsa doğrudan iptal seçeneği sun
+  const myUsername = (CurrentUser?.username || "").trim().toLowerCase();
+  const merchantUsername = (order.merchant || "").trim().toLowerCase();
+  if (myUsername && merchantUsername && myUsername === merchantUsername) {
+    const wantCancel = confirm("Bu sizin kendi ilanınızdır. İlanı iptal edip varlıklarınızı cüzdanınıza geri almak istiyor musunuz?");
+    if (wantCancel) {
+      cancelP2pOrder(order.id || orderId);
+    }
+    return;
+  }
+
+  activeP2pOrder = order;
+  const isBuy = p2pFilter === 'buy';
+  const title = document.getElementById('p2p-trade-title');
+  const merchant = document.getElementById('p2p-trade-merchant');
+  const price = document.getElementById('p2p-trade-price');
+  const inputOra = document.getElementById('p2p-trade-input-ora');
+  const btn = document.getElementById('p2p-trade-btn-confirm');
+
+  if (title) title.innerText = isBuy ? `ORA Satın Al (${order.merchant})` : `ORA Sat (${order.merchant})`;
+  if (merchant) merchant.innerText = order.merchant;
+  if (price) price.innerText = `$${Number(order.price).toFixed(4)} USDT`;
+  if (inputOra) inputOra.value = order.oraAmount;
+
+  if (btn) {
+    btn.className = isBuy 
+      ? "w-full py-3.5 rounded-xl bg-mineora-green text-white font-black text-xs hover:opacity-90 transition cursor-pointer" 
+      : "w-full py-3.5 rounded-xl bg-rose-600 text-white font-black text-xs hover:opacity-90 transition cursor-pointer";
+    btn.innerText = isBuy ? "USDT Öde ve ORA Al" : "ORA Gönder ve USDT Al";
+  }
+
+  openModal('modal-p2p-trade');
 };
 window.openP2pTradeModal = function(orderId, isBotOrder = false) {
   let order = null;
