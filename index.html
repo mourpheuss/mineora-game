@@ -5079,25 +5079,21 @@ if (typeof fbDb !== 'undefined' && fbDb) {
   });
 }
 
-// --- 2. TÜRKÇE PİYASA YAPICI (MARKET MAKER) BOT MOTORU ---
-const TR_BOT_NAMES = [
-  "Murat", "Burak", "Emre", "Serkan", "Hakan", "Volkan", "Kaan", "Deniz",
-  "Baris", "Tolga", "Onur", "Yasin", "Gokhan", "Oguz", "Selim", "Tarik",
-  "Umut", "Yavuz", "Kadir", "Eren", "Alper", "Cem", "Kerem", "Fatih"
+    // --- 2. DOĞAL PİYASA YAPICI (MARKET MAKER) LİKİDİTE MOTORU ---
+const TR_BOT_USERNAMES = [
+  "muratkaya", "burak94", "emrecan", "serkany", "hakan35", "volkandemir",
+  "kaan_alp", "deniz91", "barisay", "tolga06", "onurx", "yasin_b",
+  "gokhank", "oguzhan58", "selimy", "tarik34", "umutcelik", "yavuzk",
+  "kadiravci", "eren98", "alperturan", "cemoe", "kerem07", "fatihyilmaz",
+  "mertaslan", "ahmetoz", "caner34", "alikemal", "berkayt", "ugurcan92"
 ];
 
-const TR_BOT_TAGS = [
-  "Trader", "Madenci", "Kripto", "Node", "Kasa", "Holding", "Borsa", "Yatirim", "OTC", "Vadi"
-];
-
-const TR_CITY_CODES = ["34", "06", "35", "16", "07", "01", "41", "54", "26", "61"];
-
-// 5 dakikada bir otomatik değişen Türkçe bot ilanları (Gerçek ilanlara ASLA dokunmaz)
+// 5 dakikada bir otomatik değişen doğal oyuncu ilanları
 function getActiveBotOrders() {
   const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
   let cache = null;
   try {
-    cache = JSON.parse(localStorage.getItem('mineora_bot_p2p_cache') || 'null');
+    cache = JSON.parse(localStorage.getItem('mineora_bot_p2p_cache_v2') || 'null');
   } catch(e) {}
 
   if (!cache || cache.timeBlock !== timeBlock || !Array.isArray(cache.orders)) {
@@ -5116,13 +5112,10 @@ function getActiveBotOrders() {
     ];
 
     function getDynamicTurkishBotName(index, salt) {
-      const name = TR_BOT_NAMES[(timeBlock + index * 3 + salt) % TR_BOT_NAMES.length];
-      const tag = TR_BOT_TAGS[(timeBlock * 2 + index + salt * 2) % TR_BOT_TAGS.length];
-      const city = TR_CITY_CODES[(timeBlock + index + salt) % TR_CITY_CODES.length];
-      return (index % 2 === 0) ? `${name}_${tag}${city}` : `${name}_${tag}`;
+      return TR_BOT_USERNAMES[(timeBlock + index * 3 + salt) % TR_BOT_USERNAMES.length];
     }
 
-    // Bot Satış İlanları (Üyeler USDT verip ORA Alır)
+    // Satış İlanları (Üyeler USDT verip ORA Alır)
     tieredPackages.forEach((pkg, idx) => {
       freshOrders.push({
         id: `bot_sell_${idx}`,
@@ -5135,7 +5128,7 @@ function getActiveBotOrders() {
       });
     });
 
-    // Bot Alış İlanları (Üyeler ORA satıp USDT Alır)
+    // Alış İlanları (Üyeler ORA satıp USDT Alır)
     tieredPackages.forEach((pkg, idx) => {
       freshOrders.push({
         id: `bot_buy_${idx}`,
@@ -5149,7 +5142,7 @@ function getActiveBotOrders() {
     });
 
     cache = { timeBlock: timeBlock, orders: freshOrders };
-    localStorage.setItem('mineora_bot_p2p_cache', JSON.stringify(cache));
+    localStorage.setItem('mineora_bot_p2p_cache_v2', JSON.stringify(cache));
   }
 
   return cache.orders;
@@ -5160,7 +5153,7 @@ function consumeBotOrder(orderId, filledOra) {
   const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
   let cache = null;
   try {
-    cache = JSON.parse(localStorage.getItem('mineora_bot_p2p_cache') || 'null');
+    cache = JSON.parse(localStorage.getItem('mineora_bot_p2p_cache_v2') || 'null');
   } catch(e) {}
 
   if (!cache || cache.timeBlock !== timeBlock || !Array.isArray(cache.orders)) return;
@@ -5173,7 +5166,7 @@ function consumeBotOrder(orderId, filledOra) {
     if (cache.orders[idx].oraAmount <= 0.001) {
       cache.orders.splice(idx, 1);
     }
-    localStorage.setItem('mineora_bot_p2p_cache', JSON.stringify(cache));
+    localStorage.setItem('mineora_bot_p2p_cache_v2', JSON.stringify(cache));
   }
 }
 
@@ -5230,7 +5223,7 @@ window.submitP2pOrder = function() {
   const oraAmt = parseFloat(document.getElementById('p2p-create-amount')?.value);
 
   if (isNaN(price) || price <= 0 || isNaN(oraAmt) || oraAmt <= 0) {
-    showToast("⚠️ Geçerli bir fiyat ve ORA miktarı girin!", "warning");
+    showToast("⚠️️ Geçerli bir fiyat ve ORA miktarı girin!", "warning");
     return;
   }
 
@@ -5250,7 +5243,6 @@ window.submitP2pOrder = function() {
   saveUserWorld();
   updateHUD();
 
-  // Benzersiz İlan ID'si (Kalıcı Kayıt)
   const orderId = `p2p_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   const newOrder = {
     id: orderId,
@@ -5263,7 +5255,6 @@ window.submitP2pOrder = function() {
     createdAt: Date.now()
   };
 
-  // Hem yerel belleğe hem Firebase'e kalıcı yaz
   realP2pOrdersMap[orderId] = newOrder;
   saveLocalRealP2pOrders(realP2pOrdersMap);
 
@@ -5275,7 +5266,7 @@ window.submitP2pOrder = function() {
 
   closeModal('modal-p2p-create');
   renderP2pOrders();
-  showToast("📋 İlanınız oluşturuldu, emanete (escrow) alındı ve en üste yerleşti!", "success");
+  showToast("📋 İlanınız oluşturuldu, emanete (escrow) alındı ve listeye eklendi!", "success");
   setTimeout(() => { isP2pProcessing = false; }, 800);
 };
 
@@ -5319,17 +5310,14 @@ window.renderP2pOrders = function() {
 
   const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
 
-  // 1) GERÇEK KULLANICI İLANLARI (Tarihe göre sıralı, en yenisi en üstte)
   const realUserOrders = Object.values(realP2pOrdersMap || {})
     .filter(o => o && o.side === targetSide && Number(o.oraAmount) > 0 && !o.isBot)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-  // 2) TÜRKÇE BOT İLANLARI (Gerçek ilanların daima altında)
   const botOrders = ENABLE_P2P_BOTS 
     ? getActiveBotOrders().filter(o => o.side === targetSide && Number(o.oraAmount) > 0)
     : [];
 
-  // ÖNCELİK: Gerçek kullanıcılar DAİMA en üstte!
   const combinedList = [...realUserOrders, ...botOrders];
 
   if (combinedList.length === 0) {
@@ -5339,26 +5327,22 @@ window.renderP2pOrders = function() {
 
   combinedList.forEach(order => {
     const isMyOrder = CurrentUser && CurrentUser.username.toLowerCase() === order.merchant.toLowerCase();
-    const isRealUser = !order.isBot;
     const tr = document.createElement('tr');
     
-    tr.className = isRealUser 
-      ? "hover:bg-mineora-bg/80 bg-amber-500/[0.04] transition border-b border-amber-500/30 text-xs" 
-      : "hover:bg-mineora-bg/50 transition border-b border-mineora-border/40 text-xs opacity-90";
+    // Tüm satırlar birebir aynı stilde görünür
+    tr.className = "hover:bg-mineora-bg/60 transition border-b border-mineora-border/60 text-xs";
 
     const btnClass = p2pFilter === 'buy' ? "bg-mineora-green hover:opacity-90 text-white" : "bg-rose-600 hover:opacity-90 text-white";
     const btnText = p2pFilter === 'buy' ? "USDT Öde & ORA Al" : "ORA Gönder & USDT Al";
 
     tr.innerHTML = `
       <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg ${isRealUser ? 'bg-amber-500/20 text-mineora-gold border border-amber-500/40' : 'bg-mineora-input text-slate-400'} flex items-center justify-center text-xs font-black shrink-0">
-          ${isRealUser ? '<i class="fa-solid fa-user text-[11px]"></i>' : order.merchant.charAt(0).toUpperCase()}
+        <div class="w-7 h-7 rounded-lg bg-mineora-input border border-mineora-border text-slate-200 flex items-center justify-center text-xs font-bold shrink-0">
+          ${order.merchant.charAt(0).toUpperCase()}
         </div>
-        <div>
-          <span class="${isRealUser ? 'text-amber-200 font-extrabold' : 'text-slate-300'}">${order.merchant}</span>
-          ${isMyOrder ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SİZİN İLANINIZ</span>` : ''}
-          ${isRealUser && !isMyOrder ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[8px] font-mono border border-emerald-500/30 font-bold">Gerçek Oyuncu</span>` : ''}
-          ${order.isBot ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-[8px] font-mono border border-cyan-500/20">Doğrulanmış Tüccar</span>` : ''}
+        <div class="flex items-center">
+          <span class="text-white font-bold">${order.merchant}</span>
+          ${isMyOrder ? `<span class="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SİZİN İLANINIZ</span>` : ''}
         </div>
       </td>
       <td class="py-3.5 px-4 font-mono font-bold text-white">$${Number(order.price).toFixed(4)} USDT</td>
@@ -5381,7 +5365,6 @@ window.renderP2pOrders = function() {
     tbody.appendChild(tr);
   });
 };
-
 window.openP2pTradeModal = function(orderId, isBotOrder = false) {
   let order = null;
   if (isBotOrder) {
