@@ -3088,9 +3088,19 @@ function getStoredUser(username) {
 function saveStoredUser(userObj) {
   if (!userObj || !userObj.username) return;
   const uKey = userObj.username.toLowerCase();
+  
+  // 1. Cihaz hafızasına yaz
   localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(userObj));
-  if (fbDb) {
-    try { fbDb.ref('users/' + uKey).set(userObj); } catch(e) {}
+  
+  // 2. Firebase Bulutuna Canlı Gönder
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref('users/' + uKey).set(userObj)
+      .then(() => {
+        // Buluta başarıyla yazıldı
+      })
+      .catch(err => {
+        console.error("Firebase Bulut Kayıt Hatası:", err);
+      });
   }
 }
 
