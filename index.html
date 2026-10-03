@@ -5303,7 +5303,7 @@ window.cancelP2pOrder = function(orderId) {
     }
   }
 
-  // 2. Aşama (Kurtarma Motoru): ID "undefined" geldiyse kullanıcının adına ait ilk ilanı yakala
+  // 2. Aşama: ID undefined ise kullanıcının adına ait ilk ilanı yakala
   if (!order && realP2pOrdersMap) {
     const myUname = (CurrentUser.username || "").trim().toLowerCase();
     for (let k in realP2pOrdersMap) {
@@ -5332,29 +5332,26 @@ window.cancelP2pOrder = function(orderId) {
 
   isP2pProcessing = true;
 
-  // İade işlemi: Satış emriyse ORA, Alış emriyse USDT cüzdana geri aktarılır
   if (order.side === 'sell') {
     const refundOra = Number(parseFloat(order.oraAmount || 0).toFixed(2));
     CurrentUser.ora = Number(((CurrentUser.ora || 0) + refundOra).toFixed(2));
-    showToast(`↩️ Satış ilanı iptal edildi! ${refundOra.toLocaleString()} ORA kasanıza iade edildi.`, "success");
+    showToast("↩️ Satış ilanı iptal edildi! " + refundOra.toLocaleString() + " ORA kasanıza iade edildi.", "success");
   } else {
     const refundUsdt = Number(parseFloat(order.usdtAmount || 0).toFixed(2));
     CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + refundUsdt).toFixed(2));
-    showToast(`↩️ Alış ilanı iptal edildi! $${refundUsdt.toFixed(2)} USDT kasanıza iade edildi.`, "success");
+    showToast("↩️ Alış ilanı iptal edildi! $" + refundUsdt.toFixed(2) + " USDT kasanıza iade edildi.", "success");
   }
 
-  // Yerel hafızadan temizle
   if (realP2pOrdersMap) {
     delete realP2pOrdersMap[targetKey];
     if (order.id) delete realP2pOrdersMap[order.id];
   }
   saveLocalRealP2pOrders(realP2pOrdersMap);
 
-  // Firebase bulutundan temizle
   if (typeof fbDb !== 'undefined' && fbDb) {
-    fbDb.ref(`p2pOrders/${targetKey}`).remove();
+    fbDb.ref("p2pOrders/" + targetKey).remove();
     if (order.id && String(order.id) !== String(targetKey)) {
-      fbDb.ref(`p2pOrders/${order.id}`).remove();
+      fbDb.ref("p2pOrders/" + order.id).remove();
     }
   }
 
@@ -5369,10 +5366,9 @@ window.renderP2pOrders = function() {
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  const myUsername = (CurrentUser?.username || "").trim().toLowerCase();
+  const myUsername = (CurrentUser && CurrentUser.username ? CurrentUser.username : "").trim().toLowerCase();
   const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
 
-  // Tüm gerçek ilanları anahtarlarıyla birlikte eksiksiz topla
   const allRealOrders = [];
   if (realP2pOrdersMap && typeof realP2pOrdersMap === 'object') {
     Object.keys(realP2pOrdersMap).forEach(key => {
@@ -5387,10 +5383,9 @@ window.renderP2pOrders = function() {
       }
     });
   }
-  
-  // 1) Kullanıcının kendi aktif ilanları (Sayfanın en üstünde gösterilir)
-  const myOpenOrders = allRealOrders.filter(o => (o.merchant || "").trim().toLowerCase() === myUsername);
 
+  // 1) Sizin Aktif İlanlarınız Kutusu
+  const myOpenOrders = allRealOrders.filter(o => (o.merchant || "").trim().toLowerCase() === myUsername);
   let myOrdersContainer = document.getElementById('p2p-my-orders-banner');
   if (!myOrdersContainer) {
     myOrdersContainer = document.createElement('div');
@@ -5402,37 +5397,41 @@ window.renderP2pOrders = function() {
   }
 
   if (myOpenOrders.length > 0) {
+    let myCardsHtml = '';
+    myOpenOrders.forEach(mo => {
+      const isSell = mo.side === 'sell';
+      const sideBadge = isSell 
+        ? '<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-rose-500/20 text-rose-300">ORA Satış Emri</span>'
+        : '<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300">ORA Alış Emri</span>';
+      const orderKey = mo._key || mo.id;
+
+      myCardsHtml += '<div class="flex items-center justify-between bg-mineora-bg/90 p-2.5 rounded-xl border border-mineora-border text-xs font-mono">'
+        + '<div class="flex items-center gap-3">'
+        + sideBadge
+        + '<strong class="text-mineora-gold">' + Number(mo.oraAmount).toLocaleString() + ' ORA</strong>'
+        + '<span class="text-slate-400">($' + Number(mo.usdtAmount).toFixed(2) + ' USDT)</span>'
+        + '<span class="text-slate-500 text-[11px]">Birim: $' + Number(mo.price).toFixed(4) + '</span>'
+        + '</div>'
+        + '<button type="button" onclick="cancelP2pOrder(\'' + orderKey + '\')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 transition">'
+        + '<i class="fa-solid fa-ban"></i> İlanı İptal Et & İade Al'
+        + '</button>'
+        + '</div>';
+    });
+
     myOrdersContainer.className = "mb-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/40 space-y-2.5 notranslate";
-    myOrdersContainer.innerHTML = `
-      <div class="flex items-center justify-between border-b border-amber-500/20 pb-2">
-        <span class="text-xs font-black text-amber-300 flex items-center gap-2">
-          <i class="fa-solid fa-list-check"></i> Sizin Aktif P2P İlanlarınız (${myOpenOrders.length})
-        </span>
-        <span class="text-[10px] text-slate-400">İlanınızı dilediğiniz an tek tıkla iptal edip varlıklarınızı geri alabilirsiniz.</span>
-      </div>
-      <div class="space-y-2">
-        ${myOpenOrders.map(mo => `
-          <div class="flex items-center justify-between bg-mineora-bg/90 p-2.5 rounded-xl border border-mineora-border text-xs font-mono">
-            <div class="flex items-center gap-3">
-              <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${mo.side === 'sell' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}">
-                ${mo.side === 'sell' ? 'ORA Satış Emri' : 'ORA Alış Emri'}
-              </span>
-              <strong class="text-mineora-gold">${Number(mo.oraAmount).toLocaleString()} ORA</strong>
-              <span class="text-slate-400">($${Number(mo.usdtAmount).toFixed(2)} USDT)</span>               <span class="text-slate-500 text-[11px]">Birim: $${Number(mo.price).toFixed(4)}</span>
-            </div>
-            <button type="button" onclick="cancelP2pOrder('${mo._key}')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 transition">
-              <i class="fa-solid fa-ban"></i> İlanı İptal Et & İade Al
-            </button>
-          </div>
-        `).join('')}
-      </div>
-    `;
+    myOrdersContainer.innerHTML = '<div class="flex items-center justify-between border-b border-amber-500/20 pb-2">'
+      + '<span class="text-xs font-black text-amber-300 flex items-center gap-2">'
+      + '<i class="fa-solid fa-list-check"></i> Sizin Aktif P2P İlanlarınız (' + myOpenOrders.length + ')'
+      + '</span>'
+      + '<span class="text-[10px] text-slate-400">İlanınızı dilediğiniz an tek tıkla iptal edip varlıklarınızı geri alabilirsiniz.</span>'
+      + '</div>'
+      + '<div class="space-y-2">' + myCardsHtml + '</div>';
   } else {
     myOrdersContainer.className = "hidden";
     myOrdersContainer.innerHTML = "";
   }
 
-  // 2) Genel Tablo Listesi (Tüm İlanlar)
+  // 2) Genel Tablo Listesi
   const realUserOrders = allRealOrders
     .filter(o => o.side === targetSide)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -5444,7 +5443,7 @@ window.renderP2pOrders = function() {
   const combinedList = [...realUserOrders, ...botOrders];
 
   if (combinedList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500">Bu yönde aktif ilan bulunmuyor.</td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Bu yönde aktif ilan bulunmuyor.</td></tr>';
     return;
   }
 
@@ -5455,36 +5454,84 @@ window.renderP2pOrders = function() {
 
     const btnClass = p2pFilter === 'buy' ? "bg-mineora-green hover:opacity-90 text-white" : "bg-rose-600 hover:opacity-90 text-white";
     const btnText = p2pFilter === 'buy' ? "USDT Öde & ORA Al" : "ORA Gönder & USDT Al";
+    const orderKey = order._key || order.id || '';
+    const initialLetter = order.merchant ? order.merchant.charAt(0).toUpperCase() : '?';
 
-    tr.innerHTML = `
-      <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-mineora-input border border-mineora-border text-slate-200 flex items-center justify-center text-xs font-bold shrink-0">
-          ${order.merchant.charAt(0).toUpperCase()}
-        </div>
-        <div class="flex items-center">
-          <span class="text-white font-bold">${order.merchant}</span>
-          ${isMyOrder ? `<span class="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SİZİN İLANINIZ</span>` : ''}
-        </div>
-      </td>
-      <td class="py-3.5 px-4 font-mono font-bold text-white">$${Number(order.price).toFixed(4)} USDT</td>
-      <td class="py-3.5 px-4 font-mono">
-        <span class="text-mineora-gold font-bold">${Number(order.oraAmount).toLocaleString()} ORA</span>
-        <span class="text-slate-400 text-[10px] block">($${Number(order.usdtAmount).toFixed(2)} USDT)</span>
-      </td>
-      <td class="py-3.5 px-4 text-right">
-        ${isMyOrder ? `
-          <button type="button" onclick="cancelP2pOrder('${order._key || order.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition cursor-pointer">
-            <i class="fa-solid fa-ban mr-1"></i> İptal Et
-          </button>
-        ` : `
-          <button type="button" onclick="openP2pTradeModal('${order._key \vert{}\vert{} order.id}',${!!order.isBot})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ${btnClass}">
-            ${btnText}
-          </button>
-        `}
-      </td>
-    `;
+    let actionBtnHtml = '';
+    if (isMyOrder) {
+      actionBtnHtml = '<button type="button" onclick="cancelP2pOrder(\'' + orderKey + '\')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition cursor-pointer">'
+        + '<i class="fa-solid fa-ban mr-1"></i> İptal Et</button>';
+    } else {
+      const botArg = order.isBot ? 'true' : 'false';
+      actionBtnHtml = '<button type="button" onclick="openP2pTradeModal(\'' + orderKey + '\',' + botArg + ')" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ' + btnClass + '">'
+        + btnText + '</button>';
+    }
+
+    const myBadgeHtml = isMyOrder ? '<span class="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">SİZİN İLANINIZ</span>' : '';
+
+    tr.innerHTML = '<td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">'
+      + '<div class="w-7 h-7 rounded-lg bg-mineora-input border border-mineora-border text-slate-200 flex items-center justify-center text-xs font-bold shrink-0">'
+      + initialLetter + '</div>'
+      + '<div class="flex items-center"><span class="text-white font-bold">' + order.merchant + '</span>' + myBadgeHtml + '</div>'
+      + '</td>'
+      + '<td class="py-3.5 px-4 font-mono font-bold text-white">$' + Number(order.price).toFixed(4) + ' USDT</td>'
+      + '<td class="py-3.5 px-4 font-mono">'
+      + '<span class="text-mineora-gold font-bold">' + Number(order.oraAmount).toLocaleString() + ' ORA</span>'
+      + '<span class="text-slate-400 text-[10px] block">($' + Number(order.usdtAmount).toFixed(2) + ' USDT)</span>'
+      + '</td>'
+      + '<td class="py-3.5 px-4 text-right">' + actionBtnHtml + '</td>';
+
     tbody.appendChild(tr);
   });
+};
+
+window.openP2pTradeModal = function(orderId, isBotOrder = false) {
+  let order = null;
+  if (isBotOrder) {
+    order = getActiveBotOrders().find(o => o.id === orderId);
+  } else {
+    order = (realP2pOrdersMap && realP2pOrdersMap[orderId]) ? realP2pOrdersMap[orderId] : null;
+    if (!order && realP2pOrdersMap) {
+      order = Object.values(realP2pOrdersMap).find(o => o && (o.id === orderId || String(o.id) === String(orderId)));
+    }
+  }
+
+  if (!order) {
+    showToast("⚠️ İlan bulunamadı!", "warning");
+    return;
+  }
+
+  const myUsername = (CurrentUser?.username || "").trim().toLowerCase();
+  const merchantUsername = (order.merchant || "").trim().toLowerCase();
+  if (myUsername && merchantUsername && myUsername === merchantUsername) {
+    const wantCancel = confirm("Bu sizin kendi ilanınızdır. İlanı iptal edip varlıklarınızı cüzdanınıza geri almak istiyor musunuz?");
+    if (wantCancel) {
+      cancelP2pOrder(order.id || orderId);
+    }
+    return;
+  }
+
+  activeP2pOrder = order;
+  const isBuy = p2pFilter === 'buy';
+  const title = document.getElementById('p2p-trade-title');
+  const merchant = document.getElementById('p2p-trade-merchant');
+  const price = document.getElementById('p2p-trade-price');
+  const inputOra = document.getElementById('p2p-trade-input-ora');
+  const btn = document.getElementById('p2p-trade-btn-confirm');
+
+  if (title) title.innerText = isBuy ? ("ORA Satın Al (" + order.merchant + ")") : ("ORA Sat (" + order.merchant + ")");
+  if (merchant) merchant.innerText = order.merchant;
+  if (price) price.innerText = "$" + Number(order.price).toFixed(4) + " USDT";
+  if (inputOra) inputOra.value = order.oraAmount;
+
+  if (btn) {
+    btn.className = isBuy 
+      ? "w-full py-3.5 rounded-xl bg-mineora-green text-white font-black text-xs hover:opacity-90 transition cursor-pointer" 
+      : "w-full py-3.5 rounded-xl bg-rose-600 text-white font-black text-xs hover:opacity-90 transition cursor-pointer";
+    btn.innerText = isBuy ? "USDT Öde ve ORA Al" : "ORA Gönder ve USDT Al";
+  }
+
+  openModal('modal-p2p-trade');
 };
 
 window.openP2pTradeModal = function(orderId, isBotOrder = false) {
