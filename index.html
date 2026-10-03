@@ -8260,7 +8260,10 @@ function renderAdminUserTable() {
       <td class="py-3 px-4">
         ${u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>'}
       </td>
-      <td class="py-3 px-4 text-right space-x-2 notranslate whitespace-nowrap" translate="no">
+      <td class="py-3 px-4 text-right space-x-1.5 notranslate whitespace-nowrap" translate="no">
+        <button type="button" onclick="openAdminUserLogsModal('${u.username}')" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer transition shadow">
+          <i class="fa-solid fa-file-lines mr-1"></i> Log Dökümü
+        </button>
         ${!u.isRootAdmin ? `
           <button type="button" onclick="toggleAdminVaultLock('${u.username}')" class="px-2.5 py-1 rounded ${audit.isSuspicious ? 'bg-rose-600 hover:bg-rose-500 text-white font-black' : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-bold'} text-[11px] cursor-pointer">
             ${u.isVaultLocked ? 'Kilidi Aç' : (audit.isSuspicious ? 'Acil Kilitle!' : 'Kilitle')}
