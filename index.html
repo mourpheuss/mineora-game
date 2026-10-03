@@ -8368,6 +8368,36 @@ function saveAdminUserModifications() {
   const newOra = parseFloat(document.getElementById('admin-mod-ora').value) || 0;
   const newRole = document.getElementById('admin-mod-role').value;
 
+  const oldUsdt = Number(parseFloat(activeModTargetUser.usdt || 0).toFixed(2));
+  const oldOra = Number(parseFloat(activeModTargetUser.ora || 0).toFixed(2));
+
+  const diffOra = Number((newOra - oldOra).toFixed(2));
+  const diffUsdt = Number((newUsdt - oldUsdt).toFixed(2));
+
+  // ORA değişimi varsa resmi admin logu oluştur
+  if (Math.abs(diffOra) >= 0.01) {
+    const sign = diffOra > 0 ? "+" : "";
+    addUserNotificationLog(
+      activeModTargetUser,
+      "Yönetici ORA Müdahalesi",
+      "Root Admin tarafından bakiye güncellendi.",
+      `${sign}${diffOra.toFixed(2)} ORA`,
+      diffOra > 0 ? "admin_grant" : "admin_deduct"
+    );
+  }
+
+  // USDT değişimi varsa resmi admin logu oluştur
+  if (Math.abs(diffUsdt) >= 0.01) {
+    const sign = diffUsdt > 0 ? "+$" : "-$";
+    addUserNotificationLog(
+      activeModTargetUser,
+      "Yönetici USDT Müdahalesi",
+      "Root Admin tarafından bakiye güncellendi.",
+      `${sign}${Math.abs(diffUsdt).toFixed(2)} USDT`,
+      diffUsdt > 0 ? "admin_grant" : "admin_deduct"
+    );
+  }
+
   activeModTargetUser.usdt = Number(newUsdt.toFixed(2));
   activeModTargetUser.ora = Number(newOra.toFixed(2));
   activeModTargetUser.role = newRole;
@@ -8375,9 +8405,8 @@ function saveAdminUserModifications() {
   saveStoredUser(activeModTargetUser);
   closeModal('modal-admin-modify-user');
   renderAdminUserTable();
-  showToast(`💾 ${activeModTargetUser.username} verileri güncellendi!`, "success");
+  showToast(`💾 ${activeModTargetUser.username} bakiyesi ve rolü resmi log kaydıyla güncellendi!`, "success");
 }
-
 function handleAdminCreateUserSubmit() {
   const u = document.getElementById('admin-new-username')?.value.trim();
   const p = document.getElementById('admin-new-pass')?.value.trim();
