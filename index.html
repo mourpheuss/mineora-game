@@ -5282,14 +5282,33 @@ window.cancelP2pOrder = function(orderId) {
     return;
   }
 
-  // Hem doğrudan key hem de nesne/dizi içi id üzerinden ilanı bul
-  let targetKey = orderId;
-  let order = (realP2pOrdersMap && realP2pOrdersMap[targetKey]) ? realP2pOrdersMap[targetKey] : null;
+  let targetKey = null;
+  let order = null;
+  const searchId = (orderId !== undefined && orderId !== null) ? String(orderId).trim() : "";
 
+  // 1. Aşama: Doğrudan Key veya ID üzerinden arama
+  if (realP2pOrdersMap && searchId && searchId !== "undefined") {
+    if (realP2pOrdersMap[searchId]) {
+      order = realP2pOrdersMap[searchId];
+      targetKey = searchId;
+    } else {
+      for (let k in realP2pOrdersMap) {
+        const item = realP2pOrdersMap[k];
+        if (item && (String(k) === searchId || String(item.id) === searchId || String(item._key) === searchId)) {
+          order = item;
+          targetKey = k;
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. Aşama (Kurtarma Motoru): ID "undefined" geldiyse kullanıcının adına ait ilk ilanı yakala
   if (!order && realP2pOrdersMap) {
+    const myUname = (CurrentUser.username || "").trim().toLowerCase();
     for (let k in realP2pOrdersMap) {
       const item = realP2pOrdersMap[k];
-      if (item && (item.id === orderId || String(k) === String(orderId))) {
+      if (item && (item.merchant || "").trim().toLowerCase() === myUname) {
         order = item;
         targetKey = k;
         break;
@@ -5297,7 +5316,7 @@ window.cancelP2pOrder = function(orderId) {
     }
   }
 
-  if (!order) {
+  if (!order || !targetKey) {
     showToast("⚠️ İlan bulunamadı veya daha önce iptal edilmiş!", "warning");
     renderP2pOrders();
     return;
@@ -5313,28 +5332,30 @@ window.cancelP2pOrder = function(orderId) {
 
   isP2pProcessing = true;
 
-  // İade işlemi: Satış ilanıysa ORA'yı, Alış ilanıysa USDT'yi hesaba geri yükle
+  // İade işlemi: Satış emriyse ORA, Alış emriyse USDT cüzdana geri aktarılır
   if (order.side === 'sell') {
-    const refundOra = Number(order.oraAmount || 0);
+    const refundOra = Number(parseFloat(order.oraAmount || 0).toFixed(2));
     CurrentUser.ora = Number(((CurrentUser.ora || 0) + refundOra).toFixed(2));
-    showToast(`↩️ İlan iptal edildi! ${refundOra.toFixed(2)} ORA kasanıza iade edildi.`, "success");
+    showToast(`↩️ Satış ilanı iptal edildi! ${refundOra.toLocaleString()} ORA kasanıza iade edildi.`, "success");
   } else {
-    const refundUsdt = Number(order.usdtAmount || 0);
+    const refundUsdt = Number(parseFloat(order.usdtAmount || 0).toFixed(2));
     CurrentUser.usdt = Number(((CurrentUser.usdt || 0) + refundUsdt).toFixed(2));
-    showToast(`↩️ İlan iptal edildi! $${refundUsdt.toFixed(2)} USDT kasanıza iade edildi.`, "success");
+    showToast(`↩️ Alış ilanı iptal edildi! $${refundUsdt.toFixed(2)} USDT kasanıza iade edildi.`, "success");
   }
 
-  // Hafızadan sil
+  // Yerel hafızadan temizle
   if (realP2pOrdersMap) {
     delete realP2pOrdersMap[targetKey];
-    delete realP2pOrdersMap[orderId];
+    if (order.id) delete realP2pOrdersMap[order.id];
   }
   saveLocalRealP2pOrders(realP2pOrdersMap);
 
-  // Buluttan sil
+  // Firebase bulutundan temizle
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref(`p2pOrders/${targetKey}`).remove();
-    if (targetKey !== orderId) fbDb.ref(`p2pOrders/${orderId}`).remove();
+    if (order.id && String(order.id) !== String(targetKey)) {
+      fbDb.ref(`p2pOrders/${order.id}`).remove();
+    }
   }
 
   saveUserWorld();
@@ -5351,9 +5372,23 @@ window.renderP2pOrders = function() {
   const myUsername = (CurrentUser?.username || "").trim().toLowerCase();
   const targetSide = p2pFilter === 'buy' ? 'sell' : 'buy';
 
-  const allRealOrders = Object.values(realP2pOrdersMap || {}).filter(o => o && Number(o.oraAmount) > 0 && !o.isBot);
+  // Tüm gerçek ilanları anahtarlarıyla birlikte eksiksiz topla
+  const allRealOrders = [];
+  if (realP2pOrdersMap && typeof realP2pOrdersMap === 'object') {
+    Object.keys(realP2pOrdersMap).forEach(key => {
+      const item = realP2pOrdersMap[key];
+      if (item && typeof item === 'object') {
+        const cleanKey = String(key);
+        item._key = cleanKey;
+        item.id = item.id ? String(item.id) : cleanKey;
+        if (Number(item.oraAmount) > 0 && !item.isBot) {
+          allRealOrders.push(item);
+        }
+      }
+    });
+  }
   
-  // 1) Kullanıcının kendi aktif ilanları (Sayfanın hangi sekmesinde olursa olsun en üstte gösterilir)
+  // 1) Kullanıcının kendi aktif ilanları (Sayfanın en üstünde gösterilir)
   const myOpenOrders = allRealOrders.filter(o => (o.merchant || "").trim().toLowerCase() === myUsername);
 
   let myOrdersContainer = document.getElementById('p2p-my-orders-banner');
@@ -5385,7 +5420,7 @@ window.renderP2pOrders = function() {
               <strong class="text-mineora-gold">${Number(mo.oraAmount).toLocaleString()} ORA</strong>
               <span class="text-slate-400">($${Number(mo.usdtAmount).toFixed(2)} USDT)</span>               <span class="text-slate-500 text-[11px]">Birim: $${Number(mo.price).toFixed(4)}</span>
             </div>
-            <button type="button" onclick="cancelP2pOrder('${mo.id}')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 transition">
+            <button type="button" onclick="cancelP2pOrder('${mo._key}')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 transition">
               <i class="fa-solid fa-ban"></i> İlanı İptal Et & İade Al
             </button>
           </div>
@@ -5438,11 +5473,11 @@ window.renderP2pOrders = function() {
       </td>
       <td class="py-3.5 px-4 text-right">
         ${isMyOrder ? `
-          <button type="button" onclick="cancelP2pOrder('${order.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition cursor-pointer">
+          <button type="button" onclick="cancelP2pOrder('${order._key || order.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition cursor-pointer">
             <i class="fa-solid fa-ban mr-1"></i> İptal Et
           </button>
         ` : `
-          <button type="button" onclick="openP2pTradeModal('${order.id}',${!!order.isBot})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ${btnClass}">
+          <button type="button" onclick="openP2pTradeModal('${order._key \vert{}\vert{} order.id}',${!!order.isBot})" class="px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow ${btnClass}">
             ${btnText}
           </button>
         `}
