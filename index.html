@@ -5563,7 +5563,6 @@ window.confirmP2pTrade = function() {
   if (p2pFilter === 'buy') {
     const totalRequiredUsdt = Number((rawUsdt + feeUsdt).toFixed(2));
 
-    // KESİN GÜVENLİK: Cüzdanda yeterli USDT yoksa işlem anında reddedilir
     if (realCurrentUsdt < totalRequiredUsdt || realCurrentUsdt <= 0) {
       showToast("⛔ Yetersiz Bakiye! Bu alım için $" + totalRequiredUsdt.toFixed(2) + " USDT gereklidir. Cüzdanınız: $" + realCurrentUsdt.toFixed(2) + " USDT", "warning");
       return;
@@ -5595,7 +5594,6 @@ window.confirmP2pTrade = function() {
 
   // --- SENARYO B: KULLANICI ORA SATIYOR (ORA Verir -> USDT Alır) ---
   else if (p2pFilter === 'sell') {
-    // KESİN GÜVENLİK: Cüzdanda yeterli ORA yoksa işlem anında reddedilir
     if (realCurrentOra < amtOra || realCurrentOra <= 0) {
       showToast("⛔ Yetersiz Maden! Satmak istediğiniz miktar: " + amtOra.toFixed(2) + " ORA. Cüzdanınız: " + realCurrentOra.toFixed(2) + " ORA", "warning");
       return;
