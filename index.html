@@ -5625,64 +5625,123 @@ window.confirmP2pTrade = function() {
   if (!CurrentUser || !activeP2pOrder) return;
   if (isP2pProcessing) { showToast("⏳ İşlem yürütülüyor...", "info"); return; }
 
-  const amtOra = parseFloat(document.getElementById('p2p-trade-input-ora')?.value);
-  if (isNaN(amtOra) || amtOra <= 0 || amtOra > activeP2pOrder.oraAmount) { 
-    showToast("⚠️ Geçersiz miktar veya emir limitini aşıyor!", "warning"); 
+  // 1. GİRDİ GÜVENLİK FİLTRESİ (Sıfır, Negatif veya Hatalı Sayı Girişini Engelle)
+  const amtOra = Number(parseFloat(document.getElementById('p2p-trade-input-ora')?.value) || 0);
+  const orderMaxOra = Number(parseFloat(activeP2pOrder.oraAmount) || 0);
+
+  if (isNaN(amtOra) || amtOra <= 0 || amtOra > orderMaxOra) { 
+    showToast("⚠️ Geçersiz miktar veya emir sınırını aşıyor!", "warning"); 
     return; 
   }
 
+  const orderPrice = Number(parseFloat(activeP2pOrder.price) || 0.1000);
   const feeUsdtPercent = (typeof ProtocolState !== 'undefined' && ProtocolState.feeUsdtPercent) ? ProtocolState.feeUsdtPercent : 1.0;
   const feeOraPercent = (typeof ProtocolState !== 'undefined' && ProtocolState.feeOraPercent) ? ProtocolState.feeOraPercent : 1.0;
 
-  const rawUsdt = Number((amtOra * activeP2pOrder.price).toFixed(2));
+  const rawUsdt = Number((amtOra * orderPrice).toFixed(2));
   const feeUsdt = Number(((rawUsdt * feeUsdtPercent) / 100).toFixed(2));
   const burnOra = Number(((amtOra * feeOraPercent) / 100).toFixed(2));
 
-  isP2pProcessing = true;
+  // 2. KESİN CÜZDAN KONTROLÜ (Kullanıcının gerçek varlığı doğrulanır)
+  const realCurrentUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
+  const realCurrentOra = Number(parseFloat(CurrentUser.ora || 0).toFixed(2));
 
-  // 1. KULLANICI BOTTAN ORA ALIYOR (USDT Verir -> ORA Alır, 1 Milyar Rezervden Düşer)
-  if (activeP2pOrder.isBot && p2pFilter === 'buy') {
-    const totalUsdt = Number((rawUsdt + feeUsdt).toFixed(2));
-    const myUsdt = Number(parseFloat(CurrentUser.usdt || 0).toFixed(2));
+  // --- SENARYO A: KULLANICI ORA ALIYOR (USDT ÖDER -> ORA ALIR) ---
+  if (p2pFilter === 'buy') {
+    const totalRequiredUsdt = Number((rawUsdt + feeUsdt).toFixed(2));
 
-    if (myUsdt < totalUsdt) {
-      showToast(`⚠️ Yetersiz USDT! Gereken: $${totalUsdt.toFixed(2)} USDT`, "warning");
-      isP2pProcessing = false;
+    // KESİN ŞART: Cüzdanda yeterli USDT yoksa İŞLEM İMKANSIZDIR
+    if (realCurrentUsdt < totalRequiredUsdt || realCurrentUsdt <= 0) {
+      showToast(`⛔ Yetersiz Bakiye! Bu alım için $${totalRequiredUsdt.toFixed(2)} USDT gereklidir. Cüzdanınız: $${realCurrentUsdt.toFixed(2)} USDT`, "warning");
       return;
     }
 
-    const masterReserve = Number(AdminState.genesisOraReserve || 1000000000);
-    if (masterReserve < amtOra) {
-      showToast("⛔ Master ORA rezervi yetersiz!", "warning");
-      isP2pProcessing = false;
-      return;
+    isP2pProcessing = true;
+
+    // Kullanıcının USDT'si kesin olarak düşülür, ORA'sı eklenir
+    CurrentUser.usdt = Number((realCurrentUsdt - totalRequiredUsdt).toFixed(2));
+    CurrentUser.ora = Number((realCurrentOra + (amtOra - burnOra)).toFixed(2));
+
+    if (activeP2pOrder.isBot) {
+      if (typeof AdminState !== 'undefined') {
+        AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) + totalRequiredUsdt).toFixed(2));
+        AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + burnOra).toFixed(2));
+        saveAdminProtocolState(AdminState);
+      }
+      consumeBotOrder(activeP2pOrder.id, amtOra);
+    } else {
+      let merchantObj = getStoredUser(activeP2pOrder.merchant);
+      if (merchantObj) {
+        merchantObj.usdt = Number(((merchantObj.usdt || 0) + rawUsdt).toFixed(2));
+        addUserNotificationLog(merchantObj, "P2P İlanınız Satıldı", `${CurrentUser.username} sizden ${amtOra} ORA satın aldı.`, `+$${rawUsdt.toFixed(2)} USDT`, "income");
+        saveStoredUser(merchantObj);
+      }
     }
 
-    CurrentUser.usdt = Number((myUsdt - totalUsdt).toFixed(2));
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + (amtOra - burnOra)).toFixed(2));
-
-    AdminState.masterVaultUsdt = Number(((AdminState.masterVaultUsdt || 0) + rawUsdt + feeUsdt).toFixed(2));
-    AdminState.genesisOraReserve = Number((masterReserve - amtOra).toFixed(2));
-    AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + burnOra).toFixed(2));
-
-    saveAdminProtocolState(AdminState);
-    if (typeof ProtocolState !== 'undefined') {
-      ProtocolState.adminVaultUsdt = AdminState.masterVaultUsdt;
-      ProtocolState.totalBurnedOra = AdminState.totalBurnedOra;
-      saveGlobalProtocolState(ProtocolState);
-    }
-
-    addUserNotificationLog(CurrentUser, "P2P ORA Alımı", `${activeP2pOrder.merchant} tüccarından $${totalUsdt.toFixed(2)} USDT karşılığı ${amtOra} ORA alındı.`, `+${(amtOra - burnOra).toFixed(2)} ORA`, "income");
-
-    consumeBotOrder(activeP2pOrder.id, amtOra);
-    saveUserWorld();
-    updateHUD();
-    closeModal('modal-p2p-trade');
-    renderP2pOrders();
-    showToast(`✅ ${(amtOra - burnOra).toFixed(2)} ORA cüzdanınıza yansıtıldı! (${amtOra} ORA rezervden düşüldü)`, "success");
-    setTimeout(() => { isP2pProcessing = false; }, 800);
-    return;
+    addUserNotificationLog(CurrentUser, "P2P ORA Alımı", `$${totalRequiredUsdt.toFixed(2)} USDT ödenerek ${amtOra} ORA satın alındı.`, `+${(amtOra - burnOra).toFixed(2)} ORA`, "income");
+    showToast(`✅ $${totalRequiredUsdt.toFixed(2)} USDT tahsil edildi, ${(amtOra - burnOra).toFixed(2)} ORA cüzdanınıza aktarıldı!`, "success");
   }
+
+  // --- SENARYO B: KULLANICI ORA SATIYOR (ORA VERİR -> USDT ALIR) ---
+  else if (p2pFilter === 'sell') {
+    // KESİN ŞART: Cüzdanda satılmak istenen kadar ORA yoksa İŞLEM İMKANSIZDIR
+    if (realCurrentOra < amtOra || realCurrentOra <= 0) {
+      showToast(`⛔ Yetersiz Maden! Satmak istediğiniz miktar: ${amtOra.toFixed(2)} ORA. Cüzdanınız: ${realCurrentOra.toFixed(2)} ORA`, "warning");
+      return;
+    }
+
+    isP2pProcessing = true;
+    const netReceiveUsdt = Number((rawUsdt - feeUsdt).toFixed(2));
+
+    // Kullanıcının ORA'sı kesin olarak düşülür, USDT'si eklenir
+    CurrentUser.ora = Number((realCurrentOra - amtOra).toFixed(2));
+    CurrentUser.usdt = Number((realCurrentUsdt + netReceiveUsdt).toFixed(2));
+
+    if (activeP2pOrder.isBot) {
+      if (typeof AdminState !== 'undefined') {
+        AdminState.totalBurnedOra = Number(((AdminState.totalBurnedOra || 0) + amtOra).toFixed(2));
+        saveAdminProtocolState(AdminState);
+      }
+      consumeBotOrder(activeP2pOrder.id, amtOra);
+    } else {
+      let merchantObj = getStoredUser(activeP2pOrder.merchant);
+      if (merchantObj) {
+        merchantObj.ora = Number(((merchantObj.ora || 0) + (amtOra - burnOra)).toFixed(2));
+        addUserNotificationLog(merchantObj, "P2P Alış İlanınız Doldu", `${CurrentUser.username} size ${amtOra} ORA sattı.`, `+${(amtOra - burnOra).toFixed(2)} ORA`, "income");
+        saveStoredUser(merchantObj);
+      }
+    }
+
+    addUserNotificationLog(CurrentUser, "P2P ORA Satışı", `${amtOra} ORA satıldı, komisyon düşülerek net ödeme alındı.`, `+$${netReceiveUsdt.toFixed(2)} USDT`, "income");
+    showToast(`✅ ${amtOra.toFixed(2)} ORA cüzdanınızdan düşüldü, $${netReceiveUsdt.toFixed(2)} USDT kasanıza yansıtıldı!`, "success");
+  }
+
+  // Gerçek ilanın kalan miktarını düş veya kapat
+  if (!activeP2pOrder.isBot) {
+    const targetOrderId = activeP2pOrder._key || activeP2pOrder.id;
+    const remainingOra = Number((orderMaxOra - amtOra).toFixed(2));
+    if (remainingOra <= 0.001) {
+      delete realP2pOrdersMap[targetOrderId];
+      if (typeof fbDb !== 'undefined' && fbDb) fbDb.ref(`p2pOrders/${targetOrderId}`).remove();
+    } else {
+      realP2pOrdersMap[targetOrderId].oraAmount = remainingOra;
+      realP2pOrdersMap[targetOrderId].usdtAmount = Number((remainingOra * orderPrice).toFixed(2));
+      if (typeof fbDb !== 'undefined' && fbDb) {
+        fbDb.ref(`p2pOrders/${targetOrderId}`).update({
+          oraAmount: remainingOra,
+          usdtAmount: realP2pOrdersMap[targetOrderId].usdtAmount
+        });
+      }
+    }
+    saveLocalRealP2pOrders(realP2pOrdersMap);
+  }
+
+  saveUserWorld();
+  updateHUD();
+  closeModal('modal-p2p-trade');
+  renderP2pOrders();
+  setTimeout(() => { isP2pProcessing = false; }, 500);
+};
 
   // 2. KULLANICI BOTA ORA SATIYOR (ORA Verir -> USDT Alır, Kurucu Kasadan Ödenir)
   if (activeP2pOrder.isBot && p2pFilter === 'sell') {
