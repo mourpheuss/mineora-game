@@ -3981,18 +3981,33 @@ function handlePasswordChange() {
   if (oldP !== CurrentUser.pass) { showToast("⚠️ Current password incorrect!", "warning"); return; }
   if (newP !== repP) { showToast("⚠️ Passwords do not match!", "warning"); return; }
   if (newP.length < 4) { showToast("⚠️ Password must be at least 4 characters!", "warning"); return; }
-  
+
   CurrentUser.pass = newP;
-  CurrentUserWorld.pass = newP;
-  saveUserWorld();
+  if (CurrentUserWorld) CurrentUserWorld.pass = newP;
+
+  // 1. Yerel hafızaya yaz
+  const uKey = CurrentUser.username.toLowerCase();
+  localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(CurrentUser));
+
+  // 2. Buluta (Firebase) kesin kayıt ve onay kontrolü
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    showToast("⏳ Bulut şifresi güncelleniyor...", "info");
+    fbDb.ref(`users/${uKey}`).update({ pass: newP })
+      .then(() => {
+        showToast("🔐 Şifreniz tüm cihazlarda başarıyla güncellendi!", "success");
+      })
+      .catch((err) => {
+        console.error("Firebase şifre güncelleme hatası:", err);
+        showToast("⚠️ Şifre cihaza kaydedildi ancak buluta iletilemedi: " + err.message, "warning");
+      });
+  } else {
+    showToast("🔐 Şifre sadece yerel cihaza kaydedildi.", "info");
+  }
 
   document.getElementById('pwd-old').value = "";
   document.getElementById('pwd-new').value = "";
   document.getElementById('pwd-repeat').value = "";
-
-  showToast("🔐 Password updated across the cloud!", "success");
 }
-
 function renderHierarchyUI() {
   const container = document.getElementById('sec-owner');
   if (!container || !CurrentUser) return;
