@@ -259,6 +259,40 @@
 
         .filter-btn.active { color: var(--accent-green); background: rgba(255, 255, 255, 0.06); }
 
+        /* ARAMA ÇUBUĞU */
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 420px;
+            min-width: 260px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 0.6rem 1rem 0.6rem 2.4rem;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 15px rgba(0, 245, 155, 0.15);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
@@ -314,7 +348,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-b: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
             padding-bottom: 1.5rem;
             margin-bottom: 2rem;
             flex-wrap: wrap;
@@ -467,7 +501,7 @@
             <div class="brand-badge">MAS PRO</div>
             <div>
                 <h1 class="brand-title">MINE ANALİZ SYSTEM</h1>
-                <p class="brand-subtitle">Kapalı Devre Spor Analitiği ve Matematik Terminali</p>
+                <p class="brand-subtitle">Kapalı Devre İddaa Olasılık & +EV Terminali</p>
             </div>
         </div>
 
@@ -484,11 +518,11 @@
         <div class="hero-badge"><i class="fa-solid fa-lock"></i> SADECE PRO ABONELERE ÖZEL TERMİNAL</div>
         <h2 class="hero-title">Matematiksel Üstünlükle <span>Bültenden Değer Çıkarın</span></h2>
         <p class="hero-desc">
-            MAS (Mine Analiz System); klasik tahminler yerine <strong>Dixon-Coles matris modellemesi</strong>, 
-            <strong>Shannon Entropi filtresi</strong> ve oran manipülasyonlarını tespit eden <strong>+EV (Pozitif Beklenen Değer)</strong> motoruyla çalışır.
+            MAS; klasik tahminler yerine tüm İddaa & Maçkolik bültenini <strong>Dixon-Coles modellemesi</strong>, 
+            <strong>Shannon Entropi filtresi</strong> ve <strong>+EV (Pozitif Beklenen Değer)</strong> süzgeciyle tarar.
         </p>
         <div class="hero-cta">
-            <a id="shopier-btn-hero" href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-primary" style="font-size: 1rem; padding: 1rem 2.2rem;">
+            <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-primary" style="font-size: 1rem; padding: 1rem 2.2rem;">
                 <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
             </a>
             <button class="btn-secondary" onclick="openModal('modal-login')">Mevcut Üye Girişi</button>
@@ -497,24 +531,24 @@
 
     <div class="features-grid">
         <div class="feature-box">
-            <div class="feature-icon"><i class="fa-solid fa-calculator"></i></div>
-            <h3>Dixon-Coles Modellemesi</h3>
-            <p>0-0 ve kısır skorların frekansını düzelten saf bilimsel algoritma ile gerçek gol ve sonuç olasılıkları.</p>
+            <div class="feature-icon"><i class="fa-solid fa-list-ol"></i></div>
+            <h3>Tüm İddaa & Maçkolik Bülteni</h3>
+            <p>Günün programındaki tüm resmi maçları, İddaa kodları ve anlık büro oranlarıyla tek ekranda analiz edin.</p>
         </div>
         <div class="feature-box">
             <div class="feature-icon"><i class="fa-solid fa-filter"></i></div>
             <h3>Shannon Entropisi Kaos Filtresi</h3>
-            <p>Öngörülemez, kaotik ve riskli karşılaşmaları otomatik olarak eler; yalnızca stabil maçları terminale taşır.</p>
+            <p>Sonucu tamamen rastlantısal olan tuzak maçları otomatik eler, yalnızca istatistiksel dengesi olanları sunar.</p>
         </div>
         <div class="feature-box">
             <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
             <h3>Pozitif Beklenen Değer (+EV)</h3>
-            <p>Büroların açtığı oranlardaki matematiksel açıkları ve piyasa hatalarını anında ekrana döker.</p>
+            <p>İddaa oranlarında büronun yaptığı matematiksel hataları ve piyasa açıklarını ekrana döker.</p>
         </div>
         <div class="feature-box">
             <div class="feature-icon"><i class="fa-solid fa-tv"></i></div>
             <h3>Kesintisiz Canlı Maç TV</h3>
-            <p>PRO abonelere özel entegre maç yayınları ve anlık oran güncellemeleri.</p>
+            <p>PRO abonelere özel entegre maç yayınları ve anlık oran takibi.</p>
         </div>
     </div>
 </div>
@@ -535,20 +569,24 @@
                 <i class="fa-solid fa-tv"></i> CANLI MAÇ TV
             </button>
             <div class="stats-bar">
-                <div><span>ÇEKİRDEK:</span> <strong>MAS v1.0</strong></div>
-                <div><span>AKTİF EV:</span> <strong id="stat-ev-count">Yükleniyor...</strong></div>
+                <div><span>TOPLAM MAÇ:</span> <strong id="stat-total-count">0</strong></div>
+                <div><span>+EV FIRSAT:</span> <strong id="stat-ev-count">0</strong></div>
             </div>
             <button class="btn-logout" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i> Çıkış</button>
         </div>
     </header>
 
+    <!-- KONTROL & ARAMA ÇUBUĞU -->
     <div class="controls">
         <div class="filter-group">
-            <button class="filter-btn active" onclick="filterCards('all', event)">Tüm Bülten</button>
-            <button class="filter-btn" onclick="filterCards('ev', event)">Sadece +EV Fırsatları</button>
+            <button id="filter-all-btn" class="filter-btn active" onclick="setFilter('all')">Tüm Bülten</button>
+            <button id="filter-ev-btn" class="filter-btn" onclick="setFilter('ev')">Sadece +EV Fırsatları</button>
         </div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
-            Terminal Durumu: <span style="color: var(--accent-green);">Canlı Senkronize</span>
+
+        <!-- İDDAA KODU VEYA TAKIM ARAMA KUTUSU -->
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="match-search-input" oninput="handleSearch(event)" placeholder="İddaa Kodu veya Takım Ara (Örn: 40101, Galatasaray)...">
         </div>
     </div>
 
@@ -613,7 +651,7 @@
 <div id="modal-admin-auth" class="modal" onclick="closeOnBackdrop(event, 'modal-admin-auth')">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--accent-amber);"><i class="fa-solid fa-shield-halved"></i> Kurucu Güvenlik Girişi</h2>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Yönetici masasını açmak için güvenlik anahtarını giriniz.</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Yönetici masasını açmak için şifreyi giriniz.</p>
         
         <div class="form-group">
             <label>Yönetici Şifresi</label>
@@ -694,7 +732,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <script>
-    const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
     const ADMIN_SECRET_KEY = "mas777root"; // Yönetici Şifreniz
 
     const firebaseConfig = {
@@ -705,12 +742,14 @@
     const db = firebase.database();
 
     let CurrentUser = null;
+    let allMatchesData = [];
+    let currentTabFilter = 'all';
+    let currentSearchTerm = '';
 
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
 
-    // Ekran Geçişleri (Düzeltildi: Terminale geçince maçları otomatik çeker)
     function switchView(viewName) {
         document.getElementById('view-landing').classList.add('hidden');
         document.getElementById('view-terminal').classList.add('hidden');
@@ -719,12 +758,12 @@
         if (viewName === 'landing') document.getElementById('view-landing').classList.remove('hidden');
         if (viewName === 'terminal') {
             document.getElementById('view-terminal').classList.remove('hidden');
-            loadTerminalMatches(); // Maçları anında yükler
+            loadTerminalMatches();
         }
         if (viewName === 'admin') document.getElementById('view-admin').classList.remove('hidden');
     }
 
-    // --- YÖNETİCİ PANELİ MANTIĞI ---
+    // --- YÖNETİCİ PANELİ ---
     function handleAdminLogin() {
         const key = document.getElementById('admin-key-input').value.trim();
         if (key === ADMIN_SECRET_KEY) {
@@ -866,10 +905,10 @@
         window.location.reload();
     }
 
-    // --- MAÇLARI YÜKLEME (Dizi ve Nesne desteği eklendi) ---
+    // --- MAÇLARI YÜKLEME VE FİLTRELEME MOTORU ---
     function loadTerminalMatches() {
         const grid = document.getElementById('matches-grid');
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--accent-green);"></i><p style="margin-top:0.75rem;">Canlı maç analizleri Firebase\'den çekiliyor...</p></div>';
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--accent-green);"></i><p style="margin-top:0.75rem;">İddaa bülteni ve analizler Firebase\'den çekiliyor...</p></div>';
 
         db.ref("analyzed_matches").on("value", (snapshot) => {
             const raw = snapshot.val();
@@ -878,30 +917,61 @@
                 return;
             }
 
-            // Veri hem Array hem Object gelse sorunsuz listeye çevirir
-            const matches = Array.isArray(raw) ? raw : Object.values(raw);
-            if (matches.length > 0) {
-                renderCards(matches);
-            } else {
-                grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);">Bültende aktif maç bulunmuyor.</div>';
-            }
+            allMatchesData = Array.isArray(raw) ? raw : Object.values(raw);
+            applyCombinedFilters();
         }, (error) => {
             grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--accent-red);">Bağlantı hatası: ${error.message}</div>`;
         });
     }
 
+    function handleSearch(e) {
+        currentSearchTerm = e.target.value.trim().toLowerCase();
+        applyCombinedFilters();
+    }
+
+    function setFilter(type) {
+        currentTabFilter = type;
+        document.getElementById('filter-all-btn').classList.toggle('active', type === 'all');
+        document.getElementById('filter-ev-btn').classList.toggle('active', type === 'ev');
+        applyCombinedFilters();
+    }
+
+    function applyCombinedFilters() {
+        let filtered = allMatchesData.filter(m => {
+            const hasEV = m.value_scenarios && m.value_scenarios.length > 0;
+            if (currentTabFilter === 'ev' && !hasEV) return false;
+
+            if (currentSearchTerm) {
+                const matchName = (m.match || '').toLowerCase();
+                const matchId = (m.match_id || '').toLowerCase();
+                const league = (m.league || '').toLowerCase();
+                if (!matchName.includes(currentSearchTerm) && !matchId.includes(currentSearchTerm) && !league.includes(currentSearchTerm)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        renderCards(filtered);
+    }
+
     function renderCards(matches) {
         const grid = document.getElementById('matches-grid');
         grid.innerHTML = '';
-        let totalEVCount = 0;
+
+        const totalEVCount = allMatchesData.filter(m => m.value_scenarios && m.value_scenarios.length > 0).length;
+        document.getElementById('stat-total-count').textContent = allMatchesData.length;
+        document.getElementById('stat-ev-count').textContent = totalEVCount;
+
+        if (matches.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);">Aramanızla eşleşen karşılaşma bulunamadı.</div>';
+            return;
+        }
 
         matches.forEach(m => {
             const hasEV = m.value_scenarios && m.value_scenarios.length > 0;
-            if (hasEV) totalEVCount++;
-
             const card = document.createElement('div');
             card.className = 'card';
-            card.setAttribute('data-has-ev', hasEV ? 'true' : 'false');
 
             let valuesHtml = '';
             if (hasEV) {
@@ -923,11 +993,23 @@
                 `;
             }
 
+            let topScoresHtml = '';
+            if (m.top_predicted_scores && m.top_predicted_scores.length > 0) {
+                topScoresHtml = `
+                    <div style="display:flex; gap:0.4rem; margin-top:0.6rem; font-family:var(--font-mono); font-size:0.75rem;">
+                        <span style="color:var(--text-muted);">Skor:</span>
+                        ${m.top_predicted_scores.map(s => `<span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;"><strong>${s.score}</strong> (${s.prob})</span>`).join('')}
+                    </div>
+                `;
+            }
+
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
                     <div>
                         <h2 style="font-size:1.15rem; font-weight:700;">${m.match}</h2>
-                        <span style="font-size:0.78rem; color:var(--text-muted); font-family:var(--font-mono);">ID: ${m.match_id || '---'} • ${m.date || ''}</span>
+                        <span style="font-size:0.78rem; color:var(--text-muted); font-family:var(--font-mono);">
+                            İddaa Kod: <strong style="color:var(--accent-blue);">${m.match_id || '---'}</strong> • ${m.date || ''}
+                        </span>
                     </div>
                     <span class="entropy-tag">Entropi: ${m.entropy}</span>
                 </div>
@@ -951,22 +1033,11 @@
                         <span>X: %${m.probabilities ? m.probabilities.draw : '-'}</span>
                         <span>MS 2: %${m.probabilities ? m.probabilities.away_win : '-'}</span>
                     </div>
+                    ${topScoresHtml}
                 </div>
                 ${valuesHtml}
             `;
             grid.appendChild(card);
-        });
-
-        document.getElementById('stat-ev-count').textContent = `${totalEVCount} Karşılaşma`;
-    }
-
-    function filterCards(type, e) {
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        if (e && e.target) e.target.classList.add('active');
-        const cards = document.querySelectorAll('.card');
-        cards.forEach(c => {
-            if (type === 'all') c.style.display = 'block';
-            else if (type === 'ev') c.style.display = c.getAttribute('data-has-ev') === 'true' ? 'block' : 'none';
         });
     }
 
