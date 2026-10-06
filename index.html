@@ -49,14 +49,11 @@
             padding-bottom: 2rem;
             border-bottom: 1px solid var(--border-subtle);
             margin-bottom: 4rem;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
-        .hero {
-            text-align: center;
-            max-width: 840px;
-            margin: 0 auto 5rem auto;
-        }
-
+        .hero { text-align: center; max-width: 840px; margin: 0 auto 5rem auto; }
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -72,33 +69,15 @@
             margin-bottom: 1.5rem;
         }
 
-        .hero-title {
-            font-size: 2.8rem;
-            font-weight: 800;
-            line-height: 1.15;
-            letter-spacing: -0.03em;
-            margin-bottom: 1.25rem;
-        }
-
+        .hero-title { font-size: 2.8rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 1.25rem; }
         .hero-title span {
             background: linear-gradient(135deg, #00f59b, #38bdf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .hero-desc {
-            font-size: 1.05rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-            margin-bottom: 2.5rem;
-        }
-
-        .hero-cta {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
+        .hero-desc { font-size: 1.05rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2.5rem; }
+        .hero-cta { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
 
         .btn-primary {
             background: linear-gradient(135deg, #00f59b, #00a86b);
@@ -137,6 +116,23 @@
             border-color: rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.05);
         }
+
+        .btn-admin-gate {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-amber);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            font-weight: 700;
+            padding: 0.9rem 1.3rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-admin-gate:hover { background: rgba(245, 158, 11, 0.2); }
 
         .features-grid {
             display: grid;
@@ -313,7 +309,114 @@
             margin-bottom: 0.45rem;
         }
 
-        /* ================= MODALLER (GİRİŞ / KAYIT / TV) ================= */
+        /* ================= YÖNETİCİ PANELİ (ADMIN DESK) ================= */
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-b: 1px solid var(--border-subtle);
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .admin-stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 1.25rem;
+        }
+
+        .admin-stat-card span { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+        .admin-stat-card strong { display: block; font-size: 1.7rem; font-family: var(--font-mono); margin-top: 0.3rem; }
+
+        .admin-table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            overflow-x: auto;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        .admin-table th {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .admin-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }
+
+        .badge-status {
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            font-family: var(--font-mono);
+            display: inline-block;
+        }
+
+        .badge-active { background: rgba(0, 245, 155, 0.15); color: var(--accent-green); border: 1px solid rgba(0, 245, 155, 0.3); }
+        .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .btn-action-activate {
+            background: #059669;
+            color: #fff;
+            border: none;
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-action-activate:hover { background: #10b981; }
+
+        .btn-action-revoke {
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-action-delete {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-subtle);
+            padding: 0.45rem 0.65rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-left: 0.4rem;
+        }
+        .btn-action-delete:hover { color: var(--accent-red); border-color: var(--accent-red); }
+
+        /* ================= MODALLER ================= */
         .modal {
             display: none;
             position: fixed;
@@ -368,7 +471,10 @@
             </div>
         </div>
 
-        <div style="display: flex; gap: 0.75rem;">
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn-admin-gate" onclick="openModal('modal-admin-auth')">
+                <i class="fa-solid fa-shield-halved"></i> Yönetici Girişi
+            </button>
             <button class="btn-secondary" onclick="openModal('modal-login')">Giriş Yap</button>
             <button class="btn-primary" onclick="openModal('modal-register')">PRO Kayıt Ol</button>
         </div>
@@ -382,7 +488,7 @@
             <strong>Shannon Entropi filtresi</strong> ve oran manipülasyonlarını tespit eden <strong>+EV (Pozitif Beklenen Değer)</strong> motoruyla çalışır.
         </p>
         <div class="hero-cta">
-            <a id="shopier-btn-hero" href="#" target="_blank" class="btn-primary" style="font-size: 1rem; padding: 1rem 2.2rem;">
+            <a id="shopier-btn-hero" href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-primary" style="font-size: 1rem; padding: 1rem 2.2rem;">
                 <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
             </a>
             <button class="btn-secondary" onclick="openModal('modal-login')">Mevcut Üye Girişi</button>
@@ -413,7 +519,7 @@
     </div>
 </div>
 
-<!-- ================= 2. TERMİNAL EKRANI (SADECE ONAYLI PRO ÜYELER) ================= -->
+<!-- ================= 2. TERMİNAL EKRANI (PRO ÜYELER) ================= -->
 <div id="view-terminal" class="container hidden">
     <header>
         <div class="brand">
@@ -451,7 +557,72 @@
     </div>
 </div>
 
+<!-- ================= 3. YÖNETİCİ MASASI (ADMIN PANEL) ================= -->
+<div id="view-admin" class="container hidden">
+    <div class="admin-header">
+        <div class="brand">
+            <div class="brand-badge" style="background: var(--accent-amber); color: #000;">YÖNETİCİ MASASI</div>
+            <div>
+                <h1 class="brand-title">MAS KONTROL MERKEZİ</h1>
+                <p class="brand-subtitle">Üye Kayıtları, Shopier Ödeme Teyidi ve PRO Onay Paneli</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="btn-secondary" onclick="switchView('landing')"><i class="fa-solid fa-arrow-left"></i> Vitrine Dön</button>
+            <button class="btn-primary" onclick="switchView('terminal')"><i class="fa-solid fa-desktop"></i> Terminale Geç</button>
+        </div>
+    </div>
+
+    <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+            <span>Toplam Kayıtlı Üye</span>
+            <strong id="adm-stat-total" style="color: var(--text-main);">0</strong>
+        </div>
+        <div class="admin-stat-card">
+            <span>Aktif PRO Aboneler</span>
+            <strong id="adm-stat-active" style="color: var(--accent-green);">0</strong>
+        </div>
+        <div class="admin-stat-card">
+            <span>Onay Bekleyenler</span>
+            <strong id="adm-stat-pending" style="color: var(--accent-amber);">0</strong>
+        </div>
+    </div>
+
+    <div class="admin-table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Kullanıcı Adı</th>
+                    <th>Şifre</th>
+                    <th>Shopier No / Tel</th>
+                    <th>Kayıt Tarihi</th>
+                    <th>Abonelik Durumu</th>
+                    <th style="text-align: right;">Yetkilendirme</th>
+                </tr>
+            </thead>
+            <tbody id="admin-user-rows">
+                <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Veriler çekiliyor...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- ================= MODALLER ================= -->
+
+<!-- YÖNETİCİ GİRİŞ MODAL -->
+<div id="modal-admin-auth" class="modal" onclick="closeOnBackdrop(event, 'modal-admin-auth')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--accent-amber);"><i class="fa-solid fa-shield-halved"></i> Kurucu Güvenlik Girişi</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Yönetici masasını açmak için güvenlik anahtarını giriniz.</p>
+        
+        <div class="form-group">
+            <label>Yönetici Şifresi</label>
+            <input type="password" id="admin-key-input" class="form-control" placeholder="••••••••">
+        </div>
+
+        <button onclick="handleAdminLogin()" class="btn-primary" style="width: 100%; justify-content: center; background: var(--accent-amber); color: #000;">Yönetim Masasını Aç</button>
+    </div>
+</div>
 
 <!-- GİRİŞ MODAL -->
 <div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
@@ -497,7 +668,7 @@
         <button onclick="handleRegister()" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">Aktivasyon Başvurusu Yap</button>
         
         <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem;">
-            <a id="shopier-link-register" href="#" target="_blank" style="color: var(--accent-green); font-weight: 700;">Henüz satın almadınız mı? Shopier'e Git &rarr;</a>
+            <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" style="color: var(--accent-green); font-weight: 700;">Henüz satın almadınız mı? Shopier'e Git &rarr;</a>
         </div>
     </div>
 </div>
@@ -523,10 +694,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <script>
-    // Shopier doğrudan ürün ödeme bağlantısı
-const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
+    const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
+    const ADMIN_SECRET_KEY = "mas777root"; // Yönetici Şifreniz
 
-    // Firebase Ayarı (Mevcut MineOra Veritabanı)
     const firebaseConfig = {
         databaseURL: "https://mineora-web-default-rtdb.firebaseio.com"
     };
@@ -534,17 +704,99 @@ const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Shopier Linklerini bağla
-    document.getElementById('shopier-btn-hero').href = SHOPIER_STORE_URL;
-    document.getElementById('shopier-link-register').href = SHOPIER_STORE_URL;
-
-    // --- 2. KULLANICI YÖNETİMİ & KORUMA DUVARI ---
     let CurrentUser = null;
 
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
 
+    function switchView(viewName) {
+        document.getElementById('view-landing').classList.add('hidden');
+        document.getElementById('view-terminal').classList.add('hidden');
+        document.getElementById('view-admin').classList.add('hidden');
+
+        if (viewName === 'landing') document.getElementById('view-landing').classList.remove('hidden');
+        if (viewName === 'terminal') document.getElementById('view-terminal').classList.remove('hidden');
+        if (viewName === 'admin') document.getElementById('view-admin').classList.remove('hidden');
+    }
+
+    // --- YÖNETİCİ PANELİ MANTIĞI ---
+    function handleAdminLogin() {
+        const key = document.getElementById('admin-key-input').value.trim();
+        if (key === ADMIN_SECRET_KEY) {
+            closeModal('modal-admin-auth');
+            switchView('admin');
+            initAdminDashboard();
+        } else {
+            alert("❌ Hatalı yönetici güvenlik şifresi!");
+        }
+    }
+
+    function initAdminDashboard() {
+        db.ref('mas_users').on('value', snapshot => {
+            const users = snapshot.val() || {};
+            const tbody = document.getElementById('admin-user-rows');
+            tbody.innerHTML = '';
+
+            let total = 0;
+            let active = 0;
+            let pending = 0;
+
+            const userKeys = Object.keys(users);
+            if (userKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Henüz kayıtlı bir üye bulunmuyor.</td></tr>';
+                return;
+            }
+
+            userKeys.forEach(username => {
+                const u = users[username];
+                total++;
+                if (u.isPro) active++; else pending++;
+
+                const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' }) : '-';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:700;">${u.username}</td>
+                    <td style="font-family:var(--font-mono); color:var(--text-muted);">${u.password || '---'}</td>
+                    <td style="font-family:var(--font-mono); color:var(--accent-blue);">${u.shopierNo || 'Girilmedi'}</td>
+                    <td style="font-size:0.78rem; color:var(--text-muted);">${dateStr}</td>
+                    <td>
+                        <span class="badge-status ${u.isPro ? 'badge-active' : 'badge-pending'}">
+                            ${u.isPro ? 'PRO AKTİF' : 'ONAY BEKLİYOR'}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        ${u.isPro ? `
+                            <button onclick="setUserProStatus('${u.username}', false)" class="btn-action-revoke">Yetkiyi Kaldır</button>
+                        ` : `
+                            <button onclick="setUserProStatus('${u.username}', true)" class="btn-action-activate">PRO Onayla</button>
+                        `}
+                        <button onclick="deleteUserRecord('${u.username}')" class="btn-action-delete" title="Üyeyi Sil"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('adm-stat-total').innerText = total;
+            document.getElementById('adm-stat-active').innerText = active;
+            document.getElementById('adm-stat-pending').innerText = pending;
+        });
+    }
+
+    function setUserProStatus(username, status) {
+        db.ref('mas_users/' + username + '/isPro').set(status)
+            .then(() => alert(`✅ ${username} adlı kullanıcının PRO durumu güncellendi: ${status ? 'AKTİF' : 'PASİF'}`))
+            .catch(err => alert("Hata: " + err.message));
+    }
+
+    function deleteUserRecord(username) {
+        if (confirm(`'${username}' adlı üyeyi tamamen silmek istediğinize emin misiniz?`)) {
+            db.ref('mas_users/' + username).remove();
+        }
+    }
+
+    // --- KULLANICI İŞLEMLERİ ---
     async function handleRegister() {
         const u = document.getElementById('reg-user').value.trim().toLowerCase();
         const p = document.getElementById('reg-pass').value.trim();
@@ -559,7 +811,6 @@ const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
             return;
         }
 
-        // Yeni kayıt: Varsayılan olarak isPro = false (Ödeme onayından sonra true yapılacak)
         await userRef.set({
             username: u,
             password: p,
@@ -568,7 +819,7 @@ const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
             createdAt: Date.now()
         });
 
-        alert("Başvurunuz alındı! Shopier ödemeniz kontrol edilip hesabınız onaylandıktan sonra terminale giriş yapabilirsiniz.");
+        alert("Başvurunuz alındı! Shopier siparişiniz onaylandıktan sonra terminale giriş yapabilirsiniz.");
         closeModal('modal-register');
         openModal('modal-login');
     }
@@ -588,11 +839,10 @@ const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
         }
 
         if (!userData.isPro) {
-            alert("⚠️ PRO Aboneliğiniz henüz onaylanmadı!\nShopier siparişiniz kontrol ediliyor. Lütfen kısa süre sonra tekrar deneyin veya destek ile iletişime geçin.");
+            alert("⚠️ PRO Aboneliğiniz henüz onaylanmadı!\nShopier siparişiniz kontrol ediliyor. Lütfen kısa süre sonra tekrar deneyin.");
             return;
         }
 
-        // Başarılı Giriş
         CurrentUser = userData;
         localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
         closeModal('modal-login');
@@ -600,8 +850,7 @@ const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
     }
 
     function enterTerminal() {
-        document.getElementById('view-landing').classList.add('hidden');
-        document.getElementById('view-terminal').classList.remove('hidden');
+        switchView('terminal');
         document.getElementById('user-display').innerText = CurrentUser.username.toUpperCase();
         loadTerminalMatches();
     }
@@ -612,13 +861,11 @@ const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
         window.location.reload();
     }
 
-    // --- 3. MAÇLARI YÜKLEME (SADECE GİRİŞ YAPILDIĞINDA ÇALIŞIR) ---
+    // --- MAÇLAR VE TERMİNAL ---
     function loadTerminalMatches() {
         db.ref("analyzed_matches").on("value", (snapshot) => {
             const data = snapshot.val();
-            if (data && data.length > 0) {
-                renderCards(data);
-            }
+            if (data && data.length > 0) renderCards(data);
         });
     }
 
@@ -702,24 +949,17 @@ const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
         });
     }
 
-    // Başlangıç Oturumu Kontrolü
     window.addEventListener('DOMContentLoaded', () => {
         const session = localStorage.getItem('mas_pro_session');
         if (session) {
             try {
                 CurrentUser = JSON.parse(session);
-                // Canlı yetki kontrolü
                 db.ref('mas_users/' + CurrentUser.username).once('value', snap => {
                     const u = snap.val();
-                    if (u && u.isPro) {
-                        enterTerminal();
-                    } else {
-                        handleLogout();
-                    }
+                    if (u && u.isPro) enterTerminal();
+                    else handleLogout();
                 });
-            } catch(e) {
-                handleLogout();
-            }
+            } catch(e) { handleLogout(); }
         }
     });
 </script>
