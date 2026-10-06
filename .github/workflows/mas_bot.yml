@@ -1,0 +1,29 @@
+name: MAS 30-Dakika Otomatik Analiz Motoru
+
+on:
+  schedule:
+    # Her 30 dakikada bir otomatik çalışır
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-analytics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Proje Kodlarını Çek
+        uses: actions/checkout@v3
+
+      - name: Python Ortamını Kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Gerekli Kütüphaneleri Yükle
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: MAS Analiz Motorunu Çalıştır ve Firebase'e Bas
+        run: |
+          python main.py
