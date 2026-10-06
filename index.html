@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAS // Mine Analiz System - Olasılık ve Spor Analitiği Terminali</title>
+    <title>MAS // Mine Analiz System - Kapalı Devre Olasılık Terminali</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
         :root {
             --bg-base: #06090e;
             --bg-surface: #0c121d;
-            --bg-card: rgba(16, 24, 38, 0.78);
+            --bg-card: rgba(16, 24, 38, 0.85);
             --border-subtle: rgba(255, 255, 255, 0.08);
             --border-hover: rgba(0, 245, 155, 0.35);
             --text-main: #f1f5f9;
@@ -26,30 +26,150 @@
             --font-mono: 'JetBrains Mono', monospace;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             background-color: var(--bg-base);
             color: var(--text-main);
             font-family: var(--font-sans);
             min-height: 100vh;
-            padding: 2rem 1.5rem;
             background-image: 
                 radial-gradient(circle at 10% 20%, rgba(0, 245, 155, 0.04) 0%, transparent 45%),
                 radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.04) 0%, transparent 45%);
             background-attachment: fixed;
         }
 
-        .container {
-            max-width: 1240px;
-            margin: 0 auto;
+        .container { max-width: 1240px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .hidden { display: none !important; }
+
+        /* ================= VİTRİN / LANDING SCREEN ================= */
+        .landing-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 4rem;
         }
 
-        /* HEADER */
+        .hero {
+            text-align: center;
+            max-width: 840px;
+            margin: 0 auto 5rem auto;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 245, 155, 0.08);
+            border: 1px solid rgba(0, 245, 155, 0.25);
+            color: var(--accent-green);
+            padding: 0.45rem 1rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-title {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.25rem;
+        }
+
+        .hero-title span {
+            background: linear-gradient(135deg, #00f59b, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-desc {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
+        }
+
+        .hero-cta {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00f59b, #00a86b);
+            color: #06090e;
+            font-weight: 800;
+            padding: 0.9rem 1.8rem;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.92rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 245, 155, 0.35);
+        }
+
+        .btn-secondary {
+            background: var(--bg-surface);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            font-weight: 700;
+            padding: 0.9rem 1.8rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.92rem;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 5rem;
+        }
+
+        .feature-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 1.8rem;
+        }
+
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(0, 245, 155, 0.1);
+            border: 1px solid rgba(0, 245, 155, 0.25);
+            color: var(--accent-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .feature-box h3 { font-size: 1.15rem; margin-bottom: 0.5rem; }
+        .feature-box p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+
+        /* ================= PRO TERMİNAL EKRANI ================= */
         header {
             display: flex;
             justify-content: space-between;
@@ -61,12 +181,7 @@
             gap: 1.25rem;
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 0.9rem;
-        }
-
+        .brand { display: flex; align-items: center; gap: 0.9rem; }
         .brand-badge {
             background: linear-gradient(135deg, #00f59b, #00a86b);
             color: #06090e;
@@ -75,31 +190,15 @@
             padding: 0.4rem 0.75rem;
             border-radius: 8px;
             letter-spacing: 0.06em;
-            box-shadow: 0 0 15px rgba(0, 245, 155, 0.25);
         }
 
-        .brand-title {
-            font-size: 1.45rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-        }
+        .brand-title { font-size: 1.45rem; font-weight: 800; }
+        .brand-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
 
-        .brand-subtitle {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 3px;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
+        .header-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
         .btn-live-stream {
             background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: #ffffff;
+            color: #fff;
             border: none;
             padding: 0.65rem 1.2rem;
             border-radius: 12px;
@@ -109,26 +208,17 @@
             align-items: center;
             gap: 0.5rem;
             cursor: pointer;
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
-            transition: all 0.2s ease;
         }
 
-        .btn-live-stream:hover {
-            transform: scale(1.03);
-            box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
-        }
-
-        .btn-live-stream span.live-dot {
-            width: 8px;
-            height: 8px;
-            background: #ffffff;
-            border-radius: 50%;
-            animation: pulseDot 1.2s infinite;
-        }
-
-        @keyframes pulseDot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.3); }
+        .btn-logout {
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.25);
+            color: var(--accent-red);
+            padding: 0.65rem 1rem;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
         }
 
         .stats-bar {
@@ -142,16 +232,6 @@
             font-size: 0.82rem;
         }
 
-        .stat-item span {
-            color: var(--text-muted);
-            margin-right: 0.4rem;
-        }
-
-        .stat-item strong {
-            color: var(--accent-green);
-        }
-
-        /* CONTROLS */
         .controls {
             display: flex;
             justify-content: space-between;
@@ -179,19 +259,10 @@
             font-weight: 600;
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
-        .filter-btn.active, .filter-btn:hover {
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-main);
-        }
+        .filter-btn.active { color: var(--accent-green); background: rgba(255, 255, 255, 0.06); }
 
-        .filter-btn.active {
-            color: var(--accent-green);
-        }
-
-        /* GRID & CARDS */
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
@@ -200,28 +271,9 @@
 
         .card {
             background: var(--bg-card);
-            backdrop-filter: blur(14px);
             border: 1px solid var(--border-subtle);
             border-radius: 16px;
             padding: 1.5rem;
-            position: relative;
-            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            border-color: var(--border-hover);
-            box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1.25rem;
         }
 
         .entropy-tag {
@@ -229,32 +281,11 @@
             font-size: 0.72rem;
             padding: 0.3rem 0.65rem;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-muted);
-        }
-
-        .entropy-tag.safe {
-            border-color: rgba(0, 245, 155, 0.3);
+            border: 1px solid rgba(0, 245, 155, 0.3);
             color: var(--accent-green);
             background: var(--accent-green-glow);
         }
 
-        .match-teams {
-            font-size: 1.15rem;
-            font-weight: 700;
-            line-height: 1.35;
-            letter-spacing: -0.01em;
-            margin-bottom: 0.3rem;
-        }
-
-        .match-meta {
-            font-size: 0.78rem;
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-        }
-
-        /* METRICS */
         .metrics-box {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -263,72 +294,14 @@
             margin: 1rem 0;
         }
 
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            margin-bottom: 0.45rem;
-        }
-
-        .prob-bars {
-            display: flex;
-            height: 7px;
-            border-radius: 4px;
-            overflow: hidden;
-            background: #1e293b;
-            margin: 0.8rem 0;
-        }
-
+        .metric-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.45rem; }
+        .prob-bars { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #1e293b; margin: 0.8rem 0; }
         .prob-bar.home { background: var(--accent-blue); }
         .prob-bar.draw { background: #64748b; }
         .prob-bar.away { background: var(--accent-amber); }
+        .prob-legend { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
 
-        .prob-legend {
-            display: flex;
-            justify-content: space-between;
-            font-family: var(--font-mono);
-            font-size: 0.72rem;
-            color: var(--text-muted);
-        }
-
-        .scores-box {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-        }
-
-        .score-chip {
-            background: rgba(255, 255, 255, 0.04);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            color: #94a3b8;
-        }
-
-        .score-chip strong { color: var(--text-main); }
-
-        /* VALUE SCENARIOS */
-        .value-section {
-            margin-top: 1rem;
-            border-top: 1px dashed var(--border-subtle);
-            padding-top: 1rem;
-        }
-
-        .value-badge-title {
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--accent-green);
-            margin-bottom: 0.65rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
+        .value-section { margin-top: 1rem; border-top: 1px dashed var(--border-subtle); padding-top: 1rem; }
         .value-item {
             display: flex;
             justify-content: space-between;
@@ -340,94 +313,126 @@
             margin-bottom: 0.45rem;
         }
 
-        .value-market { font-weight: 700; font-size: 0.88rem; }
-        .value-stats { font-family: var(--font-mono); font-size: 0.78rem; text-align: right; }
-        .ev-tag { color: var(--accent-green); font-weight: 700; margin-left: 0.5rem; }
-
-        /* MODAL (CANLI MAÇ YAYINI) */
-        .stream-modal {
+        /* ================= MODALLER (GİRİŞ / KAYIT / TV) ================= */
+        .modal {
             display: none;
             position: fixed;
             inset: 0;
             background: rgba(4, 7, 12, 0.88);
             backdrop-filter: blur(16px);
-            z-index: 1000;
+            z-index: 2000;
             align-items: center;
             justify-content: center;
             padding: 1.5rem;
         }
 
-        .stream-modal.active { display: flex; }
-
-        .stream-content {
-            background: #0b111a;
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
             border-radius: 20px;
             width: 100%;
-            max-width: 900px;
-            overflow: hidden;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
-        }
-
-        .stream-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .stream-close {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 1.4rem;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .stream-close:hover { color: #ffffff; }
-
-        .player-viewport {
+            max-width: 440px;
+            padding: 2rem;
             position: relative;
-            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
-            height: 0;
-            background: #000000;
         }
 
-        .player-viewport iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; }
+        .form-control {
             width: 100%;
-            height: 100%;
-            border: none;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-subtle);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
         }
+        .form-control:focus { border-color: var(--accent-green); }
+
+        .stream-viewport { position: relative; padding-bottom: 56.25%; height: 0; background: #000; }
+        .stream-viewport iframe { position: absolute; top:0; left:0; width:100%; height:100%; border:none; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<!-- ================= 1. GİRİŞ EKRANI / VİTRİN (LANDING) ================= -->
+<div id="view-landing" class="container">
+    <nav class="landing-nav">
+        <div class="brand">
+            <div class="brand-badge">MAS PRO</div>
+            <div>
+                <h1 class="brand-title">MINE ANALİZ SYSTEM</h1>
+                <p class="brand-subtitle">Kapalı Devre Spor Analitiği ve Matematik Terminali</p>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="btn-secondary" onclick="openModal('modal-login')">Giriş Yap</button>
+            <button class="btn-primary" onclick="openModal('modal-register')">PRO Kayıt Ol</button>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="hero-badge"><i class="fa-solid fa-lock"></i> SADECE PRO ABONELERE ÖZEL TERMİNAL</div>
+        <h2 class="hero-title">Matematiksel Üstünlükle <span>Bültenden Değer Çıkarın</span></h2>
+        <p class="hero-desc">
+            MAS (Mine Analiz System); klasik tahminler yerine <strong>Dixon-Coles matris modellemesi</strong>, 
+            <strong>Shannon Entropi filtresi</strong> ve oran manipülasyonlarını tespit eden <strong>+EV (Pozitif Beklenen Değer)</strong> motoruyla çalışır.
+        </p>
+        <div class="hero-cta">
+            <a id="shopier-btn-hero" href="#" target="_blank" class="btn-primary" style="font-size: 1rem; padding: 1rem 2.2rem;">
+                <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
+            </a>
+            <button class="btn-secondary" onclick="openModal('modal-login')">Mevcut Üye Girişi</button>
+        </div>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-box">
+            <div class="feature-icon"><i class="fa-solid fa-calculator"></i></div>
+            <h3>Dixon-Coles Modellemesi</h3>
+            <p>0-0 ve kısır skorların frekansını düzelten saf bilimsel algoritma ile gerçek gol ve sonuç olasılıkları.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon"><i class="fa-solid fa-filter"></i></div>
+            <h3>Shannon Entropisi Kaos Filtresi</h3>
+            <p>Öngörülemez, kaotik ve riskli karşılaşmaları otomatik olarak eler; yalnızca stabil maçları terminale taşır.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+            <h3>Pozitif Beklenen Değer (+EV)</h3>
+            <p>Büroların açtığı oranlardaki matematiksel açıkları ve piyasa hatalarını anında ekrana döker.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon"><i class="fa-solid fa-tv"></i></div>
+            <h3>Kesintisiz Canlı Maç TV</h3>
+            <p>PRO abonelere özel entegre maç yayınları ve anlık oran güncellemeleri.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 2. TERMİNAL EKRANI (SADECE ONAYLI PRO ÜYELER) ================= -->
+<div id="view-terminal" class="container hidden">
     <header>
         <div class="brand">
             <div class="brand-badge">MAS PRO</div>
             <div>
                 <h1 class="brand-title">MINE ANALİZ SYSTEM</h1>
-                <p class="brand-subtitle">Dixon-Coles Tabanlı Olasılık Simülasyonu ve +EV Terminali</p>
+                <p class="brand-subtitle">Aktif Kullanıcı: <strong id="user-display" style="color: var(--accent-green);">---</strong></p>
             </div>
         </div>
 
         <div class="header-actions">
-            <!-- CANLI MAÇ TV BUTONU -->
-            <button class="btn-live-stream" onclick="openStreamModal()">
-                <span class="live-dot"></span>
+            <button class="btn-live-stream" onclick="openModal('modal-stream')">
                 <i class="fa-solid fa-tv"></i> CANLI MAÇ TV
             </button>
-
             <div class="stats-bar">
-                <div class="stat-item"><span>ÇEKİRDEK:</span> <strong>MAS v1.0</strong></div>
-                <div class="stat-item"><span>AKTİF EV:</span> <strong id="stat-ev-count">Yükleniyor...</strong></div>
+                <div><span>ÇEKİRDEK:</span> <strong>MAS v1.0</strong></div>
+                <div><span>AKTİF EV:</span> <strong id="stat-ev-count">Yükleniyor...</strong></div>
             </div>
+            <button class="btn-logout" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i> Çıkış</button>
         </div>
     </header>
 
@@ -437,7 +442,7 @@
             <button class="filter-btn" onclick="filterCards('ev', event)">Sadece +EV Fırsatları</button>
         </div>
         <div style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
-            Terminal Durumu: <span id="sync-status" style="color: var(--accent-green);">Bağlantı Kuruluyor...</span>
+            Terminal Durumu: <span style="color: var(--accent-green);">Canlı Senkronize</span>
         </div>
     </div>
 
@@ -446,28 +451,69 @@
     </div>
 </div>
 
-<!-- CANLI YAYIN MODAL PENCERESİ -->
-<div class="stream-modal" id="streamModal" onclick="closeStreamModalOnBackdrop(event)">
-    <div class="stream-content" onclick="event.stopPropagation()">
-        <div class="stream-header">
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-                <span style="color: var(--accent-red); font-size: 0.8rem;"><i class="fa-solid fa-circle animate-pulse"></i> CANLI YAYIN</span>
-                <strong style="font-size: 0.95rem; letter-spacing: -0.01em;">MAS Canlı Maç Terminali</strong>
-            </div>
-            <button class="stream-close" onclick="closeStreamModal()">&times;</button>
+<!-- ================= MODALLER ================= -->
+
+<!-- GİRİŞ MODAL -->
+<div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem;">PRO Giriş</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Terminal erişimi için bilgilerinizi giriniz.</p>
+        
+        <div class="form-group">
+            <label>Kullanıcı Adı</label>
+            <input type="text" id="login-user" class="form-control" placeholder="Kullanıcı adınız">
+        </div>
+        <div class="form-group">
+            <label>Şifre</label>
+            <input type="password" id="login-pass" class="form-control" placeholder="••••••••">
         </div>
 
-        <div class="player-viewport">
-            <!-- Varsayılan yayın iframe alanı (Kendi yayın linkinizi buraya koyabilirsiniz) -->
+        <button onclick="handleLogin()" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">Terminale Bağlan</button>
+        <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+            Hesabınız yok mu? <a href="#" onclick="openModal('modal-register'); closeModal('modal-login');" style="color: var(--accent-green);">PRO Kayıt Ol</a>
+        </div>
+    </div>
+</div>
+
+<!-- KAYIT MODAL -->
+<div id="modal-register" class="modal" onclick="closeOnBackdrop(event, 'modal-register')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem;">PRO Kayıt & Aktivasyon</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Ödemenizi Shopier üzerinden yapıp bilgilerinizi girin.</p>
+        
+        <div class="form-group">
+            <label>Kullanıcı Adı</label>
+            <input type="text" id="reg-user" class="form-control" placeholder="kullaniciadi">
+        </div>
+        <div class="form-group">
+            <label>Şifre</label>
+            <input type="password" id="reg-pass" class="form-control" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+            <label>Shopier Sipariş Numarası / Telefon</label>
+            <input type="text" id="reg-shopier" class="form-control" placeholder="Örn: 948210394 veya 0532...">
+        </div>
+
+        <button onclick="handleRegister()" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">Aktivasyon Başvurusu Yap</button>
+        
+        <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem;">
+            <a id="shopier-link-register" href="#" target="_blank" style="color: var(--accent-green); font-weight: 700;">Henüz satın almadınız mı? Shopier'e Git &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<!-- CANLI YAYIN MODAL -->
+<div id="modal-stream" class="modal" onclick="closeOnBackdrop(event, 'modal-stream')">
+    <div class="modal-content" style="max-width: 900px; padding: 1.5rem;" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="color: var(--accent-red); font-size: 0.8rem;"><i class="fa-solid fa-circle animate-pulse"></i> CANLI</span>
+                <strong>MAS Pro TV</strong>
+            </div>
+            <button onclick="closeModal('modal-stream')" style="background:transparent; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="stream-viewport">
             <iframe id="liveFrame" src="https://www.youtube.com/embed/live_stream?channel=UC4R8DWoMoI7CAwX8_BQQ5vg" allowfullscreen allow="autoplay"></iframe>
-        </div>
-
-        <div style="padding: 1rem 1.5rem; background: #0c121d; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-            <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">Yayın Kaynağı: Kesintisiz HD Feed</span>
-            <div style="display: flex; gap: 0.5rem;">
-                <button onclick="changeChannel('https://www.youtube.com/embed/live_stream?channel=UC4R8DWoMoI7CAwX8_BQQ5vg')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer;">Kanal 1</button>
-                <button onclick="changeChannel('about:blank')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer;">Kanal 2</button>
-            </div>
         </div>
     </div>
 </div>
@@ -477,98 +523,108 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <script>
-    // State.js'ten gelen mevcut Firebase ayarın otomatik bağlandı
+    // Shopier doğrudan ürün ödeme bağlantısı
+const SHOPIER_STORE_URL = "https://www.shopier.com/VAKTINDEYAZILIM/51584594";
+
+    // Firebase Ayarı (Mevcut MineOra Veritabanı)
     const firebaseConfig = {
         databaseURL: "https://mineora-web-default-rtdb.firebaseio.com"
     };
 
-    const defaultData = [
-        {
-            "match_id": "50142",
-            "date": "2026-10-07 20:45",
-            "match": "Manchester City vs Arsenal",
-            "expected_goals": { "home": 2.15, "away": 1.10 },
-            "probabilities": { "home_win": 54.2, "draw": 23.5, "away_win": 22.3, "over_25": 62.4, "under_25": 37.6, "btts_yes": 58.0 },
-            "top_predicted_scores": [
-                { "score": "2-1", "prob": "%11.8" },
-                { "score": "2-0", "prob": "%10.4" },
-                { "score": "1-1", "prob": "%9.6" }
-            ],
-            "entropy": 1.41,
-            "status": "ONAYLANDI (Stabil)",
-            "value_scenarios": [
-                { "market": "2.5 ÜST", "model_prob": "%62.4", "bulten_orani": 1.70, "expected_value": "+%6.1" },
-                { "market": "MS 1", "model_prob": "%54.2", "bulten_orani": 1.95, "expected_value": "+%5.7" }
-            ]
-        },
-        {
-            "match_id": "50143",
-            "date": "2026-10-07 21:00",
-            "match": "Galatasaray vs Fenerbahçe",
-            "expected_goals": { "home": 1.75, "away": 1.55 },
-            "probabilities": { "home_win": 39.5, "draw": 27.8, "away_win": 32.7, "over_25": 56.1, "under_25": 43.9, "btts_yes": 61.2 },
-            "top_predicted_scores": [
-                { "score": "1-1", "prob": "%12.2" },
-                { "score": "2-1", "prob": "%9.8" },
-                { "score": "1-2", "prob": "%8.9" }
-            ],
-            "entropy": 1.48,
-            "status": "ONAYLANDI (Stabil)",
-            "value_scenarios": [
-                { "market": "MS 2", "model_prob": "%32.7", "bulten_orani": 3.40, "expected_value": "+%11.2" }
-            ]
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Shopier Linklerini bağla
+    document.getElementById('shopier-btn-hero').href = SHOPIER_STORE_URL;
+    document.getElementById('shopier-link-register').href = SHOPIER_STORE_URL;
+
+    // --- 2. KULLANICI YÖNETİMİ & KORUMA DUVARI ---
+    let CurrentUser = null;
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
+
+    async function handleRegister() {
+        const u = document.getElementById('reg-user').value.trim().toLowerCase();
+        const p = document.getElementById('reg-pass').value.trim();
+        const shopierNo = document.getElementById('reg-shopier').value.trim();
+
+        if (!u || !p) { alert("Lütfen kullanıcı adı ve şifre girin!"); return; }
+
+        const userRef = db.ref('mas_users/' + u);
+        const snapshot = await userRef.once('value');
+        if (snapshot.exists()) {
+            alert("Bu kullanıcı adı zaten alınmış!");
+            return;
         }
-    ];
 
-    let currentMatches = [];
+        // Yeni kayıt: Varsayılan olarak isPro = false (Ödeme onayından sonra true yapılacak)
+        await userRef.set({
+            username: u,
+            password: p,
+            shopierNo: shopierNo,
+            isPro: false,
+            createdAt: Date.now()
+        });
 
-    function initApp() {
-        const statusElement = document.getElementById('sync-status');
-
-        try {
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.database();
-
-            statusElement.textContent = "Canlı Bulut Senkronu Aktif";
-            statusElement.style.color = "var(--accent-green)";
-
-            db.ref("analyzed_matches").on("value", (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.length > 0) {
-                    currentMatches = data;
-                    renderCards(currentMatches);
-                } else {
-                    loadLocalOrFallback();
-                }
-            }, (error) => {
-                loadLocalOrFallback();
-            });
-        } catch (err) {
-            loadLocalOrFallback();
-        }
+        alert("Başvurunuz alındı! Shopier ödemeniz kontrol edilip hesabınız onaylandıktan sonra terminale giriş yapabilirsiniz.");
+        closeModal('modal-register');
+        openModal('modal-login');
     }
 
-    async function loadLocalOrFallback() {
-        try {
-            const res = await fetch('analiz_raporu.json');
-            if (res.ok) {
-                const data = await res.json();
-                if (data && data.length > 0) {
-                    currentMatches = data;
-                    renderCards(currentMatches);
-                    return;
-                }
+    async function handleLogin() {
+        const u = document.getElementById('login-user').value.trim().toLowerCase();
+        const p = document.getElementById('login-pass').value.trim();
+
+        if (!u || !p) { alert("Lütfen bilgilerinizi eksiksiz girin!"); return; }
+
+        const snapshot = await db.ref('mas_users/' + u).once('value');
+        const userData = snapshot.val();
+
+        if (!userData || userData.password !== p) {
+            alert("Kullanıcı adı veya şifre hatalı!");
+            return;
+        }
+
+        if (!userData.isPro) {
+            alert("⚠️ PRO Aboneliğiniz henüz onaylanmadı!\nShopier siparişiniz kontrol ediliyor. Lütfen kısa süre sonra tekrar deneyin veya destek ile iletişime geçin.");
+            return;
+        }
+
+        // Başarılı Giriş
+        CurrentUser = userData;
+        localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
+        closeModal('modal-login');
+        enterTerminal();
+    }
+
+    function enterTerminal() {
+        document.getElementById('view-landing').classList.add('hidden');
+        document.getElementById('view-terminal').classList.remove('hidden');
+        document.getElementById('user-display').innerText = CurrentUser.username.toUpperCase();
+        loadTerminalMatches();
+    }
+
+    function handleLogout() {
+        localStorage.removeItem('mas_pro_session');
+        CurrentUser = null;
+        window.location.reload();
+    }
+
+    // --- 3. MAÇLARI YÜKLEME (SADECE GİRİŞ YAPILDIĞINDA ÇALIŞIR) ---
+    function loadTerminalMatches() {
+        db.ref("analyzed_matches").on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.length > 0) {
+                renderCards(data);
             }
-        } catch (e) {}
-        
-        currentMatches = defaultData;
-        renderCards(currentMatches);
+        });
     }
 
     function renderCards(matches) {
         const grid = document.getElementById('matches-grid');
         grid.innerHTML = '';
-
         let totalEVCount = 0;
 
         matches.forEach(m => {
@@ -583,15 +639,15 @@
             if (hasEV) {
                 valuesHtml = `
                     <div class="value-section">
-                        <div class="value-badge-title">
-                            <span>●</span> Pozitif Beklenen Değer (+EV)
+                        <div style="color: var(--accent-green); font-size: 0.72rem; font-weight: 700; margin-bottom: 0.6rem;">
+                            ● POZİTİF BEKLENEN DEĞER (+EV)
                         </div>
                         ${m.value_scenarios.map(v => `
                             <div class="value-item">
-                                <span class="value-market">${v.market}</span>
-                                <div class="value-stats">
+                                <span style="font-weight: 700; font-size: 0.88rem;">${v.market}</span>
+                                <div style="font-family: var(--font-mono); font-size: 0.78rem;">
                                     <span>Oran: ${v.bulten_orani}</span>
-                                    <span class="ev-tag">${v.expected_value}</span>
+                                    <span style="color: var(--accent-green); font-weight:700; margin-left:0.5rem;">${v.expected_value}</span>
                                 </div>
                             </div>
                         `).join('')}
@@ -599,57 +655,37 @@
                 `;
             }
 
-            let topScoresHtml = '';
-            if (m.top_predicted_scores && m.top_predicted_scores.length > 0) {
-                topScoresHtml = `
-                    <div class="scores-box">
-                        <span style="color: var(--text-muted);">En Olası Skorlar:</span>
-                        ${m.top_predicted_scores.map(s => `
-                            <span class="score-chip"><strong>${s.score}</strong> (${s.prob})</span>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
             card.innerHTML = `
-                <div>
-                    <div class="card-header">
-                        <div>
-                            <h2 class="match-teams">${m.match}</h2>
-                            <span class="match-meta">ID: ${m.match_id || '---'} • ${m.date || 'Tarih Belirtilmedi'}</span>
-                        </div>
-                        <span class="entropy-tag safe">Entropi: ${m.entropy}</span>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+                    <div>
+                        <h2 style="font-size:1.15rem; font-weight:700;">${m.match}</h2>
+                        <span style="font-size:0.78rem; color:var(--text-muted); font-family:var(--font-mono);">ID: ${m.match_id || '---'} • ${m.date || ''}</span>
                     </div>
-
-                    <div class="metrics-box">
-                        <div class="metric-row">
-                            <span style="color: var(--text-muted);">Dinamik Beklenti (xG)</span>
-                            <span style="font-family: var(--font-mono);">${m.expected_goals ? `${m.expected_goals.home} -${m.expected_goals.away}` : '-'}</span>
-                        </div>
-                        <div class="metric-row">
-                            <span style="color: var(--text-muted);">2.5 Üst Olasılığı</span>
-                            <span style="font-family: var(--font-mono); color: var(--accent-blue);">%${m.probabilities ? m.probabilities.over_25 : '-'}</span>
-                        </div>
-
-                        <div class="prob-bars">
-                            <div class="prob-bar home" style="width: ${m.probabilities ? m.probabilities.home_win : 33}%"></div>
-                            <div class="prob-bar draw" style="width: ${m.probabilities ? m.probabilities.draw : 33}%"></div>
-                            <div class="prob-bar away" style="width: ${m.probabilities ? m.probabilities.away_win : 33}%"></div>
-                        </div>
-
-                        <div class="prob-legend">
-                            <span>MS 1: %${m.probabilities ? m.probabilities.home_win : '-'}</span>
-                            <span>X: %${m.probabilities ? m.probabilities.draw : '-'}</span>
-                            <span>MS 2: %${m.probabilities ? m.probabilities.away_win : '-'}</span>
-                        </div>
-
-                        ${topScoresHtml}
-                    </div>
+                    <span class="entropy-tag">Entropi: ${m.entropy}</span>
                 </div>
 
+                <div class="metrics-box">
+                    <div class="metric-row">
+                        <span style="color: var(--text-muted);">xG Beklentisi</span>
+                        <span style="font-family: var(--font-mono);">${m.expected_goals ? `${m.expected_goals.home} -${m.expected_goals.away}` : '-'}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span style="color: var(--text-muted);">2.5 Üst Olasılığı</span>
+                        <span style="font-family: var(--font-mono); color: var(--accent-blue);">%${m.probabilities ? m.probabilities.over_25 : '-'}</span>
+                    </div>
+                    <div class="prob-bars">
+                        <div class="prob-bar home" style="width: ${m.probabilities ? m.probabilities.home_win : 33}%"></div>
+                        <div class="prob-bar draw" style="width: ${m.probabilities ? m.probabilities.draw : 33}%"></div>
+                        <div class="prob-bar away" style="width: ${m.probabilities ? m.probabilities.away_win : 33}%"></div>
+                    </div>
+                    <div class="prob-legend">
+                        <span>MS 1: %${m.probabilities ? m.probabilities.home_win : '-'}</span>
+                        <span>X: %${m.probabilities ? m.probabilities.draw : '-'}</span>
+                        <span>MS 2: %${m.probabilities ? m.probabilities.away_win : '-'}</span>
+                    </div>
+                </div>
                 ${valuesHtml}
             `;
-
             grid.appendChild(card);
         });
 
@@ -659,32 +695,33 @@
     function filterCards(type, e) {
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
         if (e && e.target) e.target.classList.add('active');
-
         const cards = document.querySelectorAll('.card');
         cards.forEach(c => {
-            if (type === 'all') c.style.display = 'flex';
-            else if (type === 'ev') c.style.display = c.getAttribute('data-has-ev') === 'true' ? 'flex' : 'none';
+            if (type === 'all') c.style.display = 'block';
+            else if (type === 'ev') c.style.display = c.getAttribute('data-has-ev') === 'true' ? 'block' : 'none';
         });
     }
 
-    // Modal Fonksiyonları
-    function openStreamModal() {
-        document.getElementById('streamModal').classList.add('active');
-    }
-
-    function closeStreamModal() {
-        document.getElementById('streamModal').classList.remove('active');
-    }
-
-    function closeStreamModalOnBackdrop(e) {
-        if (e.target.id === 'streamModal') closeStreamModal();
-    }
-
-    function changeChannel(url) {
-        document.getElementById('liveFrame').src = url;
-    }
-
-    initApp();
+    // Başlangıç Oturumu Kontrolü
+    window.addEventListener('DOMContentLoaded', () => {
+        const session = localStorage.getItem('mas_pro_session');
+        if (session) {
+            try {
+                CurrentUser = JSON.parse(session);
+                // Canlı yetki kontrolü
+                db.ref('mas_users/' + CurrentUser.username).once('value', snap => {
+                    const u = snap.val();
+                    if (u && u.isPro) {
+                        enterTerminal();
+                    } else {
+                        handleLogout();
+                    }
+                });
+            } catch(e) {
+                handleLogout();
+            }
+        }
+    });
 </script>
 </body>
 </html>
