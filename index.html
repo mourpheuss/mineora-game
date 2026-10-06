@@ -710,13 +710,17 @@
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
 
+    // Ekran Geçişleri (Düzeltildi: Terminale geçince maçları otomatik çeker)
     function switchView(viewName) {
         document.getElementById('view-landing').classList.add('hidden');
         document.getElementById('view-terminal').classList.add('hidden');
         document.getElementById('view-admin').classList.add('hidden');
 
         if (viewName === 'landing') document.getElementById('view-landing').classList.remove('hidden');
-        if (viewName === 'terminal') document.getElementById('view-terminal').classList.remove('hidden');
+        if (viewName === 'terminal') {
+            document.getElementById('view-terminal').classList.remove('hidden');
+            loadTerminalMatches(); // Maçları anında yükler
+        }
         if (viewName === 'admin') document.getElementById('view-admin').classList.remove('hidden');
     }
 
@@ -724,6 +728,8 @@
     function handleAdminLogin() {
         const key = document.getElementById('admin-key-input').value.trim();
         if (key === ADMIN_SECRET_KEY) {
+            CurrentUser = { username: "KURUCU YÖNETİCİ", isPro: true };
+            document.getElementById('user-display').innerText = "KURUCU (ADMIN)";
             closeModal('modal-admin-auth');
             switchView('admin');
             initAdminDashboard();
@@ -851,8 +857,7 @@
 
     function enterTerminal() {
         switchView('terminal');
-        document.getElementById('user-display').innerText = CurrentUser.username.toUpperCase();
-        loadTerminalMatches();
+        document.getElementById('user-display').innerText = (CurrentUser.username || 'ÜYE').toUpperCase();
     }
 
     function handleLogout() {
@@ -861,11 +866,27 @@
         window.location.reload();
     }
 
-    // --- MAÇLAR VE TERMİNAL ---
+    // --- MAÇLARI YÜKLEME (Dizi ve Nesne desteği eklendi) ---
     function loadTerminalMatches() {
+        const grid = document.getElementById('matches-grid');
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--accent-green);"></i><p style="margin-top:0.75rem;">Canlı maç analizleri Firebase\'den çekiliyor...</p></div>';
+
         db.ref("analyzed_matches").on("value", (snapshot) => {
-            const data = snapshot.val();
-            if (data && data.length > 0) renderCards(data);
+            const raw = snapshot.val();
+            if (!raw) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);">Henüz analiz edilmiş maç verisi bulunamadı.</div>';
+                return;
+            }
+
+            // Veri hem Array hem Object gelse sorunsuz listeye çevirir
+            const matches = Array.isArray(raw) ? raw : Object.values(raw);
+            if (matches.length > 0) {
+                renderCards(matches);
+            } else {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);">Bültende aktif maç bulunmuyor.</div>';
+            }
+        }, (error) => {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--accent-red);">Bağlantı hatası: ${error.message}</div>`;
         });
     }
 
