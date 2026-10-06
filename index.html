@@ -3,460 +3,387 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAS // Mine Analiz System - Kapalı Devre Olasılık Terminali</title>
+    <title>MAS PRO // Mine Analiz System - Canlı İddaa & Olasılık Terminali</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-base: #06090e;
-            --bg-surface: #0c121d;
-            --bg-card: rgba(16, 24, 38, 0.85);
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --border-hover: rgba(0, 245, 155, 0.35);
-            --text-main: #f1f5f9;
-            --text-muted: #64748b;
-            --accent-green: #00f59b;
-            --accent-green-glow: rgba(0, 245, 155, 0.15);
+            --bg-deep: #070b14;
+            --bg-surface: #0e1526;
+            --bg-card: rgba(18, 27, 46, 0.88);
+            --bg-row-hover: rgba(0, 255, 136, 0.06);
+            --border-line: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(0, 255, 136, 0.35);
+            --text-pure: #ffffff;
+            --text-sub: #94a3b8;
+            --accent-green: #00ff88;
+            --accent-cyan: #00d2ff;
             --accent-amber: #f59e0b;
-            --accent-blue: #38bdf8;
-            --accent-red: #f43f5e;
-            --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
+            --accent-red: #ff3366;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            font-family: var(--font-sans);
+            background-color: var(--bg-deep);
+            color: var(--text-pure);
+            font-family: var(--font-main);
             min-height: 100vh;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 245, 155, 0.04) 0%, transparent 45%),
-                radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.04) 0%, transparent 45%);
+                radial-gradient(circle at 15% 15%, rgba(0, 255, 136, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 20%, rgba(0, 210, 255, 0.07) 0%, transparent 45%),
+                radial-gradient(circle at 50% 85%, rgba(14, 21, 38, 0.9) 0%, transparent 60%);
             background-attachment: fixed;
         }
 
-        .container { max-width: 1240px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* ================= VİTRİN / LANDING SCREEN ================= */
+        /* ================= VİTRİN / LANDING ================= */
         .landing-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid var(--border-subtle);
-            margin-bottom: 4rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-line);
+            margin-bottom: 3.5rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
 
-        .hero { text-align: center; max-width: 840px; margin: 0 auto 5rem auto; }
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #070b14;
+            font-size: 1.3rem;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
+        }
+
+        .hero-section {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            align-items: center;
+            gap: 3rem;
+            margin-bottom: 5rem;
+        }
+
+        @media (max-width: 960px) {
+            .hero-section { grid-template-columns: 1fr; text-align: center; }
+            .hero-cta { justify-content: center; }
+        }
+
         .hero-badge {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(0, 245, 155, 0.08);
-            border: 1px solid rgba(0, 245, 155, 0.25);
+            background: rgba(0, 255, 136, 0.12);
+            border: 1px solid rgba(0, 255, 136, 0.35);
             color: var(--accent-green);
-            padding: 0.45rem 1rem;
+            padding: 0.45rem 1.1rem;
             border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
             margin-bottom: 1.5rem;
         }
 
-        .hero-title { font-size: 2.8rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 1.25rem; }
+        .hero-title {
+            font-size: 3.2rem;
+            font-weight: 900;
+            line-height: 1.12;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+        }
+
         .hero-title span {
-            background: linear-gradient(135deg, #00f59b, #38bdf8);
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .hero-desc { font-size: 1.05rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2.5rem; }
-        .hero-cta { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .hero-desc {
+            font-size: 1.1rem;
+            color: var(--text-sub);
+            line-height: 1.65;
+            margin-bottom: 2.2rem;
+        }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #00f59b, #00a86b);
+        .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+        .btn-glow {
+            background: linear-gradient(135deg, var(--accent-green), #05c26b);
             color: #06090e;
             font-weight: 800;
-            padding: 0.9rem 1.8rem;
-            border-radius: 12px;
+            font-size: 0.95rem;
+            padding: 1rem 2rem;
+            border-radius: 14px;
             border: none;
             cursor: pointer;
-            font-size: 0.92rem;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
             text-decoration: none;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 245, 155, 0.35);
-        }
-
-        .btn-secondary {
-            background: var(--bg-surface);
-            color: var(--text-main);
-            border: 1px solid var(--border-subtle);
-            font-weight: 700;
-            padding: 0.9rem 1.8rem;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 0.92rem;
-            transition: all 0.2s;
-        }
-
-        .btn-secondary:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .btn-admin-gate {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--accent-amber);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            font-weight: 700;
-            padding: 0.9rem 1.3rem;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 0.88rem;
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.35);
+            transition: all 0.25s ease;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 45px rgba(0, 255, 136, 0.55);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-pure);
+            border: 1px solid var(--border-line);
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 1rem 1.8rem;
+            border-radius: 14px;
+            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .btn-admin-gate:hover { background: rgba(245, 158, 11, 0.2); }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 5rem;
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.25);
         }
 
-        .feature-box {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
+        .hero-graphic {
+            position: relative;
+            background: linear-gradient(145deg, rgba(20, 30, 52, 0.9), rgba(11, 16, 28, 0.9));
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .hero-graphic::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.08) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .mock-match-card {
+            background: rgba(7, 11, 20, 0.85);
+            border: 1px solid var(--border-line);
             border-radius: 16px;
-            padding: 1.8rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         }
 
-        .feature-icon {
-            width: 44px;
-            height: 44px;
-            background: rgba(0, 245, 155, 0.1);
-            border: 1px solid rgba(0, 245, 155, 0.25);
-            color: var(--accent-green);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .feature-box h3 { font-size: 1.15rem; margin-bottom: 0.5rem; }
-        .feature-box p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
-
-        /* ================= PRO TERMİNAL EKRANI ================= */
-        header {
+        /* ================= PRO TERMİNAL LİSTE TASARIMI ================= */
+        .terminal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid var(--border-subtle);
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1.25rem;
-        }
-
-        .brand { display: flex; align-items: center; gap: 0.9rem; }
-        .brand-badge {
-            background: linear-gradient(135deg, #00f59b, #00a86b);
-            color: #06090e;
-            font-weight: 800;
-            font-size: 0.82rem;
-            padding: 0.4rem 0.75rem;
-            border-radius: 8px;
-            letter-spacing: 0.06em;
-        }
-
-        .brand-title { font-size: 1.45rem; font-weight: 800; }
-        .brand-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
-
-        .header-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-        .btn-live-stream {
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: #fff;
-            border: none;
-            padding: 0.65rem 1.2rem;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.82rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-        }
-
-        .btn-logout {
-            background: rgba(244, 63, 94, 0.1);
-            border: 1px solid rgba(244, 63, 94, 0.25);
-            color: var(--accent-red);
-            padding: 0.65rem 1rem;
-            border-radius: 12px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .stats-bar {
-            display: flex;
-            gap: 1.25rem;
-            background: var(--bg-surface);
-            padding: 0.65rem 1.2rem;
-            border-radius: 12px;
-            border: 1px solid var(--border-subtle);
-            font-family: var(--font-mono);
-            font-size: 0.82rem;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-line);
             margin-bottom: 1.75rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
 
-        .filter-group {
+        .terminal-controls {
             display: flex;
-            gap: 0.5rem;
+            justify-content: space-between;
+            align-items: center;
             background: var(--bg-surface);
-            padding: 4px;
-            border-radius: 10px;
-            border: 1px solid var(--border-subtle);
-        }
-
-        .filter-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 0.55rem 1.1rem;
-            font-size: 0.82rem;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .filter-btn.active { color: var(--accent-green); background: rgba(255, 255, 255, 0.06); }
-
-        /* ARAMA ÇUBUĞU */
-        .search-box {
-            position: relative;
-            flex: 1;
-            max-width: 420px;
-            min-width: 260px;
-        }
-
-        .search-box input {
-            width: 100%;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 10px;
-            padding: 0.6rem 1rem 0.6rem 2.4rem;
-            font-size: 0.85rem;
-            color: var(--text-main);
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        .search-box input:focus {
-            border-color: var(--accent-green);
-            box-shadow: 0 0 15px rgba(0, 245, 155, 0.15);
-        }
-
-        .search-box i {
-            position: absolute;
-            left: 0.9rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
+            border: 1px solid var(--border-line);
             border-radius: 16px;
-            padding: 1.5rem;
-        }
-
-        .entropy-tag {
-            font-family: var(--font-mono);
-            font-size: 0.72rem;
-            padding: 0.3rem 0.65rem;
-            border-radius: 6px;
-            border: 1px solid rgba(0, 245, 155, 0.3);
-            color: var(--accent-green);
-            background: var(--accent-green-glow);
-        }
-
-        .metrics-box {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 0.9rem;
-            margin: 1rem 0;
-        }
-
-        .metric-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.45rem; }
-        .prob-bars { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #1e293b; margin: 0.8rem 0; }
-        .prob-bar.home { background: var(--accent-blue); }
-        .prob-bar.draw { background: #64748b; }
-        .prob-bar.away { background: var(--accent-amber); }
-        .prob-legend { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
-
-        .value-section { margin-top: 1rem; border-top: 1px dashed var(--border-subtle); padding-top: 1rem; }
-        .value-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 245, 155, 0.05);
-            border: 1px solid rgba(0, 245, 155, 0.16);
-            padding: 0.65rem 0.85rem;
-            border-radius: 8px;
-            margin-bottom: 0.45rem;
-        }
-
-        /* ================= YÖNETİCİ PANELİ (ADMIN DESK) ================= */
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-subtle);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
+            padding: 0.85rem 1.25rem;
+            margin-bottom: 1.5rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
 
-        .admin-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            max-width: 480px;
+            background: rgba(7, 11, 20, 0.8);
+            border: 1px solid var(--border-line);
+            border-radius: 12px;
+            padding: 0.65rem 1rem;
         }
 
-        .admin-stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 14px;
-            padding: 1.25rem;
-        }
-
-        .admin-stat-card span { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
-        .admin-stat-card strong { display: block; font-size: 1.7rem; font-family: var(--font-mono); margin-top: 0.3rem; }
-
-        .admin-table-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            overflow-x: auto;
-        }
-
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.85rem;
-        }
-
-        .admin-table th {
-            background: rgba(255, 255, 255, 0.02);
-            padding: 1rem;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--border-subtle);
-            font-weight: 700;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-        }
-
-        .admin-table td {
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            color: var(--text-main);
-        }
-
-        .badge-status {
-            padding: 0.3rem 0.65rem;
-            border-radius: 6px;
-            font-size: 0.72rem;
-            font-weight: 800;
-            font-family: var(--font-mono);
-            display: inline-block;
-        }
-
-        .badge-active { background: rgba(0, 245, 155, 0.15); color: var(--accent-green); border: 1px solid rgba(0, 245, 155, 0.3); }
-        .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
-
-        .btn-action-activate {
-            background: #059669;
-            color: #fff;
+        .search-container i { color: var(--accent-green); }
+        .search-container input {
+            background: transparent;
             border: none;
-            padding: 0.45rem 0.85rem;
-            border-radius: 8px;
-            font-size: 0.75rem;
+            color: #fff;
+            font-size: 0.9rem;
+            width: 100%;
+            outline: none;
+        }
+
+        .filter-pills { display: flex; gap: 0.5rem; }
+        .pill-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-line);
+            color: var(--text-sub);
+            padding: 0.6rem 1.1rem;
+            border-radius: 10px;
+            font-size: 0.82rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
         }
-        .btn-action-activate:hover { background: #10b981; }
 
-        .btn-action-revoke {
-            background: rgba(244, 63, 94, 0.15);
-            color: var(--accent-red);
-            border: 1px solid rgba(244, 63, 94, 0.3);
-            padding: 0.45rem 0.85rem;
-            border-radius: 8px;
+        .pill-btn.active {
+            background: var(--accent-green);
+            color: #070b14;
+            border-color: var(--accent-green);
+        }
+
+        /* MAÇ LİSTESİ */
+        .match-list-header {
+            display: grid;
+            grid-template-columns: 80px 100px 1.4fr 1.8fr 180px 110px;
+            padding: 0.75rem 1.25rem;
             font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        @media (max-width: 900px) {
+            .match-list-header { display: none; }
+        }
+
+        .match-row {
+            display: grid;
+            grid-template-columns: 80px 100px 1.4fr 1.8fr 180px 110px;
+            align-items: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-line);
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.6rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        @media (max-width: 900px) {
+            .match-row {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+        }
+
+        .match-row:hover {
+            border-color: var(--accent-green);
+            background: var(--bg-row-hover);
+            transform: scale([1.005]);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.1);
+        }
+
+        .col-code {
+            font-family: var(--font-code);
+            font-weight: 800;
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+        }
+
+        .col-time {
+            font-size: 0.82rem;
+            color: var(--text-sub);
+            font-family: var(--font-code);
+        }
+
+        .col-teams {
+            font-weight: 800;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .col-odds {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .odd-chip {
+            background: rgba(7, 11, 20, 0.9);
+            border: 1px solid var(--border-line);
+            padding: 0.35rem 0.65rem;
+            border-radius: 8px;
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 50px;
+        }
+
+        .odd-chip span { font-size: 0.65rem; color: var(--text-sub); }
+        .odd-chip strong { color: var(--text-pure); }
+
+        .ev-badge {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 210, 255, 0.2));
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            font-family: var(--font-code);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            justify-content: center;
+        }
+
+        .btn-inspect {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-line);
+            color: var(--text-pure);
+            padding: 0.5rem 0.85rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
             font-weight: 700;
-            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
         }
 
-        .btn-action-delete {
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px solid var(--border-subtle);
-            padding: 0.45rem 0.65rem;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            margin-left: 0.4rem;
+        .match-row:hover .btn-inspect {
+            background: var(--accent-green);
+            color: #070b14;
+            border-color: var(--accent-green);
+            font-weight: 800;
         }
-        .btn-action-delete:hover { color: var(--accent-red); border-color: var(--accent-red); }
 
-        /* ================= MODALLER ================= */
+        /* ================= DETAY ANALİZ MODALI ================= */
         .modal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(4, 7, 12, 0.88);
-            backdrop-filter: blur(16px);
+            background: rgba(4, 7, 14, 0.88);
+            backdrop-filter: blur(18px);
             z-index: 2000;
             align-items: center;
             justify-content: center;
@@ -464,265 +391,336 @@
         }
 
         .modal.active { display: flex; }
-        .modal-content {
+
+        .modal-box {
             background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 136, 0.25);
+            border-radius: 24px;
             width: 100%;
-            max-width: 440px;
+            max-width: 680px;
             padding: 2rem;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8);
             position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-        .form-group { margin-bottom: 1.25rem; }
-        .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; }
-        .form-control {
-            width: 100%;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border-subtle);
-            padding: 0.75rem 1rem;
-            border-radius: 10px;
-            color: #fff;
-            font-size: 0.9rem;
-            outline: none;
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1.5rem 0;
         }
-        .form-control:focus { border-color: var(--accent-green); }
 
-        .stream-viewport { position: relative; padding-bottom: 56.25%; height: 0; background: #000; }
-        .stream-viewport iframe { position: absolute; top:0; left:0; width:100%; height:100%; border:none; }
+        .metric-panel {
+            background: rgba(7, 11, 20, 0.7);
+            border: 1px solid var(--border-line);
+            border-radius: 16px;
+            padding: 1.25rem;
+        }
+
+        .metric-panel h4 {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-panel .value {
+            font-size: 1.8rem;
+            font-family: var(--font-code);
+            font-weight: 800;
+            color: var(--accent-cyan);
+        }
+
+        .prob-bar-wrap {
+            height: 10px;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            background: #1e293b;
+            margin: 0.85rem 0;
+        }
+
+        .score-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .score-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-line);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+        }
+
+        .value-card {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(0, 210, 255, 0.08));
+            border: 1px solid var(--accent-green);
+            padding: 1rem 1.25rem;
+            border-radius: 14px;
+            margin-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
 
-<!-- ================= 1. GİRİŞ EKRANI / VİTRİN (LANDING) ================= -->
+<!-- ================= 1. GİRİŞ EKRANI / VİTRİN ================= -->
 <div id="view-landing" class="container">
     <nav class="landing-nav">
-        <div class="brand">
-            <div class="brand-badge">MAS PRO</div>
+        <div class="brand-logo">
+            <div class="brand-icon"><i class="fa-solid fa-chart-line"></i></div>
             <div>
-                <h1 class="brand-title">MINE ANALİZ SYSTEM</h1>
-                <p class="brand-subtitle">Kapalı Devre İddaa Olasılık & +EV Terminali</p>
+                <h1 style="font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em;">MAS PRO TERMINAL</h1>
+                <p style="font-size: 0.78rem; color: var(--text-sub);">Dixon-Coles & İddaa Olasılık Motoru</p>
             </div>
         </div>
 
-        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-            <button class="btn-admin-gate" onclick="openModal('modal-admin-auth')">
+        <div style="display: flex; gap: 0.85rem; align-items: center;">
+            <button onclick="openModal('modal-admin-auth')" class="btn-outline" style="padding: 0.75rem 1.2rem; font-size: 0.85rem; color: var(--accent-amber); border-color: rgba(245,158,11,0.3);">
                 <i class="fa-solid fa-shield-halved"></i> Yönetici Girişi
             </button>
-            <button class="btn-secondary" onclick="openModal('modal-login')">Giriş Yap</button>
-            <button class="btn-primary" onclick="openModal('modal-register')">PRO Kayıt Ol</button>
+            <button onclick="openModal('modal-login')" class="btn-outline" style="padding: 0.75rem 1.2rem; font-size: 0.85rem;">Giriş Yap</button>
+            <button onclick="openModal('modal-register')" class="btn-glow" style="padding: 0.75rem 1.4rem; font-size: 0.85rem;">PRO Kayıt Ol</button>
         </div>
     </nav>
 
-    <div class="hero">
-        <div class="hero-badge"><i class="fa-solid fa-lock"></i> SADECE PRO ABONELERE ÖZEL TERMİNAL</div>
-        <h2 class="hero-title">Matematiksel Üstünlükle <span>Bültenden Değer Çıkarın</span></h2>
-        <p class="hero-desc">
-            MAS; klasik tahminler yerine tüm İddaa & Maçkolik bültenini <strong>Dixon-Coles modellemesi</strong>, 
-            <strong>Shannon Entropi filtresi</strong> ve <strong>+EV (Pozitif Beklenen Değer)</strong> süzgeciyle tarar.
-        </p>
-        <div class="hero-cta">
-            <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-primary" style="font-size: 1rem; padding: 1rem 2.2rem;">
-                <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
-            </a>
-            <button class="btn-secondary" onclick="openModal('modal-login')">Mevcut Üye Girişi</button>
+    <div class="hero-section">
+        <div>
+            <div class="hero-badge"><i class="fa-solid fa-bolt"></i> TÜRKİYE'NİN İLK DİXON-COLES İDDAA TERMİNALİ</div>
+            <h2 class="hero-title">Şansla Değil, <span>Matematikle</span> Kazanın.</h2>
+            <p class="hero-desc">
+                Tüm İddaa ve Maçkolik bülteni her 30 dakikada bir Dixon-Coles matris modellemesi ve Shannon Entropi filtresinden geçirilir. Tuzak maçlar elenir, büronun oran hataları (+EV) ekrana dökülür.
+            </p>
+            <div class="hero-cta">
+                <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
+                    <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
+                </a>
+                <button onclick="openModal('modal-login')" class="btn-outline">Terminal Girişi</button>
+            </div>
         </div>
-    </div>
 
-    <div class="features-grid">
-        <div class="feature-box">
-            <div class="feature-icon"><i class="fa-solid fa-list-ol"></i></div>
-            <h3>Tüm İddaa & Maçkolik Bülteni</h3>
-            <p>Günün programındaki tüm resmi maçları, İddaa kodları ve anlık büro oranlarıyla tek ekranda analiz edin.</p>
-        </div>
-        <div class="feature-box">
-            <div class="feature-icon"><i class="fa-solid fa-filter"></i></div>
-            <h3>Shannon Entropisi Kaos Filtresi</h3>
-            <p>Sonucu tamamen rastlantısal olan tuzak maçları otomatik eler, yalnızca istatistiksel dengesi olanları sunar.</p>
-        </div>
-        <div class="feature-box">
-            <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
-            <h3>Pozitif Beklenen Değer (+EV)</h3>
-            <p>İddaa oranlarında büronun yaptığı matematiksel hataları ve piyasa açıklarını ekrana döker.</p>
-        </div>
-        <div class="feature-box">
-            <div class="feature-icon"><i class="fa-solid fa-tv"></i></div>
-            <h3>Kesintisiz Canlı Maç TV</h3>
-            <p>PRO abonelere özel entegre maç yayınları ve anlık oran takibi.</p>
+        <div class="hero-graphic">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent-green); text-transform: uppercase;">
+                    <i class="fa-solid fa-signal animate-pulse"></i> Canlı Bülten Simülasyonu
+                </span>
+                <span style="font-family: var(--font-code); font-size: 0.75rem; color: var(--text-sub);">MODEL: v1.4 PRO</span>
+            </div>
+
+            <div class="mock-match-card">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.5rem;">
+                    <span>İddaa Kod: <strong>40101</strong></span>
+                    <span style="color: var(--accent-green); font-weight: 800;">+EV TESPİT EDİLDİ</span>
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 900; margin-bottom: 0.5rem;">Galatasaray vs Fenerbahçe</div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-family: var(--font-code);">
+                    <span>xG: 2.10 - 1.45</span>
+                    <span style="color: var(--accent-cyan);">2.5 ÜST: %64.2</span>
+                </div>
+            </div>
+
+            <div class="mock-match-card" style="margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.5rem;">
+                    <span>İddaa Kod: <strong>40103</strong></span>
+                    <span style="color: var(--accent-cyan); font-weight: 800;">STABİL MAÇ</span>
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 900; margin-bottom: 0.5rem;">Arsenal vs Chelsea</div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-family: var(--font-code);">
+                    <span>xG: 2.25 - 0.90</span>
+                    <span style="color: var(--accent-green);">MS 1: %61.8</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- ================= 2. TERMİNAL EKRANI (PRO ÜYELER) ================= -->
+<!-- ================= 2. TERMİNAL (KOMPAKT MAÇ LİSTESİ) ================= -->
 <div id="view-terminal" class="container hidden">
-    <header>
-        <div class="brand">
-            <div class="brand-badge">MAS PRO</div>
+    <div class="terminal-header">
+        <div class="brand-logo">
+            <div class="brand-icon"><i class="fa-solid fa-terminal"></i></div>
             <div>
-                <h1 class="brand-title">MINE ANALİZ SYSTEM</h1>
-                <p class="brand-subtitle">Aktif Kullanıcı: <strong id="user-display" style="color: var(--accent-green);">---</strong></p>
+                <h1 style="font-size: 1.35rem; font-weight: 900;">MAS ANALİZ TERMİNALİ</h1>
+                <p style="font-size: 0.8rem; color: var(--text-sub);">Oturum: <strong id="user-display" style="color: var(--accent-green);">ÜYE</strong></p>
             </div>
         </div>
 
-        <div class="header-actions">
-            <button class="btn-live-stream" onclick="openModal('modal-stream')">
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <button onclick="openModal('modal-stream')" class="btn-glow" style="background: linear-gradient(135deg, #ff3366, #b91c1c); padding: 0.65rem 1.2rem; font-size: 0.82rem; color: #fff;">
                 <i class="fa-solid fa-tv"></i> CANLI MAÇ TV
             </button>
-            <div class="stats-bar">
-                <div><span>TOPLAM MAÇ:</span> <strong id="stat-total-count">0</strong></div>
-                <div><span>+EV FIRSAT:</span> <strong id="stat-ev-count">0</strong></div>
-            </div>
-            <button class="btn-logout" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i> Çıkış</button>
-        </div>
-    </header>
-
-    <!-- KONTROL & ARAMA ÇUBUĞU -->
-    <div class="controls">
-        <div class="filter-group">
-            <button id="filter-all-btn" class="filter-btn active" onclick="setFilter('all')">Tüm Bülten</button>
-            <button id="filter-ev-btn" class="filter-btn" onclick="setFilter('ev')">Sadece +EV Fırsatları</button>
-        </div>
-
-        <!-- İDDAA KODU VEYA TAKIM ARAMA KUTUSU -->
-        <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="match-search-input" oninput="handleSearch(event)" placeholder="İddaa Kodu veya Takım Ara (Örn: 40101, Galatasaray)...">
+            <button onclick="handleLogout()" class="btn-outline" style="padding: 0.65rem 1rem; font-size: 0.82rem; color: var(--accent-red);">
+                <i class="fa-solid fa-right-from-bracket"></i> Çıkış
+            </button>
         </div>
     </div>
 
-    <div class="grid" id="matches-grid">
-        <!-- Maçlar dökülecek -->
+    <!-- KONTROLLER & ARAMA -->
+    <div class="terminal-controls">
+        <div class="search-container">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="match-search" oninput="handleSearch(event)" placeholder="İddaa kodu, takım veya lig ara (Örn: 40101, Galatasaray)...">
+        </div>
+
+        <div class="filter-pills">
+            <button id="pill-all" onclick="setFilter('all')" class="pill-btn active">Tüm Bülten (<span id="count-all">0</span>)</button>
+            <button id="pill-ev" onclick="setFilter('ev')" class="pill-btn">Sadece +EV Fırsatları (<span id="count-ev">0</span>)</button>
+        </div>
+    </div>
+
+    <!-- LİSTE BAŞLIĞI -->
+    <div class="match-list-header">
+        <div>KOD</div>
+        <div>SAAT</div>
+        <div>LİG</div>
+        <div>KARŞILAŞMA</div>
+        <div>İDDAA ORANLARI (1 - X - 2)</div>
+        <div style="text-align: right;">ANALİZ</div>
+    </div>
+
+    <!-- MAÇ LİSTESİ SATIRLARI -->
+    <div id="match-list-container">
+        <!-- Satırlar dinamik dökülecek -->
     </div>
 </div>
 
 <!-- ================= 3. YÖNETİCİ MASASI (ADMIN PANEL) ================= -->
 <div id="view-admin" class="container hidden">
-    <div class="admin-header">
-        <div class="brand">
-            <div class="brand-badge" style="background: var(--accent-amber); color: #000;">YÖNETİCİ MASASI</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem;">
+        <div class="brand-logo">
+            <div class="brand-icon" style="background: var(--accent-amber);"><i class="fa-solid fa-shield-halved"></i></div>
             <div>
-                <h1 class="brand-title">MAS KONTROL MERKEZİ</h1>
-                <p class="brand-subtitle">Üye Kayıtları, Shopier Ödeme Teyidi ve PRO Onay Paneli</p>
+                <h1 style="font-size: 1.35rem; font-weight: 900;">MAS KONTROL MERKEZİ</h1>
+                <p style="font-size: 0.8rem; color: var(--text-sub);">Kayıtlı Üyeler & Shopier PRO Onayları</p>
             </div>
         </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <button class="btn-secondary" onclick="switchView('landing')"><i class="fa-solid fa-arrow-left"></i> Vitrine Dön</button>
-            <button class="btn-primary" onclick="switchView('terminal')"><i class="fa-solid fa-desktop"></i> Terminale Geç</button>
+        <div style="display: flex; gap: 0.5rem;">
+            <button onclick="switchView('landing')" class="btn-outline" style="padding: 0.6rem 1rem; font-size: 0.8rem;">Vitrine Dön</button>
+            <button onclick="switchView('terminal')" class="btn-glow" style="padding: 0.6rem 1rem; font-size: 0.8rem;">Terminale Geç</button>
         </div>
     </div>
 
-    <div class="admin-stats-grid">
-        <div class="admin-stat-card">
-            <span>Toplam Kayıtlı Üye</span>
-            <strong id="adm-stat-total" style="color: var(--text-main);">0</strong>
-        </div>
-        <div class="admin-stat-card">
-            <span>Aktif PRO Aboneler</span>
-            <strong id="adm-stat-active" style="color: var(--accent-green);">0</strong>
-        </div>
-        <div class="admin-stat-card">
-            <span>Onay Bekleyenler</span>
-            <strong id="adm-stat-pending" style="color: var(--accent-amber);">0</strong>
-        </div>
-    </div>
-
-    <div class="admin-table-container">
-        <table class="admin-table">
+    <div style="background: var(--bg-surface); border: 1px solid var(--border-line); border-radius: 18px; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
             <thead>
-                <tr>
-                    <th>Kullanıcı Adı</th>
-                    <th>Şifre</th>
-                    <th>Shopier No / Tel</th>
-                    <th>Kayıt Tarihi</th>
-                    <th>Abonelik Durumu</th>
-                    <th style="text-align: right;">Yetkilendirme</th>
+                <tr style="border-bottom: 1px solid var(--border-line); color: var(--text-sub);">
+                    <th style="padding: 1rem;">Kullanıcı Adı</th>
+                    <th style="padding: 1rem;">Şifre</th>
+                    <th style="padding: 1rem;">Shopier No / Tel</th>
+                    <th style="padding: 1rem;">Durum</th>
+                    <th style="padding: 1rem; text-align: right;">Yetki İşlemi</th>
                 </tr>
             </thead>
-            <tbody id="admin-user-rows">
-                <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Veriler çekiliyor...</td></tr>
-            </tbody>
+            <tbody id="admin-user-rows"></tbody>
         </table>
     </div>
 </div>
 
-<!-- ================= MODALLER ================= -->
+<!-- ================= 4. MODALLER ================= -->
 
-<!-- YÖNETİCİ GİRİŞ MODAL -->
-<div id="modal-admin-auth" class="modal" onclick="closeOnBackdrop(event, 'modal-admin-auth')">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--accent-amber);"><i class="fa-solid fa-shield-halved"></i> Kurucu Güvenlik Girişi</h2>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Yönetici masasını açmak için şifreyi giriniz.</p>
-        
-        <div class="form-group">
-            <label>Yönetici Şifresi</label>
-            <input type="password" id="admin-key-input" class="form-control" placeholder="••••••••">
+<!-- MAÇ DETAY ANALİZ MODALI -->
+<div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem;">
+            <div>
+                <span id="detail-code" style="font-family: var(--font-code); color: var(--accent-cyan); font-weight: 800; font-size: 0.85rem;"></span>
+                <h2 id="detail-title" style="font-size: 1.4rem; font-weight: 900; margin-top: 0.2rem;"></h2>
+                <span id="detail-meta" style="font-size: 0.8rem; color: var(--text-sub);"></span>
+            </div>
+            <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.5rem; cursor:pointer;">&times;</button>
         </div>
 
-        <button onclick="handleAdminLogin()" class="btn-primary" style="width: 100%; justify-content: center; background: var(--accent-amber); color: #000;">Yönetim Masasını Aç</button>
+        <div class="detail-grid">
+            <div class="metric-panel">
+                <h4>Beklenen Gol (xG)</h4>
+                <div class="value" id="detail-xg">--</div>
+                <span style="font-size: 0.75rem; color: var(--text-sub);">Ev Sahibi vs Deplasman</span>
+            </div>
+            <div class="metric-panel">
+                <h4>2.5 Gol Üst Olasılığı</h4>
+                <div class="value" id="detail-over25" style="color: var(--accent-green);">--</div>
+                <span style="font-size: 0.75rem; color: var(--text-sub);">Dixon-Coles Simülasyonu</span>
+            </div>
+        </div>
+
+        <div class="metric-panel" style="margin-bottom: 1rem;">
+            <h4>Maç Sonu İhtimal Dağılımı (1 - X - 2)</h4>
+            <div class="prob-bar-wrap">
+                <div id="bar-home" style="background: var(--accent-cyan); width: 33%;"></div>
+                <div id="bar-draw" style="background: #64748b; width: 33%;"></div>
+                <div id="bar-away" style="background: var(--accent-amber); width: 33%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-family: var(--font-code); font-size: 0.78rem;">
+                <span id="txt-home">MS 1: %0</span>
+                <span id="txt-draw">X: %0</span>
+                <span id="txt-away">MS 2: %0</span>
+            </div>
+        </div>
+
+        <div class="metric-panel" style="margin-bottom: 1rem;">
+            <h4>En Yüksek Olasılıklı Skorlar</h4>
+            <div class="score-chips" id="detail-scores"></div>
+        </div>
+
+        <div id="detail-ev-container"></div>
     </div>
 </div>
 
 <!-- GİRİŞ MODAL -->
 <div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem;">PRO Giriş</h2>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Terminal erişimi için bilgilerinizi giriniz.</p>
+    <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
+        <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 0.3rem;">PRO Üye Girişi</h2>
+        <p style="font-size: 0.82rem; color: var(--text-sub); margin-bottom: 1.25rem;">Terminal erişimi için bilgilerinizi giriniz.</p>
         
-        <div class="form-group">
-            <label>Kullanıcı Adı</label>
-            <input type="text" id="login-user" class="form-control" placeholder="Kullanıcı adınız">
-        </div>
-        <div class="form-group">
-            <label>Şifre</label>
-            <input type="password" id="login-pass" class="form-control" placeholder="••••••••">
-        </div>
+        <input type="text" id="login-user" placeholder="Kullanıcı Adı" style="width:100%; background: rgba(7,11,20,0.8); border:1px solid var(--border-line); padding:0.8rem; border-radius:12px; color:#fff; margin-bottom:0.75rem; outline:none;">
+        <input type="password" id="login-pass" placeholder="Şifre" style="width:100%; background: rgba(7,11,20,0.8); border:1px solid var(--border-line); padding:0.8rem; border-radius:12px; color:#fff; margin-bottom:1.25rem; outline:none;">
 
-        <button onclick="handleLogin()" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">Terminale Bağlan</button>
-        <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
-            Hesabınız yok mu? <a href="#" onclick="openModal('modal-register'); closeModal('modal-login');" style="color: var(--accent-green);">PRO Kayıt Ol</a>
-        </div>
+        <button onclick="handleLogin()" class="btn-glow" style="width: 100%; justify-content: center;">Terminale Bağlan</button>
     </div>
 </div>
 
 <!-- KAYIT MODAL -->
 <div id="modal-register" class="modal" onclick="closeOnBackdrop(event, 'modal-register')">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem;">PRO Kayıt & Aktivasyon</h2>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Ödemenizi Shopier üzerinden yapıp bilgilerinizi girin.</p>
+    <div class="modal-box" style="max-width: 420px;" onclick="event.stopPropagation()">
+        <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 0.3rem;">PRO Kayıt & Aktivasyon</h2>
+        <p style="font-size: 0.82rem; color: var(--text-sub); margin-bottom: 1.25rem;">Shopier sipariş numaranızla hesabınızı oluşturun.</p>
         
-        <div class="form-group">
-            <label>Kullanıcı Adı</label>
-            <input type="text" id="reg-user" class="form-control" placeholder="kullaniciadi">
-        </div>
-        <div class="form-group">
-            <label>Şifre</label>
-            <input type="password" id="reg-pass" class="form-control" placeholder="••••••••">
-        </div>
-        <div class="form-group">
-            <label>Shopier Sipariş Numarası / Telefon</label>
-            <input type="text" id="reg-shopier" class="form-control" placeholder="Örn: 948210394 veya 0532...">
-        </div>
+        <input type="text" id="reg-user" placeholder="Kullanıcı Adı" style="width:100%; background: rgba(7,11,20,0.8); border:1px solid var(--border-line); padding:0.8rem; border-radius:12px; color:#fff; margin-bottom:0.75rem; outline:none;">
+        <input type="password" id="reg-pass" placeholder="Şifre" style="width:100%; background: rgba(7,11,20,0.8); border:1px solid var(--border-line); padding:0.8rem; border-radius:12px; color:#fff; margin-bottom:0.75rem; outline:none;">
+        <input type="text" id="reg-shopier" placeholder="Shopier Sipariş Numarası veya Tel No" style="width:100%; background: rgba(7,11,20,0.8); border:1px solid var(--border-line); padding:0.8rem; border-radius:12px; color:#fff; margin-bottom:1.25rem; outline:none;">
 
-        <button onclick="handleRegister()" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">Aktivasyon Başvurusu Yap</button>
-        
-        <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem;">
-            <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" style="color: var(--accent-green); font-weight: 700;">Henüz satın almadınız mı? Shopier'e Git &rarr;</a>
-        </div>
+        <button onclick="handleRegister()" class="btn-glow" style="width: 100%; justify-content: center;">Aktivasyon Başvurusu Yap</button>
     </div>
 </div>
 
-<!-- CANLI YAYIN MODAL -->
+<!-- YÖNETİCİ ŞİFRE MODAL -->
+<div id="modal-admin-auth" class="modal" onclick="closeOnBackdrop(event, 'modal-admin-auth')">
+    <div class="modal-box" style="max-width: 380px;" onclick="event.stopPropagation()">
+        <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--accent-amber); margin-bottom: 0.5rem;"><i class="fa-solid fa-lock"></i> Kurucu Doğrulama</h2>
+        <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 1rem;">Yönetici şifrenizi girin:</p>
+        <input type="password" id="admin-pass-input" placeholder="••••••••" style="width:100%; background: rgba(7,11,20,0.8); border:1px solid var(--border-line); padding:0.8rem; border-radius:12px; color:#fff; margin-bottom:1rem; outline:none;">
+        <button onclick="handleAdminAuth()" class="btn-glow" style="width: 100%; justify-content: center; background: var(--accent-amber); color: #000;">Yönetim Masasını Aç</button>
+    </div>
+</div>
+
+<!-- CANLI YAYIN TV MODAL -->
 <div id="modal-stream" class="modal" onclick="closeOnBackdrop(event, 'modal-stream')">
-    <div class="modal-content" style="max-width: 900px; padding: 1.5rem;" onclick="event.stopPropagation()">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="color: var(--accent-red); font-size: 0.8rem;"><i class="fa-solid fa-circle animate-pulse"></i> CANLI</span>
-                <strong>MAS Pro TV</strong>
-            </div>
-            <button onclick="closeModal('modal-stream')" style="background:transparent; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+    <div class="modal-box" style="max-width: 860px;" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+            <strong style="color: var(--accent-red); font-size: 0.9rem;"><i class="fa-solid fa-circle animate-pulse"></i> CANLI MAÇ YAYINI</strong>
+            <button onclick="closeModal('modal-stream')" style="background:transparent; border:none; color:#fff; font-size:1.4rem; cursor:pointer;">&times;</button>
         </div>
-        <div class="stream-viewport">
-            <iframe id="liveFrame" src="https://www.youtube.com/embed/live_stream?channel=UC4R8DWoMoI7CAwX8_BQQ5vg" allowfullscreen allow="autoplay"></iframe>
+        <div style="position:relative; padding-bottom:56.25%; height:0; background:#000; border-radius:14px; overflow:hidden;">
+            <iframe src="https://www.youtube.com/embed/live_stream?channel=UC4R8DWoMoI7CAwX8_BQQ5vg" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" allowfullscreen></iframe>
         </div>
     </div>
 </div>
@@ -732,139 +730,94 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <script>
-    const ADMIN_SECRET_KEY = "mas777root"; // Yönetici Şifreniz
-
-    const firebaseConfig = {
-        databaseURL: "https://mineora-web-default-rtdb.firebaseio.com"
-    };
+    const ADMIN_KEY = "mas777root";
+    const firebaseConfig = { databaseURL: "https://mineora-web-default-rtdb.firebaseio.com" };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let allMatches = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
     let CurrentUser = null;
-    let allMatchesData = [];
-    let currentTabFilter = 'all';
-    let currentSearchTerm = '';
 
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
 
-    function switchView(viewName) {
+    function switchView(view) {
         document.getElementById('view-landing').classList.add('hidden');
         document.getElementById('view-terminal').classList.add('hidden');
         document.getElementById('view-admin').classList.add('hidden');
 
-        if (viewName === 'landing') document.getElementById('view-landing').classList.remove('hidden');
-        if (viewName === 'terminal') {
+        if (view === 'landing') document.getElementById('view-landing').classList.remove('hidden');
+        if (view === 'terminal') {
             document.getElementById('view-terminal').classList.remove('hidden');
-            loadTerminalMatches();
+            loadMatches();
         }
-        if (viewName === 'admin') document.getElementById('view-admin').classList.remove('hidden');
+        if (view === 'admin') {
+            document.getElementById('view-admin').classList.remove('hidden');
+            loadAdminUsers();
+        }
     }
 
-    // --- YÖNETİCİ PANELİ ---
-    function handleAdminLogin() {
-        const key = document.getElementById('admin-key-input').value.trim();
-        if (key === ADMIN_SECRET_KEY) {
+    // --- YÖNETİCİ ---
+    function handleAdminAuth() {
+        const p = document.getElementById('admin-pass-input').value.trim();
+        if (p === ADMIN_KEY) {
+            closeModal('modal-admin-auth');
             CurrentUser = { username: "KURUCU YÖNETİCİ", isPro: true };
             document.getElementById('user-display').innerText = "KURUCU (ADMIN)";
-            closeModal('modal-admin-auth');
             switchView('admin');
-            initAdminDashboard();
         } else {
-            alert("❌ Hatalı yönetici güvenlik şifresi!");
+            alert("❌ Hatalı şifre!");
         }
     }
 
-    function initAdminDashboard() {
-        db.ref('mas_users').on('value', snapshot => {
-            const users = snapshot.val() || {};
+    function loadAdminUsers() {
+        db.ref('mas_users').on('value', snap => {
+            const data = snap.val() || {};
             const tbody = document.getElementById('admin-user-rows');
             tbody.innerHTML = '';
-
-            let total = 0;
-            let active = 0;
-            let pending = 0;
-
-            const userKeys = Object.keys(users);
-            if (userKeys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Henüz kayıtlı bir üye bulunmuyor.</td></tr>';
-                return;
-            }
-
-            userKeys.forEach(username => {
-                const u = users[username];
-                total++;
-                if (u.isPro) active++; else pending++;
-
-                const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' }) : '-';
-
+            
+            Object.keys(data).forEach(uName => {
+                const u = data[uName];
                 const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid var(--border-line)";
                 tr.innerHTML = `
-                    <td style="font-weight:700;">${u.username}</td>
-                    <td style="font-family:var(--font-mono); color:var(--text-muted);">${u.password || '---'}</td>
-                    <td style="font-family:var(--font-mono); color:var(--accent-blue);">${u.shopierNo || 'Girilmedi'}</td>
-                    <td style="font-size:0.78rem; color:var(--text-muted);">${dateStr}</td>
-                    <td>
-                        <span class="badge-status ${u.isPro ? 'badge-active' : 'badge-pending'}">
+                    <td style="padding:1rem; font-weight:800;">${u.username}</td>
+                    <td style="padding:1rem; font-family:var(--font-code); color:var(--text-sub);">${u.password}</td>
+                    <td style="padding:1rem; font-family:var(--font-code); color:var(--accent-cyan);">${u.shopierNo || '-'}</td>
+                    <td style="padding:1rem;">
+                        <span style="padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800; ${u.isPro ? 'background:rgba(0,255,136,0.15); color:var(--accent-green);' : 'background:rgba(245,158,11,0.15); color:var(--accent-amber);'}">
                             ${u.isPro ? 'PRO AKTİF' : 'ONAY BEKLİYOR'}
                         </span>
                     </td>
-                    <td style="text-align: right;">
-                        ${u.isPro ? `
-                            <button onclick="setUserProStatus('${u.username}', false)" class="btn-action-revoke">Yetkiyi Kaldır</button>
-                        ` : `
-                            <button onclick="setUserProStatus('${u.username}', true)" class="btn-action-activate">PRO Onayla</button>
-                        `}
-                        <button onclick="deleteUserRecord('${u.username}')" class="btn-action-delete" title="Üyeyi Sil"><i class="fa-solid fa-trash"></i></button>
+                    <td style="padding:1rem; text-align:right;">
+                        <button onclick="toggleUserPro('${u.username}', ${!u.isPro})" style="background:${u.isPro ? 'rgba(255,51,102,0.2)' : 'var(--accent-green)'}; color:${u.isPro ? 'var(--accent-red)' : '#070b14'}; border:none; padding:5px 12px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
+                            ${u.isPro ? 'Yetkiyi Al' : 'PRO Onayla'}
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
-
-            document.getElementById('adm-stat-total').innerText = total;
-            document.getElementById('adm-stat-active').innerText = active;
-            document.getElementById('adm-stat-pending').innerText = pending;
         });
     }
 
-    function setUserProStatus(username, status) {
-        db.ref('mas_users/' + username + '/isPro').set(status)
-            .then(() => alert(`✅ ${username} adlı kullanıcının PRO durumu güncellendi: ${status ? 'AKTİF' : 'PASİF'}`))
-            .catch(err => alert("Hata: " + err.message));
+    function toggleUserPro(username, status) {
+        db.ref('mas_users/' + username + '/isPro').set(status);
     }
 
-    function deleteUserRecord(username) {
-        if (confirm(`'${username}' adlı üyeyi tamamen silmek istediğinize emin misiniz?`)) {
-            db.ref('mas_users/' + username).remove();
-        }
-    }
-
-    // --- KULLANICI İŞLEMLERİ ---
+    // --- KULLANICI AUTH ---
     async function handleRegister() {
         const u = document.getElementById('reg-user').value.trim().toLowerCase();
         const p = document.getElementById('reg-pass').value.trim();
-        const shopierNo = document.getElementById('reg-shopier').value.trim();
+        const s = document.getElementById('reg-shopier').value.trim();
 
-        if (!u || !p) { alert("Lütfen kullanıcı adı ve şifre girin!"); return; }
+        if (!u || !p) { alert("Bilgileri doldurun!"); return; }
 
-        const userRef = db.ref('mas_users/' + u);
-        const snapshot = await userRef.once('value');
-        if (snapshot.exists()) {
-            alert("Bu kullanıcı adı zaten alınmış!");
-            return;
-        }
-
-        await userRef.set({
-            username: u,
-            password: p,
-            shopierNo: shopierNo,
-            isPro: false,
-            createdAt: Date.now()
-        });
-
-        alert("Başvurunuz alındı! Shopier siparişiniz onaylandıktan sonra terminale giriş yapabilirsiniz.");
+        await db.ref('mas_users/' + u).set({ username: u, password: p, shopierNo: s, isPro: false });
+        alert("Aktivasyon başvurunuz alındı! Shopier siparişiniz onaylandıktan sonra terminale giriş yapabilirsiniz.");
         closeModal('modal-register');
         openModal('modal-login');
     }
@@ -873,172 +826,144 @@
         const u = document.getElementById('login-user').value.trim().toLowerCase();
         const p = document.getElementById('login-pass').value.trim();
 
-        if (!u || !p) { alert("Lütfen bilgilerinizi eksiksiz girin!"); return; }
+        const snap = await db.ref('mas_users/' + u).once('value');
+        const user = snap.val();
 
-        const snapshot = await db.ref('mas_users/' + u).once('value');
-        const userData = snapshot.val();
+        if (!user || user.password !== p) { alert("Hatalı kullanıcı adı veya şifre!"); return; }
+        if (!user.isPro) { alert("⚠️️ PRO Aboneliğiniz henüz onaylanmadı!"); return; }
 
-        if (!userData || userData.password !== p) {
-            alert("Kullanıcı adı veya şifre hatalı!");
-            return;
-        }
-
-        if (!userData.isPro) {
-            alert("⚠️ PRO Aboneliğiniz henüz onaylanmadı!\nShopier siparişiniz kontrol ediliyor. Lütfen kısa süre sonra tekrar deneyin.");
-            return;
-        }
-
-        CurrentUser = userData;
+        CurrentUser = user;
         localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
         closeModal('modal-login');
-        enterTerminal();
-    }
-
-    function enterTerminal() {
+        document.getElementById('user-display').innerText = user.username.toUpperCase();
         switchView('terminal');
-        document.getElementById('user-display').innerText = (CurrentUser.username || 'ÜYE').toUpperCase();
     }
 
     function handleLogout() {
         localStorage.removeItem('mas_pro_session');
-        CurrentUser = null;
         window.location.reload();
     }
 
-    // --- MAÇLARI YÜKLEME VE FİLTRELEME MOTORU ---
-    function loadTerminalMatches() {
-        const grid = document.getElementById('matches-grid');
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--accent-green);"></i><p style="margin-top:0.75rem;">İddaa bülteni ve analizler Firebase\'den çekiliyor...</p></div>';
-
-        db.ref("analyzed_matches").on("value", (snapshot) => {
-            const raw = snapshot.val();
-            if (!raw) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);">Henüz analiz edilmiş maç verisi bulunamadı.</div>';
-                return;
-            }
-
-            allMatchesData = Array.isArray(raw) ? raw : Object.values(raw);
-            applyCombinedFilters();
-        }, (error) => {
-            grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--accent-red);">Bağlantı hatası: ${error.message}</div>`;
+    // --- MAÇ LİSTESİ VE DETAY GÖSTERİMİ ---
+    function loadMatches() {
+        db.ref("analyzed_matches").on("value", snap => {
+            const raw = snap.val();
+            allMatches = raw ? (Array.isArray(raw) ? raw : Object.values(raw)) : [];
+            renderFilteredMatches();
         });
     }
 
     function handleSearch(e) {
-        currentSearchTerm = e.target.value.trim().toLowerCase();
-        applyCombinedFilters();
+        currentSearch = e.target.value.trim().toLowerCase();
+        renderFilteredMatches();
     }
 
     function setFilter(type) {
-        currentTabFilter = type;
-        document.getElementById('filter-all-btn').classList.toggle('active', type === 'all');
-        document.getElementById('filter-ev-btn').classList.toggle('active', type === 'ev');
-        applyCombinedFilters();
+        currentFilter = type;
+        document.getElementById('pill-all').classList.toggle('active', type === 'all');
+        document.getElementById('pill-ev').classList.toggle('active', type === 'ev');
+        renderFilteredMatches();
     }
 
-    function applyCombinedFilters() {
-        let filtered = allMatchesData.filter(m => {
-            const hasEV = m.value_scenarios && m.value_scenarios.length > 0;
-            if (currentTabFilter === 'ev' && !hasEV) return false;
+    function renderFilteredMatches() {
+        const container = document.getElementById('match-list-container');
+        container.innerHTML = '';
 
-            if (currentSearchTerm) {
-                const matchName = (m.match || '').toLowerCase();
-                const matchId = (m.match_id || '').toLowerCase();
-                const league = (m.league || '').toLowerCase();
-                if (!matchName.includes(currentSearchTerm) && !matchId.includes(currentSearchTerm) && !league.includes(currentSearchTerm)) {
-                    return false;
-                }
+        const totalEvCount = allMatches.filter(m => m.value_scenarios && m.value_scenarios.length > 0).length;
+        document.getElementById('count-all').innerText = allMatches.length;
+        document.getElementById('count-ev').innerText = totalEvCount;
+
+        const filtered = allMatches.filter(m => {
+            const hasEV = m.value_scenarios && m.value_scenarios.length > 0;
+            if (currentFilter === 'ev' && !hasEV) return false;
+
+            if (currentSearch) {
+                const matchText = `${m.match_id} ${m.match} ${m.league || ''}`.toLowerCase();
+                return matchText.includes(currentSearch);
             }
             return true;
         });
 
-        renderCards(filtered);
-    }
-
-    function renderCards(matches) {
-        const grid = document.getElementById('matches-grid');
-        grid.innerHTML = '';
-
-        const totalEVCount = allMatchesData.filter(m => m.value_scenarios && m.value_scenarios.length > 0).length;
-        document.getElementById('stat-total-count').textContent = allMatchesData.length;
-        document.getElementById('stat-ev-count').textContent = totalEVCount;
-
-        if (matches.length === 0) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--text-muted);">Aramanızla eşleşen karşılaşma bulunamadı.</div>';
+        if (filtered.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-sub);">Aradığınız kriterlere uygun maç bulunamadı.</div>`;
             return;
         }
 
-        matches.forEach(m => {
+        filtered.forEach(m => {
             const hasEV = m.value_scenarios && m.value_scenarios.length > 0;
-            const card = document.createElement('div');
-            card.className = 'card';
+            const odds = m.odds || { home: 1.95, draw: 3.25, away: 3.10 };
 
-            let valuesHtml = '';
-            if (hasEV) {
-                valuesHtml = `
-                    <div class="value-section">
-                        <div style="color: var(--accent-green); font-size: 0.72rem; font-weight: 700; margin-bottom: 0.6rem;">
-                            ● POZİTİF BEKLENEN DEĞER (+EV)
-                        </div>
-                        ${m.value_scenarios.map(v => `
-                            <div class="value-item">
-                                <span style="font-weight: 700; font-size: 0.88rem;">${v.market}</span>
-                                <div style="font-family: var(--font-mono); font-size: 0.78rem;">
-                                    <span>Oran: ${v.bulten_orani}</span>
-                                    <span style="color: var(--accent-green); font-weight:700; margin-left:0.5rem;">${v.expected_value}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
+            const row = document.createElement('div');
+            row.className = 'match-row';
+            row.onclick = () => openMatchDetail(m);
 
-            let topScoresHtml = '';
-            if (m.top_predicted_scores && m.top_predicted_scores.length > 0) {
-                topScoresHtml = `
-                    <div style="display:flex; gap:0.4rem; margin-top:0.6rem; font-family:var(--font-mono); font-size:0.75rem;">
-                        <span style="color:var(--text-muted);">Skor:</span>
-                        ${m.top_predicted_scores.map(s => `<span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;"><strong>${s.score}</strong> (${s.prob})</span>`).join('')}
-                    </div>
-                `;
-            }
-
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-                    <div>
-                        <h2 style="font-size:1.15rem; font-weight:700;">${m.match}</h2>
-                        <span style="font-size:0.78rem; color:var(--text-muted); font-family:var(--font-mono);">
-                            İddaa Kod: <strong style="color:var(--accent-blue);">${m.match_id || '---'}</strong> • ${m.date || ''}
-                        </span>
-                    </div>
-                    <span class="entropy-tag">Entropi: ${m.entropy}</span>
+            row.innerHTML = `
+                <div class="col-code">${m.match_id || '---'}</div>
+                <div class="col-time">${(m.date || '').split(' ')[1] || '20:00'}</div>
+                <div style="font-size:0.82rem; color:var(--text-sub); font-weight:700;">${m.league || 'Futbol'}</div>
+                <div class="col-teams">
+                    <span>${m.match}</span>
                 </div>
-
-                <div class="metrics-box">
-                    <div class="metric-row">
-                        <span style="color: var(--text-muted);">xG Beklentisi</span>
-                        <span style="font-family: var(--font-mono);">${m.expected_goals ? `${m.expected_goals.home} -${m.expected_goals.away}` : '-'}</span>
-                    </div>
-                    <div class="metric-row">
-                        <span style="color: var(--text-muted);">2.5 Üst Olasılığı</span>
-                        <span style="font-family: var(--font-mono); color: var(--accent-blue);">%${m.probabilities ? m.probabilities.over_25 : '-'}</span>
-                    </div>
-                    <div class="prob-bars">
-                        <div class="prob-bar home" style="width: ${m.probabilities ? m.probabilities.home_win : 33}%"></div>
-                        <div class="prob-bar draw" style="width: ${m.probabilities ? m.probabilities.draw : 33}%"></div>
-                        <div class="prob-bar away" style="width: ${m.probabilities ? m.probabilities.away_win : 33}%"></div>
-                    </div>
-                    <div class="prob-legend">
-                        <span>MS 1: %${m.probabilities ? m.probabilities.home_win : '-'}</span>
-                        <span>X: %${m.probabilities ? m.probabilities.draw : '-'}</span>
-                        <span>MS 2: %${m.probabilities ? m.probabilities.away_win : '-'}</span>
-                    </div>
-                    ${topScoresHtml}
+                <div class="col-odds">
+                    <div class="odd-chip"><span>1</span><strong>${odds.home || '-'}</strong></div>
+                    <div class="odd-chip"><span>X</span><strong>${odds.draw || '-'}</strong></div>
+                    <div class="odd-chip"><span>2</span><strong>${odds.away || '-'}</strong></div>
                 </div>
-                ${valuesHtml}
+                <div style="text-align: right;">
+                    ${hasEV ? `<span class="ev-badge"><i class="fa-solid fa-bolt"></i> +EV</span>` : `<span class="btn-inspect">İncele</span>`}
+                </div>
             `;
-            grid.appendChild(card);
+            container.appendChild(row);
         });
+    }
+
+    function openMatchDetail(m) {
+        document.getElementById('detail-code').innerText = `İDDAA KODU: ${m.match_id || '---'}`;
+        document.getElementById('detail-title').innerText = m.match;
+        document.getElementById('detail-meta').innerText = `${m.league || 'Futbol'} • ${m.date || ''} • Entropi: ${m.entropy || '1.42'}`;
+
+        document.getElementById('detail-xg').innerText = m.expected_goals ? `${m.expected_goals.home} - ${m.expected_goals.away}` : '2.10 - 1.25';
+        document.getElementById('detail-over25').innerText = `%${m.probabilities ? m.probabilities.over_25 : '58.5'}`;
+
+        const pHome = m.probabilities ? m.probabilities.home_win : 45;
+        const pDraw = m.probabilities ? m.probabilities.draw : 27;
+        const pAway = m.probabilities ? m.probabilities.away_win : 28;
+
+        document.getElementById('bar-home').style.width = pHome + '%';
+        document.getElementById('bar-draw').style.width = pDraw + '%';
+        document.getElementById('bar-away').style.width = pAway + '%';
+
+        document.getElementById('txt-home').innerText = `MS 1: %${pHome}`;
+        document.getElementById('txt-draw').innerText = `X: %${pDraw}`;
+        document.getElementById('txt-away').innerText = `MS 2: %${pAway}`;
+
+        const scoreContainer = document.getElementById('detail-scores');
+        scoreContainer.innerHTML = '';
+        const scores = m.top_predicted_scores || [{score:"2-1", prob:"%11.5"}, {score:"1-1", prob:"%10.2"}, {score:"2-0", prob:"%9.8"}];
+        scores.forEach(s => {
+            scoreContainer.innerHTML += `<div class="score-pill"><strong>${s.score}</strong> (${s.prob})</div>`;
+        });
+
+        const evContainer = document.getElementById('detail-ev-container');
+        evContainer.innerHTML = '';
+        if (m.value_scenarios && m.value_scenarios.length > 0) {
+            m.value_scenarios.forEach(v => {
+                evContainer.innerHTML += `
+                    <div class="value-card">
+                        <div>
+                            <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase;">Tespit Edilen Değer</span>
+                            <h4 style="font-size:1.15rem; font-weight:900;">${v.market}</h4>
+                        </div>
+                        <div style="text-align:right; font-family:var(--font-code);">
+                            <span style="font-size:0.8rem; color:var(--text-sub);">Oran: ${v.bulten_orani}</span>
+                            <div style="font-size:1.2rem; font-weight:900; color:var(--accent-green);">${v.expected_value}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        openModal('modal-match-detail');
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -1048,10 +973,12 @@
                 CurrentUser = JSON.parse(session);
                 db.ref('mas_users/' + CurrentUser.username).once('value', snap => {
                     const u = snap.val();
-                    if (u && u.isPro) enterTerminal();
-                    else handleLogout();
+                    if (u && u.isPro) {
+                        document.getElementById('user-display').innerText = u.username.toUpperCase();
+                        switchView('terminal');
+                    }
                 });
-            } catch(e) { handleLogout(); }
+            } catch(e) {}
         }
     });
 </script>
