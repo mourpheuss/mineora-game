@@ -31,25 +31,10 @@ function startPowerBarLoop() {
 function performMiningStrike() {
   if (isTransitLocked || isSwinging || !CurrentUser) return;
 
-  // 48 SAATLİK ADAY DENEME SÜRESİ KONTROLÜ
-  if (typeof isCandidateTrialExpired === 'function' && isCandidateTrialExpired(CurrentUser)) {
-    showToast(`⛔ ${t('trial_expired')}`, "warning");
-    return;
-  }
-
   isSwinging = true;
   swingFrame = 1;
   const isSweetSpot = powerBarValue >= 35 && powerBarValue <= 75;
   const fillAmount = isSweetSpot ? 14 : 7;
-  
-  let rewardOra = 0;
-  if (CurrentUser.role === "İşçi Madenci" || CurrentUser.role === "Worker Miner") {
-    rewardOra = isSweetSpot ? 0.60 : 0.25;
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + rewardOra).toFixed(2));
-    if (typeof deductMinedOraFromMasterReserve === 'function') {
-      deductMinedOraFromMasterReserve(rewardOra);
-    }
-  }
 
   playPickaxeSound(isSweetSpot);
 
@@ -62,23 +47,16 @@ function performMiningStrike() {
     const crystalDropChance = isSweetSpot ? 0.08 : 0.03;
     if (Math.random() < crystalDropChance) {
       CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
-      showToast("💎 Rare Alp Crystal extracted! (+1 Elevator Ticket)", "success");
-    }
-
-    if (wagonFill >= 100 && currentWagonStage === 2 && (CurrentUser.alpCrystals || 0) === 0) {
-      CurrentUser.alpCrystals = 1;
-      showToast("💎 Obtained 1 Alp Crystal from deep reserve vein!", "success");
+      showToast("💎 Nadir Alp Kristali Çıkarıldı! (+1 Asansör Bileti)", "success");
     }
 
     const wagonFillEl = document.getElementById('wagon-fill-text');
     if (wagonFillEl) wagonFillEl.innerText = `${wagonFill}%`;
 
-    if (rewardOra > 0) {
-      showFloatingReward(
-        isSweetSpot ? `⚡ CRITICAL HIT! +${rewardOra.toFixed(2)} ORA` : `+${rewardOra.toFixed(2)} ORA`,
-        isSweetSpot ? "#facc15" : "#0ecb81"
-      );
-    }
+    showFloatingReward(
+      isSweetSpot ? `⚡ KRİTİK VURUŞ! +%${fillAmount}` : `+ %${fillAmount}`,
+      isSweetSpot ? "#facc15" : "#0ecb81"
+    );
 
     updateHUD();
     saveUserWorld();
@@ -291,7 +269,7 @@ function renderAlpMapPins() {
       const leftHours = Math.floor(leftMs / (1000 * 60 * 60));
       const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
       const leftSecs = Math.floor((leftMs % (1000 * 60)) / 1000);
-      timeRemainingText = `${leftHours}h ${leftMins}m ${leftSecs}s`;
+      timeRemainingText = `${leftHours}s ${leftMins}d ${leftSecs}sn`;
     }
 
     let icon = isDep ? 'fa-lock' : 'fa-gem';
@@ -326,11 +304,6 @@ function renderAlpMapPins() {
 function selectMine(idx) {
   if (!CurrentUser) return;
 
-  if (typeof isCandidateTrialExpired === 'function' && isCandidateTrialExpired(CurrentUser)) {
-    showToast(`⛔ ${t('trial_expired')}`, "warning");
-    return;
-  }
-
   checkMinesCooldown();
   const m = CurrentUser.mines[idx];
   if (m.depleted) {
@@ -338,18 +311,18 @@ function selectMine(idx) {
     const leftMs = Math.max(0, COOLDOWN_24H_MS - (now - (m.sealedAt || now)));
     const leftHours = Math.floor(leftMs / (1000 * 60 * 60));
     const leftMins = Math.floor((leftMs % (1000 * 60 * 60)) / (1000 * 60));
-    showToast(`⏳ This mine is sealed! Remaining cooldown: ${leftHours} hours ${leftMins} minutes.`, "warning");
+    showToast(`⏳ Bu maden mühürlüdür! Kalan dinlenme süresi: ${leftHours} saat ${leftMins} dakika.`, "warning");
     return;
   }
 
   activeMineIdx = idx; wagonFill = 0; currentWagonStage = 1; isTransitLocked = false; rockParticles = [];
   document.getElementById('transit-overlay')?.classList.add('hidden');
   document.getElementById('active-mine-title').innerText = m.name;
-  document.getElementById('active-mine-mineral').innerText = `Mineral: ${m.mineral}`;
-  document.getElementById('wagon-round-indicator').innerText = "Wagon Stage: 1 / 2";
+  document.getElementById('active-mine-mineral').innerText = `Cevher: ${m.mineral}`;
+  document.getElementById('wagon-round-indicator').innerText = "Vagon: 1 / 2";
   document.getElementById('wagon-fill-text').innerText = `${wagonFill}%`;
   switchTab('cave');
-  showToast(`⛏️ Entered ${m.name}! Strike the ore to fill the wagon.`, "info");
+  showToast(`⛏️ ${m.name} sahasına girildi! Vagonu doldurmak için kazma vurun.`, "info");
 }
 
 function showFloatingReward(text, color = '#f0b90b') {
@@ -369,92 +342,13 @@ function triggerWagonFull() {
   document.getElementById('btn-dispatch-wagon')?.classList.remove('hidden');
 
   if (currentWagonStage === 1) {
-    document.getElementById('transit-title').innerText = "1st Wagon Full!";
-    document.getElementById('transit-desc').innerText = "Dispatch the 1st wagon to the elevator. It will be pulled to the surface in 15 seconds while an empty wagon is lowered.";
-    document.getElementById('btn-dispatch-text').innerText = "Dispatch 1st Wagon (15s Transit)";
+    document.getElementById('transit-title').innerText = "1. Vagon Doldu!";
+    document.getElementById('transit-desc').innerText = "1. vagonu yüzey asansörüne sevk edin. Vagon 15 saniyede boşaltılıp yeni vagon indirilecektir.";
+    document.getElementById('btn-dispatch-text').innerText = "1. Vagonu Sevk Et (15s)";
   } else {
-    document.getElementById('transit-title').innerText = "2nd Wagon Full & Mine Depleted!";
-    document.getElementById('transit-desc').innerText = "Dispatch the final wagon (5s transit). Daily payouts will distribute and this mine will be sealed for 24 hours.";
-    document.getElementById('btn-dispatch-text').innerText = "Dispatch Final Wagon (5s Transit & Seal)";
-  }
-}
-
-function distributeDailyMiningRoyalties(workerUsername) {
-  if (!CurrentUser || !CurrentUser.referredBy) return;
-  const leader = typeof findUserByRefCode === 'function' ? findUserByRefCode(CurrentUser.referredBy) : null;
-  if (!leader) return;
-
-  let mineOwner = null, companyOwner = null;
-  if (leader.role === "Maden Sahibi" || leader.role === "Mine Owner") {
-    mineOwner = leader;
-    if (mineOwner.referredBy && typeof findUserByRefCode === 'function') {
-      const top = findUserByRefCode(mineOwner.referredBy);
-      if (top && (top.role === "Şirket Sahibi" || top.role === "Holding Owner")) companyOwner = top;
-    }
-  } else if (leader.role === "Şirket Sahibi" || leader.role === "Holding Owner") {
-    companyOwner = leader;
-  } else if ((leader.role === "İşçi Madenci" || leader.role === "Worker Miner") && leader.referredBy) {
-    const parent = typeof findUserByRefCode === 'function' ? findUserByRefCode(leader.referredBy) : null;
-    if (parent && (parent.role === "Maden Sahibi" || parent.role === "Mine Owner")) {
-      mineOwner = parent;
-      if (mineOwner.referredBy) {
-        const top = findUserByRefCode(mineOwner.referredBy);
-        if (top && (top.role === "Şirket Sahibi" || top.role === "Holding Owner")) companyOwner = top;
-      }
-    } else if (parent && (parent.role === "Şirket Sahibi" || parent.role === "Holding Owner")) {
-      companyOwner = parent;
-    }
-  }
-
-  const todayStr = new Date().toDateString();
-  if (mineOwner) {
-    const MINE_DAILY_CAP = 150.00, intendedAmount = 1.50;
-    if (mineOwner.lastRoyaltyDate !== todayStr) { mineOwner.lastRoyaltyDate = todayStr; mineOwner.dailyRoyaltiesEarned = 0.00; }
-    const currentEarned = Number(mineOwner.dailyRoyaltiesEarned || 0);
-    const payable = Math.min(intendedAmount, Math.max(0, MINE_DAILY_CAP - currentEarned));
-    const overflowToBurn = Number((intendedAmount - payable).toFixed(2));
-
-    if (payable > 0) {
-      mineOwner.ora = Number(((mineOwner.ora || 0) + payable).toFixed(2));
-      mineOwner.dailyRoyaltiesEarned = Number((currentEarned + payable).toFixed(2));
-      addUserNotificationLog(mineOwner, "Daily Mine Royalties", `${workerUsername} finished extraction shift.`, `+${payable.toFixed(2)} ORA`, "income");
-    }
-    if (overflowToBurn > 0 && typeof registerProtocolSystemBurn === 'function') {
-      registerProtocolSystemBurn(overflowToBurn, `Mine Owner (${mineOwner.username}) Daily Cap Overflow`);
-    }
-    if (mineOwner.workers) {
-      const w = mineOwner.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
-      if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
-    }
-    saveStoredUser(mineOwner);
-  }
-
-  if (companyOwner) {
-    const COMP_DAILY_CAP = 750.00, intendedCompAmount = 0.50;
-    if (companyOwner.lastRoyaltyDate !== todayStr) { companyOwner.lastRoyaltyDate = todayStr; companyOwner.dailyRoyaltiesEarned = 0.00; }
-    const currentCompEarned = Number(companyOwner.dailyRoyaltiesEarned || 0);
-    const payableComp = Math.min(intendedCompAmount, Math.max(0, COMP_DAILY_CAP - currentCompEarned));
-    const overflowCompToBurn = Number((intendedCompAmount - payableComp).toFixed(2));
-
-    if (payableComp > 0) {
-      companyOwner.ora = Number(((companyOwner.ora || 0) + payableComp).toFixed(2));
-      companyOwner.dailyRoyaltiesEarned = Number((currentCompEarned + payableComp).toFixed(2));
-      addUserNotificationLog(companyOwner, "Holding Fleet Royalties", `${workerUsername} finished shift.`, `+${payableComp.toFixed(2)} ORA`, "income");
-    }
-    if (overflowCompToBurn > 0 && typeof registerProtocolSystemBurn === 'function') {
-      registerProtocolSystemBurn(overflowCompToBurn, `Holding Owner (${companyOwner.username}) Daily Cap Overflow`);
-    }
-    if (mineOwner && companyOwner.minesOwned) {
-      const ocak = companyOwner.minesOwned.find(m => m.ownerUsername.toLowerCase() === mineOwner.username.toLowerCase());
-      if (ocak && ocak.workers) {
-        const w = ocak.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
-        if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
-      }
-    } else if (companyOwner.workers) {
-      const w = companyOwner.workers.find(i => i.username.toLowerCase() === workerUsername.toLowerCase());
-      if (w) { w.workedToday = true; w.oraMined = Number(((w.oraMined || 0) + 10.00).toFixed(2)); }
-    }
-    saveStoredUser(companyOwner);
+    document.getElementById('transit-title').innerText = "2. Vagon Doldu & Maden Tamamlandı!";
+    document.getElementById('transit-desc').innerText = "Son vagon tahliye ediliyor (5s). Tamamlanınca günlük kazancınız doğrudan TL cüzdanınıza aktarılacaktır.";
+    document.getElementById('btn-dispatch-text').innerText = "Son Vagonu Tahliye Et (5s & Mühürle)";
   }
 }
 
@@ -467,11 +361,11 @@ function startElevatorDispatch() {
   if (timerText) timerText.innerText = countdown;
 
   if (currentWagonStage === 1) {
-    if (subText) subText.innerText = "1st Wagon loaded onto elevator, ascending to surface...";
-    showToast("🚀 1st Wagon in transit, ascending (15s)...", "info");
+    if (subText) subText.innerText = "1. Vagon yüzeye çıkarılıyor...";
+    showToast("🚀 1. Vagon sevk ediliyor (15s)...", "info");
   } else {
-    if (subText) subText.innerText = "Final wagon ascending, mine is sealing...";
-    showToast("⚡ Final evacuation started (5s)...", "info");
+    if (subText) subText.innerText = "Son vagon tahliye ediliyor, maden kapatılıyor...";
+    showToast("⚡ Son vagon tahliyesi başladı (5s)...", "info");
   }
 
   const iv = setInterval(() => {
@@ -483,27 +377,20 @@ function startElevatorDispatch() {
         currentWagonStage = 2; wagonFill = 0; isTransitLocked = false; rockParticles = [];
         document.getElementById('transit-overlay')?.classList.add('hidden');
         document.getElementById('wagon-fill-text').innerText = "0%";
-        document.getElementById('wagon-round-indicator').innerText = "Wagon Stage: 2 / 2 (Deep Vein)";
-        showToast("✅ 1st Wagon emptied! 2nd wagon ready, resume mining!", "success");
+        document.getElementById('wagon-round-indicator').innerText = "Vagon: 2 / 2 (Derin Damar)";
+        showToast("✅ 1. Vagon boşaltıldı! 2. vagon bağlandı, kazıya devam edin!", "success");
       } else {
         const m = CurrentUser.mines[activeMineIdx];
         m.depleted = true; m.sealedAt = Date.now(); m.hp = 0; wagonFill = 0;
 
-        if (CurrentUser.role === "Maden Sahibi" || CurrentUser.role === "Mine Owner" || CurrentUser.role === "Şirket Sahibi" || CurrentUser.role === "Holding Owner") {
-          CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 2;
-          showToast("👑 Management Logistics Bonus: +2 Alp Crystals added!", "info");
-        } else if (CurrentUser.role === "İşçi Madenci" || CurrentUser.role === "Worker Miner") {
-          CurrentUser.ora = Number(((CurrentUser.ora || 0) + 8.00).toFixed(2));
-          showToast("💰 Worker Shift Earnings: +8.00 ORA!", "success");
-        } else {
-          showToast("⛏️ Shift complete! Upgrade license to unlock ORA extraction.", "info");
-        }
+        // DOĞRUDAN TÜRK LİRASI KAZANCI
+        const earnedTl = 25.00; // Maden başı 25 ₺ (5 maden tamamlandığında günlük 125 ₺ kazanç)
+        CurrentUser.tl = Number(((CurrentUser.tl || 0) + earnedTl).toFixed(2));
+        showToast(`💰 Maden Tamamlandı! +${earnedTl.toFixed(2)} ₺ cüzdanınıza aktarıldı!`, "success");
 
-        addUserNotificationLog(CurrentUser, "Daily Extraction Finished", `Extracted 2 wagons from ${m.name}.`, (CurrentUser.role === "İşçi Madenci" || CurrentUser.role === "Worker Miner") ? "+8.00 ORA" : "Completed", "income");
-        distributeDailyMiningRoyalties(CurrentUser.username);
+        addUserNotificationLog(CurrentUser, "Maden Kazısı Tamamlandı", `${m.name} sahasından 2 vagon sevk edildi.`, `+${earnedTl.toFixed(2)} ₺`, "income");
         saveUserWorld(); 
         updateHUD();
-        showToast(`🏆 ${m.name} finished! Mine SEALED for 24 hours!`, "success");
         setTimeout(() => { document.getElementById('transit-overlay')?.classList.add('hidden'); switchTab('map'); renderAlpMapPins(); }, 800);
       }
     }
