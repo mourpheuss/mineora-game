@@ -39,7 +39,7 @@
         .container { max-width: 1260px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* VİTRİN / LANDING */
+        /* ================= VİTRİN / LANDING ================= */
         .landing-hero-wrapper {
             position: relative;
             background-image: 
@@ -51,6 +51,19 @@
             border-bottom: 1px solid var(--border-line);
             padding-bottom: 6rem;
             overflow: hidden;
+        }
+
+        .landing-hero-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(0, 210, 255, 0.22), transparent 70%);
+            pointer-events: none;
+            filter: blur(40px);
         }
 
         .landing-nav {
@@ -195,7 +208,7 @@
             line-height: 1.65;
         }
 
-        /* TERMİNAL (CANLI STADYUM AMBİYANS) */
+        /* TERMİNAL */
         .terminal-stadium-wrapper {
             position: relative;
             background-image: 
@@ -295,7 +308,9 @@
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
+            transition: all 0.2s;
         }
+        .date-pill:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
         .date-pill.active {
             background: var(--accent-green);
             color: #060911;
@@ -378,11 +393,7 @@
             100% { box-shadow: 0 0 0 0 rgba(255, 51, 102, 0); }
         }
 
-        .card-red-indicator {
-            color: var(--accent-red);
-            font-size: 0.75rem;
-            margin-left: 3px;
-        }
+        .card-red-indicator { color: var(--accent-red); font-size: 0.75rem; margin-left: 3px; }
 
         .btn-report-action {
             background: linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(0, 210, 255, 0.12));
@@ -526,7 +537,7 @@
     </div>
 </div>
 
-<!-- 2. PRO TERMİNAL EKRANI (CANLI SKOR & KIRMIZI KART DESTEKLİ) -->
+<!-- ================= 2. PRO TERMİNAL EKRANI ================= -->
 <div id="view-terminal" class="terminal-stadium-wrapper hidden">
     <div class="container">
         <div class="terminal-header">
@@ -548,7 +559,7 @@
             </div>
         </div>
 
-        <!-- 4'LÜ TELEMETRİ ŞERİDİ -->
+        <!-- TELEMETRİ ŞERİDİ -->
         <div class="terminal-kpi-bar">
             <div class="kpi-card">
                 <div class="kpi-icon" style="background:rgba(0,255,136,0.12); color:var(--accent-green);"><i class="fa-solid fa-futbol"></i></div>
@@ -580,6 +591,7 @@
             </div>
         </div>
 
+        <!-- TARİH VE ARAMA SEKMELERİ -->
         <div class="terminal-controls">
             <div class="search-container">
                 <i class="fa-solid fa-magnifying-glass" style="color: var(--accent-green);"></i>
@@ -651,7 +663,7 @@
     </div>
 </div>
 
-<!-- 4. DETAY ANALİZ RAPOR MODALI (YAPAY ZEKA METİN KUTUSU KALDIRILDI) -->
+<!-- 4. DETAY ANALİZ RAPOR MODALI -->
 <div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
@@ -835,6 +847,21 @@
     let adminUsersList = {};
     let adminActiveTab = 'all';
     let adminSearchTerm = '';
+
+    // ================= RESMİ TÜRKİYE SAATİ (TSİ) TARİH HESAPLAYICISI =================
+    function getTurkeyDateStr(dayOffset = 0) {
+        const d = new Date();
+        if (dayOffset !== 0) {
+            d.setDate(d.getDate() + dayOffset);
+        }
+        // en-CA formatı daima YYYY-MM-DD çıktısı üretir
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Europe/Istanbul',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(d);
+    }
 
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -1155,9 +1182,14 @@
         });
     }
 
+    // ================= KALICI "BUGÜN" VE "YARIN" SEKMELERİ =================
     function buildDateTabs() {
         const container = document.getElementById('date-tabs-container');
         container.innerHTML = '';
+
+        // TSİ bazlı bugün ve yarın tarihleri
+        const todayTsi = getTurkeyDateStr(0);
+        const tomTsi = getTurkeyDateStr(1);
 
         const dateMap = {};
         allMatches.forEach(m => {
@@ -1165,36 +1197,42 @@
             if (d) dateMap[d] = (dateMap[d] || 0) + 1;
         });
 
-        const sortedDates = Object.keys(dateMap).sort();
-
+        // 1. "Tüm Maçlar" Sekmesi
         const allBtn = document.createElement('button');
         allBtn.className = `date-pill ${selectedDateFilter === 'all' ? 'active' : ''}`;
         allBtn.innerHTML = `Tüm Maçlar (${allMatches.length})`;
         allBtn.onclick = () => selectDateFilter('all');
         container.appendChild(allBtn);
 
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${y}-${m}-${d}`;
+        // 2. "Bugün" Sekmesi (HER ZAMAN MEVCUTTUR)
+        const todayCount = dateMap[todayTsi] || 0;
+        const todayBtn = document.createElement('button');
+        todayBtn.className = `date-pill ${selectedDateFilter === todayTsi ? 'active' : ''}`;
+        todayBtn.innerHTML = `Bugün (${todayCount})`;
+        todayBtn.onclick = () => selectDateFilter(todayTsi);
+        container.appendChild(todayBtn);
 
-        const tom = new Date(now);
-        tom.setDate(tom.getDate() + 1);
-        const tomStr = `${tom.getFullYear()}-${String(tom.getMonth() + 1).padStart(2, '0')}-${String(tom.getDate()).padStart(2, '0')}`;
+        // 3. "Yarın" Sekmesi (HER ZAMAN MEVCUTTUR)
+        const tomCount = dateMap[tomTsi] || 0;
+        const tomBtn = document.createElement('button');
+        tomBtn.className = `date-pill ${selectedDateFilter === tomTsi ? 'active' : ''}`;
+        tomBtn.innerHTML = `Yarın (${tomCount})`;
+        tomBtn.onclick = () => selectDateFilter(tomTsi);
+        container.appendChild(tomBtn);
 
-        sortedDates.forEach(dateStr => {
+        // 4. Sonraki Günler (Bugün ve Yarın filtrelenir, mükerrer oluşamaz)
+        const allDates = Object.keys(dateMap).sort();
+        allDates.forEach(dateStr => {
+            if (dateStr === todayTsi || dateStr === tomTsi) return;
+            if (dateStr < todayTsi) return; // Geçmiş günleri atla
+
             let label = dateStr;
             try {
                 const parts = dateStr.split('-');
                 const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-                if (dateStr === todayStr) label = "Bugün";
-                else if (dateStr === tomStr) label = "Yarın";
-                else {
-                    const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cts"];
-                    const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-                    label = `${dt.getDate()} ${months[dt.getMonth()]} ${days[dt.getDay()]}`;
-                }
+                const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cts"];
+                const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+                label = `${dt.getDate()} ${months[dt.getMonth()]} ${days[dt.getDay()]}`;
             } catch(e) {}
 
             const pill = document.createElement('button');
@@ -1220,6 +1258,8 @@
         const container = document.getElementById('match-list-container');
         container.innerHTML = '';
 
+        const todayTsi = getTurkeyDateStr(0);
+
         const filtered = allMatches.filter(m => {
             if (selectedDateFilter !== 'all') {
                 const mDate = (m.date || '').split(' ')[0];
@@ -1233,7 +1273,10 @@
         });
 
         if (filtered.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-sub); background:rgba(11,18,32,0.6); border-radius:16px;">Seçilen günde veya kriterde aktif maç bulunamadı.</div>';
+            const emptyNotice = selectedDateFilter === todayTsi 
+                ? "Bugün için bültende planlanmış maç bulunmuyor. 'Yarın' veya 'Tüm Maçlar' sekmesini inceleyebilirsiniz."
+                : "Seçilen filtrede karşılaşma bulunamadı.";
+            container.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-sub); background:rgba(11,18,32,0.6); border-radius:16px;">${emptyNotice}</div>`;
             return;
         }
 
@@ -1254,7 +1297,6 @@
             row.className = `match-row ${isLive ? 'row-live' : ''}`;
             row.onclick = () => openReportModal(m);
 
-            // Canlıysa Kırmızı CANLI rozeti ve Anlık Skor, değilse Başlama Saati
             const timeOrStatusHtml = isLive 
                 ? `<span class="badge-live-pulse"><i class="fa-solid fa-circle" style="font-size:0.55rem;"></i> ${m.live_clock || 'CANLI'}</span>`
                 : `<span class="badge-time"><i class="fa-regular fa-clock" style="color:var(--accent-cyan);"></i> ${timeOnly}</span>`;
