@@ -1,9 +1,9 @@
 // ================= BANKA HAVALE/EFT & TL CÜZDAN MOTORU (wallet.js) =================
 let isWalletProcessing = false;
 
-// DAHA SONRA VERECEĞİNİZ ŞİRKET VE IBAN BİLGİLERİ (Burayı güncelleyebilirsiniz)
+// İLERİDE DEĞİŞTİRECEĞİNİZ ŞİRKET VE IBAN BİLGİLERİ
 const BANK_CONFIG = {
-  companyName: "MINEORA TEKNOLOJİ A.Ş. (Örnek Şirket)",
+  companyName: "MINEORA BİLİŞİM VE TEKNOLOJİ A.Ş.",
   bankName: "Ziraat Bankası / Garanti BBVA",
   iban: "TR00 0000 0000 0000 0000 0000 00"
 };
@@ -31,8 +31,9 @@ function setWalletTab(tab) {
 }
 
 function copyCompanyIban() {
-  navigator.clipboard.writeText(BANK_CONFIG.iban.replace(/\s/g, '')).then(() => {
-    showToast("📋 Şirket IBAN adresi kopyalandı!", "success");
+  const cleanIban = BANK_CONFIG.iban.replace(/\s/g, '');
+  navigator.clipboard.writeText(cleanIban).then(() => {
+    showToast("📋 Şirket IBAN numarası kopyalandı!", "success");
   });
 }
 
@@ -42,7 +43,7 @@ function fillMaxWithdraw() {
   if (withInput) withInput.value = Math.max(0, CurrentUser.tl || 0).toFixed(2);
 }
 
-// Para Yatırma Bildirimi (Havale / EFT)
+// Para Yatırma Bildirimi (Kullanıcı havale yaptıktan sonra bildirir)
 function submitDepositReceipt() {
   if (!CurrentUser || isWalletProcessing) return;
   const senderNameInput = document.getElementById('deposit-sender-name');
@@ -52,7 +53,7 @@ function submitDepositReceipt() {
   const amt = parseFloat(amtInput?.value) || 0;
 
   if (!senderName || senderName.length < 3) {
-    showToast("⚠️ Lütfen havaleyi gönderdiğiniz Adı ve Soyadı girin!", "warning");
+    showToast("⚠️ Lütfen havaleyi gönderen Adı ve Soyadı girin!", "warning");
     return;
   }
   if (isNaN(amt) || amt < 50) { 
@@ -69,11 +70,11 @@ function submitDepositReceipt() {
   if (senderNameInput) senderNameInput.value = "";
   if (amtInput) amtInput.value = "";
   closeModal('modal-wallet');
-  showToast(`⏳ ${amt.toFixed(2)} ₺ yatırma bildiriminiz alındı. Muhasebe onayından sonra bakiyenize yansıyacaktır.`, "info");
+  showToast(`⏳ ${amt.toFixed(2)} ₺ yatırım bildiriminiz alındı. Havale kontrolünden sonra bakiyenize yansıtılacaktır.`, "info");
   setTimeout(() => { isWalletProcessing = false; }, 1000);
 }
 
-// Para Çekme Talebi (Banka Hesabına)
+// Para Çekme Bildirimi (Kullanıcı IBAN'ına çekim ister)
 function executeWithdrawal() {
   if (!CurrentUser) return;
   if (CurrentUser.isVaultLocked) { 
@@ -99,13 +100,13 @@ function executeWithdrawal() {
     return;
   }
   if (isNaN(amt) || amt < 100) { 
-    showToast("⚠️ Minimum çekim tutarı 100 ₺'dir!", "warning"); 
+    showToast("⚠️ Minimum para çekme tutarı 100 ₺'dir!", "warning"); 
     return; 
   }
 
   const currentTl = Number(CurrentUser.tl) || 0;
   if (amt > currentTl) { 
-    showToast(`⚠️ Yetersiz bakiye! Mevcut TL: ${currentTl.toFixed(2)} ₺`, "warning"); 
+    showToast(`⚠️ Yetersiz bakiye! Mevcut Bakiyeniz: ${currentTl.toFixed(2)} ₺`, "warning"); 
     return; 
   }
   if (!pwd) { 
@@ -132,6 +133,6 @@ function executeWithdrawal() {
   document.getElementById('withdraw-auth-password').value = "";
 
   closeModal('modal-wallet');
-  showToast(`🔒 ${amt.toFixed(2)} ₺ çekim talebiniz banka sırasına alındı.`, "success");
+  showToast(`🔒 ${amt.toFixed(2)} ₺ çekim talebiniz banka ödeme sırasına alındı.`, "success");
   setTimeout(() => { isWalletProcessing = false; }, 1000);
 }
