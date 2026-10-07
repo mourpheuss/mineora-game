@@ -15,7 +15,6 @@
             --bg-card: rgba(16, 25, 42, 0.92);
             --bg-row-hover: rgba(0, 255, 136, 0.06);
             --border-line: rgba(255, 255, 255, 0.08);
-            --border-active: rgba(0, 255, 136, 0.4);
             --text-pure: #ffffff;
             --text-sub: #94a3b8;
             --accent-green: #00ff88;
@@ -43,7 +42,7 @@
         .container { max-width: 1260px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* ================= 1. VİTRİN / LANDING ================= */
+        /* VİTRİN */
         .landing-nav {
             display: flex;
             justify-content: space-between;
@@ -55,12 +54,7 @@
             gap: 1rem;
         }
 
-        .brand-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.85rem;
-        }
-
+        .brand-logo { display: flex; align-items: center; gap: 0.85rem; }
         .brand-icon {
             width: 44px;
             height: 44px;
@@ -115,13 +109,7 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .hero-desc {
-            font-size: 1.05rem;
-            color: var(--text-sub);
-            line-height: 1.65;
-            margin-bottom: 2.2rem;
-        }
-
+        .hero-desc { font-size: 1.05rem; color: var(--text-sub); line-height: 1.65; margin-bottom: 2.2rem; }
         .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
 
         .btn-glow {
@@ -141,10 +129,7 @@
             transition: all 0.25s ease;
         }
 
-        .btn-glow:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 45px rgba(0, 255, 136, 0.5);
-        }
+        .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 0 45px rgba(0, 255, 136, 0.5); }
 
         .btn-outline {
             background: rgba(255, 255, 255, 0.04);
@@ -158,54 +143,16 @@
             transition: all 0.2s;
         }
 
-        .btn-outline:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.25);
-        }
-
-        /* NASIL ÇALIŞIYOR BÖLÜMÜ */
-        .section-header {
-            text-align: center;
-            max-width: 700px;
-            margin: 0 auto 3.5rem auto;
-        }
-
-        .section-header h3 {
-            font-size: 2rem;
-            font-weight: 900;
-            margin-bottom: 0.8rem;
-        }
-
-        .method-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 5rem;
-        }
-
+        /* METODOLOJİ */
+        .section-header { text-align: center; max-width: 700px; margin: 0 auto 3.5rem auto; }
+        .section-header h3 { font-size: 2rem; font-weight: 900; margin-bottom: 0.8rem; }
+        .method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 4rem; }
         .method-card {
             background: var(--bg-card);
             border: 1px solid var(--border-line);
             border-radius: 20px;
             padding: 2rem;
             position: relative;
-            overflow: hidden;
-            transition: all 0.25s;
-        }
-
-        .method-card:hover {
-            border-color: var(--accent-green);
-            transform: translateY(-4px);
-        }
-
-        .method-number {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            font-size: 2.2rem;
-            font-family: var(--font-code);
-            font-weight: 900;
-            color: rgba(255, 255, 255, 0.05);
         }
 
         .method-icon {
@@ -222,19 +169,19 @@
             margin-bottom: 1.3rem;
         }
 
-        .method-card h4 {
-            font-size: 1.2rem;
-            font-weight: 800;
-            margin-bottom: 0.6rem;
-        }
-
-        .method-card p {
-            font-size: 0.88rem;
+        /* SORUMLULUK REDDİ BANNER */
+        .disclaimer-banner {
+            background: rgba(12, 19, 34, 0.6);
+            border: 1px solid var(--border-line);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 3rem;
+            font-size: 0.82rem;
             color: var(--text-sub);
             line-height: 1.6;
         }
 
-        /* ================= 2. PRO TERMİNAL EKRANI ================= */
+        /* TERMİNAL */
         .terminal-header {
             display: flex;
             justify-content: space-between;
@@ -267,7 +214,6 @@
             padding: 0.75rem 1.25rem;
         }
 
-        .search-container i { color: var(--accent-green); }
         .search-container input {
             background: transparent;
             border: none;
@@ -277,14 +223,7 @@
             outline: none;
         }
 
-        /* TARİH SEKMELERİ */
-        .date-pills-bar {
-            display: flex;
-            gap: 0.5rem;
-            overflow-x: auto;
-            padding-bottom: 4px;
-        }
-
+        .date-pills-bar { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 4px; }
         .date-pill {
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--border-line);
@@ -295,38 +234,10 @@
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            transition: all 0.2s;
         }
 
-        .date-pill:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            color: #fff;
-        }
+        .date-pill.active { background: var(--accent-green); color: #060911; font-weight: 800; border-color: var(--accent-green); }
 
-        .date-pill.active {
-            background: var(--accent-green);
-            color: #060911;
-            border-color: var(--accent-green);
-            font-weight: 800;
-        }
-
-        .date-pill .badge {
-            background: rgba(0, 0, 0, 0.25);
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-size: 0.72rem;
-            font-family: var(--font-code);
-        }
-
-        .date-pill.active .badge {
-            background: rgba(6, 9, 17, 0.2);
-            color: #060911;
-        }
-
-        /* MAÇ LİSTESİ */
         .match-list-header {
             display: grid;
             grid-template-columns: 85px 95px 1.3fr 1.8fr 150px 110px;
@@ -335,12 +246,9 @@
             font-weight: 800;
             color: var(--text-sub);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
         }
 
-        @media (max-width: 900px) {
-            .match-list-header { display: none; }
-        }
+        @media (max-width: 900px) { .match-list-header { display: none; } }
 
         .match-row {
             display: grid;
@@ -352,28 +260,14 @@
             padding: 1rem 1.25rem;
             margin-bottom: 0.6rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
-        @media (max-width: 900px) {
-            .match-row { grid-template-columns: 1fr; gap: 0.6rem; }
-        }
+        @media (max-width: 900px) { .match-row { grid-template-columns: 1fr; gap: 0.6rem; } }
+        .match-row:hover { border-color: var(--accent-green); background: var(--bg-row-hover); }
 
-        .match-row:hover {
-            border-color: var(--accent-green);
-            background: var(--bg-row-hover);
-            transform: scale([1.004]);
-        }
-
-        /* ================= 3. YÖNETİCİ MASASI (ADMIN PANEL) ================= */
-        .admin-nav-tabs {
-            display: flex;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-line);
-            padding-bottom: 0.75rem;
-        }
-
+        /* YÖNETİCİ PANELİ & WHATSAPP */
+        .admin-nav-tabs { display: flex; gap: 0.75rem; }
         .admin-tab-btn {
             background: transparent;
             border: none;
@@ -383,56 +277,29 @@
             padding: 0.6rem 1.2rem;
             border-radius: 10px;
             cursor: pointer;
+        }
+        .admin-tab-btn.active { background: rgba(255, 255, 255, 0.06); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .btn-whatsapp-notify {
+            background: #25d366;
+            color: #060911;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
+            gap: 0.3rem;
+            margin-left: 0.4rem;
         }
+        .btn-whatsapp-notify:hover { background: #20ba5a; }
 
-        .admin-tab-btn.active {
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--accent-amber);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
+        .admin-table th { padding: 1rem; border-bottom: 1px solid var(--border-line); color: var(--text-sub); }
+        .admin-table td { padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
 
-        .tab-badge {
-            background: var(--accent-amber);
-            color: #000;
-            font-size: 0.7rem;
-            padding: 2px 7px;
-            border-radius: 999px;
-            font-weight: 900;
-        }
-
-        .admin-table-wrap {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-line);
-            border-radius: 18px;
-            overflow-x: auto;
-        }
-
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-            text-align: left;
-        }
-
-        .admin-table th {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-line);
-            color: var(--text-sub);
-            font-weight: 800;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-        }
-
-        .admin-table td {
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        /* ================= 4. MODALLER ================= */
+        /* MODALLER */
         .modal {
             display: none;
             position: fixed;
@@ -467,44 +334,14 @@
             margin-bottom: 1.25rem;
         }
 
-        .prob-bar-container {
-            height: 10px;
-            border-radius: 6px;
-            overflow: hidden;
-            display: flex;
-            background: #1e293b;
-            margin: 0.65rem 0;
-        }
-
-        .form-badge {
-            display: inline-flex;
-            width: 24px;
-            height: 24px;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 800;
-            margin-right: 4px;
-        }
+        .prob-bar-container { height: 10px; border-radius: 6px; overflow: hidden; display: flex; background: #1e293b; margin: 0.65rem 0; }
+        .form-badge { display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.75rem; font-weight: 800; margin-right: 4px; }
         .form-G { background: #059669; color: #fff; }
         .form-B { background: #64748b; color: #fff; }
         .form-M { background: #e11d48; color: #fff; }
 
-        .stat-grid-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 0.75rem;
-            text-align: center;
-        }
-
-        .stat-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-line);
-            border-radius: 12px;
-            padding: 0.75rem;
-        }
-
+        .stat-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; text-align: center; }
+        .stat-box { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-line); border-radius: 12px; padding: 0.75rem; }
         .stat-box span { font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 0.3rem; }
         .stat-box strong { font-size: 1.25rem; font-family: var(--font-code); color: var(--accent-green); }
     </style>
@@ -517,7 +354,7 @@
         <div class="brand-logo">
             <div class="brand-icon"><i class="fa-solid fa-chart-line"></i></div>
             <div>
-                <h1 style="font-size: 1.35rem; font-weight: 900; letter-spacing: -0.02em;">MAS PRO TERMINAL</h1>
+                <h1 style="font-size: 1.35rem; font-weight: 900;">MAS PRO TERMINAL</h1>
                 <p style="font-size: 0.75rem; color: var(--text-sub);">Bilimsel Futbol Analitiği & Olasılık Motoru</p>
             </div>
         </div>
@@ -549,13 +386,12 @@
             </div>
         </div>
 
-        <!-- KURUMSAL PLATFORM GÖSTERGESİ -->
         <div style="background: var(--bg-surface); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 24px; padding: 2rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-line); padding-bottom:1rem;">
                 <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-green); text-transform: uppercase;">
                     <i class="fa-solid fa-server animate-pulse"></i> MAS Çekirdek Durumu
                 </span>
-                <span style="font-family: var(--font-code); font-size: 0.78rem; color: var(--accent-cyan);">ONLINE // v2.4 PRO</span>
+                <span style="font-family: var(--font-code); font-size: 0.78rem; color: var(--accent-cyan);">ONLINE // v2.5 PRO</span>
             </div>
 
             <div style="display:flex; flex-direction:column; gap:1rem;">
@@ -577,41 +413,44 @@
         </div>
     </div>
 
-    <!-- NASIL ÇALIŞIYOR? (METODOLOJİ) -->
+    <!-- METODOLOJİ -->
     <div class="section-header">
-        <span style="color: var(--accent-green); font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">BİLİMSEL YAKLAŞIM</span>
+        <span style="color: var(--accent-green); font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">BİLİMSEL YAKLAŞIM</span>
         <h3>MAS Analiz Motoru Nasıl Çalışır?</h3>
         <p style="color: var(--text-sub); font-size: 0.95rem;">Biz hislerle veya tahminlerle hareket etmiyoruz. Duyguları kenara bırakıp yeşil sahadaki gerçek istatistiklerin matematiksel röntgenini çekiyoruz.</p>
     </div>
 
     <div class="method-grid">
         <div class="method-card">
-            <span class="method-number">01</span>
             <div class="method-icon"><i class="fa-solid fa-satellite-dish"></i></div>
             <h4>Canlı Fikstür & Puan Cetveli</h4>
             <p>Süper Lig'den Premier Lig'e, La Liga'dan alt liglere kadar tüm resmi maçlar, başlama saatleri ve kulüplerin ligdeki gerçek puan durumları anlık taranır.</p>
         </div>
-
         <div class="method-card">
-            <span class="method-number">02</span>
             <div class="method-icon"><i class="fa-solid fa-crosshairs"></i></div>
             <h4>Hücum & Savunma Güç Endeksi</h4>
             <p>Ev sahibi ve deplasman takımlarının maç başına attığı/yediği gol oranları ve iç saha baskı katsayıları çarpıştırılarak iki takıma özel net gol beklentisi (xG) hesaplanır.</p>
         </div>
-
         <div class="method-card">
-            <span class="method-number">03</span>
             <div class="method-icon"><i class="fa-solid fa-calculator"></i></div>
             <h4>49 Olasılıklı Skor Matrisi</h4>
             <p>Olasılık teorisi uygulanarak 0-0'dan 6-6'ya kadar tüm skor ihtimalleri simüle edilir. Maç Sonu, İlk Yarı ve İkinci Yarı galibiyet yüzdeleri şeffaf olarak ayrıştırılır.</p>
         </div>
-
         <div class="method-card">
-            <span class="method-number">04</span>
             <div class="method-icon"><i class="fa-solid fa-shield-virus"></i></div>
             <h4>Form & Karşılaşma Filtresi</h4>
             <p>Son 5 haftanın sonuçları ve ligdeki güç uçurumları ağırlıklandırılarak 1.5, 2.5, 3.5 gol baremleri ile Karşılıklı Gol ihtimalleri tek raporda sunulur.</p>
         </div>
+    </div>
+
+    <!-- SORUMLULUK REDDİ BANNER (VİTRİN BİLGİLENDİRMESİ) -->
+    <div class="disclaimer-banner">
+        <div style="display: flex; align-items: center; gap: 0.6rem; color: var(--accent-amber); font-weight: 800; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-scale-balanced"></i> YASAL UYARI VE SORUMLULUK REDDİ BEYANI
+        </div>
+        <p>
+            MAS (Mine Analiz System); 7258 sayılı kanun ve ilgili mevzuat uyarınca kesinlikle bir <strong>bahis oynatma, aracılık etme veya bahis kabul etme platformu değildir</strong>. Sitede yer alan analizler, yüzdeler ve istatistikler geçmiş verilere dayalı Poisson matematiksel simülasyonlarıdır ve <strong>kesin kazanç vaat etmez</strong>. Platform 18 yaşından büyüklere yöneliktir. Kullanıcıların aldıkları kararlardan ve doğabilecek maddi/manevi zararlardan MAS ve yöneticileri hiçbir suretle sorumlu tutulamaz. Detaylar için <a href="#" onclick="openModal('modal-disclaimer')" style="color: var(--accent-green); text-decoration: underline;">Kullanıcı ve Sorumluluk Reddi Sözleşmesi</a>'ni inceleyiniz.
+        </p>
     </div>
 </div>
 
@@ -639,11 +478,7 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" id="match-search" oninput="handleSearch(event)" placeholder="Takım, lig veya maç kodu ara (Örn: Galatasaray, Premier, 40101)...">
         </div>
-
-        <!-- DİNAMİK GÜN/TARİH SEKMELERİ -->
-        <div class="date-pills-bar" id="date-tabs-container">
-            <!-- Dinamik olarak doldurulur -->
-        </div>
+        <div class="date-pills-bar" id="date-tabs-container"></div>
     </div>
 
     <!-- MAÇ LİSTESİ BAŞLIKLARI -->
@@ -656,9 +491,7 @@
         <div style="text-align: right;">RAPOR</div>
     </div>
 
-    <div id="match-list-container">
-        <!-- Dinamik Maçlar -->
-    </div>
+    <div id="match-list-container"></div>
 </div>
 
 <!-- ================= 3. YÖNETİCİ MASASI (ADMIN PANEL) ================= -->
@@ -668,7 +501,7 @@
             <div class="brand-icon" style="background: var(--accent-amber); color: #000;"><i class="fa-solid fa-shield-halved"></i></div>
             <div>
                 <h1 style="font-size: 1.35rem; font-weight: 900;">MAS KONTROL MERKEZİ</h1>
-                <p style="font-size: 0.8rem; color: var(--text-sub);">Üye Yönetimi & Shopier PRO Onay Masası</p>
+                <p style="font-size: 0.8rem; color: var(--text-sub);">Üye Yönetimi & WhatsApp Bildirim Masası</p>
             </div>
         </div>
         <div style="display: flex; gap: 0.5rem;">
@@ -677,34 +510,33 @@
         </div>
     </div>
 
-    <!-- SEKMELER (TÜM ÜYELER & ONAY BEKLEYENLER) -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-        <div class="admin-nav-tabs" style="margin-bottom:0; border:none; padding:0;">
+        <div class="admin-nav-tabs">
             <button id="admin-tab-all" class="admin-tab-btn active" onclick="setAdminTab('all')">
                 <i class="fa-solid fa-users"></i> Tüm Üyeler (<span id="adm-count-all">0</span>)
             </button>
             <button id="admin-tab-pending" class="admin-tab-btn" onclick="setAdminTab('pending')">
                 <i class="fa-solid fa-clock-rotate-left"></i> Onay Bekleyenler 
-                <span class="tab-badge" id="adm-count-pending">0</span>
+                <span style="background:var(--accent-amber); color:#000; font-size:0.7rem; padding:2px 7px; border-radius:999px; font-weight:900;" id="adm-count-pending">0</span>
             </button>
         </div>
 
         <div style="background: var(--bg-surface); border: 1px solid var(--border-line); border-radius: 10px; padding: 0.4rem 0.8rem; display: flex; align-items: center; gap: 0.5rem; width: 280px;">
             <i class="fa-solid fa-magnifying-glass" style="font-size: 0.8rem; color: var(--text-sub);"></i>
-            <input type="text" id="admin-user-search" oninput="handleAdminUserSearch(event)" placeholder="Kullanıcı veya Shopier ara..." style="background: transparent; border: none; color: #fff; font-size: 0.82rem; width: 100%; outline: none;">
+            <input type="text" id="admin-user-search" oninput="handleAdminUserSearch(event)" placeholder="Kullanıcı, Tel veya Shopier ara..." style="background: transparent; border: none; color: #fff; font-size: 0.82rem; width: 100%; outline: none;">
         </div>
     </div>
 
-    <div class="admin-table-wrap">
+    <div style="background: var(--bg-surface); border: 1px solid var(--border-line); border-radius: 18px; overflow-x: auto;">
         <table class="admin-table">
             <thead>
                 <tr>
                     <th>Kullanıcı Adı</th>
                     <th>Şifre</th>
-                    <th>Shopier Sipariş No / İletişim</th>
-                    <th>Kayıt Tarihi</th>
+                    <th>WhatsApp Tel / İletişim</th>
+                    <th>Shopier Sipariş No</th>
                     <th>Abonelik Durumu</th>
-                    <th style="text-align: right;">Yetki & İşlem</th>
+                    <th style="text-align: right;">Yetki & WhatsApp Bildirimi</th>
                 </tr>
             </thead>
             <tbody id="admin-user-rows"></tbody>
@@ -723,7 +555,6 @@
             <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.6rem; cursor:pointer;">&times;</button>
         </div>
 
-        <!-- 1. PUAN DURUMU & FORM -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom: 0.85rem;">
                 <i class="fa-solid fa-table-list"></i> Gerçek Puan Durumu & Son 5 Maçlık Form
@@ -744,7 +575,6 @@
             </div>
         </div>
 
-        <!-- 2. MAÇ SONU (MS 1 - X - 2) -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800;">
                 <i class="fa-solid fa-trophy"></i> Maç Sonu Kazanma İhtimali (MS)
@@ -761,7 +591,6 @@
             </div>
         </div>
 
-        <!-- 3. İLK VE İKİNCİ YARI -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
             <div class="card-panel" style="margin-bottom:0;">
                 <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom:0.6rem;">
@@ -785,7 +614,6 @@
             </div>
         </div>
 
-        <!-- 4. GOLLER VE KG -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom:0.8rem;">
                 <i class="fa-solid fa-bullseye"></i> Gol Baremleri & Karşılıklı Gol
@@ -798,7 +626,6 @@
             </div>
         </div>
 
-        <!-- 5. EN OLASI SKORLAR -->
         <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid var(--border-line); padding:0.85rem 1.25rem; border-radius:14px;">
             <span style="font-size:0.82rem; font-weight:800; color:var(--text-sub);">EN OLASI SKORLAR:</span>
             <div id="rep-top-scores" style="display:flex; gap:0.5rem; font-family:var(--font-code);"></div>
@@ -806,7 +633,25 @@
     </div>
 </div>
 
-<!-- ================= MODALLER (GİRİŞ / KAYIT / ADMIN) ================= -->
+<!-- ================= 5. YASAL SÖZLEŞME VE SORUMLULUK REDDİ MODALI ================= -->
+<div id="modal-disclaimer" class="modal" onclick="closeOnBackdrop(event, 'modal-disclaimer')">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.2rem; font-weight: 900; color: var(--accent-amber);"><i class="fa-solid fa-scale-balanced"></i> Kullanıcı Sözleşmesi & Sorumluluk Reddi</h3>
+            <button onclick="closeModal('modal-disclaimer')" style="background:transparent; border:none; color:#fff; font-size: 1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-sub); line-height: 1.7; display:flex; flex-direction:column; gap:0.8rem;">
+            <p><strong>1. Kapsam ve Nitelik:</strong> MAS (Mine Analiz System), spor müsabakalarına ilişkin kamuya açık verileri (puan tablosu, gol ortalamaları, fikstür) Poisson matematiksel modeli ile işleyen bağımsız bir analitik yazılımıdır.</p>
+            <p><strong>2. Bahis ve Kumar Yasağı:</strong> Platformumuz bir bahis sitesi değildir. Hiçbir suretle bahis oynatılmaz, aracılık edilmez, bakiye yatırılmaz veya çekilmez. Türkiye Cumhuriyeti 7258 sayılı kanununa tam uyumlu çalışır.</p>
+            <p><strong>3. Kesin Kazanç Garantisi Yoktur:</strong> Futbol müsabakaları doğası gereği kırmızı kart, hava koşulları, hakem hataları gibi öngörülemez değişkenler barındırır. Sitedeki yüzdeler matematiksel ihtimallerdir; kesin sonuç veya mali kazanç vaat etmez.</p>
+            <p><strong>4. Yaş Sınırı:</strong> Platform yalnızca 18 yaşını doldurmuş bireylerin kişisel analiz kullanımı içindir.</p>
+            <p><strong>5. Sorumluluk Sınırı:</strong> Kullanıcıların sitedeki analizlere dayanarak yasal platformlarda oynadıkları kuponlardan, kayıplardan veya hukuki sonuçlardan tamamen kullanıcının kendisi sorumludur. MAS ve yöneticileri sorumlu tutulamaz.</p>
+        </div>
+        <button onclick="closeModal('modal-disclaimer')" class="btn-glow" style="width: 100%; justify-content:center; margin-top:1.5rem;">Okudum, Anladım</button>
+    </div>
+</div>
+
+<!-- ================= 6. GİRİŞ & KAYIT & ADMIN MODALLERİ ================= -->
 <div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
     <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">PRO Girişi</h3>
@@ -816,12 +661,25 @@
     </div>
 </div>
 
+<!-- GELİŞMİŞ KAYIT FORMU (WHATSAPP + SHOPIER + SOZLESME ONAYI) -->
 <div id="modal-register" class="modal" onclick="closeOnBackdrop(event, 'modal-register')">
-    <div class="modal-box" style="max-width: 420px;" onclick="event.stopPropagation()">
-        <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">PRO Kayıt & Aktivasyon</h3>
-        <input type="text" id="reg-user" placeholder="Kullanıcı Adı" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.8rem; border-radius:10px; color:#fff; margin-bottom:0.75rem; outline:none;">
-        <input type="password" id="reg-pass" placeholder="Şifre" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.8rem; border-radius:10px; color:#fff; margin-bottom:0.75rem; outline:none;">
-        <input type="text" id="reg-shopier" placeholder="Shopier Sipariş Numarası / Tel No" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.8rem; border-radius:10px; color:#fff; margin-bottom:1.25rem; outline:none;">
+    <div class="modal-box" style="max-width: 440px;" onclick="event.stopPropagation()">
+        <h3 style="font-size: 1.25rem; font-weight:900; margin-bottom: 0.3rem;">PRO Kayıt & Aktivasyon</h3>
+        <p style="font-size: 0.78rem; color: var(--text-sub); margin-bottom: 1.2rem;">Onay bildiriminiz WhatsApp üzerinden iletilecektir.</p>
+        
+        <input type="text" id="reg-user" placeholder="Kullanıcı Adı" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:0.6rem; outline:none;">
+        <input type="password" id="reg-pass" placeholder="Şifre" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:0.6rem; outline:none;">
+        <input type="text" id="reg-phone" placeholder="WhatsApp Tel No (Örn: 05321234567)" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:0.6rem; outline:none;">
+        <input type="text" id="reg-shopier" placeholder="Shopier Sipariş Numarası" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:1rem; outline:none;">
+
+        <!-- ONAY KUTUSU (CHECKBOX) -->
+        <div style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 1.2rem; font-size: 0.78rem; color: var(--text-sub);">
+            <input type="checkbox" id="reg-agreement" style="margin-top: 3px; accent-color: var(--accent-green); cursor:pointer;">
+            <label for="reg-agreement">
+                18 yaşından büyüğüm. <a href="#" onclick="openModal('modal-disclaimer')" style="color: var(--accent-green); text-decoration: underline;">Sorumluluk Reddi ve Kullanıcı Sözleşmesi</a>'ni okudum, kabul ediyorum.
+            </label>
+        </div>
+
         <button onclick="handleRegister()" class="btn-glow" style="width: 100%; justify-content:center;">Başvuruyu Gönder</button>
     </div>
 </div>
@@ -846,19 +704,17 @@
 
     let allMatches = [];
     let currentSearch = '';
-    let selectedDateFilter = 'all'; // 'all', 'YYYY-MM-DD'
+    let selectedDateFilter = 'all';
     let CurrentUser = null;
 
-    // Admin State
     let adminUsersList = {};
-    let adminActiveTab = 'all'; // 'all' veya 'pending'
+    let adminActiveTab = 'all';
     let adminSearchTerm = '';
 
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
 
-    // F5 KORUMALI EKRAN YÖNETİCİSİ
     function switchView(view) {
         document.getElementById('view-landing').classList.add('hidden');
         document.getElementById('view-terminal').classList.add('hidden');
@@ -877,7 +733,7 @@
         }
     }
 
-    // YÖNETİCİ AUTH & İŞLEMLER
+    // YÖNETİCİ İŞLEMLERİ
     function handleAdminAuth() {
         if (document.getElementById('admin-pass-input').value.trim() === ADMIN_KEY) {
             closeModal('modal-admin-auth');
@@ -926,7 +782,7 @@
             const u = adminUsersList[k];
             if (adminActiveTab === 'pending' && u.isPro) return false;
             if (adminSearchTerm) {
-                const searchStr = `${u.username} ${u.shopierNo || ''} ${u.password || ''}`.toLowerCase();
+                const searchStr = `${u.username} ${u.phone || ''} ${u.shopierNo || ''}`.toLowerCase();
                 return searchStr.includes(adminSearchTerm);
             }
             return true;
@@ -939,24 +795,33 @@
 
         filteredKeys.forEach(uName => {
             const u = adminUsersList[uName];
-            const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '-';
+            const cleanPhone = (u.phone || '').replace(/[^0-9]/g, '');
+            const targetPhone = cleanPhone.startsWith('90') ? cleanPhone : (cleanPhone.startsWith('0') ? '9' + cleanPhone : '90' + cleanPhone);
+
+            const msg = encodeURIComponent(`Merhaba ${u.username}, MAS (Mine Analiz System) PRO Terminal aboneliğiniz ve Shopier siparişiniz onaylanmıştır! Kullanıcı adı ve şifrenizle https://mineoragame.com üzerinden anında giriş yapabilirsiniz. Bol şanslar dileriz.`);
+            const waLink = `https://wa.me/${targetPhone}?text=${msg}`;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="font-weight:800;">${u.username}</td>
                 <td style="font-family:var(--font-code); color:var(--text-sub);">${u.password}</td>
-                <td style="font-family:var(--font-code); color:var(--accent-cyan); font-weight:700;">${u.shopierNo || '-'}</td>
-                <td style="font-size:0.78rem; color:var(--text-sub);">${dateStr}</td>
+                <td style="font-family:var(--font-code); color:var(--accent-cyan); font-weight:700;">${u.phone || '-'}</td>
+                <td style="font-family:var(--font-code); color:#fff;">${u.shopierNo || '-'}</td>
                 <td>
                     <span style="padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800; ${u.isPro ? 'background:rgba(0,255,136,0.15); color:var(--accent-green);' : 'background:rgba(245,158,11,0.15); color:var(--accent-amber);'}">
                         ${u.isPro ? 'PRO AKTİF' : 'ONAY BEKLİYOR'}
                     </span>
                 </td>
                 <td style="text-align:right;">
-                    <button onclick="toggleUserPro('${u.username}', ${!u.isPro})" style="background:${u.isPro ? 'rgba(255,51,102,0.2)' : 'var(--accent-green)'}; color:${u.isPro ? 'var(--accent-red)' : '#060911'}; border:none; padding:6px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; margin-right:4px;">
+                    <button onclick="toggleUserPro('${u.username}', ${!u.isPro})" style="background:${u.isPro ? 'rgba(255,51,102,0.2)' : 'var(--accent-green)'}; color:${u.isPro ? 'var(--accent-red)' : '#060911'}; border:none; padding:6px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
                         ${u.isPro ? 'Yetkiyi Al' : 'PRO Onayla'}
                     </button>
-                    <button onclick="deleteUser('${u.username}')" style="background:transparent; border:1px solid var(--border-line); color:var(--text-sub); padding:6px 10px; border-radius:8px; cursor:pointer;" title="Sil">
+                    ${u.phone ? `
+                        <a href="${waLink}" target="_blank" class="btn-whatsapp-notify" title="WhatsApp ile Onay Bildir">
+                            <i class="fa-brands fa-whatsapp"></i> Bildir
+                        </a>
+                    ` : ''}
+                    <button onclick="deleteUser('${u.username}')" style="background:transparent; border:1px solid var(--border-line); color:var(--text-sub); padding:6px 10px; border-radius:8px; cursor:pointer; margin-left:4px;" title="Sil">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </td>
@@ -975,21 +840,32 @@
         }
     }
 
-    // ÜYE AUTH
+    // KAYIT VE GİRİŞ
     async function handleRegister() {
         const u = document.getElementById('reg-user').value.trim().toLowerCase();
         const p = document.getElementById('reg-pass').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
         const s = document.getElementById('reg-shopier').value.trim();
-        if (!u || !p) return alert("Bilgileri doldurun!");
+        const agreed = document.getElementById('reg-agreement').checked;
+
+        if (!u || !p || !phone || !s) {
+            return alert("Lütfen tüm alanları (Kullanıcı Adı, Şifre, Telefon ve Shopier No) eksiksiz doldurunuz!");
+        }
+
+        if (!agreed) {
+            return alert("Lütfen Kullanıcı Sözleşmesi ve Sorumluluk Reddi Beyanı'nı onaylayınız!");
+        }
 
         await db.ref('mas_users/' + u).set({
             username: u,
             password: p,
+            phone: phone,
             shopierNo: s,
             isPro: false,
             createdAt: Date.now()
         });
-        alert("Başvurunuz alındı! Shopier siparişiniz onaylandıktan sonra terminale giriş yapabilirsiniz.");
+
+        alert("Başvurunuz alındı! Shopier siparişiniz onaylandığında WhatsApp üzerinden bildirim gönderilecek ve terminal erişiminiz açılacaktır.");
         closeModal('modal-register');
         openModal('modal-login');
     }
@@ -1001,7 +877,7 @@
         const user = snap.val();
 
         if (!user || user.password !== p) return alert("Hatalı kullanıcı adı veya şifre!");
-        if (!user.isPro) return alert("⚠️ PRO aboneliğiniz henüz onaylanmadı!");
+        if (!user.isPro) return alert("⚠️ PRO aboneliğiniz henüz onaylanmadı! Siparişiniz kontrol ediliyor.");
 
         CurrentUser = user;
         localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
@@ -1016,7 +892,7 @@
         window.location.reload();
     }
 
-    // ================= MAÇLAR VE TARİH FİLTRESİ =================
+    // MAÇ YÖNETİMİ
     function loadMatches() {
         db.ref("analyzed_matches").on("value", snap => {
             const raw = snap.val();
@@ -1026,30 +902,24 @@
         });
     }
 
-    // Tarih Butonlarını Otomatik Oluştur
     function buildDateTabs() {
         const container = document.getElementById('date-tabs-container');
         container.innerHTML = '';
 
-        // Tüm benzersiz tarihleri topla ve sırala
         const dateMap = {};
         allMatches.forEach(m => {
             const d = (m.date || '').split(' ')[0];
-            if (d) {
-                dateMap[d] = (dateMap[d] || 0) + 1;
-            }
+            if (d) dateMap[d] = (dateMap[d] || 0) + 1;
         });
 
         const sortedDates = Object.keys(dateMap).sort();
 
-        // 1. "Tüm Maçlar" Butonu
         const allBtn = document.createElement('button');
         allBtn.className = `date-pill ${selectedDateFilter === 'all' ? 'active' : ''}`;
-        allBtn.innerHTML = `Tüm Maçlar <span class="badge">${allMatches.length}</span>`;
+        allBtn.innerHTML = `Tüm Maçlar (${allMatches.length})`;
         allBtn.onclick = () => selectDateFilter('all');
         container.appendChild(allBtn);
 
-        // Tarih İsimlendirme Fonksiyonu
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
         const tomorrow = new Date();
@@ -1061,11 +931,9 @@
             try {
                 const parts = dateStr.split('-');
                 const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-                if (dateStr === todayStr) {
-                    label = "Bugün";
-                } else if (dateStr === tomorrowStr) {
-                    label = "Yarın";
-                } else {
+                if (dateStr === todayStr) label = "Bugün";
+                else if (dateStr === tomorrowStr) label = "Yarın";
+                else {
                     const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cts"];
                     const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
                     label = `${dt.getDate()} ${months[dt.getMonth()]} ${days[dt.getDay()]}`;
@@ -1074,7 +942,7 @@
 
             const pill = document.createElement('button');
             pill.className = `date-pill ${selectedDateFilter === dateStr ? 'active' : ''}`;
-            pill.innerHTML = `${label} <span class="badge">${dateMap[dateStr]}</span>`;
+            pill.innerHTML = `${label} (${dateMap[dateStr]})`;
             pill.onclick = () => selectDateFilter(dateStr);
             container.appendChild(pill);
         });
@@ -1096,13 +964,10 @@
         container.innerHTML = '';
 
         const filtered = allMatches.filter(m => {
-            // Tarih kontrolü
             if (selectedDateFilter !== 'all') {
                 const mDate = (m.date || '').split(' ')[0];
                 if (mDate !== selectedDateFilter) return false;
             }
-
-            // Arama kontrolü
             if (currentSearch) {
                 const searchStr = `${m.match_id} ${m.match} ${m.league || ''}`.toLowerCase();
                 return searchStr.includes(currentSearch);
