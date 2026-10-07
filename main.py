@@ -18,6 +18,11 @@ def run_scientific_pipeline():
     raw_matches = scraper.fetch_live_bulletin()
     print(f"-> Toplam {len(raw_matches)} maç bültenden çekildi.")
 
+    # GÜVENLİK KİLİDİ: Eğer API boş dönerse veritabanını ASLA silme!
+    if not raw_matches or len(raw_matches) == 0:
+        print("[KRİTİK UYARI] Bülten boş döndü, mevcut Firebase verisi korunuyor!")
+        return
+
     analyzed_matches = []
     value_count = 0
 
@@ -25,9 +30,8 @@ def run_scientific_pipeline():
         enriched_match = feeder.enrich_match_data(match)
         analysis = engine.analyze_match(enriched_match)
         
-        # Arayüzün ihtiyaç duyduğu tüm alanları aktarıyoruz:
-        analysis["match_id"] = enriched_match["match_id"]
-        analysis["date"] = enriched_match["date"]
+        analysis["match_id"] = enriched_match.get("match_id", "40100")
+        analysis["date"] = enriched_match.get("start_time", enriched_match.get("date", ""))
         analysis["league"] = enriched_match.get("league", "Futbol")
         analysis["odds"] = enriched_match.get("odds", {})
 
@@ -38,9 +42,10 @@ def run_scientific_pipeline():
 
     print(f"-> Analiz Edilen: {len(analyzed_matches)}, +EV Bulunan: {value_count}")
 
-    # Firebase Realtime Database Senkronizasyonu
+    # Firebase'e Aktar
     fb = FirebaseSync(FIREBASE_DATABASE_URL)
     fb.push_analyzed_matches(analyzed_matches)
+    print("-> Firebase senkronizasyonu tamamlandı.")
     print("=" * 60)
 
 if __name__ == "__main__":
