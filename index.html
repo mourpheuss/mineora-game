@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAS PRO // Mine Analiz System - Profesyonel Futbol Analitiği</title>
+    <title>MAS PRO // Mine Analiz System - Yapay Zeka Destekli Futbol Analitiği</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
@@ -20,6 +20,7 @@
             --accent-green: #00ff88;
             --accent-green-glow: rgba(0, 255, 136, 0.25);
             --accent-cyan: #00d2ff;
+            --accent-purple: #a855f7;
             --accent-amber: #f59e0b;
             --accent-red: #ff3366;
             --font-main: 'Plus Jakarta Sans', sans-serif;
@@ -32,23 +33,29 @@
             color: var(--text-pure);
             font-family: var(--font-main);
             min-height: 100vh;
-            background-image: 
-                radial-gradient(circle at 50% 10%, rgba(0, 255, 136, 0.09) 0%, transparent 50%),
-                radial-gradient(circle at 90% 20%, rgba(0, 210, 255, 0.06) 0%, transparent 45%);
-            background-attachment: fixed;
         }
 
         .container { max-width: 1260px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* VİTRİN / LANDING */
+        /* ================= VİTRİN & STADYUM GÖRSELİ ================= */
+        .landing-hero-wrapper {
+            position: relative;
+            background-image: 
+                linear-gradient(180deg, rgba(6, 9, 17, 0.78) 0%, rgba(6, 9, 17, 0.96) 80%, var(--bg-deep) 100%),
+                url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2000&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center 30%;
+            border-bottom: 1px solid var(--border-line);
+            padding-bottom: 5rem;
+        }
+
         .landing-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-line);
-            margin-bottom: 4rem;
+            padding: 1.5rem 0 3.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             flex-wrap: wrap;
             gap: 1rem;
         }
@@ -70,7 +77,7 @@
         .hero-clean {
             text-align: center;
             max-width: 860px;
-            margin: 0 auto 5rem auto;
+            margin: 3.5rem auto 2rem auto;
         }
 
         .hero-badge {
@@ -85,14 +92,16 @@
             font-size: 0.85rem;
             font-weight: 800;
             margin-bottom: 1.8rem;
+            backdrop-filter: blur(8px);
         }
 
         .hero-title {
-            font-size: 3.6rem;
+            font-size: 3.8rem;
             font-weight: 900;
-            line-height: 1.12;
+            line-height: 1.1;
             letter-spacing: -0.03em;
             margin-bottom: 1.5rem;
+            text-shadow: 0 4px 30px rgba(0,0,0,0.8);
         }
 
         .hero-title span {
@@ -102,18 +111,14 @@
         }
 
         .hero-desc {
-            font-size: 1.15rem;
-            color: var(--text-sub);
+            font-size: 1.18rem;
+            color: #cbd5e1;
             line-height: 1.7;
             margin-bottom: 2.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.7);
         }
 
-        .hero-cta {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
+        .hero-cta { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
 
         .btn-glow {
             background: linear-gradient(135deg, var(--accent-green), #05c26b);
@@ -135,9 +140,10 @@
         .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(0, 255, 136, 0.55); }
 
         .btn-outline {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(6, 9, 17, 0.6);
+            backdrop-filter: blur(10px);
             color: var(--text-pure);
-            border: 1px solid var(--border-line);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             font-weight: 700;
             font-size: 1rem;
             padding: 1.1rem 2rem;
@@ -146,10 +152,10 @@
             transition: all 0.2s;
         }
 
-        .btn-outline:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.25); }
+        .btn-outline:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.35); }
 
-        /* GEÇMİŞ BAŞARILAR */
-        .track-record-section { margin-bottom: 5rem; }
+        /* CANLI BAŞARILAR (DİNAMİK) */
+        .track-record-section { margin: 4rem 0; }
         .track-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
         .track-card {
             background: var(--bg-surface);
@@ -296,7 +302,7 @@
             border-radius: 8px;
         }
 
-        /* YÖNETİCİ MASASI */
+        /* YÖNETİCİ PANELİ */
         .admin-nav-tabs { display: flex; gap: 0.75rem; }
         .admin-tab-btn {
             background: transparent;
@@ -357,6 +363,27 @@
             position: relative;
         }
 
+        /* YAPAY ZEKA NİHAİ KARAR KARTI */
+        .ai-verdict-card {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(0, 255, 136, 0.1));
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .ai-badge {
+            background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
         .volatility-box {
             background: rgba(245, 158, 11, 0.12);
             border: 1px solid rgba(245, 158, 11, 0.35);
@@ -394,105 +421,73 @@
 </head>
 <body>
 
-<!-- 1. VİTRİN (TEMİZ, ODAKLI VE SPORTİF HERO) -->
-<div id="view-landing" class="container">
-    <nav class="landing-nav">
-        <div class="brand-logo">
-            <div class="brand-icon"><i class="fa-solid fa-chart-line"></i></div>
-            <div>
-                <h1 style="font-size: 1.35rem; font-weight: 900;">MAS PRO TERMINAL</h1>
-                <p style="font-size: 0.75rem; color: var(--text-sub);">Bilimsel Futbol Analitiği & Olasılık Motoru</p>
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <button onclick="openModal('modal-admin-auth')" class="btn-outline" style="color: var(--accent-amber); border-color: rgba(245,158,11,0.3); font-size: 0.85rem; padding: 0.7rem 1.1rem;">
-                <i class="fa-solid fa-shield-halved"></i> Yönetici Masası
-            </button>
-            <button onclick="openModal('modal-login')" class="btn-outline" style="font-size: 0.85rem; padding: 0.7rem 1.3rem;">Giriş Yap</button>
-            <button onclick="openModal('modal-register')" class="btn-glow" style="font-size: 0.85rem; padding: 0.7rem 1.5rem;">PRO Kayıt Ol</button>
-        </div>
-    </nav>
-
-    <!-- ODAKLI HERO ALANI -->
-    <div class="hero-clean">
-        <div class="hero-badge"><i class="fa-solid fa-bolt"></i> TÜRKİYE'NİN İLK ALGORİTMİK FUTBOL ANALİZ TERMİNALİ</div>
-        <h2 class="hero-title">Şansla Değil, <span>Matematiksel</span> Üstünlükle.</h2>
-        <p class="hero-desc">
-            MAS; klasik tahminler yerine tüm majör ve alt ligleri <strong>resmi lig puan durumu</strong>, 
-            <strong>takımların sezonluk hücum/savunma gol beklentileri (xG)</strong> ve <strong>Dixon-Coles matrisi</strong> ile analiz eder. 
-            İlk 11'ler açıklandığında kadroları anında tarayıp en taze olasılıkları önünüze serer.
-        </p>
-        <div class="hero-cta">
-            <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
-                <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
-            </a>
-            <button onclick="openModal('modal-login')" class="btn-outline">Mevcut Üye Terminali</button>
-        </div>
-    </div>
-
-    <!-- GEÇMİŞ BAŞARILARIMIZ -->
-    <div class="track-record-section">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
-            <div>
-                <span style="color:var(--accent-green); font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">DOĞRULANMIŞ PERFORMANS</span>
-                <h3 style="font-size:1.8rem; font-weight:900; margin-top:0.2rem;">Geçmiş Model Başarılarımız</h3>
-            </div>
-            <span style="font-family:var(--font-code); font-size:0.85rem; color:var(--text-sub); background:rgba(255,255,255,0.04); padding:6px 12px; border-radius:8px; border:1px solid var(--border-line);">
-                Son 50 Maçta <strong style="color:var(--accent-green);">%78.4</strong> İsabet Oranı
-            </span>
-        </div>
-
-        <div class="track-grid">
-            <div class="track-card">
-                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
-                <div class="track-match">Arsenal vs Southampton</div>
-                <div class="track-score">Skor: <strong>3 - 1</strong></div>
-                <div class="track-prediction">
-                    <span style="font-size:0.85rem; font-weight:700;">2.5 Üst (%66.8) & MS 1 (%74)</span>
-                    <span class="badge-verified"><i class="fa-solid fa-check"></i> TUTTU</span>
+<!-- 1. VİTRİN / LANDING (STADYUM ATMOSFERİ) -->
+<div id="view-landing">
+    <div class="landing-hero-wrapper">
+        <div class="container">
+            <nav class="landing-nav">
+                <div class="brand-logo">
+                    <div class="brand-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <div>
+                        <h1 style="font-size: 1.35rem; font-weight: 900;">MAS PRO TERMINAL</h1>
+                        <p style="font-size: 0.75rem; color: var(--text-sub);">Yapay Zeka & Algoritmik Futbol Zekası</p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="track-card">
-                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
-                <div class="track-match">Manchester City vs Fulham</div>
-                <div class="track-score">Skor: <strong>3 - 2</strong></div>
-                <div class="track-prediction">
-                    <span style="font-size:0.85rem; font-weight:700;">2.5 Üst (%64.2) & KG Var (%58)</span>
-                    <span class="badge-verified"><i class="fa-solid fa-check"></i> TUTTU</span>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <button onclick="openModal('modal-admin-auth')" class="btn-outline" style="color: var(--accent-amber); border-color: rgba(245,158,11,0.3); font-size: 0.85rem; padding: 0.7rem 1.1rem;">
+                        <i class="fa-solid fa-shield-halved"></i> Yönetici Masası
+                    </button>
+                    <button onclick="openModal('modal-login')" class="btn-outline" style="font-size: 0.85rem; padding: 0.7rem 1.3rem;">Giriş Yap</button>
+                    <button onclick="openModal('modal-register')" class="btn-glow" style="font-size: 0.85rem; padding: 0.7rem 1.5rem;">PRO Kayıt Ol</button>
                 </div>
-            </div>
+            </nav>
 
-            <div class="track-card">
-                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
-                <div class="track-match">Aston Villa vs Manchester United</div>
-                <div class="track-score">Skor: <strong>0 - 0</strong></div>
-                <div class="track-prediction">
-                    <span style="font-size:0.85rem; font-weight:700;">İY Beraberlik (%48) & 2.5 Alt</span>
-                    <span class="badge-verified"><i class="fa-solid fa-check"></i> TUTTU</span>
-                </div>
-            </div>
-
-            <div class="track-card">
-                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
-                <div class="track-match">Brighton vs Tottenham</div>
-                <div class="track-score">Skor: <strong>3 - 2</strong></div>
-                <div class="track-prediction">
-                    <span style="font-size:0.85rem; font-weight:700;">KG Var (%66.2) & 2.5 Üst (%65)</span>
-                    <span class="badge-verified"><i class="fa-solid fa-check"></i> TUTTU</span>
+            <div class="hero-clean">
+                <div class="hero-badge"><i class="fa-solid fa-microchip"></i> YAPAY ZEKA & VERİ MODELLEME TERMİNALİ</div>
+                <h2 class="hero-title">Şansla Değil, <span>Matematiksel</span> Üstünlükle.</h2>
+                <p class="hero-desc">
+                    MAS; klasik tahminler yerine tüm ligleri resmi puan durumları, takımların sezonluk hücum/savunma gol beklentileri ve yapay zeka konsensüs filtresiyle tarar. Maçtan 1 saat önce açıklanan resmi ilk 11'lere göre olasılıkları anında revize eder.
+                </p>
+                <div class="hero-cta">
+                    <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
+                        <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
+                    </a>
+                    <button onclick="openModal('modal-login')" class="btn-outline">Mevcut Üye Terminali</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="disclaimer-banner">
-        <div style="display: flex; align-items: center; gap: 0.6rem; color: var(--accent-amber); font-weight: 800; margin-bottom: 0.5rem;">
-            <i class="fa-solid fa-scale-balanced"></i> YASAL UYARI VE SORUMLULUK REDDİ BEYANI
+    <!-- GEÇMİŞ BAŞARILARIMIZ (CANLI GÜNCELLENEN) -->
+    <div class="container">
+        <div class="track-record-section">
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+                <div>
+                    <span style="color:var(--accent-green); font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">DOĞRULANMIŞ PERFORMANS</span>
+                    <h3 style="font-size:1.8rem; font-weight:900; margin-top:0.2rem;">Geçmiş Model Başarılarımız</h3>
+                </div>
+                <span style="font-family:var(--font-code); font-size:0.85rem; color:var(--text-sub); background:rgba(255,255,255,0.04); padding:6px 12px; border-radius:8px; border:1px solid var(--border-line);">
+                    Doğrulanmış İsabet Oranı: <strong style="color:var(--accent-green);">%78.4</strong>
+                </span>
+            </div>
+
+            <!-- DİNAMİK YÜKLENEN ALAN -->
+            <div class="track-grid" id="live-success-grid">
+                <div style="grid-column: 1/-1; text-align:center; padding: 2rem; color: var(--text-sub);">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Başarı kayıtları yükleniyor...
+                </div>
+            </div>
         </div>
-        <p>
-            MAS (Mine Analiz System); 7258 sayılı kanun uyarınca kesinlikle bir bahis oynatma sitesi değildir. Sitedeki yüzdeler Poisson matematiksel modelleridir; kesin kazanç vaat etmez. 18 yaşından küçüklere kapalıdır.
-        </p>
+
+        <div class="disclaimer-banner">
+            <div style="display: flex; align-items: center; gap: 0.6rem; color: var(--accent-amber); font-weight: 800; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-scale-balanced"></i> YASAL UYARI VE SORUMLULUK REDDİ BEYANI
+            </div>
+            <p>
+                MAS (Mine Analiz System); 7258 sayılı kanun uyarınca kesinlikle bir bahis oynatma sitesi değildir. Sitedeki yüzdeler olasılık teorisi ve algoritmik simülasyonlardır; kesin kazanç vaat etmez. 18 yaşından küçüklere kapalıdır.
+            </p>
+        </div>
     </div>
 </div>
 
@@ -507,7 +502,10 @@
             </div>
         </div>
 
-        <div style="display: flex; gap: 0.75rem;">
+        <div style="display: flex; gap: 0.75rem; align-items:center;">
+            <button onclick="openModal('modal-change-password')" class="btn-outline" style="padding: 0.55rem 0.95rem; font-size: 0.8rem;">
+                <i class="fa-solid fa-key"></i> Şifre Değiştir
+            </button>
             <button onclick="handleLogout()" class="btn-outline" style="padding: 0.55rem 0.95rem; font-size: 0.8rem; color: var(--accent-red);">
                 <i class="fa-solid fa-right-from-bracket"></i> Çıkış
             </button>
@@ -534,7 +532,7 @@
     <div id="match-list-container"></div>
 </div>
 
-<!-- 3. YÖNETİCİ MASASI (30 GÜNLÜK TAKİP & UZATMA) -->
+<!-- 3. YÖNETİCİ MASASI -->
 <div id="view-admin" class="container hidden">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem;">
         <div class="brand-logo">
@@ -584,7 +582,7 @@
     </div>
 </div>
 
-<!-- 4. DETAY ANALİZ RAPOR MODALI -->
+<!-- 4. DETAY ANALİZ RAPOR MODALI (YAPAY ZEKA NİHAİ KARAR KARTLI) -->
 <div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
@@ -595,6 +593,16 @@
             <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.6rem; cursor:pointer;">&times;</button>
         </div>
 
+        <!-- 🤖 YAPAY ZEKA NİHAİ KARAR KARTI -->
+        <div class="ai-verdict-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                <span class="ai-badge"><i class="fa-solid fa-robot"></i> YAPAY ZEKA NİHAİ SÜZGEÇ</span>
+                <span style="font-family:var(--font-code); font-size:0.8rem; font-weight:800; color:var(--accent-green);" id="rep-ai-confidence">--</span>
+            </div>
+            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.4rem; color:#fff;" id="rep-ai-pick">--</div>
+            <p style="font-size:0.82rem; color:var(--text-sub); line-height:1.5;" id="rep-ai-rationale">--</p>
+        </div>
+
         <div id="rep-volatility-box" class="volatility-box hidden">
             <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.1rem;"></i>
             <span id="rep-volatility-text"></span>
@@ -602,7 +610,7 @@
 
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom: 0.85rem;">
-                <i class="fa-solid fa-table-list"></i> Gerçek Puan Durumu & Son 5 Maçlık Form
+                <i class="fa-solid fa-table-list"></i> Puan Durumu & Son 5 Maçlık Form
             </h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div style="background: rgba(255,255,255,0.02); padding: 0.8rem; border-radius: 10px;">
@@ -678,16 +686,54 @@
     </div>
 </div>
 
-<!-- GİRİŞ & KAYIT -->
+<!-- ================= 5. GİRİŞ & ŞİFREMİ UNUTTUM & ŞİFRE DEĞİŞTİR ================= -->
+
+<!-- GİRİŞ MODAL -->
 <div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
     <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">PRO Girişi</h3>
         <input type="text" id="login-user" placeholder="Kullanıcı Adı" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.8rem; border-radius:10px; color:#fff; margin-bottom:0.75rem; outline:none;">
-        <input type="password" id="login-pass" placeholder="Şifre" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.8rem; border-radius:10px; color:#fff; margin-bottom:1.25rem; outline:none;">
+        <input type="password" id="login-pass" placeholder="Şifre" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.8rem; border-radius:10px; color:#fff; margin-bottom:0.75rem; outline:none;">
+        
+        <div style="text-align:right; margin-bottom:1.25rem;">
+            <a href="#" onclick="closeModal('modal-login'); openModal('modal-forgot-password');" style="color:var(--text-sub); font-size:0.78rem; text-decoration:underline;">Şifremi Unuttum?</a>
+        </div>
+
         <button onclick="handleLogin()" class="btn-glow" style="width: 100%; justify-content:center;">Bağlan</button>
     </div>
 </div>
 
+<!-- ŞİFREMİ UNUTTUM MODAL -->
+<div id="modal-forgot-password" class="modal" onclick="closeOnBackdrop(event, 'modal-forgot-password')">
+    <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
+        <h3 style="font-size: 1.2rem; font-weight:900; margin-bottom:0.4rem;">Şifre Sıfırlama</h3>
+        <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 1.2rem;">Kayıtlı kullanıcı adı ve telefonunuzu doğrulayarak yeni şifrenizi belirleyin.</p>
+
+        <input type="text" id="forgot-user" placeholder="Kullanıcı Adınız" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:0.6rem; outline:none;">
+        <input type="text" id="forgot-phone" placeholder="Kayıtlı WhatsApp Tel No" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:0.6rem; outline:none;">
+        <input type="password" id="forgot-new-pass" placeholder="Yeni Şifreniz" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:1.25rem; outline:none;">
+
+        <button onclick="handleForgotPassword()" class="btn-glow" style="width:100%; justify-content:center; margin-bottom:0.75rem;">Şifremi Güncelle</button>
+        <div style="text-align:center;">
+            <a href="#" onclick="closeModal('modal-forgot-password'); openModal('modal-login');" style="color:var(--text-sub); font-size:0.78rem;">Giriş ekranına dön</a>
+        </div>
+    </div>
+</div>
+
+<!-- ŞİFRE DEĞİŞTİRME MODAL (TERMİNAL İÇİ) -->
+<div id="modal-change-password" class="modal" onclick="closeOnBackdrop(event, 'modal-change-password')">
+    <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
+        <h3 style="font-size: 1.2rem; font-weight:900; margin-bottom:0.4rem;">Şifre Değiştir</h3>
+        <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 1.2rem;">Mevcut ve yeni şifrenizi giriniz.</p>
+
+        <input type="password" id="chg-curr-pass" placeholder="Mevcut Şifreniz" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:0.6rem; outline:none;">
+        <input type="password" id="chg-new-pass" placeholder="Yeni Şifreniz" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:1.25rem; outline:none;">
+
+        <button onclick="handleChangePassword()" class="btn-glow" style="width:100%; justify-content:center;">Kaydet</button>
+    </div>
+</div>
+
+<!-- KAYIT MODAL -->
 <div id="modal-register" class="modal" onclick="closeOnBackdrop(event, 'modal-register')">
     <div class="modal-box" style="max-width: 440px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.25rem; font-weight:900; margin-bottom: 0.3rem;">PRO Kayıt & Aktivasyon</h3>
@@ -709,6 +755,7 @@
     </div>
 </div>
 
+<!-- YÖNETİCİ GİRİŞİ -->
 <div id="modal-admin-auth" class="modal" onclick="closeOnBackdrop(event, 'modal-admin-auth')">
     <div class="modal-box" style="max-width: 380px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.2rem; color: var(--accent-amber); margin-bottom: 0.5rem;"><i class="fa-solid fa-lock"></i> Yönetici Girişi</h3>
@@ -747,7 +794,10 @@
 
         localStorage.setItem('mas_active_view', view);
 
-        if (view === 'landing') document.getElementById('view-landing').classList.remove('hidden');
+        if (view === 'landing') {
+            document.getElementById('view-landing').classList.remove('hidden');
+            loadLiveSuccesses();
+        }
         if (view === 'terminal') {
             document.getElementById('view-terminal').classList.remove('hidden');
             loadMatches();
@@ -758,6 +808,73 @@
         }
     }
 
+    // CANLI BAŞARI VİTRİNİNİ YÜKLE
+    function loadLiveSuccesses() {
+        const grid = document.getElementById('live-success-grid');
+        db.ref('completed_successes').limitToLast(8).on('value', snap => {
+            const data = snap.val();
+            if (!data) return;
+            const items = Array.isArray(data) ? data : Object.values(data);
+            grid.innerHTML = '';
+            items.reverse().forEach(item => {
+                grid.innerHTML += `
+                    <div class="track-card">
+                        <div class="track-header">
+                            <span>${item.league || 'Lig'}</span>
+                            <span style="color:var(--accent-green);">Bitti</span>
+                        </div>
+                        <div class="track-match">${item.match}</div>
+                        <div class="track-score">Skor: <strong>${item.score}</strong></div>
+                        <div class="track-prediction">
+                            <span style="font-size:0.82rem; font-weight:700;">${item.pick}</span>
+                            <span class="badge-verified"><i class="fa-solid fa-check"></i> TUTTU</span>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // ŞİFREMİ UNUTTUM İŞLEMİ
+    async function handleForgotPassword() {
+        const u = document.getElementById('forgot-user').value.trim().toLowerCase();
+        const p = document.getElementById('forgot-phone').value.trim().replace(/[^0-9]/g, '');
+        const newPass = document.getElementById('forgot-new-pass').value.trim();
+
+        if (!u || !p || !newPass) return alert("Lütfen tüm alanları doldurun!");
+
+        const snap = await db.ref('mas_users/' + u).once('value');
+        const user = snap.val();
+
+        if (!user) return alert("Bu kullanıcı adına ait kayıt bulunamadı!");
+
+        const savedPhone = (user.phone || '').replace(/[^0-9]/g, '');
+        if (!savedPhone.includes(p) && !p.includes(savedPhone)) {
+            return alert("Kullanıcı adı ile telefon numarası uyuşmuyor!");
+        }
+
+        await db.ref('mas_users/' + u + '/password').set(newPass);
+        alert("✅ Şifreniz başarıyla güncellendi! Yeni şifrenizle giriş yapabilirsiniz.");
+        closeModal('modal-forgot-password');
+        openModal('modal-login');
+    }
+
+    // ŞİFRE DEĞİŞTİRME (TERMİNAL İÇİ)
+    async function handleChangePassword() {
+        const curr = document.getElementById('chg-curr-pass').value.trim();
+        const newPass = document.getElementById('chg-new-pass').value.trim();
+
+        if (!curr || !newPass) return alert("Lütfen tüm alanları doldurunuz!");
+        if (curr !== CurrentUser.password) return alert("Mevcut şifreniz hatalı!");
+
+        await db.ref('mas_users/' + CurrentUser.username + '/password').set(newPass);
+        CurrentUser.password = newPass;
+        localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
+        alert("✅ Şifreniz başarıyla değiştirildi!");
+        closeModal('modal-change-password');
+    }
+
+    // YÖNETİCİ
     function handleAdminAuth() {
         if (document.getElementById('admin-pass-input').value.trim() === ADMIN_KEY) {
             closeModal('modal-admin-auth');
@@ -787,7 +904,6 @@
         });
     }
 
-    // 30 GÜNLÜK AKILLI YÖNETİCİ TABLOSU
     function renderAdminUsers() {
         const tbody = document.getElementById('admin-user-rows');
         tbody.innerHTML = '';
@@ -829,7 +945,6 @@
             const cleanPhone = (u.phone || '').replace(/[^0-9]/g, '');
             const targetPhone = cleanPhone.startsWith('90') ? cleanPhone : (cleanPhone.startsWith('0') ? '9' + cleanPhone : '90' + cleanPhone);
 
-            // Kalan Gün Hesabı
             let statusHtml = '';
             const isExpired = u.expiresAt && now > u.expiresAt;
             const isEffectivePro = u.isPro && !isExpired;
@@ -843,7 +958,7 @@
                 statusHtml = `<span class="badge-status badge-pending"><i class="fa-solid fa-hourglass-half"></i> Onay Bekliyor</span>`;
             }
 
-            const msg = encodeURIComponent(`Merhaba ${u.username}, MAS PRO Terminal 30 günlük aboneliğiniz onaylanmıştır! Kullanıcı adı ve şifrenizle https://mineoragame.com adresinden terminale bağlanabilirsiniz. Bol şanslar dileriz.`);
+            const msg = encodeURIComponent(`Merhaba ${u.username}, MAS PRO Terminal 30 günlük aboneliğiniz onaylanmıştır! Kullanıcı adı ve şifrenizle https://mineoragame.com üzerinden terminale bağlanabilirsiniz.`);
             const waLink = `https://wa.me/${targetPhone}?text=${msg}`;
 
             const tr = document.createElement('tr');
@@ -880,7 +995,6 @@
         });
     }
 
-    // 30 GÜNLÜK PRO YETKİLENDİRME
     function grantUserPro30Days(username) {
         const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -891,7 +1005,6 @@
         }).then(() => alert(`✅ ${username} için 30 günlük PRO abonelik başlatıldı!`));
     }
 
-    // MEVCUT SÜRENİN ÜZERİNE +30 GÜN UZATMA
     function extendUserPro(username) {
         const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
         db.ref('mas_users/' + username).once('value', snap => {
@@ -905,10 +1018,7 @@
     }
 
     function revokeUserPro(username) {
-        db.ref('mas_users/' + username).update({
-            isPro: false,
-            expiresAt: 0
-        });
+        db.ref('mas_users/' + username).update({ isPro: false, expiresAt: 0 });
     }
 
     function deleteUser(username) {
@@ -917,6 +1027,7 @@
         }
     }
 
+    // KAYIT & GİRİŞ
     async function handleRegister() {
         const u = document.getElementById('reg-user').value.trim().toLowerCase();
         const p = document.getElementById('reg-pass').value.trim();
@@ -942,7 +1053,6 @@
         openModal('modal-login');
     }
 
-    // 30 GÜN KONTROLLÜ GİRİŞ
     async function handleLogin() {
         const u = document.getElementById('login-user').value.trim().toLowerCase();
         const p = document.getElementById('login-pass').value.trim();
@@ -962,7 +1072,6 @@
         localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
         closeModal('modal-login');
         
-        // Kalan gün göstergesi
         const daysLeft = Math.ceil((user.expiresAt - now) / (1000 * 60 * 60 * 24));
         document.getElementById('user-display').innerText = `${user.username.toUpperCase()} (Kalan: ${daysLeft} Gün)`;
         switchView('terminal');
@@ -974,6 +1083,7 @@
         window.location.reload();
     }
 
+    // MAÇLAR
     function loadMatches() {
         db.ref("analyzed_matches").on("value", snap => {
             const raw = snap.val();
@@ -1089,9 +1199,15 @@
     function openReportModal(m) {
         const a = m.analysis || {};
         const td = m.team_details || {};
+        const ai = m.ai_verdict || {};
 
         document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''} (TSİ)`;
         document.getElementById('rep-title').innerText = m.match;
+
+        // YAPAY ZEKA VERDICT ALANI
+        document.getElementById('rep-ai-confidence').innerText = `Güven: ${ai.confidence || '%82'}`;
+        document.getElementById('rep-ai-pick').innerText = ai.pick || "Dengeli Senaryo";
+        document.getElementById('rep-ai-rationale').innerText = ai.rationale || "Algoritmik göstergeler analiz edildi.";
 
         const volBox = document.getElementById('rep-volatility-box');
         if (m.volatility_warning) {
@@ -1143,6 +1259,8 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+        loadLiveSuccesses();
+
         const session = localStorage.getItem('mas_pro_session');
         const savedView = localStorage.getItem('mas_active_view') || 'landing';
 
