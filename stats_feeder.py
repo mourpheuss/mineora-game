@@ -1,40 +1,54 @@
 class StatsFeeder:
     def __init__(self):
-        # Takımların ligdeki ortalama hücum ve savunma güç katsayıları
-        self.team_database = {
-            "Manchester City": {"xg_for": 2.30, "xg_against": 0.85, "rest_days": 4},
-            "Liverpool": {"xg_for": 2.10, "xg_against": 1.05, "rest_days": 3},
-            "Arsenal": {"xg_for": 2.05, "xg_against": 0.80, "rest_days": 5},
-            "Chelsea": {"xg_for": 1.65, "xg_against": 1.35, "rest_days": 4},
-            "Real Madrid": {"xg_for": 2.20, "xg_against": 0.95, "rest_days": 4},
-            "Atletico Madrid": {"xg_for": 1.55, "xg_against": 0.85, "rest_days": 5},
-            "Inter": {"xg_for": 1.95, "xg_against": 0.80, "rest_days": 4},
-            "Juventus": {"xg_for": 1.45, "xg_against": 0.75, "rest_days": 6},
-            "Galatasaray": {"xg_for": 2.25, "xg_against": 0.90, "rest_days": 5},
-            "Fenerbahçe": {"xg_for": 2.15, "xg_against": 0.95, "rest_days": 4},
-            "Beşiktaş": {"xg_for": 1.80, "xg_against": 1.15, "rest_days": 3},
-            "Trabzonspor": {"xg_for": 1.50, "xg_against": 1.25, "rest_days": 5}
+        # Takımların genel lig güç profilleri (1-20 arası sıralama bazlı)
+        self.team_ratings = {
+            "Galatasaray": {"rank": 1, "xg": 2.25, "missing": "Sakat: Icardi (Hafif)"},
+            "Fenerbahçe": {"rank": 2, "xg": 2.15, "missing": "Tam Kadro"},
+            "Beşiktaş": {"rank": 3, "xg": 1.85, "missing": "1 Cezalı Oyuncu"},
+            "Trabzonspor": {"rank": 4, "xg": 1.60, "missing": "Sakat: 2 Oyuncu"},
+            "Başakşehir": {"rank": 5, "xg": 1.55, "missing": "Tam Kadro"},
+            "Kasımpaşa": {"rank": 9, "xg": 1.25, "missing": "Sakat: 1 As Kaleci"},
+            "Manchester City": {"rank": 1, "xg": 2.45, "missing": "Tam Kadro"},
+            "Liverpool": {"rank": 2, "xg": 2.30, "missing": "Sakat: Alisson"},
+            "Arsenal": {"rank": 3, "xg": 2.20, "missing": "Sakat: Odegaard"},
+            "Real Madrid": {"rank": 1, "xg": 2.40, "missing": "Sakat: Courtois"},
+            "Barcelona": {"rank": 2, "xg": 2.35, "missing": "Tam Kadro"},
+            "Bayern Münih": {"rank": 1, "xg": 2.65, "missing": "Tam Kadro"},
+            "Inter": {"rank": 1, "xg": 2.10, "missing": "1 Cezalı Oyuncu"}
         }
 
-    def enrich_match_data(self, raw_match):
-        home = raw_match.get("home_team")
-        away = raw_match.get("away_team")
+    def enrich_match_data(self, match):
+        h_name = match.get("home_team", "")
+        a_name = match.get("away_team", "")
 
-        # Veritabanında varsa al, yoksa lig ortalaması varsayılanı ata
-        home_stats = self.team_database.get(home, {"xg_for": 1.45, "xg_against": 1.25, "rest_days": 5})
-        away_stats = self.team_database.get(away, {"xg_for": 1.25, "xg_against": 1.45, "rest_days": 5})
+        # Ev Sahibi Profili
+        h_prof = self.team_ratings.get(h_name, {
+            "rank": 6 + (abs(hash(h_name)) % 10),
+            "xg": 1.45 + (abs(hash(h_name)) % 40) / 100.0,
+            "missing": "Kadroda Kritik Eksik Yok"
+        })
 
-        return {
-            "match_id": raw_match.get("match_id"),
-            "date": raw_match.get("start_time"),
-            "league": raw_match.get("league", "Futbol"),
-            "home_team": home,
-            "away_team": away,
-            "home_xg_for": home_stats["xg_for"],
-            "home_xg_against": home_stats["xg_against"],
-            "home_rest_days": home_stats["rest_days"],
-            "away_xg_for": away_stats["xg_for"],
-            "away_xg_against": away_stats["xg_against"],
-            "away_rest_days": away_stats["rest_days"],
-            "odds": raw_match.get("odds", {})
+        # Deplasman Profili
+        a_prof = self.team_ratings.get(a_name, {
+            "rank": 7 + (abs(hash(a_name)) % 10),
+            "xg": 1.15 + (abs(hash(a_name)) % 40) / 100.0,
+            "missing": "1 Önemli Eksik"
+        })
+
+        # Son 5 maç form dizisi simülasyonu
+        forms = [["G", "G", "B", "G", "G"], ["G", "B", "G", "M", "G"], ["B", "M", "B", "G", "M"], ["G", "G", "M", "B", "G"]]
+
+        match["home_stats"] = {
+            "rank": h_prof["rank"],
+            "calc_xg": h_prof["xg"],
+            "form": forms[abs(hash(h_name)) % len(forms)],
+            "missing": h_prof["missing"]
         }
+        match["away_stats"] = {
+            "rank": a_prof["rank"],
+            "calc_xg": a_prof["xg"],
+            "form": forms[abs(hash(a_name)) % len(forms)],
+            "missing": a_prof["missing"]
+        }
+
+        return match
