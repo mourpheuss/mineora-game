@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="google" content="notranslate">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
   <title>MINEORA • Madencilik ve Holding Simülasyonu</title>
   
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -30,9 +33,45 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
+  
+  <style>
+    body { 
+      background-color: #0b0e11; 
+      color: #eaecef; 
+      font-family: 'Inter', sans-serif; 
+      overflow-x: hidden; 
+      user-select: none; 
+    }
+    .font-cinzel { font-family: 'Cinzel', serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #0b0e11; }
+    ::-webkit-scrollbar-thumb { background: #2b313a; border-radius: 4px; }
+    .modal-backdrop { 
+      background: rgba(5, 7, 10, 0.92); 
+      backdrop-filter: blur(14px); 
+    }
+    .screen-shake { 
+      animation: shakeAnim 0.22s cubic-bezier(.36,.07,.19,.97) both; 
+    }
+    @keyframes shakeAnim { 
+      0%, 100% { transform: translate(0, 0); } 
+      20% { transform: translate(-6px, 5px); } 
+      40% { transform: translate(6px, -5px); } 
+      60% { transform: translate(-4px, 3px); } 
+      80% { transform: translate(4px, -3px); } 
+    }
+    .floating-text { 
+      animation: floatUp 1s ease-out forwards; 
+      pointer-events: none; 
+    }
+    @keyframes floatUp { 
+      0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 
+      100% { opacity: 0; transform: translate(-50%, -60px) scale(1.2); } 
+    }
+  </style>
 
   <script>
     function openModal(id) {
@@ -42,6 +81,9 @@
       m.classList.add('flex');
       if (id === 'modal-wallet') {
         if (typeof setWalletTab === 'function') setWalletTab('deposit');
+      }
+      if (id === 'modal-notifications' && typeof renderNotificationsModal === 'function') {
+        renderNotificationsModal();
       }
       if (id === 'modal-auth-login') {
         setTimeout(() => { document.getElementById('login-user')?.focus(); }, 100);
@@ -65,19 +107,25 @@
 
   <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA -->
   <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden">
-    <nav class="relative z-30 max-w-7xl mx-auto w-full px-4 sm:px-8 py-4 flex items-center justify-between border-b border-mineora-border backdrop-blur-md">
-      <div class="flex items-center gap-2 sm:gap-3">
-        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-mineora-gold flex items-center justify-center text-black shadow-lg font-black">
-          <i class="fa-solid fa-mountain text-sm sm:text-lg"></i>
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+
+    <nav class="relative z-30 max-w-7xl mx-auto w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-mineora-border backdrop-blur-md">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 via-mineora-gold to-yellow-300 flex items-center justify-center text-black shadow-lg font-black">
+          <i class="fa-solid fa-mountain text-sm"></i>
         </div>
         <span class="text-lg sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-mineora-gold to-yellow-200 font-cinzel">MINEORA</span>
       </div>
 
       <div class="flex items-center gap-2">
-        <button type="button" onclick="openModal('modal-auth-login')" class="px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs sm:text-sm font-bold transition cursor-pointer">
+        <button type="button" onclick="openModal('modal-contact')" class="px-3.5 py-1.5 rounded-xl bg-mineora-card hover:bg-mineora-input border border-cyan-500/40 text-cyan-300 text-xs font-bold transition cursor-pointer">
+          <i class="fa-solid fa-headset mr-1"></i> Destek
+        </button>
+        <button type="button" onclick="openModal('modal-auth-login')" class="px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs font-bold transition cursor-pointer">
           Giriş Yap
         </button>
-        <button type="button" onclick="openModal('modal-auth-register')" class="px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-xs sm:text-sm font-black transition shadow-lg cursor-pointer">
+        <button type="button" onclick="openModal('modal-auth-register')" class="px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-xs font-black transition shadow-lg cursor-pointer">
           Kayıt Ol
         </button>
       </div>
@@ -85,18 +133,18 @@
 
     <main class="relative z-20 max-w-4xl mx-auto px-4 py-16 flex flex-col items-center text-center">
       <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-mineora-gold/10 border border-mineora-gold/30 text-mineora-gold text-xs font-black uppercase mb-6 animate-pulse">
-        <i class="fa-solid fa-gem"></i> Gerçek Kazançlı Madencilik Protokolü
+        <i class="fa-solid fa-gem"></i> Doğrudan Türk Lirası Kazanç Protokolü
       </div>
       <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">
         Derinlikleri Keşfet, Kaynakları Yönet, <br>
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-mineora-gold to-yellow-200">Kendi Maden İmparatorluğunu Kur!</span>
       </h1>
-      <p class="mt-4 text-sm sm:text-base text-slate-300 max-w-xl">
-        Alplerin derin damarlarında kazı yapın, filonuzu genişletin ve çıkardığınız madenleri anında Türk Lirası olarak banka hesabınıza çekin.
+      <p class="mt-4 text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed">
+        Alplerin derin damarlarında kazı yaparak günlük üretim yapın. Çıkardığınız madenleri doğrudan Türk Lirası olarak banka hesabınıza çekin.
       </p>
       <div class="mt-8 flex gap-4">
         <button type="button" onclick="openModal('modal-auth-login')" class="px-8 py-3.5 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm shadow-xl cursor-pointer">
-          Hemen Katıl ve Başla
+          Hemen Başla & Kazan
         </button>
       </div>
     </main>
@@ -139,9 +187,13 @@
             </div>
           </div>
 
-          <!-- BANKA CÜZDAN BUTONU -->
           <button type="button" onclick="openModal('modal-wallet')" class="px-3.5 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-xs font-black flex items-center gap-1.5 transition shadow cursor-pointer">
-            <i class="fa-solid fa-building-columns"></i> <span>Banka İşlemleri</span>
+            <i class="fa-solid fa-building-columns"></i> <span>Banka Masası</span>
+          </button>
+
+          <button type="button" onclick="openModal('modal-notifications')" class="relative px-3 py-2 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs cursor-pointer">
+            <i class="fa-solid fa-bell text-mineora-gold"></i>
+            <span id="notif-badge" class="hidden absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse">0</span>
           </button>
 
           <button type="button" onclick="logoutSession()" class="px-3 py-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-xs font-bold transition cursor-pointer">
@@ -152,7 +204,7 @@
     </header>
 
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
-      <!-- SOL MENÜ -->
+      <!-- SOL MENÜ (P2P TAMAMEN KALDIRILDI) -->
       <aside class="w-16 sm:w-60 bg-mineora-card/60 backdrop-blur-md border-r border-mineora-border flex flex-col justify-between p-2 sm:p-4 shrink-0 overflow-y-auto">
         <div class="space-y-4">
           <div class="space-y-1">
@@ -180,6 +232,10 @@
             <button type="button" onclick="switchTab('owner')" id="tab-btn-owner" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 cursor-pointer">
               <i class="fa-solid fa-sitemap w-4 text-center text-mineora-gold"></i>
               <span class="hidden sm:inline">Referans Ağı</span>
+            </button>
+            <button type="button" onclick="switchTab('settings')" id="tab-btn-settings" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 cursor-pointer">
+              <i class="fa-solid fa-key w-4 text-center text-cyan-400"></i>
+              <span class="hidden sm:inline">Şifre Değiştir</span>
             </button>
           </div>
         </div>
@@ -313,13 +369,13 @@
           </div>
         </section>
 
-        <!-- 4) KARİYER SEÇİMİ -->
+        <!-- 4) KARİYER SEÇİMİ (TL BAZLI) -->
         <section id="sec-career" class="hidden space-y-6 max-w-4xl mx-auto">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="p-6 rounded-3xl bg-mineora-card border border-cyan-500/40 space-y-4 flex flex-col justify-between">
               <div class="space-y-3">
                 <h4 class="text-base font-black text-white">İşçi Madenci</h4>
-                <p class="text-xs text-slate-400">Günlük maden kazısı yaparak TL geliri elde edin.</p>
+                <p class="text-xs text-slate-400">Maden kazısı yaparak doğrudan TL geliri elde edin.</p>
                 <div class="p-3 rounded-xl bg-mineora-bg font-mono text-cyan-400 font-bold text-xs">Lisans: 500 ₺</div>
               </div>
               <button type="button" onclick="upgradeRole('Worker Miner', 500)" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Lisansı Al (500 ₺)</button>
@@ -328,7 +384,7 @@
             <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-gold/40 space-y-4 flex flex-col justify-between">
               <div class="space-y-3">
                 <h4 class="text-base font-black text-white">Maden Sahibi</h4>
-                <p class="text-xs text-slate-400">Referans kodunuzla kendi işçi filonuzu kurun ve pay alın.</p>
+                <p class="text-xs text-slate-400">Referans kodunuzla kendi madenci ekibinizi kurun ve pay alın.</p>
                 <div class="p-3 rounded-xl bg-mineora-bg font-mono text-mineora-gold font-bold text-xs">İşletme: 2,500 ₺</div>
               </div>
               <button type="button" onclick="upgradeRole('Mine Owner', 2500)" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer">İşletme Kur (2,500 ₺)</button>
@@ -337,7 +393,7 @@
             <div class="p-6 rounded-3xl bg-mineora-card border border-purple-500/50 space-y-4 flex flex-col justify-between">
               <div class="space-y-3">
                 <h4 class="text-base font-black text-white">Holding Sahibi</h4>
-                <p class="text-xs text-slate-400">Tüm Alplerde madenleri konsolide edin ve derin filo yönetin.</p>
+                <p class="text-xs text-slate-400">Büyük filoları yönetin ve derin ekip geliri elde edin.</p>
                 <div class="p-3 rounded-xl bg-mineora-bg font-mono text-purple-300 font-bold text-xs">Holding: 10,000 ₺</div>
               </div>
               <button type="button" onclick="upgradeRole('Holding Owner', 10000)" class="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs cursor-pointer">Holding Kur (10,000 ₺)</button>
@@ -347,6 +403,19 @@
 
         <!-- 5) REFERANS AĞI -->
         <section id="sec-owner" class="hidden space-y-6"></section>
+
+        <!-- 6) ŞİFRE DEĞİŞTİR -->
+        <section id="sec-settings" class="hidden space-y-4 max-w-xl mx-auto">
+          <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-border space-y-4 text-xs shadow-xl">
+            <h3 class="text-sm font-black text-white flex items-center gap-2"><i class="fa-solid fa-key text-cyan-400"></i> Şifre Değiştir</h3>
+            <div class="space-y-3">
+              <input type="password" id="pwd-old" placeholder="Mevcut Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+              <input type="password" id="pwd-new" placeholder="Yeni Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+              <input type="password" id="pwd-repeat" placeholder="Yeni Şifre Tekrar" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+            </div>
+            <button type="button" onclick="handlePasswordChange()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Şifreyi Güncelle</button>
+          </div>
+        </section>
       </main>
     </div>
   </div>
@@ -381,10 +450,10 @@
         <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/30 space-y-2">
           <span class="text-[11px] text-slate-400 block font-bold">Resmi Şirket Banka Bilgileri:</span>
           <div class="text-xs text-white space-y-1 font-mono">
-            <div>Şirket: <strong class="text-mineora-gold">MINEORA TEKNOLOJİ A.Ş.</strong></div>
+            <div>Şirket: <strong class="text-mineora-gold" id="company-name-label">MINEORA BİLİŞİM A.Ş.</strong></div>
             <div>Banka: <strong class="text-slate-200">Ziraat Bankası / Garanti BBVA</strong></div>
             <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl mt-1">
-              <span class="text-emerald-400 font-bold select-all">TR00 0000 0000 0000 0000 0000 00</span>
+              <span class="text-emerald-400 font-bold select-all" id="company-iban-label">TR00 0000 0000 0000 0000 0000 00</span>
               <button type="button" onclick="copyCompanyIban()" class="text-slate-300 hover:text-white text-xs cursor-pointer"><i class="fa-solid fa-copy"></i></button>
             </div>
           </div>
@@ -477,14 +546,37 @@
     </div>
   </div>
 
-  <!-- SCRIPT ENTEGRASYONLARI (P2P BAĞLANTISI KALDIRILDI) -->
-  <script src="Lang.js"></script>
+  <!-- MODAL: DESTEK FORMU -->
+  <div id="modal-contact" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <h3 class="text-sm font-black text-white">Mineora Destek & İletişim</h3>
+        <button type="button" onclick="closeModal('modal-contact')"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none"></textarea>
+      <button type="button" onclick="submitContactMessage()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Mesajı İlet</button>
+    </div>
+  </div>
+
+  <!-- MODAL: BİLDİRİMLER -->
+  <div id="modal-notifications" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Hesap Bildirimleri</h3>
+        <button type="button" onclick="closeModal('modal-notifications')"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="user-notifications-list" class="space-y-2 overflow-y-auto flex-1 pr-1"></div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT MOTORLARI ENTEGRASYONU -->
   <script src="state.js"></script>
   <script src="admin.js"></script>
   <script src="mining.js"></script>
   <script src="crash.js"></script>
   <script src="wallet.js"></script>
-  <script src="Live.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
