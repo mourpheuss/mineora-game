@@ -264,7 +264,7 @@
             </div>
             <h2 class="hero-title">Tahmin Değil, <span>Matematiksel Gerçekler.</span></h2>
             <p style="font-size: 1.05rem; color: var(--text-sub); line-height: 1.6; margin-bottom: 2rem;">
-                Tüm majör liglerin güncel puan durumları, takımların sezon içi gerçek gol ortalamaları ve form grafikleri anlık olarak taranır. Maç Sonu, İlk Yarı, İkinci Yarı ve Gol Baremleri net yüzdelerle raporlanır.
+                Tüm majör ve alt liglerin güncel puan durumları, takımların sezon içi gerçek gol ortalamaları ve form grafikleri anlık olarak taranır. Maç Sonu, İlk Yarı, İkinci Yarı ve Gol Baremleri net yüzdelerle raporlanır.
             </p>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                 <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
@@ -274,7 +274,6 @@
             </div>
         </div>
 
-        <!-- KURUMSAL PLATFORM MİMARİSİ (SAHTE MAÇ KARTI KALDIRILDI) -->
         <div style="background: var(--bg-surface); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 24px; padding: 2rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-line); padding-bottom:1rem;">
                 <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-green); text-transform: uppercase;">
@@ -295,8 +294,8 @@
                 </div>
 
                 <div style="background: rgba(7,11,20,0.7); border:1px solid var(--border-line); padding:0.9rem; border-radius:12px;">
-                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">OTOMASYON DÖNGÜSÜ</div>
-                    <div style="font-size:1rem; font-weight:800; color:var(--accent-green); margin-top:0.2rem;">Her 5 Dakikada Bir Otomatik Güncelleme</div>
+                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">GENİŞ BÜLTEN KAPSAMI</div>
+                    <div style="font-size:1rem; font-weight:800; color:var(--accent-green); margin-top:0.2rem;">25+ Dünya ve Türkiye Ligi Otomasyonu</div>
                 </div>
             </div>
         </div>
@@ -321,25 +320,21 @@
         </div>
     </div>
 
-    <!-- ARAMA -->
     <div class="search-bar">
         <i class="fa-solid fa-magnifying-glass" style="color: var(--accent-green);"></i>
         <input type="text" id="match-search" oninput="handleSearch(event)" placeholder="Takım, lig veya maç kodu ara (Örn: Galatasaray, Premier, 40101)...">
     </div>
 
-    <!-- BAŞLIKLAR -->
     <div style="display: grid; grid-template-columns: 90px 90px 1.4fr 1.8fr 140px 120px; padding: 0.75rem 1.25rem; font-size: 0.75rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase;">
         <div>KOD</div>
-        <div>SAAT</div>
+        <div>SAAT (TSİ)</div>
         <div>LİG</div>
         <div>KARŞILAŞMA</div>
         <div>PUAN DURUMU</div>
         <div style="text-align: right;">RAPOR</div>
     </div>
 
-    <div id="match-list-container">
-        <!-- Dinamik Maçlar -->
-    </div>
+    <div id="match-list-container"></div>
 </div>
 
 <!-- 3. YÖNETİCİ MASASI -->
@@ -368,7 +363,7 @@
     </div>
 </div>
 
-<!-- ================= 4. DETAY ANALİZ RAPORU ================= -->
+<!-- 4. DETAY ANALİZ RAPORU -->
 <div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
@@ -379,7 +374,6 @@
             <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.6rem; cursor:pointer;">&times;</button>
         </div>
 
-        <!-- 1. PUAN DURUMU & FORM BİLGİSİ -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom: 0.85rem;">
                 <i class="fa-solid fa-table-list"></i> Gerçek Puan Durumu & Son 5 Maçlık Form
@@ -408,7 +402,6 @@
             </div>
         </div>
 
-        <!-- 2. MAÇ SONU (MS 1 - X - 2) -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800;">
                 <i class="fa-solid fa-trophy"></i> Maç Sonu Kazanma İhtimali (MS)
@@ -425,7 +418,6 @@
             </div>
         </div>
 
-        <!-- 3. İLK YARI VE İKİNCİ YARI -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
             <div class="card-panel" style="margin-bottom:0;">
                 <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom:0.6rem;">
@@ -449,32 +441,18 @@
             </div>
         </div>
 
-        <!-- 4. GOL İHTİMALLERİ (1.5 / 2.5 / 3.5 & KG) -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom:0.8rem;">
                 <i class="fa-solid fa-bullseye"></i> Gol Baremleri & Karşılıklı Gol
             </h4>
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:0.5rem; text-align:center;">
-                <div class="stat-box">
-                    <span>1.5 GOL</span>
-                    <strong id="val-o15" style="font-size:1.05rem;">%0 Üst</strong>
-                </div>
-                <div class="stat-box">
-                    <span>2.5 GOL</span>
-                    <strong id="val-o25" style="font-size:1.05rem; color:var(--accent-cyan);">%0 Üst</strong>
-                </div>
-                <div class="stat-box">
-                    <span>3.5 GOL</span>
-                    <strong id="val-o35" style="font-size:1.05rem; color:var(--accent-amber);">%0 Üst</strong>
-                </div>
-                <div class="stat-box">
-                    <span>KG VAR</span>
-                    <strong id="val-btts" style="font-size:1.05rem; color:var(--accent-green);">%0 Var</strong>
-                </div>
+                <div class="stat-box"><span>1.5 GOL</span><strong id="val-o15" style="font-size:1.05rem;">%0 Üst</strong></div>
+                <div class="stat-box"><span>2.5 GOL</span><strong id="val-o25" style="font-size:1.05rem; color:var(--accent-cyan);">%0 Üst</strong></div>
+                <div class="stat-box"><span>3.5 GOL</span><strong id="val-o35" style="font-size:1.05rem; color:var(--accent-amber);">%0 Üst</strong></div>
+                <div class="stat-box"><span>KG VAR</span><strong id="val-btts" style="font-size:1.05rem; color:var(--accent-green);">%0 Var</strong></div>
             </div>
         </div>
 
-        <!-- 5. EN OLASI SKORLAR -->
         <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid var(--border-line); padding:0.85rem 1.25rem; border-radius:14px;">
             <span style="font-size:0.82rem; font-weight:800; color:var(--text-sub);">EN OLASI SKORLAR:</span>
             <div id="rep-top-scores" style="display:flex; gap:0.5rem; font-family:var(--font-code);"></div>
@@ -510,7 +488,6 @@
     </div>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -529,10 +506,13 @@
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
 
+    // F5 KORUMALI SAYFA DEĞİŞTİRİCİ
     function switchView(view) {
         document.getElementById('view-landing').classList.add('hidden');
         document.getElementById('view-terminal').classList.add('hidden');
         document.getElementById('view-admin').classList.add('hidden');
+
+        localStorage.setItem('mas_active_view', view);
 
         if (view === 'landing') document.getElementById('view-landing').classList.remove('hidden');
         if (view === 'terminal') {
@@ -545,11 +525,12 @@
         }
     }
 
-    // YÖNETİCİ
+    // YÖNETİCİ GİRİŞİ
     function handleAdminAuth() {
         if (document.getElementById('admin-pass-input').value.trim() === ADMIN_KEY) {
             closeModal('modal-admin-auth');
-            CurrentUser = { username: "KURUCU (ADMIN)", isPro: true };
+            CurrentUser = { username: "KURUCU (ADMIN)", role: "admin", isPro: true };
+            localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
             document.getElementById('user-display').innerText = "KURUCU (ADMIN)";
             switchView('admin');
         } else { alert("Hatalı şifre!"); }
@@ -588,7 +569,7 @@
         db.ref('mas_users/' + username + '/isPro').set(status);
     }
 
-    // AUTH
+    // ÜYE AUTH
     async function handleRegister() {
         const u = document.getElementById('reg-user').value.trim().toLowerCase();
         const p = document.getElementById('reg-pass').value.trim();
@@ -619,10 +600,11 @@
 
     function handleLogout() {
         localStorage.removeItem('mas_pro_session');
+        localStorage.removeItem('mas_active_view');
         window.location.reload();
     }
 
-    // MAÇLAR
+    // MAÇLARI YÜKLE
     function loadMatches() {
         db.ref("analyzed_matches").on("value", snap => {
             const raw = snap.val();
@@ -674,7 +656,7 @@
         const a = m.analysis || {};
         const td = m.team_details || {};
 
-        document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''}`;
+        document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''} (TSİ)`;
         document.getElementById('rep-title').innerText = m.match;
 
         document.getElementById('rep-home-name').innerText = m.home_team || "Ev Sahibi";
@@ -722,19 +704,22 @@
         openModal('modal-match-detail');
     }
 
+    // SAYFA YENİLEME (F5) HAFIZASI
     window.addEventListener('DOMContentLoaded', () => {
         const session = localStorage.getItem('mas_pro_session');
+        const savedView = localStorage.getItem('mas_active_view') || 'landing';
+
         if (session) {
             try {
                 CurrentUser = JSON.parse(session);
-                db.ref('mas_users/' + CurrentUser.username).once('value', snap => {
-                    const u = snap.val();
-                    if (u && u.isPro) {
-                        document.getElementById('user-display').innerText = u.username.toUpperCase();
-                        switchView('terminal');
-                    }
-                });
-            } catch(e) {}
+                document.getElementById('user-display').innerText = CurrentUser.username.toUpperCase();
+                // Kullanıcı F5 attığında hangi ekrandaysa doğrudan orayı aç
+                switchView(savedView === 'admin' && CurrentUser.role === 'admin' ? 'admin' : 'terminal');
+            } catch(e) {
+                switchView('landing');
+            }
+        } else {
+            switchView('landing');
         }
     });
 </script>
