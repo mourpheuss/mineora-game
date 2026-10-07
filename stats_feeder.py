@@ -7,9 +7,9 @@ class StatsFeeder:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         }
-        # Lig slug eşleşmeleri
         self.league_slugs = {
             "Trendyol Süper Lig": "tur.1",
+            "Trendyol 1. Lig": "tur.2",
             "Premier League": "eng.1",
             "La Liga": "esp.1",
             "Serie A": "ita.1",
@@ -22,15 +22,12 @@ class StatsFeeder:
         self.standings_cache = {}
 
     def _normalize(self, text):
-        """Türkçe ve yabancı karakterleri temizleyip eşleştirme yapar."""
-        if not text:
-            return ""
+        if not text: return ""
         text = text.replace("İ", "I").replace("ı", "i")
         n = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8')
         return re.sub(r'[^a-zA-Z0-9]', '', n).lower()
 
     def fetch_league_standings(self, league_name):
-        """Ligin canlı puan durumunu resmi açık servisten çeker."""
         if league_name in self.standings_cache:
             return self.standings_cache[league_name]
 
@@ -58,14 +55,12 @@ class StatsFeeder:
 
                     stats_list = {s.get("name"): s for s in entry.get("stats", [])}
                     
-                    # Gerçek Sıralama
                     rank = int(stats_list.get("rank", {}).get("value", idx + 1))
                     points = int(stats_list.get("points", {}).get("value", 0))
                     played = int(stats_list.get("gamesPlayed", {}).get("value", 1))
                     gf = float(stats_list.get("pointsFor", {}).get("value", 0))
                     ga = float(stats_list.get("pointsAgainst", {}).get("value", 0))
 
-                    # Form serisi
                     raw_form = stats_list.get("form", {}).get("displayValue", "")
                     form_list = []
                     if raw_form:
@@ -87,10 +82,16 @@ class StatsFeeder:
                     }
 
                 self.standings_cache[league_name] = table
-        except Exception as e:
-            print(f"[UYARI] {league_name} puan durumu çekilemedi: {e}")
+        except Exception:
+            pass
 
         return table
+
+    def _calc_form_factor(self, form_list):
+        """Son 5 maçın form puanını hesaplar (G=3, B=1, M=0)"""
+        pts = sum(3 if x == 'G' else (1 if x == 'B' else 0) for x in form_list)
+        # 15 üzerinden ortalama 7.5 puana göre %15 yukarı/aşağı çarpan
+        return round(1.0 + ((pts - 7.5) * 0.015), 2)
 
     def enrich_match_data(self, match):
         league = match.get("league", "")
@@ -102,36 +103,36 @@ class StatsFeeder:
         norm_h = self._normalize(home_team)
         norm_a = self._normalize(away_team)
 
-        # Tabloda fuzzy arama
-        h_data = table.get(norm_h)
-        if not h_data:
-            for k, v in table.items():
-                if k in norm_h or norm_h in k:
-                    h_data = v
-                    break
+        h_data = table.get(norm_h) or next((v for k, v in table.items() if k in norm_h or norm_h in k), None)
+        a_data = table.get(norm_a) or next((v for k, v in table.items() if k in norm_a or norm_a in k), None)
 
-        a_data = table.get(norm_a)
-        if not a_data:
-            for k, v in table.items():
-                if k in norm_a or norm_a in k:
-                    a_data = v
-                    break
+        h_form = h_data["form"] if h_data else ["G", "B", "G", "M", "G"]
+        a_form = a_data["form"] if a_data else ["M", "B", "G", "M", "B"]
 
-        # Gerçek veriler bulunduysa ekle, bulunamadıysa lig ortalaması ata
+        h_form_factor = self._calc_form_factor(h_form)
+        a_form_factor = self._calc_form_factor(a_form)
+
+        # İç Saha / Dış Saha ve Form Kalibrasyonlu xG Hesabı
+        h_base = float(h_data["avg_scored"]) if h_data else 1.45
+        a_conc = float(a_data["avg_conceded"]) if a_data else 1.30
+        home_calc_xg = round((h_base * a_conc / 1.30) * 1.15 * h_form_factor, 2)
+
+        a_base = float(a_data["avg_scored"]) if a_data else 1.20
+        h_conc = float(h_data["avg_conceded"]) if h_data else 1.15
+        away_calc_xg = round((a_base * h_conc / 1.30) * 0.88 * a_form_factor, 2)
+
         match["home_stats"] = {
             "rank": h_data["rank"] if h_data else "-",
             "points": h_data["points"] if h_data else "-",
-            "form": h_data["form"] if h_data else ["G", "B", "G", "M", "G"],
-            "avg_scored": h_data["avg_scored"] if h_data else 1.40,
-            "avg_conceded": h_data["avg_conceded"] if h_data else 1.20
+            "form": h_form,
+            "calc_xg": max(0.45, home_calc_xg)
         }
 
         match["away_stats"] = {
             "rank": a_data["rank"] if a_data else "-",
             "points": a_data["points"] if a_data else "-",
-            "form": a_data["form"] if a_data else ["M", "B", "G", "M", "B"],
-            "avg_scored": a_data["avg_scored"] if a_data else 1.15,
-            "avg_conceded": a_data["avg_conceded"] if a_data else 1.35
+            "form": a_form,
+            "calc_xg": max(0.35, away_calc_xg)
         }
 
         return match
