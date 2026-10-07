@@ -16,46 +16,6 @@ class SportsAnalyticsEngine:
         elif x == 1 and y == 1: return 1.0 - self.rho
         return 1.0
 
-    def _generate_ai_verdict(self, home_team, away_team, ms_h, ms_d, ms_a, o25, btts, h_xg, a_xg):
-        """Yapay Zeka Nihai Karar ve Güvenilirlik Süzgeci"""
-        # En baskın piyasayı bul
-        best_market = ""
-        confidence = 70
-        reason = ""
-
-        if ms_h >= 62.0:
-            best_market = f"Maç Sonu: {home_team} Galibiyeti"
-            confidence = int(ms_h * 1.08)
-            reason = f"{home_team} iç saha üstünlüğü ve xG beklentisi ({h_xg}) net galibiyet senaryosunu teyit ediyor."
-        elif ms_a >= 58.0:
-            best_market = f"Maç Sonu: {away_team} Galibiyeti"
-            confidence = int(ms_a * 1.1)
-            reason = f"{away_team} deplasman hücum üretkenliği rakip savunma zaafiyetine karşı belirgin üstünlük kuruyor."
-        elif o25 >= 63.0:
-            best_market = "Toplam Gol: 2.5 Üst"
-            confidence = int(o25 * 1.12)
-            reason = f"Her iki takımın toplam {round(h_xg + a_xg, 2)} gol beklentisi yüksek tempolu ve gollü bir maçı işaret ediyor."
-        elif btts >= 61.0:
-            best_market = "Karşılıklı Gol: VAR"
-            confidence = int(btts * 1.1)
-            reason = "Karşılıklı geçiş oyunu zaafiyetleri iki takımın da skor üretme ihtimalini kuvvetlendiriyor."
-        elif (100.0 - o25) >= 58.0:
-            best_market = "Toplam Gol: 2.5 Alt"
-            confidence = int((100.0 - o25) * 1.08)
-            reason = "Düşük xG ortalamaları ve kontrollü taktik kurgu kısır bir skor profilini öne çıkarıyor."
-        else:
-            best_market = "İlk Yarı: Beraberlik (Dengeli Tercih)"
-            confidence = 74
-            reason = "Kuvvetler dengesi yakın; takımların ilk 45 dakikada temkinli ve savunma ağırlıklı kalması bekleniyor."
-
-        confidence = min(94, max(68, confidence))
-
-        return {
-            "pick": best_market,
-            "confidence": f"%{confidence}",
-            "rationale": reason
-        }
-
     def analyze_match(self, match_data):
         home_team = match_data.get("home_team", "Ev Sahibi")
         away_team = match_data.get("away_team", "Deplasman")
@@ -89,7 +49,7 @@ class SportsAnalyticsEngine:
 
                 matrix.append((f"{h}-{a}", p))
 
-        # Devreler
+        # Devre Dağılımları
         iy_h, iy_d, iy_a = 0.0, 0.0, 0.0
         for h in range(5):
             for a in range(5):
@@ -113,15 +73,10 @@ class SportsAnalyticsEngine:
         p_home = round((ms_h / tot_ms) * 100, 1)
         p_draw = round((ms_d / tot_ms) * 100, 1)
         p_away = round((ms_a / tot_ms) * 100, 1)
-        p_o25 = round((o25 / tot_ms) * 100, 1)
-        p_btts = round((btts_yes / tot_ms) * 100, 1)
 
-        # YAPAY ZEKA FİLTRESİ
-        ai_verdict = self._generate_ai_verdict(home_team, away_team, p_home, p_draw, p_away, p_o25, p_btts, h_xg, a_xg)
-
-        # Volatilite kontrolü
+        # Volatilite Kontrolü (Yalnızca riskli derbilerde uyarır)
         volatility_warning = None
-        if abs(p_home - p_away) < 8.0:
+        if abs(p_home - p_away) < 7.5:
             volatility_warning = "YÜKSEK VOLATİLİTE: İki takımın kazanma ihtimali birbirine çok yakın. Modelimiz taraf tercihi yerine Gol / Devre seçeneklerine odaklanmanızı tavsiye eder."
 
         matrix.sort(key=lambda x: x[1], reverse=True)
@@ -134,7 +89,6 @@ class SportsAnalyticsEngine:
             "match": f"{home_team} vs {away_team}",
             "home_team": home_team,
             "away_team": away_team,
-            "ai_verdict": ai_verdict,
             "volatility_warning": volatility_warning,
             "analysis": {
                 "ms_home": p_home,
@@ -147,9 +101,9 @@ class SportsAnalyticsEngine:
                 "y2_draw": round((y2_d / tot_2y) * 100, 1),
                 "y2_away": round((y2_a / tot_2y) * 100, 1),
                 "over_15": round((o15 / tot_ms) * 100, 1),
-                "over_25": p_o25,
+                "over_25": round((o25 / tot_ms) * 100, 1),
                 "over_35": round((o35 / tot_ms) * 100, 1),
-                "btts_yes": p_btts,
+                "btts_yes": round((btts_yes / tot_ms) * 100, 1),
                 "btts_no": round((1.0 - (btts_yes / tot_ms)) * 100, 1)
             },
             "top_scores": top_scores,
