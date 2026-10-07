@@ -1,4 +1,3 @@
-import json
 from scraper import BulletinScraper
 from stats_feeder import StatsFeeder
 from engine import SportsAnalyticsEngine
@@ -8,7 +7,7 @@ FIREBASE_DATABASE_URL = "https://mineora-web-default-rtdb.firebaseio.com"
 
 def run_scientific_pipeline():
     print("=" * 60)
-    print("MAS PIPELINE ÇALIŞTIRILIYOR (5 DAKİKALIK DÖNGÜ)")
+    print("MAS PROFESYONEL ANALİZ MOTORU ÇALIŞTIRILIYOR")
     print("=" * 60)
 
     scraper = BulletinScraper()
@@ -16,36 +15,30 @@ def run_scientific_pipeline():
     engine = SportsAnalyticsEngine()
 
     raw_matches = scraper.fetch_live_bulletin()
-    print(f"-> Toplam {len(raw_matches)} maç bültenden çekildi.")
+    print(f"-> Toplam {len(raw_matches)} bülten maçı çekildi.")
 
-    # GÜVENLİK KİLİDİ: Eğer API boş dönerse veritabanını ASLA silme!
     if not raw_matches or len(raw_matches) == 0:
-        print("[KRİTİK UYARI] Bülten boş döndü, mevcut Firebase verisi korunuyor!")
+        print("[UYARI] Bülten boş döndü, mevcut Firebase verisi korundu.")
         return
 
     analyzed_matches = []
-    value_count = 0
 
     for match in raw_matches:
         enriched_match = feeder.enrich_match_data(match)
-        analysis = engine.analyze_match(enriched_match)
+        result = engine.analyze_match(enriched_match)
         
-        analysis["match_id"] = enriched_match.get("match_id", "40100")
-        analysis["date"] = enriched_match.get("start_time", enriched_match.get("date", ""))
-        analysis["league"] = enriched_match.get("league", "Futbol")
-        analysis["odds"] = enriched_match.get("odds", {})
+        # Arayüze gerekli tüm kimlik bilgileri
+        result["match_id"] = enriched_match.get("match_id", "40100")
+        result["date"] = enriched_match.get("start_time", "")
+        result["league"] = enriched_match.get("league", "Futbol")
 
-        if len(analysis.get("value_scenarios", [])) > 0:
-            value_count += 1
+        analyzed_matches.append(result)
 
-        analyzed_matches.append(analysis)
+    print(f"-> Toplam {len(analyzed_matches)} maçın İY, 2Y, MS, Gol ve Kadro analizleri tamamlandı.")
 
-    print(f"-> Analiz Edilen: {len(analyzed_matches)}, +EV Bulunan: {value_count}")
-
-    # Firebase'e Aktar
     fb = FirebaseSync(FIREBASE_DATABASE_URL)
     fb.push_analyzed_matches(analyzed_matches)
-    print("-> Firebase senkronizasyonu tamamlandı.")
+    print("-> Analizler Firebase'e aktarıldı.")
     print("=" * 60)
 
 if __name__ == "__main__":
