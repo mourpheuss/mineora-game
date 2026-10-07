@@ -1,133 +1,120 @@
 import math
 
 class SportsAnalyticsEngine:
-    def __init__(self, rho=-0.13):
-        # Dixon-Coles korelasyon katsayısı (0-0, 1-0, 0-1, 1-1 düzeltmesi)
-        self.rho = rho
+    def __init__(self):
+        pass
 
-    def _poisson_pmf(self, k, lamb):
+    def _poisson(self, k, lamb):
         if lamb <= 0:
             return 1.0 if k == 0 else 0.0
         return (math.exp(-lamb) * (lamb ** k)) / math.factorial(k)
 
-    def _dixon_coles_tau(self, x, y, lambda_h, mu_a):
-        if x == 0 and y == 0:
-            return 1.0 - (lambda_h * mu_a * self.rho)
-        elif x == 0 and y == 1:
-            return 1.0 + (lambda_h * self.rho)
-        elif x == 1 and y == 0:
-            return 1.0 + (mu_a * self.rho)
-        elif x == 1 and y == 1:
-            return 1.0 - self.rho
-        return 1.0
-
-    def calculate_dynamic_xg(self, odds):
-        """
-        Bülten oranlarından (Over/Under & 1X2) ters matematik ile 
-        o maça özel hakiki xG ve gol beklentisini türetir.
-        Böylece her maçın kendine has yüzdesi çıkar.
-        """
-        o_over = float(odds.get("over25", 1.80))
-        o_under = float(odds.get("under25", 1.85))
-        o_home = float(odds.get("home", 2.20))
-        o_away = float(odds.get("away", 3.00))
-
-        # Marj arındırma (Vig-free fair probabilities)
-        p_raw_over = 1.0 / max(1.05, o_over)
-        p_raw_under = 1.0 / max(1.05, o_under)
-        margin_ou = p_raw_over + p_raw_under
-        p_fair_over = p_raw_over / margin_ou
-
-        # 2.5 Üst olasılığından toplam beklenen gol (Total xG)
-        # Örn: %70 üst -> 3.3 gol, %40 üst -> 2.1 gol
-        total_xg = 1.40 + (p_fair_over * 2.30)
-
-        # 1X2 oranlarından takımların güç dağılımı
-        p_raw_home = 1.0 / max(1.05, o_home)
-        p_raw_away = 1.0 / max(1.05, o_away)
-        home_strength_ratio = p_raw_home / (p_raw_home + p_raw_away)
-
-        home_xg = max(0.60, total_xg * home_strength_ratio)
-        away_xg = max(0.50, total_xg - home_xg)
-
-        return round(home_xg, 2), round(away_xg, 2)
-
     def analyze_match(self, match_data):
-        odds = match_data.get("odds", {})
-        home_xg, away_xg = self.calculate_dynamic_xg(odds)
+        home_team = match_data.get("home_team", "Ev Sahibi")
+        away_team = match_data.get("away_team", "Deplasman")
+        
+        # Takım verilerini stats_feeder'dan al
+        h_stats = match_data.get("home_stats", {})
+        a_stats = match_data.get("away_stats", {})
 
-        max_goals = 7
-        score_matrix = {}
-        prob_home, prob_draw, prob_away = 0.0, 0.0, 0.0
-        prob_over25, prob_btts = 0.0, 0.0
-        score_list = []
+        # Form, eksikler ve saha avantajına göre hakiki gol beklentileri (xG)
+        home_xg = max(0.40, h_stats.get("calc_xg", 1.65))
+        away_xg = max(0.30, a_stats.get("calc_xg", 1.15))
 
-        for h in range(max_goals + 1):
-            for a in range(max_goals + 1):
-                p_base = self._poisson_pmf(h, home_xg) * self._poisson_pmf(a, away_xg)
-                tau = self._dixon_coles_tau(h, a, home_xg, away_xg)
-                p_final = max(0.0, p_base * tau)
+        # İlk Yarı (İY) ve İkinci Yarı (2Y) Gol Dağılımı Katsayıları
+        # Futbolda gollerin ortalama %44'ü ilk yarı, %56'sı ikinci yarı atılır
+        h_xg_1h, a_xg_1h = home_xg * 0.44, away_xg * 0.44
+        h_xg_2h, a_xg_2h = home_xg * 0.56, away_xg * 0.56
 
-                score_matrix[(h, a)] = p_final
-                score_list.append(((h, a), p_final))
+        # MAÇ SONU (MS) HESAPLAMA
+        ms_home, ms_draw, ms_away = 0.0, 0.0, 0.0
+        over15, over25, over35 = 0.0, 0.0, 0.0
+        btts_yes = 0.0
+        score_matrix = []
 
-                if h > a: prob_home += p_final
-                elif h == a: prob_draw += p_final
-                else: prob_away += p_final
+        for h in range(7):
+            for a in range(7):
+                p = self._poisson(h, home_xg) * self._poisson(a, away_xg)
+                if h > a: ms_home += p
+                elif h == a: ms_draw += p
+                else: ms_away += p
 
-                if (h + a) > 2.5: prob_over25 += p_final
-                if h > 0 and a > 0: prob_btts += p_final
+                total_g = h + a
+                if total_g > 1.5: over15 += p
+                if total_g > 2.5: over25 += p
+                if total_g > 3.5: over35 += p
+                if h > 0 and a > 0: btts_yes += p
 
-        total_p = prob_home + prob_draw + prob_away
-        if total_p > 0:
-            prob_home /= total_p
-            prob_draw /= total_p
-            prob_away /= total_p
-            prob_over25 /= total_p
-            prob_btts /= total_p
+                score_matrix.append((f"{h}-{a}", p))
 
-        score_list.sort(key=lambda x: x[1], reverse=True)
+        # İLK YARI (İY) HESAPLAMA
+        iy_home, iy_draw, iy_away = 0.0, 0.0, 0.0
+        for h in range(5):
+            for a in range(5):
+                p = self._poisson(h, h_xg_1h) * self._poisson(a, a_xg_1h)
+                if h > a: iy_home += p
+                elif h == a: iy_draw += p
+                else: iy_away += p
+
+        # İKİNCİ YARI (2Y) HESAPLAMA
+        y2_home, y2_draw, y2_away = 0.0, 0.0, 0.0
+        for h in range(5):
+            for a in range(5):
+                p = self._poisson(h, h_xg_2h) * self._poisson(a, a_xg_2h)
+                if h > a: y2_home += p
+                elif h == a: y2_draw += p
+                else: y2_away += p
+
+        # Normalizasyon
+        tot_ms = ms_home + ms_draw + ms_away or 1.0
+        tot_iy = iy_home + iy_draw + iy_away or 1.0
+        tot_2y = y2_home + y2_draw + y2_away or 1.0
+
+        score_matrix.sort(key=lambda x: x[1], reverse=True)
         top_scores = [
-            {"score": f"{s[0][0]}-{s[0][1]}", "prob": f"%{round(s[1]*100, 1)}"}
-            for s in score_list[:3]
+            {"score": s[0], "prob": f"%{round((s[1]/tot_ms)*100, 1)}"}
+            for s in score_matrix[:3]
         ]
-
-        entropy = 0.0
-        for p in [prob_home, prob_draw, prob_away]:
-            if p > 0: entropy -= p * math.log2(p)
-
-        value_scenarios = []
-        markets = [
-            ("MS 1", float(odds.get("home", 0)), prob_home),
-            ("MS X", float(odds.get("draw", 0)), prob_draw),
-            ("MS 2", float(odds.get("away", 0)), prob_away),
-            ("2.5 Üst", float(odds.get("over25", 0)), prob_over25),
-            ("2.5 Alt", float(odds.get("under25", 0)), 1.0 - prob_over25),
-            ("KG Var", float(odds.get("btts_yes", 0)), prob_btts),
-            ("KG Yok", float(odds.get("btts_no", 0)), 1.0 - prob_btts)
-        ]
-
-        for m_name, odd, prob in markets:
-            if odd > 1.0:
-                ev = (prob * odd) - 1.0
-                if ev >= 0.04:  # %4 ve üzeri reel +EV
-                    value_scenarios.append({
-                        "market": m_name,
-                        "bulten_orani": str(odd),
-                        "expected_value": f"+%{round(ev * 100, 1)} EV"
-                    })
 
         return {
-            "match": f"{match_data.get('home_team')} vs {match_data.get('away_team')}",
-            "entropy": round(entropy, 2),
-            "expected_goals": {"home": home_xg, "away": away_xg},
-            "probabilities": {
-                "home_win": round(prob_home * 100, 1),
-                "draw": round(prob_draw * 100, 1),
-                "away_win": round(prob_away * 100, 1),
-                "over_25": round(prob_over25 * 100, 1),
-                "under_25": round((1.0 - prob_over25) * 100, 1)
+            "match": f"{home_team} vs {away_team}",
+            "home_team": home_team,
+            "away_team": away_team,
+            "analysis": {
+                # Maç Sonu
+                "ms_home": round((ms_home / tot_ms) * 100, 1),
+                "ms_draw": round((ms_draw / tot_ms) * 100, 1),
+                "ms_away": round((ms_away / tot_ms) * 100, 1),
+                
+                # İlk Yarı
+                "iy_home": round((iy_home / tot_iy) * 100, 1),
+                "iy_draw": round((iy_draw / tot_iy) * 100, 1),
+                "iy_away": round((iy_away / tot_iy) * 100, 1),
+
+                # İkinci Yarı
+                "y2_home": round((y2_home / tot_2y) * 100, 1),
+                "y2_draw": round((y2_draw / tot_2y) * 100, 1),
+                "y2_away": round((y2_away / tot_2y) * 100, 1),
+
+                # Gol Baremleri
+                "over_15": round((over15 / tot_ms) * 100, 1),
+                "under_15": round((1.0 - (over15 / tot_ms)) * 100, 1),
+                "over_25": round((over25 / tot_ms) * 100, 1),
+                "under_25": round((1.0 - (over25 / tot_ms)) * 100, 1),
+                "over_35": round((over35 / tot_ms) * 100, 1),
+                "under_35": round((1.0 - (over35 / tot_ms)) * 100, 1),
+
+                # Karşılıklı Gol
+                "btts_yes": round((btts_yes / tot_ms) * 100, 1),
+                "btts_no": round((1.0 - (btts_yes / tot_ms)) * 100, 1)
             },
-            "top_predicted_scores": top_scores,
-            "value_scenarios": value_scenarios
+            "top_scores": top_scores,
+            "team_details": {
+                "home_rank": h_stats.get("rank", 5),
+                "away_rank": a_stats.get("rank", 8),
+                "home_form": h_stats.get("form", ["G", "G", "B", "G", "M"]),
+                "away_form": a_stats.get("form", ["M", "B", "G", "M", "B"]),
+                "home_missing": h_stats.get("missing", "Eksik Oyuncu Yok"),
+                "away_missing": a_stats.get("missing", "1 Önemli Eksik")
+            }
         }
