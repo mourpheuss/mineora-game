@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MAS PRO // Mine Analiz System - Yapay Zeka Destekli Futbol Analitiği</title>
-    <!-- Favicon 404 hatasını önleyen dinamik SVG ikonu -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,15 +11,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-deep: #060911;
-            --bg-surface: #0c1322;
-            --bg-card: rgba(16, 25, 42, 0.92);
-            --bg-row-hover: rgba(0, 255, 136, 0.06);
-            --border-line: rgba(255, 255, 255, 0.08);
+            --bg-deep: #050811;
+            --bg-surface: #0b1220;
+            --bg-card: rgba(15, 23, 42, 0.85);
+            --bg-row-hover: rgba(0, 255, 136, 0.08);
+            --border-line: rgba(255, 255, 255, 0.1);
             --text-pure: #ffffff;
             --text-sub: #94a3b8;
             --accent-green: #00ff88;
-            --accent-green-glow: rgba(0, 255, 136, 0.25);
+            --accent-green-glow: rgba(0, 255, 136, 0.35);
             --accent-cyan: #00d2ff;
             --accent-purple: #a855f7;
             --accent-amber: #f59e0b;
@@ -40,26 +39,45 @@
         .container { max-width: 1260px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* VİTRİN & STADYUM GÖRSELİ */
+        /* ================= VİTRİN: CANLI STADYUM VE IŞIK ATMOSFERİ ================= */
         .landing-hero-wrapper {
             position: relative;
             background-image: 
-                linear-gradient(180deg, rgba(6, 9, 17, 0.78) 0%, rgba(6, 9, 17, 0.96) 80%, var(--bg-deep) 100%),
-                url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2000&auto=format&fit=crop');
+                radial-gradient(circle at 50% 20%, rgba(0, 255, 136, 0.18) 0%, transparent 60%),
+                linear-gradient(180deg, rgba(5, 8, 17, 0.35) 0%, rgba(5, 8, 17, 0.75) 55%, var(--bg-deep) 100%),
+                url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=2200&q=85');
             background-size: cover;
-            background-position: center 30%;
+            background-position: center 35%;
+            background-repeat: no-repeat;
             border-bottom: 1px solid var(--border-line);
-            padding-bottom: 5rem;
+            padding-bottom: 6rem;
+            overflow: hidden;
+        }
+
+        /* Projektör Işığı Efekti */
+        .landing-hero-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(0, 210, 255, 0.22), transparent 70%);
+            pointer-events: none;
+            filter: blur(40px);
         }
 
         .landing-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.5rem 0 3.5rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 1.5rem 0 3rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
             flex-wrap: wrap;
             gap: 1rem;
+            position: relative;
+            z-index: 10;
         }
 
         .brand-logo { display: flex; align-items: center; gap: 0.85rem; }
@@ -73,123 +91,131 @@
             justify-content: center;
             color: #060911;
             font-size: 1.35rem;
-            box-shadow: 0 0 25px var(--accent-green-glow);
+            box-shadow: 0 0 30px var(--accent-green-glow);
         }
 
         .hero-clean {
             text-align: center;
-            max-width: 860px;
-            margin: 3.5rem auto 2rem auto;
+            max-width: 880px;
+            margin: 4rem auto 2.5rem auto;
+            position: relative;
+            z-index: 10;
         }
 
         .hero-badge {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(0, 255, 136, 0.12);
-            border: 1px solid rgba(0, 255, 136, 0.35);
+            background: rgba(5, 8, 17, 0.7);
+            border: 1px solid rgba(0, 255, 136, 0.45);
             color: var(--accent-green);
-            padding: 0.5rem 1.25rem;
+            padding: 0.55rem 1.4rem;
             border-radius: 999px;
             font-size: 0.85rem;
             font-weight: 800;
-            margin-bottom: 1.8rem;
-            backdrop-filter: blur(8px);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
         }
 
         .hero-title {
-            font-size: 3.8rem;
+            font-size: 4rem;
             font-weight: 900;
-            line-height: 1.1;
+            line-height: 1.08;
             letter-spacing: -0.03em;
             margin-bottom: 1.5rem;
-            text-shadow: 0 4px 30px rgba(0,0,0,0.8);
+            text-shadow: 0 6px 35px rgba(0, 0, 0, 0.95);
         }
 
         .hero-title span {
             background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 25px rgba(0, 255, 136, 0.4));
         }
 
         .hero-desc {
-            font-size: 1.18rem;
-            color: #cbd5e1;
+            font-size: 1.22rem;
+            color: #e2e8f0;
             line-height: 1.7;
-            margin-bottom: 2.5rem;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+            margin-bottom: 2.8rem;
+            text-shadow: 0 3px 15px rgba(0, 0, 0, 0.95);
+            max-width: 780px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .hero-cta { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .hero-cta { display: flex; justify-content: center; gap: 1.2rem; flex-wrap: wrap; }
 
         .btn-glow {
             background: linear-gradient(135deg, var(--accent-green), #05c26b);
             color: #060911;
-            font-weight: 800;
-            font-size: 1rem;
-            padding: 1.1rem 2.4rem;
+            font-weight: 900;
+            font-size: 1.05rem;
+            padding: 1.15rem 2.6rem;
             border-radius: 14px;
             border: none;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            box-shadow: 0 0 35px var(--accent-green-glow);
+            gap: 0.65rem;
+            box-shadow: 0 0 40px var(--accent-green-glow);
             transition: all 0.25s ease;
         }
 
-        .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(0, 255, 136, 0.55); }
+        .btn-glow:hover { transform: translateY(-3px); box-shadow: 0 0 60px rgba(0, 255, 136, 0.65); }
 
         .btn-outline {
-            background: rgba(6, 9, 17, 0.6);
-            backdrop-filter: blur(10px);
+            background: rgba(5, 8, 17, 0.65);
+            backdrop-filter: blur(14px);
             color: var(--text-pure);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            font-weight: 700;
-            font-size: 1rem;
-            padding: 1.1rem 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: 800;
+            font-size: 1.02rem;
+            padding: 1.15rem 2.2rem;
             border-radius: 14px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .btn-outline:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.35); }
+        .btn-outline:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.4); }
 
-        /* CANLI BAŞARILAR */
-        .track-record-section { margin: 4rem 0; }
+        /* CANLI BAŞARILAR BÖLÜMÜ */
+        .track-record-section { margin: 4.5rem 0; }
         .track-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
         .track-card {
             background: var(--bg-surface);
             border: 1px solid var(--border-line);
             border-radius: 16px;
-            padding: 1.3rem;
+            padding: 1.35rem;
             transition: all 0.2s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
-        .track-card:hover { border-color: var(--accent-green); transform: translateY(-2px); }
-        .track-header { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-sub); margin-bottom: 0.75rem; }
-        .track-match { font-size: 1.05rem; font-weight: 800; margin-bottom: 0.35rem; }
-        .track-score { font-family: var(--font-code); font-size: 0.9rem; color: var(--accent-cyan); margin-bottom: 0.85rem; }
+        .track-card:hover { border-color: var(--accent-green); transform: translateY(-3px); }
+        .track-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.75rem; }
+        .track-match { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.35rem; }
+        .track-score { font-family: var(--font-code); font-size: 0.95rem; color: var(--accent-cyan); margin-bottom: 0.9rem; }
         .track-prediction {
             background: rgba(0, 255, 136, 0.08);
             border: 1px solid rgba(0, 255, 136, 0.25);
-            padding: 0.6rem 0.85rem;
+            padding: 0.65rem 0.9rem;
             border-radius: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .badge-verified { background: var(--accent-green); color: #060911; font-size: 0.72rem; font-weight: 900; padding: 3px 8px; border-radius: 6px; }
+        .badge-verified { background: var(--accent-green); color: #060911; font-size: 0.75rem; font-weight: 900; padding: 4px 9px; border-radius: 6px; }
 
         .disclaimer-banner {
-            background: rgba(12, 19, 34, 0.6);
+            background: rgba(11, 18, 32, 0.7);
             border: 1px solid var(--border-line);
             border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 3rem;
-            font-size: 0.82rem;
+            padding: 1.6rem;
+            margin-bottom: 3.5rem;
+            font-size: 0.84rem;
             color: var(--text-sub);
-            line-height: 1.6;
+            line-height: 1.65;
         }
 
         /* TERMİNAL */
@@ -422,7 +448,7 @@
 </head>
 <body>
 
-<!-- 1. VİTRİN -->
+<!-- 1. VİTRİN (CANLI VE GÖRKEMLİ STADYUM ATMOSFERİ) -->
 <div id="view-landing">
     <div class="landing-hero-wrapper">
         <div class="container">
@@ -460,7 +486,7 @@
         </div>
     </div>
 
-    <!-- GEÇMİŞ BAŞARILARIMIZ (KENDİNDEN YEDEKLİ & DİNAMİK) -->
+    <!-- GEÇMİŞ BAŞARILARIMIZ (CANLI GÜNCELLENEN) -->
     <div class="container">
         <div class="track-record-section">
             <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
@@ -799,11 +825,10 @@
         }
     }
 
-    // ONARILMIŞ & YEDEKLİ BAŞARI VİTRİNİ (ASLA YÜKLENİYORDA TAKILMAZ)
+    // CANLI BAŞARI VİTRİNİ
     function loadLiveSuccesses() {
         const grid = document.getElementById('live-success-grid');
         
-        // Varsayılan kanıtlanmış modeller (Firebase boşsa veya gecikirse anında gösterir)
         const fallbackSuccesses = [
             { league: "Premier League", match: "Arsenal vs Southampton", score: "3 - 1", pick: "2.5 Gol Üstü (%66.8) & MS 1" },
             { league: "Premier League", match: "Manchester City vs Fulham", score: "3 - 2", pick: "2.5 Gol Üstü (%64.2) & KG Var" },
@@ -818,12 +843,12 @@
                     <div class="track-card">
                         <div class="track-header">
                             <span>${item.league || 'Lig'}</span>
-                            <span style="color:var(--accent-green); font-weight:700;">Tescillendi</span>
+                            <span style="color:var(--accent-green); font-weight:800;">Tescillendi</span>
                         </div>
                         <div class="track-match">${item.match}</div>
                         <div class="track-score">Biten Skor: <strong>${item.score}</strong></div>
                         <div class="track-prediction">
-                            <span style="font-size:0.82rem; font-weight:700;">${item.pick}</span>
+                            <span style="font-size:0.84rem; font-weight:700;">${item.pick}</span>
                             <span class="badge-verified"><i class="fa-solid fa-check"></i> TUTTU</span>
                         </div>
                     </div>
@@ -831,10 +856,8 @@
             });
         };
 
-        // Önce yedek veriyi ekrana anında bas
         renderItems(fallbackSuccesses);
 
-        // Firebase'de yeni veri varsa hemen üzerine güncelle
         db.ref('completed_successes').limitToLast(8).on('value', snap => {
             const data = snap.val();
             if (data) {
@@ -844,7 +867,7 @@
         });
     }
 
-    // ŞİFREMİ UNUTTUM İŞLEMİ
+    // ŞİFREMİ UNUTTUM
     async function handleForgotPassword() {
         const u = document.getElementById('forgot-user').value.trim().toLowerCase();
         const p = document.getElementById('forgot-phone').value.trim().replace(/[^0-9]/g, '');
@@ -868,7 +891,7 @@
         openModal('modal-login');
     }
 
-    // ŞİFRE DEĞİŞTİRME (TERMİNAL İÇİ)
+    // ŞİFRE DEĞİŞTİRME
     async function handleChangePassword() {
         const curr = document.getElementById('chg-curr-pass').value.trim();
         const newPass = document.getElementById('chg-new-pass').value.trim();
@@ -1213,7 +1236,7 @@
         document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''} (TSİ)`;
         document.getElementById('rep-title').innerText = m.match;
 
-        document.getElementById('rep-ai-confidence').innerText = `Güven Endeksi: ${ai.confidence || '%84'}`;
+        document.getElementById('rep-ai-confidence').innerText = `Güven: ${ai.confidence || '%84'}`;
         document.getElementById('rep-ai-pick').innerText = ai.pick || "Dengeli Senaryo";
         document.getElementById('rep-ai-rationale').innerText = ai.rationale || "Algoritmik göstergeler analiz edildi.";
 
