@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAS PRO // Mine Analiz System - Profesyonel Futbol Analitiği</title>
+    <title>MAS PRO // Mine Analiz System - Canlı & Pre-Match Futbol Analitiği</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +21,7 @@
             --accent-green: #00ff88;
             --accent-green-glow: rgba(0, 255, 136, 0.35);
             --accent-cyan: #00d2ff;
+            --accent-purple: #a855f7;
             --accent-amber: #f59e0b;
             --accent-red: #ff3366;
             --font-main: 'Plus Jakarta Sans', sans-serif;
@@ -38,7 +39,7 @@
         .container { max-width: 1260px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* ================= VİTRİN / LANDING ================= */
+        /* VİTRİN / LANDING */
         .landing-hero-wrapper {
             position: relative;
             background-image: 
@@ -50,19 +51,6 @@
             border-bottom: 1px solid var(--border-line);
             padding-bottom: 6rem;
             overflow: hidden;
-        }
-
-        .landing-hero-wrapper::before {
-            content: '';
-            position: absolute;
-            top: -150px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 800px;
-            height: 400px;
-            background: radial-gradient(ellipse, rgba(0, 210, 255, 0.22), transparent 70%);
-            pointer-events: none;
-            filter: blur(40px);
         }
 
         .landing-nav {
@@ -112,7 +100,6 @@
             font-weight: 800;
             margin-bottom: 2rem;
             backdrop-filter: blur(12px);
-            box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
         }
 
         .hero-title {
@@ -128,7 +115,6 @@
             background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 25px rgba(0, 255, 136, 0.4));
         }
 
         .hero-desc {
@@ -136,7 +122,6 @@
             color: #e2e8f0;
             line-height: 1.75;
             margin-bottom: 2.8rem;
-            text-shadow: 0 3px 15px rgba(0, 0, 0, 0.95);
             max-width: 820px;
             margin-left: auto;
             margin-right: auto;
@@ -176,9 +161,6 @@
             transition: all 0.2s;
         }
 
-        .btn-outline:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.4); }
-
-        /* CANLI BAŞARILAR */
         .track-record-section { margin: 4.5rem 0; }
         .track-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
         .track-card {
@@ -187,9 +169,7 @@
             border-radius: 16px;
             padding: 1.35rem;
             transition: all 0.2s;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
-        .track-card:hover { border-color: var(--accent-green); transform: translateY(-3px); }
         .track-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.75rem; }
         .track-match { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.35rem; }
         .track-score { font-family: var(--font-code); font-size: 0.95rem; color: var(--accent-cyan); margin-bottom: 0.9rem; }
@@ -215,7 +195,7 @@
             line-height: 1.65;
         }
 
-        /* ================= TERMİNAL EKRANI ================= */
+        /* TERMİNAL (CANLI STADYUM AMBİYANS) */
         .terminal-stadium-wrapper {
             position: relative;
             background-image: 
@@ -240,7 +220,6 @@
             gap: 1rem;
         }
 
-        /* TELEMETRİ ŞERİDİ */
         .terminal-kpi-bar {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -259,7 +238,6 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
         }
 
         .kpi-icon {
@@ -273,7 +251,7 @@
         }
 
         .kpi-val { font-size: 1.15rem; font-weight: 900; font-family: var(--font-code); color: #fff; }
-        .kpi-label { font-size: 0.72rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .kpi-label { font-size: 0.72rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; }
 
         .terminal-controls {
             display: flex;
@@ -285,7 +263,6 @@
             border-radius: 18px;
             padding: 1.25rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         .search-container {
@@ -318,20 +295,17 @@
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s;
         }
-        .date-pill:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
         .date-pill.active {
             background: var(--accent-green);
             color: #060911;
             font-weight: 900;
             border-color: var(--accent-green);
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.35);
         }
 
         .match-list-header {
             display: grid;
-            grid-template-columns: 100px 95px 1.4fr 2fr 130px 140px;
+            grid-template-columns: 100px 105px 1.4fr 2fr 130px 140px;
             gap: 1rem;
             padding: 0.85rem 1.4rem;
             font-size: 0.75rem;
@@ -344,7 +318,7 @@
 
         .match-row {
             display: grid;
-            grid-template-columns: 100px 95px 1.4fr 2fr 130px 140px;
+            grid-template-columns: 100px 105px 1.4fr 2fr 130px 140px;
             gap: 1rem;
             align-items: center;
             background: rgba(11, 18, 32, 0.7);
@@ -355,47 +329,19 @@
             margin-bottom: 0.75rem;
             cursor: pointer;
             transition: all 0.22s ease;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
         }
 
         @media (max-width: 960px) { .match-row { grid-template-columns: 1fr; gap: 0.75rem; } }
+        .match-row:hover { border-color: var(--accent-green); background: rgba(15, 23, 42, 0.85); transform: translateY(-2px); }
 
-        .match-row:hover {
-            border-color: var(--accent-green);
-            background: rgba(15, 23, 42, 0.85);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.15);
+        .match-row.row-live {
+            border-left: 4px solid var(--accent-red);
+            background: rgba(255, 51, 102, 0.04);
         }
 
-        .matchup-container {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            font-weight: 800;
-            font-size: 1.05rem;
-        }
-
-        .vs-badge {
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--accent-cyan);
-            font-size: 0.7rem;
-            font-family: var(--font-code);
-            padding: 2px 7px;
-            border-radius: 6px;
-            font-weight: 900;
-        }
-
-        .badge-code {
-            display: inline-block;
-            background: rgba(0, 210, 255, 0.1);
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            color: var(--accent-cyan);
-            font-family: var(--font-code);
-            font-weight: 800;
-            font-size: 0.85rem;
-            padding: 5px 10px;
-            border-radius: 8px;
-        }
+        .matchup-container { display: flex; align-items: center; gap: 0.6rem; font-weight: 800; font-size: 1.05rem; }
+        .vs-badge { background: rgba(255, 255, 255, 0.06); color: var(--accent-cyan); font-size: 0.7rem; font-family: var(--font-code); padding: 2px 7px; border-radius: 6px; font-weight: 900; }
+        .badge-code { display: inline-block; background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.3); color: var(--accent-cyan); font-family: var(--font-code); font-weight: 800; font-size: 0.85rem; padding: 5px 10px; border-radius: 8px; }
 
         .badge-time {
             display: inline-flex;
@@ -411,6 +357,33 @@
             border-radius: 8px;
         }
 
+        .badge-live-pulse {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255, 51, 102, 0.15);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            font-family: var(--font-code);
+            font-size: 0.82rem;
+            font-weight: 900;
+            padding: 5px 9px;
+            border-radius: 8px;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 51, 102, 0.5); }
+            70% { box-shadow: 0 0 0 8px rgba(255, 51, 102, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 51, 102, 0); }
+        }
+
+        .card-red-indicator {
+            color: var(--accent-red);
+            font-size: 0.75rem;
+            margin-left: 3px;
+        }
+
         .btn-report-action {
             background: linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(0, 210, 255, 0.12));
             border: 1px solid rgba(0, 255, 136, 0.35);
@@ -422,47 +395,15 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.2s;
         }
+        .match-row:hover .btn-report-action { background: var(--accent-green); color: #060911; }
 
-        .match-row:hover .btn-report-action {
-            background: var(--accent-green);
-            color: #060911;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-        }
-
-        /* YÖNETİCİ PANELİ */
+        /* YÖNETİCİ */
         .admin-nav-tabs { display: flex; gap: 0.75rem; }
-        .admin-tab-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-sub);
-            font-size: 0.9rem;
-            font-weight: 700;
-            padding: 0.6rem 1.2rem;
-            border-radius: 10px;
-            cursor: pointer;
-        }
+        .admin-tab-btn { background: transparent; border: none; color: var(--text-sub); font-size: 0.9rem; font-weight: 700; padding: 0.6rem 1.2rem; border-radius: 10px; cursor: pointer; }
         .admin-tab-btn.active { background: rgba(255, 255, 255, 0.06); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-        .badge-active { background: rgba(0, 255, 136, 0.15); color: var(--accent-green); border: 1px solid rgba(0, 255, 136, 0.3); }
-        .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
-        .badge-expired { background: rgba(255, 51, 102, 0.15); color: var(--accent-red); border: 1px solid rgba(255, 51, 102, 0.3); }
-
-        .btn-whatsapp-notify {
-            background: #25d366;
-            color: #060911;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-weight: 800;
-            font-size: 0.75rem;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            margin-left: 0.4rem;
-        }
-
+        .btn-whatsapp-notify { background: #25d366; color: #060911; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; margin-left: 0.4rem; }
         .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
         .admin-table th { padding: 1rem; border-bottom: 1px solid var(--border-line); color: var(--text-sub); }
         .admin-table td { padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
@@ -504,17 +445,9 @@
             display: flex;
             align-items: center;
             gap: 0.6rem;
-            line-height: 1.5;
         }
 
-        .card-panel {
-            background: rgba(6, 9, 17, 0.75);
-            border: 1px solid var(--border-line);
-            border-radius: 16px;
-            padding: 1.25rem;
-            margin-bottom: 1.25rem;
-        }
-
+        .card-panel { background: rgba(6, 9, 17, 0.75); border: 1px solid var(--border-line); border-radius: 16px; padding: 1.25rem; margin-bottom: 1.25rem; }
         .prob-bar-container { height: 10px; border-radius: 6px; overflow: hidden; display: flex; background: #1e293b; margin: 0.65rem 0; }
         .form-badge { display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.75rem; font-weight: 800; margin-right: 4px; }
         .form-G { background: #059669; color: #fff; }
@@ -579,7 +512,6 @@
                     Doğrulanmış İsabet Oranı: <strong style="color:var(--accent-green);">%78.4</strong>
                 </span>
             </div>
-
             <div class="track-grid" id="live-success-grid"></div>
         </div>
 
@@ -594,7 +526,7 @@
     </div>
 </div>
 
-<!-- ================= 2. PRO TERMİNAL EKRANI ================= -->
+<!-- 2. PRO TERMİNAL EKRANI (CANLI SKOR & KIRMIZI KART DESTEKLİ) -->
 <div id="view-terminal" class="terminal-stadium-wrapper hidden">
     <div class="container">
         <div class="terminal-header">
@@ -643,7 +575,7 @@
                 <div class="kpi-icon" style="background:rgba(245,158,11,0.12); color:var(--accent-amber);"><i class="fa-solid fa-arrows-rotate"></i></div>
                 <div>
                     <div class="kpi-val" style="color:var(--accent-amber);">5 DAKİKA</div>
-                    <div class="kpi-label">Otomatik Döngü</div>
+                    <div class="kpi-label">Canlı & Skor Döngüsü</div>
                 </div>
             </div>
         </div>
@@ -658,7 +590,7 @@
 
         <div class="match-list-header">
             <div>KOD</div>
-            <div>SAAT (TSİ)</div>
+            <div>DURUM / SAAT</div>
             <div>LİG</div>
             <div>KARŞILAŞMA</div>
             <div>LİG SIRASI</div>
@@ -669,7 +601,7 @@
     </div>
 </div>
 
-<!-- ================= 3. YÖNETİCİ MASASI ================= -->
+<!-- 3. YÖNETİCİ MASASI -->
 <div id="view-admin" class="container hidden">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem;">
         <div class="brand-logo">
@@ -719,7 +651,7 @@
     </div>
 </div>
 
-<!-- ================= 4. DETAY ANALİZ RAPOR MODALI (TEMİZ SAF VERİ) ================= -->
+<!-- 4. DETAY ANALİZ RAPOR MODALI (YAPAY ZEKA METİN KUTUSU KALDIRILDI) -->
 <div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
@@ -730,7 +662,6 @@
             <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.6rem; cursor:pointer;">&times;</button>
         </div>
 
-        <!-- Volatilite Uyarısı (Gerektiğinde Çıkar) -->
         <div id="rep-volatility-box" class="volatility-box hidden">
             <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.1rem;"></i>
             <span id="rep-volatility-text"></span>
@@ -814,7 +745,7 @@
     </div>
 </div>
 
-<!-- ================= 5. GİRİŞ & ŞİFREMİ UNUTTUM & ŞİFRE DEĞİŞTİR ================= -->
+<!-- 5. GİRİŞ & ŞİFREMİ UNUTTUM & ŞİFRE DEĞİŞTİR -->
 <div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
     <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">PRO Girişi</h3>
@@ -930,10 +861,8 @@
         }
     }
 
-    // CANLI BAŞARI VİTRİNİ
     function loadLiveSuccesses() {
         const grid = document.getElementById('live-success-grid');
-        
         const fallbackSuccesses = [
             { league: "Premier League", match: "Arsenal vs Southampton", score: "3 - 1", pick: "2.5 Gol Üstü (%66.8) & MS 1" },
             { league: "Premier League", match: "Manchester City vs Fulham", score: "3 - 2", pick: "2.5 Gol Üstü (%64.2) & KG Var" },
@@ -972,7 +901,6 @@
         });
     }
 
-    // ŞİFREMİ UNUTTUM
     async function handleForgotPassword() {
         const u = document.getElementById('forgot-user').value.trim().toLowerCase();
         const p = document.getElementById('forgot-phone').value.trim().replace(/[^0-9]/g, '');
@@ -996,7 +924,6 @@
         openModal('modal-login');
     }
 
-    // ŞİFRE DEĞİŞTİRME
     async function handleChangePassword() {
         const curr = document.getElementById('chg-curr-pass').value.trim();
         const newPass = document.getElementById('chg-new-pass').value.trim();
@@ -1011,7 +938,6 @@
         closeModal('modal-change-password');
     }
 
-    // YÖNETİCİ
     function handleAdminAuth() {
         if (document.getElementById('admin-pass-input').value.trim() === ADMIN_KEY) {
             closeModal('modal-admin-auth');
@@ -1095,7 +1021,7 @@
                 statusHtml = `<span class="badge-status badge-pending"><i class="fa-solid fa-hourglass-half"></i> Onay Bekliyor</span>`;
             }
 
-            const msg = encodeURIComponent(`Merhaba ${u.username}, MAS PRO Terminal 30 günlük aboneliğiniz onaylanmıştır! Kullanıcı adı ve şifrenizle https://mineoragame.com üzerinden terminale bağlanabilirsiniz.`);
+            const msg = encodeURIComponent(`Merhaba ${u.username}, MAS PRO Terminal 30 günlük aboneliğiniz onaylanmıştır! https://mineoragame.com üzerinden bağlanabilirsiniz.`);
             const waLink = `https://wa.me/${targetPhone}?text=${msg}`;
 
             const tr = document.createElement('tr');
@@ -1164,7 +1090,6 @@
         }
     }
 
-    // KAYIT & GİRİŞ
     async function handleRegister() {
         const u = document.getElementById('reg-user').value.trim().toLowerCase();
         const p = document.getElementById('reg-pass').value.trim();
@@ -1220,7 +1145,6 @@
         window.location.reload();
     }
 
-    // MAÇLAR
     function loadMatches() {
         db.ref("analyzed_matches").on("value", snap => {
             const raw = snap.val();
@@ -1322,18 +1246,27 @@
             const hTeam = teams[0] || m.home_team || 'Ev Sahibi';
             const aTeam = teams[1] || m.away_team || 'Deplasman';
 
+            const isLive = m.is_live;
+            const hReds = m.home_reds || 0;
+            const aReds = m.away_reds || 0;
+
             const row = document.createElement('div');
-            row.className = 'match-row';
+            row.className = `match-row ${isLive ? 'row-live' : ''}`;
             row.onclick = () => openReportModal(m);
+
+            // Canlıysa Kırmızı CANLI rozeti ve Anlık Skor, değilse Başlama Saati
+            const timeOrStatusHtml = isLive 
+                ? `<span class="badge-live-pulse"><i class="fa-solid fa-circle" style="font-size:0.55rem;"></i> ${m.live_clock || 'CANLI'}</span>`
+                : `<span class="badge-time"><i class="fa-regular fa-clock" style="color:var(--accent-cyan);"></i> ${timeOnly}</span>`;
 
             row.innerHTML = `
                 <div><span class="badge-code">${m.match_id || '---'}</span></div>
-                <div><span class="badge-time"><i class="fa-regular fa-clock" style="color:var(--accent-cyan);"></i> ${timeOnly}</span></div>
+                <div>${timeOrStatusHtml}</div>
                 <div style="font-size:0.84rem; color:var(--text-sub); font-weight:700;"><i class="fa-regular fa-circle-dot" style="color:var(--accent-green); font-size:0.65rem; margin-right:4px;"></i> ${m.league || 'Futbol'}</div>
                 <div class="matchup-container">
-                    <span>${hTeam}</span>
-                    <span class="vs-badge">VS</span>
-                    <span>${aTeam}</span>
+                    <span>${hTeam} ${hReds > 0 ? '<span class="card-red-indicator">🟥</span>' : ''}</span>
+                    <span class="vs-badge">${isLive ? (m.live_score || 'VS') : 'VS'}</span>
+                    <span>${aTeam} ${aReds > 0 ? '<span class="card-red-indicator">🟥</span>' : ''}</span>
                 </div>
                 <div><span style="background:rgba(255,255,255,0.05); border:1px solid var(--border-line); color:var(--accent-green); padding:4px 10px; border-radius:8px; font-size:0.75rem; font-weight:800; font-family:var(--font-code);">${rankText}</span></div>
                 <div style="text-align:right;"><span class="btn-report-action"><i class="fa-solid fa-chart-pie"></i> Raporu Aç</span></div>
@@ -1346,7 +1279,8 @@
         const a = m.analysis || {};
         const td = m.team_details || {};
 
-        document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''} (TSİ)`;
+        const statusTag = m.is_live ? `• CANLI (${m.live_clock} - ${m.live_score})` : '';
+        document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''} (TSİ) ${statusTag}`;
         document.getElementById('rep-title').innerText = m.match;
 
         const volBox = document.getElementById('rep-volatility-box');
