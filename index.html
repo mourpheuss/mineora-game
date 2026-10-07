@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAS PRO // Mine Analiz System - Yapay Zeka Destekli Futbol Analitiği</title>
+    <title>MAS PRO // Mine Analiz System - Profesyonel Futbol Analitiği</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,14 +15,12 @@
             --bg-surface: rgba(11, 18, 32, 0.82);
             --bg-card: rgba(15, 23, 42, 0.75);
             --bg-row-hover: rgba(0, 255, 136, 0.08);
-            --border-line: rgba(255, 255, 255, 0.09);
-            --border-active: rgba(0, 255, 136, 0.4);
+            --border-line: rgba(255, 255, 255, 0.1);
             --text-pure: #ffffff;
             --text-sub: #94a3b8;
             --accent-green: #00ff88;
             --accent-green-glow: rgba(0, 255, 136, 0.35);
             --accent-cyan: #00d2ff;
-            --accent-purple: #a855f7;
             --accent-amber: #f59e0b;
             --accent-red: #ff3366;
             --font-main: 'Plus Jakarta Sans', sans-serif;
@@ -37,10 +35,10 @@
             min-height: 100vh;
         }
 
-        .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
+        .container { max-width: 1260px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* ================= 1. VİTRİN / LANDING STADYUM TEMASI ================= */
+        /* ================= VİTRİN / LANDING ================= */
         .landing-hero-wrapper {
             position: relative;
             background-image: 
@@ -95,7 +93,7 @@
 
         .hero-clean {
             text-align: center;
-            max-width: 880px;
+            max-width: 900px;
             margin: 4rem auto 2.5rem auto;
             position: relative;
             z-index: 10;
@@ -118,7 +116,7 @@
         }
 
         .hero-title {
-            font-size: 4rem;
+            font-size: 4.1rem;
             font-weight: 900;
             line-height: 1.08;
             letter-spacing: -0.03em;
@@ -134,12 +132,12 @@
         }
 
         .hero-desc {
-            font-size: 1.22rem;
+            font-size: 1.2rem;
             color: #e2e8f0;
-            line-height: 1.7;
+            line-height: 1.75;
             margin-bottom: 2.8rem;
             text-shadow: 0 3px 15px rgba(0, 0, 0, 0.95);
-            max-width: 780px;
+            max-width: 820px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -180,7 +178,7 @@
 
         .btn-outline:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.4); }
 
-        /* CANLI BAŞARILAR BÖLÜMÜ */
+        /* CANLI BAŞARILAR */
         .track-record-section { margin: 4.5rem 0; }
         .track-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
         .track-card {
@@ -217,7 +215,7 @@
             line-height: 1.65;
         }
 
-        /* ================= 2. TERMİNAL STADYUM ARKA PLANI & TELEMETRİ ================= */
+        /* ================= TERMİNAL EKRANI ================= */
         .terminal-stadium-wrapper {
             position: relative;
             background-image: 
@@ -242,7 +240,7 @@
             gap: 1rem;
         }
 
-        /* TELEMETRİ / CANLI ŞERİT */
+        /* TELEMETRİ ŞERİDİ */
         .terminal-kpi-bar {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -250,9 +248,7 @@
             margin-bottom: 1.5rem;
         }
 
-        @media (max-width: 900px) {
-            .terminal-kpi-bar { grid-template-columns: 1fr 1fr; }
-        }
+        @media (max-width: 900px) { .terminal-kpi-bar { grid-template-columns: 1fr 1fr; } }
 
         .kpi-card {
             background: rgba(11, 18, 32, 0.75);
@@ -264,12 +260,6 @@
             align-items: center;
             gap: 1rem;
             box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-            transition: all 0.2s;
-        }
-
-        .kpi-card:hover {
-            border-color: rgba(0, 255, 136, 0.3);
-            transform: translateY(-2px);
         }
 
         .kpi-icon {
@@ -285,7 +275,6 @@
         .kpi-val { font-size: 1.15rem; font-weight: 900; font-family: var(--font-code); color: #fff; }
         .kpi-label { font-size: 0.72rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 
-        /* KONTROLLER */
         .terminal-controls {
             display: flex;
             flex-direction: column;
@@ -340,7 +329,6 @@
             box-shadow: 0 0 20px rgba(0, 255, 136, 0.35);
         }
 
-        /* YENİ NESİL MAÇ KARTLARI (FUTBOL DİNAMİĞİ) */
         .match-list-header {
             display: grid;
             grid-template-columns: 100px 95px 1.4fr 2fr 130px 140px;
@@ -350,7 +338,6 @@
             font-weight: 800;
             color: var(--text-sub);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
         }
 
         @media (max-width: 960px) { .match-list-header { display: none; } }
@@ -480,7 +467,7 @@
         .admin-table th { padding: 1rem; border-bottom: 1px solid var(--border-line); color: var(--text-sub); }
         .admin-table td { padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
 
-        /* MODAL */
+        /* MODALLER */
         .modal {
             display: none;
             position: fixed;
@@ -503,26 +490,6 @@
             max-height: 90vh;
             overflow-y: auto;
             position: relative;
-        }
-
-        .ai-verdict-card {
-            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(0, 255, 136, 0.1));
-            border: 1px solid rgba(168, 85, 247, 0.35);
-            border-radius: 16px;
-            padding: 1.25rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .ai-badge {
-            background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
-            color: #fff;
-            font-size: 0.75rem;
-            font-weight: 800;
-            padding: 3px 10px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
         }
 
         .volatility-box {
@@ -562,7 +529,7 @@
 </head>
 <body>
 
-<!-- ================= 1. VİTRİN / LANDING ================= -->
+<!-- 1. VİTRİN / LANDING -->
 <div id="view-landing">
     <div class="landing-hero-wrapper">
         <div class="container">
@@ -571,7 +538,7 @@
                     <div class="brand-icon"><i class="fa-solid fa-chart-line"></i></div>
                     <div>
                         <h1 style="font-size: 1.35rem; font-weight: 900;">MAS PRO TERMINAL</h1>
-                        <p style="font-size: 0.75rem; color: var(--text-sub);">Yapay Zeka & Algoritmik Futbol Zekası</p>
+                        <p style="font-size: 0.75rem; color: var(--text-sub);">Yüksek Hassasiyetli Spor Analitiği</p>
                     </div>
                 </div>
 
@@ -585,10 +552,10 @@
             </nav>
 
             <div class="hero-clean">
-                <div class="hero-badge"><i class="fa-solid fa-microchip"></i> YAPAY ZEKA & VERİ MODELLEME TERMİNALİ</div>
+                <div class="hero-badge"><i class="fa-solid fa-chart-simple"></i> BÜYÜK VERİ & SAYISAL ANALİZ MOTORU</div>
                 <h2 class="hero-title">Şansla Değil, <span>Matematiksel</span> Üstünlükle.</h2>
                 <p class="hero-desc">
-                    MAS; klasik tahminler yerine tüm ligleri resmi puan durumları, takımların sezonluk hücum/savunma gol beklentileri ve yapay zeka konsensüs filtresiyle tarar. Maçtan 1 saat önce açıklanan resmi ilk 11'lere göre olasılıkları anında revize eder.
+                    Yeşil sahadaki her istatistiği matematiksel bir avantaja dönüştürün. MAS Terminal; dünya genelindeki tüm ligleri puan tabloları, hücum-savunma parametreleri ve form endeksleriyle tarayarak; maç sonu, devre analizleri ve gol baremlerini en şeffaf olasılık yüzdeleriyle ekranınıza getirir.
                 </p>
                 <div class="hero-cta">
                     <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
@@ -627,7 +594,7 @@
     </div>
 </div>
 
-<!-- ================= 2. PRO TERMİNAL EKRANI (STADYUM AMBİYANS & TELEMETRİ) ================= -->
+<!-- ================= 2. PRO TERMİNAL EKRANI ================= -->
 <div id="view-terminal" class="terminal-stadium-wrapper hidden">
     <div class="container">
         <div class="terminal-header">
@@ -649,7 +616,7 @@
             </div>
         </div>
 
-        <!-- 4'LÜ CANLI TELEMETRİ / SAHA KONTROL ŞERİDİ -->
+        <!-- 4'LÜ TELEMETRİ ŞERİDİ -->
         <div class="terminal-kpi-bar">
             <div class="kpi-card">
                 <div class="kpi-icon" style="background:rgba(0,255,136,0.12); color:var(--accent-green);"><i class="fa-solid fa-futbol"></i></div>
@@ -659,16 +626,16 @@
                 </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-icon" style="background:rgba(168,85,247,0.12); color:var(--accent-purple);"><i class="fa-solid fa-robot"></i></div>
+                <div class="kpi-icon" style="background:rgba(0,210,255,0.12); color:var(--accent-cyan);"><i class="fa-solid fa-diagram-project"></i></div>
                 <div>
-                    <div class="kpi-val" style="color:var(--accent-purple);">AKTİF</div>
-                    <div class="kpi-label">Yapay Zeka Süzgeci</div>
+                    <div class="kpi-val" style="color:var(--accent-cyan);">49 MATRİS</div>
+                    <div class="kpi-label">Matematiksel Model</div>
                 </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-icon" style="background:rgba(0,210,255,0.12); color:var(--accent-cyan);"><i class="fa-solid fa-clock"></i></div>
+                <div class="kpi-icon" style="background:rgba(168,85,247,0.12); color:var(--accent-purple);"><i class="fa-solid fa-clock"></i></div>
                 <div>
-                    <div class="kpi-val" style="color:var(--accent-cyan);">TSİ (UTC+3)</div>
+                    <div class="kpi-val" style="color:var(--accent-purple);">TSİ (UTC+3)</div>
                     <div class="kpi-label">Zaman Standardı</div>
                 </div>
             </div>
@@ -676,12 +643,11 @@
                 <div class="kpi-icon" style="background:rgba(245,158,11,0.12); color:var(--accent-amber);"><i class="fa-solid fa-arrows-rotate"></i></div>
                 <div>
                     <div class="kpi-val" style="color:var(--accent-amber);">5 DAKİKA</div>
-                    <div class="kpi-label">Döngü & 11 Taraması</div>
+                    <div class="kpi-label">Otomatik Döngü</div>
                 </div>
             </div>
         </div>
 
-        <!-- ARAMA VE TARİH KONTROLLERİ -->
         <div class="terminal-controls">
             <div class="search-container">
                 <i class="fa-solid fa-magnifying-glass" style="color: var(--accent-green);"></i>
@@ -690,7 +656,6 @@
             <div class="date-pills-bar" id="date-tabs-container"></div>
         </div>
 
-        <!-- MAÇ LİSTESİ BAŞLIKLARI -->
         <div class="match-list-header">
             <div>KOD</div>
             <div>SAAT (TSİ)</div>
@@ -700,7 +665,6 @@
             <div style="text-align: right;">ANALİZ</div>
         </div>
 
-        <!-- DİNAMİK MAÇ LİSTESİ -->
         <div id="match-list-container"></div>
     </div>
 </div>
@@ -755,7 +719,7 @@
     </div>
 </div>
 
-<!-- ================= 4. DETAY ANALİZ RAPOR MODALI ================= -->
+<!-- ================= 4. DETAY ANALİZ RAPOR MODALI (TEMİZ SAF VERİ) ================= -->
 <div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
@@ -766,15 +730,7 @@
             <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.6rem; cursor:pointer;">&times;</button>
         </div>
 
-        <div class="ai-verdict-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
-                <span class="ai-badge"><i class="fa-solid fa-robot"></i> YAPAY ZEKA NİHAİ SÜZGEÇ</span>
-                <span style="font-family:var(--font-code); font-size:0.8rem; font-weight:800; color:var(--accent-green);" id="rep-ai-confidence">--</span>
-            </div>
-            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.4rem; color:#fff;" id="rep-ai-pick">--</div>
-            <p style="font-size:0.82rem; color:var(--text-sub); line-height:1.5;" id="rep-ai-rationale">--</p>
-        </div>
-
+        <!-- Volatilite Uyarısı (Gerektiğinde Çıkar) -->
         <div id="rep-volatility-box" class="volatility-box hidden">
             <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.1rem;"></i>
             <span id="rep-volatility-text"></span>
@@ -1362,7 +1318,6 @@
             const rankText = (td.home_rank && td.away_rank && td.home_rank !== '-') ? `${td.home_rank}. vs ${td.away_rank}.` : 'Fikstür';
             const timeOnly = (m.date || '').split(' ')[1] || '20:00';
             
-            // Takım isimlerini ayrıştırıp şık VS tasarımı oluştur
             const teams = (m.match || '').split(' vs ');
             const hTeam = teams[0] || m.home_team || 'Ev Sahibi';
             const aTeam = teams[1] || m.away_team || 'Deplasman';
@@ -1390,14 +1345,9 @@
     function openReportModal(m) {
         const a = m.analysis || {};
         const td = m.team_details || {};
-        const ai = m.ai_verdict || {};
 
         document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''} (TSİ)`;
         document.getElementById('rep-title').innerText = m.match;
-
-        document.getElementById('rep-ai-confidence').innerText = `Güven: ${ai.confidence || '%84'}`;
-        document.getElementById('rep-ai-pick').innerText = ai.pick || "Dengeli Senaryo";
-        document.getElementById('rep-ai-rationale').innerText = ai.rationale || "Algoritmik göstergeler analiz edildi.";
 
         const volBox = document.getElementById('rep-volatility-box');
         if (m.volatility_warning) {
