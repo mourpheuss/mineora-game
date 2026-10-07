@@ -143,6 +143,7 @@
             transition: all 0.2s;
         }
 
+        /* METODOLOJİ */
         .section-header { text-align: center; max-width: 700px; margin: 0 auto 3.5rem auto; }
         .section-header h3 { font-size: 2rem; font-weight: 900; margin-bottom: 0.8rem; }
         .method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 4rem; }
@@ -168,6 +169,7 @@
             margin-bottom: 1.3rem;
         }
 
+        /* SORUMLULUK REDDİ BANNER */
         .disclaimer-banner {
             background: rgba(12, 19, 34, 0.6);
             border: 1px solid var(--border-line);
@@ -236,11 +238,9 @@
 
         .date-pill.active { background: var(--accent-green); color: #060911; font-weight: 800; border-color: var(--accent-green); }
 
-        /* ONARILMIŞ VE ARALIKLI GRID YAPISI */
         .match-list-header {
             display: grid;
-            grid-template-columns: 110px 105px 1.3fr 1.8fr 140px 110px;
-            gap: 1.2rem; /* SÜTUNLAR ARASI BOŞLUK */
+            grid-template-columns: 85px 95px 1.3fr 1.8fr 150px 110px;
             padding: 0.75rem 1.25rem;
             font-size: 0.75rem;
             font-weight: 800;
@@ -248,12 +248,11 @@
             text-transform: uppercase;
         }
 
-        @media (max-width: 960px) { .match-list-header { display: none; } }
+        @media (max-width: 900px) { .match-list-header { display: none; } }
 
         .match-row {
             display: grid;
-            grid-template-columns: 110px 105px 1.3fr 1.8fr 140px 110px;
-            gap: 1.2rem; /* SÜTUNLAR ARASI BOŞLUK */
+            grid-template-columns: 85px 95px 1.3fr 1.8fr 150px 110px;
             align-items: center;
             background: var(--bg-surface);
             border: 1px solid var(--border-line);
@@ -264,36 +263,8 @@
             transition: all 0.2s;
         }
 
-        @media (max-width: 960px) { .match-row { grid-template-columns: 1fr; gap: 0.6rem; } }
+        @media (max-width: 900px) { .match-row { grid-template-columns: 1fr; gap: 0.6rem; } }
         .match-row:hover { border-color: var(--accent-green); background: var(--bg-row-hover); }
-
-        /* KOD VE SAAT ROZETLERİ (ASLA BİRBİRİNE YAPIŞMAZ) */
-        .badge-code {
-            display: inline-block;
-            background: rgba(0, 210, 255, 0.1);
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            color: var(--accent-cyan);
-            font-family: var(--font-code);
-            font-weight: 800;
-            font-size: 0.85rem;
-            padding: 4px 10px;
-            border-radius: 8px;
-            letter-spacing: 0.05em;
-        }
-
-        .badge-time {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border-line);
-            color: var(--text-pure);
-            font-family: var(--font-code);
-            font-size: 0.82rem;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 8px;
-        }
 
         /* YÖNETİCİ PANELİ & WHATSAPP */
         .admin-nav-tabs { display: flex; gap: 0.75rem; }
@@ -322,6 +293,7 @@
             gap: 0.3rem;
             margin-left: 0.4rem;
         }
+        .btn-whatsapp-notify:hover { background: #20ba5a; }
 
         .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
         .admin-table th { padding: 1rem; border-bottom: 1px solid var(--border-line); color: var(--text-sub); }
@@ -376,7 +348,7 @@
 </head>
 <body>
 
-<!-- 1. VİTRİN -->
+<!-- ================= 1. VİTRİN / LANDING ================= -->
 <div id="view-landing" class="container">
     <nav class="landing-nav">
         <div class="brand-logo">
@@ -396,13 +368,15 @@
         </div>
     </nav>
 
+    <!-- HERO -->
     <div class="hero-section">
         <div>
             <div class="hero-badge"><i class="fa-solid fa-bolt"></i> TÜRKİYE'NİN İLK ALGORİTMİK FUTBOL ANALİZ TERMİNALİ</div>
             <h2 class="hero-title">Şansla Değil, <span>Matematiksel</span> Üstünlükle.</h2>
             <p class="hero-desc">
                 MAS; klasik tahminler yerine tüm majör ve alt ligleri <strong>resmi lig puan durumu</strong>, 
-                <strong>takımların sezonluk hücum/savunma gol beklentileri (xG)</strong> ve <strong>Poisson frekans matrisi</strong> ile analiz eder.
+                <strong>takımların sezonluk hücum/savunma gol beklentileri (xG)</strong> ve <strong>Poisson frekans matrisi</strong> ile analiz eder. 
+                İlk Yarı, İkinci Yarı, Maç Sonu ve Gol Baremleri net yüzdelerle parmaklarınızın ucunda.
             </p>
             <div class="hero-cta">
                 <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
@@ -417,7 +391,7 @@
                 <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-green); text-transform: uppercase;">
                     <i class="fa-solid fa-server animate-pulse"></i> MAS Çekirdek Durumu
                 </span>
-                <span style="font-family: var(--font-code); font-size: 0.78rem; color: var(--accent-cyan);">ONLINE // v2.6 PRO</span>
+                <span style="font-family: var(--font-code); font-size: 0.78rem; color: var(--accent-cyan);">ONLINE // v2.5 PRO</span>
             </div>
 
             <div style="display:flex; flex-direction:column; gap:1rem;">
@@ -439,17 +413,48 @@
         </div>
     </div>
 
+    <!-- METODOLOJİ -->
+    <div class="section-header">
+        <span style="color: var(--accent-green); font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">BİLİMSEL YAKLAŞIM</span>
+        <h3>MAS Analiz Motoru Nasıl Çalışır?</h3>
+        <p style="color: var(--text-sub); font-size: 0.95rem;">Biz hislerle veya tahminlerle hareket etmiyoruz. Duyguları kenara bırakıp yeşil sahadaki gerçek istatistiklerin matematiksel röntgenini çekiyoruz.</p>
+    </div>
+
+    <div class="method-grid">
+        <div class="method-card">
+            <div class="method-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+            <h4>Canlı Fikstür & Puan Cetveli</h4>
+            <p>Süper Lig'den Premier Lig'e, La Liga'dan alt liglere kadar tüm resmi maçlar, başlama saatleri ve kulüplerin ligdeki gerçek puan durumları anlık taranır.</p>
+        </div>
+        <div class="method-card">
+            <div class="method-icon"><i class="fa-solid fa-crosshairs"></i></div>
+            <h4>Hücum & Savunma Güç Endeksi</h4>
+            <p>Ev sahibi ve deplasman takımlarının maç başına attığı/yediği gol oranları ve iç saha baskı katsayıları çarpıştırılarak iki takıma özel net gol beklentisi (xG) hesaplanır.</p>
+        </div>
+        <div class="method-card">
+            <div class="method-icon"><i class="fa-solid fa-calculator"></i></div>
+            <h4>49 Olasılıklı Skor Matrisi</h4>
+            <p>Olasılık teorisi uygulanarak 0-0'dan 6-6'ya kadar tüm skor ihtimalleri simüle edilir. Maç Sonu, İlk Yarı ve İkinci Yarı galibiyet yüzdeleri şeffaf olarak ayrıştırılır.</p>
+        </div>
+        <div class="method-card">
+            <div class="method-icon"><i class="fa-solid fa-shield-virus"></i></div>
+            <h4>Form & Karşılaşma Filtresi</h4>
+            <p>Son 5 haftanın sonuçları ve ligdeki güç uçurumları ağırlıklandırılarak 1.5, 2.5, 3.5 gol baremleri ile Karşılıklı Gol ihtimalleri tek raporda sunulur.</p>
+        </div>
+    </div>
+
+    <!-- SORUMLULUK REDDİ BANNER (VİTRİN BİLGİLENDİRMESİ) -->
     <div class="disclaimer-banner">
         <div style="display: flex; align-items: center; gap: 0.6rem; color: var(--accent-amber); font-weight: 800; margin-bottom: 0.5rem;">
             <i class="fa-solid fa-scale-balanced"></i> YASAL UYARI VE SORUMLULUK REDDİ BEYANI
         </div>
         <p>
-            MAS (Mine Analiz System); 7258 sayılı kanun uyarınca kesinlikle bir bahis oynatma sitesi değildir. Sitedeki yüzdeler Poisson matematiksel modelleridir; kesin kazanç vaat etmez. 18 yaşından küçüklere kapalıdır.
+            MAS (Mine Analiz System); 7258 sayılı kanun ve ilgili mevzuat uyarınca kesinlikle bir <strong>bahis oynatma, aracılık etme veya bahis kabul etme platformu değildir</strong>. Sitede yer alan analizler, yüzdeler ve istatistikler geçmiş verilere dayalı Poisson matematiksel simülasyonlarıdır ve <strong>kesin kazanç vaat etmez</strong>. Platform 18 yaşından büyüklere yöneliktir. Kullanıcıların aldıkları kararlardan ve doğabilecek maddi/manevi zararlardan MAS ve yöneticileri hiçbir suretle sorumlu tutulamaz. Detaylar için <a href="#" onclick="openModal('modal-disclaimer')" style="color: var(--accent-green); text-decoration: underline;">Kullanıcı ve Sorumluluk Reddi Sözleşmesi</a>'ni inceleyiniz.
         </p>
     </div>
 </div>
 
-<!-- 2. PRO TERMİNAL EKRANI -->
+<!-- ================= 2. PRO TERMİNAL EKRANI ================= -->
 <div id="view-terminal" class="container hidden">
     <div class="terminal-header">
         <div class="brand-logo">
@@ -467,15 +472,16 @@
         </div>
     </div>
 
+    <!-- KONTROLLER, ARAMA VE TARİH SEKMELERİ -->
     <div class="terminal-controls">
         <div class="search-container">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="match-search" oninput="handleSearch(event)" placeholder="Takım, lig veya maç kodu ara (Örn: Galatasaray, Premier, 88280)...">
+            <input type="text" id="match-search" oninput="handleSearch(event)" placeholder="Takım, lig veya maç kodu ara (Örn: Galatasaray, Premier, 40101)...">
         </div>
         <div class="date-pills-bar" id="date-tabs-container"></div>
     </div>
 
-    <!-- ONARILMIŞ BAŞLIKLAR -->
+    <!-- MAÇ LİSTESİ BAŞLIKLARI -->
     <div class="match-list-header">
         <div>KOD</div>
         <div>SAAT (TSİ)</div>
@@ -488,7 +494,7 @@
     <div id="match-list-container"></div>
 </div>
 
-<!-- 3. YÖNETİCİ MASASI -->
+<!-- ================= 3. YÖNETİCİ MASASI (ADMIN PANEL) ================= -->
 <div id="view-admin" class="container hidden">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem;">
         <div class="brand-logo">
@@ -538,7 +544,7 @@
     </div>
 </div>
 
-<!-- 4. DETAY ANALİZ RAPOR MODALI -->
+<!-- ================= 4. DETAY ANALİZ RAPOR MODALI ================= -->
 <div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
@@ -627,7 +633,25 @@
     </div>
 </div>
 
-<!-- GİRİŞ & KAYIT -->
+<!-- ================= 5. YASAL SÖZLEŞME VE SORUMLULUK REDDİ MODALI ================= -->
+<div id="modal-disclaimer" class="modal" onclick="closeOnBackdrop(event, 'modal-disclaimer')">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.2rem; font-weight: 900; color: var(--accent-amber);"><i class="fa-solid fa-scale-balanced"></i> Kullanıcı Sözleşmesi & Sorumluluk Reddi</h3>
+            <button onclick="closeModal('modal-disclaimer')" style="background:transparent; border:none; color:#fff; font-size: 1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-sub); line-height: 1.7; display:flex; flex-direction:column; gap:0.8rem;">
+            <p><strong>1. Kapsam ve Nitelik:</strong> MAS (Mine Analiz System), spor müsabakalarına ilişkin kamuya açık verileri (puan tablosu, gol ortalamaları, fikstür) Poisson matematiksel modeli ile işleyen bağımsız bir analitik yazılımıdır.</p>
+            <p><strong>2. Bahis ve Kumar Yasağı:</strong> Platformumuz bir bahis sitesi değildir. Hiçbir suretle bahis oynatılmaz, aracılık edilmez, bakiye yatırılmaz veya çekilmez. Türkiye Cumhuriyeti 7258 sayılı kanununa tam uyumlu çalışır.</p>
+            <p><strong>3. Kesin Kazanç Garantisi Yoktur:</strong> Futbol müsabakaları doğası gereği kırmızı kart, hava koşulları, hakem hataları gibi öngörülemez değişkenler barındırır. Sitedeki yüzdeler matematiksel ihtimallerdir; kesin sonuç veya mali kazanç vaat etmez.</p>
+            <p><strong>4. Yaş Sınırı:</strong> Platform yalnızca 18 yaşını doldurmuş bireylerin kişisel analiz kullanımı içindir.</p>
+            <p><strong>5. Sorumluluk Sınırı:</strong> Kullanıcıların sitedeki analizlere dayanarak yasal platformlarda oynadıkları kuponlardan, kayıplardan veya hukuki sonuçlardan tamamen kullanıcının kendisi sorumludur. MAS ve yöneticileri sorumlu tutulamaz.</p>
+        </div>
+        <button onclick="closeModal('modal-disclaimer')" class="btn-glow" style="width: 100%; justify-content:center; margin-top:1.5rem;">Okudum, Anladım</button>
+    </div>
+</div>
+
+<!-- ================= 6. GİRİŞ & KAYIT & ADMIN MODALLERİ ================= -->
 <div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
     <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">PRO Girişi</h3>
@@ -637,6 +661,7 @@
     </div>
 </div>
 
+<!-- GELİŞMİŞ KAYIT FORMU (WHATSAPP + SHOPIER + SOZLESME ONAYI) -->
 <div id="modal-register" class="modal" onclick="closeOnBackdrop(event, 'modal-register')">
     <div class="modal-box" style="max-width: 440px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.25rem; font-weight:900; margin-bottom: 0.3rem;">PRO Kayıt & Aktivasyon</h3>
@@ -647,10 +672,11 @@
         <input type="text" id="reg-phone" placeholder="WhatsApp Tel No (Örn: 05321234567)" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:0.6rem; outline:none;">
         <input type="text" id="reg-shopier" placeholder="Shopier Sipariş Numarası" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border-line); padding:0.75rem; border-radius:10px; color:#fff; margin-bottom:1rem; outline:none;">
 
+        <!-- ONAY KUTUSU (CHECKBOX) -->
         <div style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 1.2rem; font-size: 0.78rem; color: var(--text-sub);">
             <input type="checkbox" id="reg-agreement" style="margin-top: 3px; accent-color: var(--accent-green); cursor:pointer;">
             <label for="reg-agreement">
-                18 yaşından büyüğüm. Sorumluluk Reddi ve Kullanıcı Sözleşmesi'ni okudum, kabul ediyorum.
+                18 yaşından büyüğüm. <a href="#" onclick="openModal('modal-disclaimer')" style="color: var(--accent-green); text-decoration: underline;">Sorumluluk Reddi ve Kullanıcı Sözleşmesi</a>'ni okudum, kabul ediyorum.
             </label>
         </div>
 
@@ -707,6 +733,7 @@
         }
     }
 
+    // YÖNETİCİ İŞLEMLERİ
     function handleAdminAuth() {
         if (document.getElementById('admin-pass-input').value.trim() === ADMIN_KEY) {
             closeModal('modal-admin-auth');
@@ -813,6 +840,7 @@
         }
     }
 
+    // KAYIT VE GİRİŞ
     async function handleRegister() {
         const u = document.getElementById('reg-user').value.trim().toLowerCase();
         const p = document.getElementById('reg-pass').value.trim();
@@ -821,11 +849,11 @@
         const agreed = document.getElementById('reg-agreement').checked;
 
         if (!u || !p || !phone || !s) {
-            return alert("Lütfen tüm alanları eksiksiz doldurunuz!");
+            return alert("Lütfen tüm alanları (Kullanıcı Adı, Şifre, Telefon ve Shopier No) eksiksiz doldurunuz!");
         }
 
         if (!agreed) {
-            return alert("Lütfen Kullanıcı Sözleşmesi'ni onaylayınız!");
+            return alert("Lütfen Kullanıcı Sözleşmesi ve Sorumluluk Reddi Beyanı'nı onaylayınız!");
         }
 
         await db.ref('mas_users/' + u).set({
@@ -837,7 +865,7 @@
             createdAt: Date.now()
         });
 
-        alert("Başvurunuz alındı! Shopier siparişiniz kontrol edildikten sonra WhatsApp üzerinden bildirim alacaksınız.");
+        alert("Başvurunuz alındı! Shopier siparişiniz onaylandığında WhatsApp üzerinden bildirim gönderilecek ve terminal erişiminiz açılacaktır.");
         closeModal('modal-register');
         openModal('modal-login');
     }
@@ -864,6 +892,7 @@
         window.location.reload();
     }
 
+    // MAÇ YÖNETİMİ
     function loadMatches() {
         db.ref("analyzed_matches").on("value", snap => {
             const raw = snap.val();
@@ -873,7 +902,6 @@
         });
     }
 
-    // ONARILMIŞ TARİH SEKMELERİ (BUGÜN / YARIN VE KRONOLOJİK DÜZEN)
     function buildDateTabs() {
         const container = document.getElementById('date-tabs-container');
         container.innerHTML = '';
@@ -893,14 +921,10 @@
         container.appendChild(allBtn);
 
         const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${y}-${m}-${d}`;
-
-        const tom = new Date(now);
-        tom.setDate(tom.getDate() + 1);
-        const tomStr = `${tom.getFullYear()}-${String(tom.getMonth() + 1).padStart(2, '0')}-${String(tom.getDate()).padStart(2, '0')}`;
+        const todayStr = now.toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(now.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
         sortedDates.forEach(dateStr => {
             let label = dateStr;
@@ -908,7 +932,7 @@
                 const parts = dateStr.split('-');
                 const dt = new Date(parts[0], parts[1] - 1, parts[2]);
                 if (dateStr === todayStr) label = "Bugün";
-                else if (dateStr === tomStr) label = "Yarın";
+                else if (dateStr === tomorrowStr) label = "Yarın";
                 else {
                     const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cts"];
                     const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -952,23 +976,21 @@
         });
 
         if (filtered.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-sub);">Seçilen günde veya kriterde aktif maç bulunamadı.</div>';
+            container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-sub);">Seçilen günde veya kriterde maç bulunamadı.</div>';
             return;
         }
 
         filtered.forEach(m => {
             const td = m.team_details || {};
             const rankText = (td.home_rank && td.away_rank && td.home_rank !== '-') ? `${td.home_rank}. vs ${td.away_rank}.` : 'Fikstür';
-            const timeOnly = (m.date || '').split(' ')[1] || '20:00';
 
             const row = document.createElement('div');
             row.className = 'match-row';
             row.onclick = () => openReportModal(m);
 
-            // KOD VE SAAT TAMAMEN AYRI VE ŞIK ROZETLERE ALINDI
             row.innerHTML = `
-                <div><span class="badge-code">${m.match_id || '---'}</span></div>
-                <div><span class="badge-time"><i class="fa-regular fa-clock"></i> ${timeOnly}</span></div>
+                <div style="font-family:var(--font-code); color:var(--accent-cyan); font-weight:800;">${m.match_id || '---'}</div>
+                <div style="font-size:0.82rem; color:var(--text-sub); font-family:var(--font-code);">${(m.date || '').split(' ')[1] || '20:00'}</div>
                 <div style="font-size:0.82rem; color:var(--text-sub); font-weight:700;">${m.league || 'Futbol'}</div>
                 <div style="font-weight:800; font-size:1.02rem;">${m.match}</div>
                 <div><span style="background:rgba(255,255,255,0.05); border:1px solid var(--border-line); color:var(--accent-green); padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800; font-family:var(--font-code);">${rankText}</span></div>
@@ -998,6 +1020,7 @@
         document.getElementById('rep-home-form').innerHTML = renderForm(td.home_form);
         document.getElementById('rep-away-form').innerHTML = renderForm(td.away_form);
 
+        // MS
         document.getElementById('bar-ms-1').style.width = (a.ms_home || 33) + '%';
         document.getElementById('bar-ms-x').style.width = (a.ms_draw || 33) + '%';
         document.getElementById('bar-ms-2').style.width = (a.ms_away || 33) + '%';
@@ -1005,6 +1028,7 @@
         document.getElementById('val-ms-x').innerText = `%${a.ms_draw || 0}`;
         document.getElementById('val-ms-2').innerText = `%${a.ms_away || 0}`;
 
+        // İY & 2Y
         document.getElementById('val-iy-1').innerText = `%${a.iy_home || 0}`;
         document.getElementById('val-iy-x').innerText = `%${a.iy_draw || 0}`;
         document.getElementById('val-iy-2').innerText = `%${a.iy_away || 0}`;
@@ -1012,11 +1036,13 @@
         document.getElementById('val-2y-x').innerText = `%${a.y2_draw || 0}`;
         document.getElementById('val-2y-2').innerText = `%${a.y2_away || 0}`;
 
+        // Goller
         document.getElementById('val-o15').innerText = `%${a.over_15 || 0} Üst`;
         document.getElementById('val-o25').innerText = `%${a.over_25 || 0} Üst`;
         document.getElementById('val-o35').innerText = `%${a.over_35 || 0} Üst`;
         document.getElementById('val-btts').innerText = `%${a.btts_yes || 0} Var`;
 
+        // Skorlar
         const scoresDiv = document.getElementById('rep-top-scores');
         scoresDiv.innerHTML = '';
         (m.top_scores || [{score:"2-1", prob:"%14"}, {score:"1-1", prob:"%12"}, {score:"2-0", prob:"%10"}]).forEach(s => {
@@ -1026,6 +1052,7 @@
         openModal('modal-match-detail');
     }
 
+    // SAYFA YENİLEME (F5) HAFIZASI
     window.addEventListener('DOMContentLoaded', () => {
         const session = localStorage.getItem('mas_pro_session');
         const savedView = localStorage.getItem('mas_active_view') || 'landing';
