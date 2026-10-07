@@ -54,7 +54,7 @@
 
         .hero-section {
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
+            grid-template-columns: 1.15fr 0.85fr;
             align-items: center;
             gap: 3rem;
             margin-bottom: 5rem;
@@ -104,7 +104,7 @@
             cursor: pointer;
         }
 
-        /* TERMİNAL LİSTESİ */
+        /* TERMİNAL */
         .terminal-header {
             display: flex;
             justify-content: space-between;
@@ -138,7 +138,7 @@
 
         .match-row {
             display: grid;
-            grid-template-columns: 90px 100px 1.4fr 2fr 160px 120px;
+            grid-template-columns: 90px 90px 1.4fr 1.8fr 140px 120px;
             align-items: center;
             background: var(--bg-surface);
             border: 1px solid var(--border-line);
@@ -158,7 +158,7 @@
             background: var(--bg-row-hover);
         }
 
-        /* DETAY MODALI */
+        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -244,7 +244,7 @@
             <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--accent-green), var(--accent-cyan)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#070b14; font-size:1.2rem; font-weight:900;">M</div>
             <div>
                 <h1 style="font-size: 1.3rem; font-weight: 900;">MAS PRO TERMINAL</h1>
-                <p style="font-size: 0.75rem; color: var(--text-sub);">Derinlikli Futbol İstatistik & Olasılık Motoru</p>
+                <p style="font-size: 0.75rem; color: var(--text-sub);">Profesyonel Spor Analitiği ve Olasılık Motoru</p>
             </div>
         </div>
 
@@ -260,11 +260,11 @@
     <div class="hero-section">
         <div>
             <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); color:var(--accent-green); padding:0.4rem 1rem; border-radius:999px; font-size:0.78rem; font-weight:800; margin-bottom:1.25rem;">
-                <i class="fa-solid fa-futbol"></i> TAHMİN DEĞİL, BİLİMSEL TAKIM ANALİTİĞİ
+                <i class="fa-solid fa-check-double"></i> RESMİ PUAN DURUMU & POISSON MATRİSİ
             </div>
-            <h2 class="hero-title">Her Detay İncelendi. <span>Yüzdelerle Konuşuyoruz.</span></h2>
+            <h2 class="hero-title">Tahmin Değil, <span>Matematiksel Gerçekler.</span></h2>
             <p style="font-size: 1.05rem; color: var(--text-sub); line-height: 1.6; margin-bottom: 2rem;">
-                Takımların son 5 maçlık form grafiği, lig puan sıralaması, sakat-cezalı durumu ve Poisson gol beklentisi harmanlanarak; <strong>İlk Yarı, İkinci Yarı, Maç Sonu, Gol Baremleri (1.5 / 2.5 / 3.5) ve Karşılıklı Gol</strong> ihtimalleri net yüzdelerle parmaklarınızın ucunda.
+                Tüm majör liglerin güncel puan durumları, takımların sezon içi gerçek gol ortalamaları ve form grafikleri anlık olarak taranır. Maç Sonu, İlk Yarı, İkinci Yarı ve Gol Baremleri net yüzdelerle raporlanır.
             </p>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                 <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
@@ -274,24 +274,29 @@
             </div>
         </div>
 
-        <div style="background: var(--bg-surface); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 20px; padding: 1.8rem;">
-            <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent-green); text-transform: uppercase;">
-                <i class="fa-solid fa-chart-pie"></i> Canlı Rapor Örneği
-            </span>
-            <h3 style="font-size: 1.3rem; font-weight: 900; margin: 0.75rem 0;">Galatasaray vs Beşiktaş</h3>
-            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 1rem; color: var(--text-sub);">
-                <span>Lig Sıralaması: 1. vs 3.</span>
-                <span style="color: var(--accent-cyan); font-weight: 700;">Form: G-G-B vs G-B-M</span>
+        <!-- KURUMSAL PLATFORM MİMARİSİ (SAHTE MAÇ KARTI KALDIRILDI) -->
+        <div style="background: var(--bg-surface); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 24px; padding: 2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-line); padding-bottom:1rem;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-green); text-transform: uppercase;">
+                    <i class="fa-solid fa-server animate-pulse"></i> MAS Çekirdek Durumu
+                </span>
+                <span style="font-family: var(--font-code); font-size: 0.78rem; color: var(--accent-cyan);">ONLINE // v2.0</span>
             </div>
-            <div style="background: rgba(7,11,20,0.8); border: 1px solid var(--border-line); border-radius: 12px; padding: 1rem; font-family: var(--font-code); font-size: 0.85rem;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-                    <span>Maç Sonu 1:</span> <strong style="color:var(--accent-green);">%56.4</strong>
+
+            <div style="display:flex; flex-direction:column; gap:1rem;">
+                <div style="background: rgba(7,11,20,0.7); border:1px solid var(--border-line); padding:0.9rem; border-radius:12px;">
+                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">PUAN TABLOSU SENKRONİZASYONU</div>
+                    <div style="font-size:1rem; font-weight:800; color:#fff; margin-top:0.2rem;">Canlı Lig Masası & Gerçek Sıralamalar</div>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-                    <span>İlk Yarı Beraberlik:</span> <strong style="color:var(--accent-cyan);">%46.2</strong>
+
+                <div style="background: rgba(7,11,20,0.7); border:1px solid var(--border-line); padding:0.9rem; border-radius:12px;">
+                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">DEVRE VE GOL ANALİZLERİ</div>
+                    <div style="font-size:1rem; font-weight:800; color:#fff; margin-top:0.2rem;">İlk Yarı, 2. Yarı, 1.5 - 2.5 - 3.5 Gol ve KG</div>
                 </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span>2.5 Gol Üstü:</span> <strong style="color:var(--accent-amber);">%63.8</strong>
+
+                <div style="background: rgba(7,11,20,0.7); border:1px solid var(--border-line); padding:0.9rem; border-radius:12px;">
+                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">OTOMASYON DÖNGÜSÜ</div>
+                    <div style="font-size:1rem; font-weight:800; color:var(--accent-green); margin-top:0.2rem;">Her 5 Dakikada Bir Otomatik Güncelleme</div>
                 </div>
             </div>
         </div>
@@ -323,12 +328,12 @@
     </div>
 
     <!-- BAŞLIKLAR -->
-    <div style="display: grid; grid-template-columns: 90px 100px 1.4fr 2fr 160px 120px; padding: 0.75rem 1.25rem; font-size: 0.75rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase;">
+    <div style="display: grid; grid-template-columns: 90px 90px 1.4fr 1.8fr 140px 120px; padding: 0.75rem 1.25rem; font-size: 0.75rem; font-weight: 800; color: var(--text-sub); text-transform: uppercase;">
         <div>KOD</div>
         <div>SAAT</div>
         <div>LİG</div>
         <div>KARŞILAŞMA</div>
-        <div>ÖNE ÇIKAN SONUÇ</div>
+        <div>PUAN DURUMU</div>
         <div style="text-align: right;">RAPOR</div>
     </div>
 
@@ -363,7 +368,7 @@
     </div>
 </div>
 
-<!-- ================= 4. YENİ GELİŞMİŞ DETAY RAPOR MODALI ================= -->
+<!-- ================= 4. DETAY ANALİZ RAPORU ================= -->
 <div id="modal-match-detail" class="modal" onclick="closeOnBackdrop(event, 'modal-match-detail')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
@@ -374,23 +379,31 @@
             <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.6rem; cursor:pointer;">&times;</button>
         </div>
 
-        <!-- 1. TAKIM DURUMLARI (Sıralama, Form, Eksikler) -->
+        <!-- 1. PUAN DURUMU & FORM BİLGİSİ -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom: 0.85rem;">
-                <i class="fa-solid fa-users-viewfinder"></i> Takım Analiz Profili & Eksikler
+                <i class="fa-solid fa-table-list"></i> Gerçek Puan Durumu & Son 5 Maçlık Form
             </h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div style="background: rgba(255,255,255,0.02); padding: 0.8rem; border-radius: 10px;">
                     <strong id="rep-home-name" style="color: var(--accent-cyan); display:block; margin-bottom:0.4rem;">Ev Sahibi</strong>
-                    <div style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.3rem;">Lig Sırası: <strong id="rep-home-rank" style="color:#fff;">-</strong></div>
-                    <div style="margin-bottom: 0.4rem;">Son 5 Maç: <span id="rep-home-form"></span></div>
-                    <div style="font-size: 0.78rem; color: var(--accent-amber);"><i class="fa-solid fa-circle-exclamation"></i> <span id="rep-home-missing"></span></div>
+                    <div style="font-size: 0.82rem; color: #fff; margin-bottom: 0.3rem;">
+                        Lig Sıralaması: <strong id="rep-home-rank" style="color:var(--accent-green); font-family:var(--font-code);">-</strong>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.4rem;">
+                        Puan: <strong id="rep-home-pts" style="color:#fff;">-</strong>
+                    </div>
+                    <div>Son 5 Maç: <span id="rep-home-form"></span></div>
                 </div>
                 <div style="background: rgba(255,255,255,0.02); padding: 0.8rem; border-radius: 10px;">
                     <strong id="rep-away-name" style="color: var(--accent-amber); display:block; margin-bottom:0.4rem;">Deplasman</strong>
-                    <div style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.3rem;">Lig Sırası: <strong id="rep-away-rank" style="color:#fff;">-</strong></div>
-                    <div style="margin-bottom: 0.4rem;">Son 5 Maç: <span id="rep-away-form"></span></div>
-                    <div style="font-size: 0.78rem; color: var(--accent-amber);"><i class="fa-solid fa-circle-exclamation"></i> <span id="rep-away-missing"></span></div>
+                    <div style="font-size: 0.82rem; color: #fff; margin-bottom: 0.3rem;">
+                        Lig Sıralaması: <strong id="rep-away-rank" style="color:var(--accent-green); font-family:var(--font-code);">-</strong>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 0.4rem;">
+                        Puan: <strong id="rep-away-pts" style="color:#fff;">-</strong>
+                    </div>
+                    <div>Son 5 Maç: <span id="rep-away-form"></span></div>
                 </div>
             </div>
         </div>
@@ -398,7 +411,7 @@
         <!-- 2. MAÇ SONU (MS 1 - X - 2) -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800;">
-                <i class="fa-solid fa-trophy"></i> Maç Sonu Kazanma İhtimalleri (MS)
+                <i class="fa-solid fa-trophy"></i> Maç Sonu Kazanma İhtimali (MS)
             </h4>
             <div class="prob-bar-container">
                 <div id="bar-ms-1" style="background: var(--accent-cyan); width: 33%;"></div>
@@ -412,7 +425,7 @@
             </div>
         </div>
 
-        <!-- 3. İLK YARI VE İKİNCİ YARI ANALİZİ -->
+        <!-- 3. İLK YARI VE İKİNCİ YARI -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
             <div class="card-panel" style="margin-bottom:0;">
                 <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom:0.6rem;">
@@ -436,10 +449,10 @@
             </div>
         </div>
 
-        <!-- 4. GOL BAREMLERİ & KARŞILIKLI GOL -->
+        <!-- 4. GOL İHTİMALLERİ (1.5 / 2.5 / 3.5 & KG) -->
         <div class="card-panel">
             <h4 style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; margin-bottom:0.8rem;">
-                <i class="fa-solid fa-bullseye"></i> Toplam Gol & Karşılıklı Gol Olasılıkları
+                <i class="fa-solid fa-bullseye"></i> Gol Baremleri & Karşılıklı Gol
             </h4>
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:0.5rem; text-align:center;">
                 <div class="stat-box">
@@ -463,13 +476,13 @@
 
         <!-- 5. EN OLASI SKORLAR -->
         <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid var(--border-line); padding:0.85rem 1.25rem; border-radius:14px;">
-            <span style="font-size:0.82rem; font-weight:800; color:var(--text-sub);">EN YÜKSEK İHTİMALLİ SKORLAR:</span>
+            <span style="font-size:0.82rem; font-weight:800; color:var(--text-sub);">EN OLASI SKORLAR:</span>
             <div id="rep-top-scores" style="display:flex; gap:0.5rem; font-family:var(--font-code);"></div>
         </div>
     </div>
 </div>
 
-<!-- GİRİŞ & KAYIT & ADMIN MODALLERİ -->
+<!-- MODALLER -->
 <div id="modal-login" class="modal" onclick="closeOnBackdrop(event, 'modal-login')">
     <div class="modal-box" style="max-width: 400px;" onclick="event.stopPropagation()">
         <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">PRO Girişi</h3>
@@ -609,7 +622,7 @@
         window.location.reload();
     }
 
-    // MAÇ LİSTESİ
+    // MAÇLAR
     function loadMatches() {
         db.ref("analyzed_matches").on("value", snap => {
             const raw = snap.val();
@@ -638,13 +651,8 @@
         }
 
         filtered.forEach(m => {
-            const a = m.analysis || {};
-            // En yüksek ihtimali bul
-            let bestPick = "Dengeli";
-            if (a.ms_home > 50) bestPick = `Ev Sahibi (%${a.ms_home})`;
-            else if (a.ms_away > 50) bestPick = `Deplasman (%${a.ms_away})`;
-            else if (a.over_25 > 60) bestPick = `2.5 Üst (%${a.over_25})`;
-            else bestPick = `İY Beraberlik (%${a.iy_draw || 40})`;
+            const td = m.team_details || {};
+            const rankText = (td.home_rank && td.away_rank && td.home_rank !== '-') ? `${td.home_rank}. vs ${td.away_rank}.` : 'Fikstür';
 
             const row = document.createElement('div');
             row.className = 'match-row';
@@ -655,14 +663,13 @@
                 <div style="font-size:0.82rem; color:var(--text-sub); font-family:var(--font-code);">${(m.date || '').split(' ')[1] || '20:00'}</div>
                 <div style="font-size:0.82rem; color:var(--text-sub); font-weight:700;">${m.league || 'Futbol'}</div>
                 <div style="font-weight:800; font-size:1.02rem;">${m.match}</div>
-                <div><span style="background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); color:var(--accent-green); padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">${bestPick}</span></div>
+                <div><span style="background:rgba(255,255,255,0.05); border:1px solid var(--border-line); color:var(--accent-green); padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800; font-family:var(--font-code);">${rankText}</span></div>
                 <div style="text-align:right;"><span style="background:rgba(255,255,255,0.06); padding:5px 12px; border-radius:8px; font-size:0.8rem; font-weight:700;">Raporu Aç</span></div>
             `;
             container.appendChild(row);
         });
     }
 
-    // RAPOR MODALINI DOLDUR
     function openReportModal(m) {
         const a = m.analysis || {};
         const td = m.team_details || {};
@@ -672,11 +679,12 @@
 
         document.getElementById('rep-home-name').innerText = m.home_team || "Ev Sahibi";
         document.getElementById('rep-away-name').innerText = m.away_team || "Deplasman";
-        document.getElementById('rep-home-rank').innerText = `${td.home_rank || 4}. Sırada`;
-        document.getElementById('rep-away-rank').innerText = `${td.away_rank || 8}. Sırada`;
+        
+        document.getElementById('rep-home-rank').innerText = td.home_rank !== '-' ? `${td.home_rank}. Sırada` : 'Mevcut';
+        document.getElementById('rep-away-rank').innerText = td.away_rank !== '-' ? `${td.away_rank}. Sırada` : 'Mevcut';
 
-        document.getElementById('rep-home-missing').innerText = td.home_missing || "Kadro Eksiksiz";
-        document.getElementById('rep-away-missing').innerText = td.away_missing || "Kadro Eksiksiz";
+        document.getElementById('rep-home-pts').innerText = td.home_points !== '-' ? `${td.home_points} Puan` : '-';
+        document.getElementById('rep-away-pts').innerText = td.away_points !== '-' ? `${td.away_points} Puan` : '-';
 
         const renderForm = arr => (arr || ['G','B','G','M','G']).map(x => `<span class="form-badge form-${x}">${x}</span>`).join('');
         document.getElementById('rep-home-form').innerHTML = renderForm(td.home_form);
