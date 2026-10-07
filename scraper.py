@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 class BulletinScraper:
     def __init__(self):
-        # İddaa ve Maçkolik bülteninde yer alan tüm geniş lig havuzu
         self.leagues = {
             # TÜRKİYE
             "Trendyol Süper Lig": "tur.1",
@@ -56,6 +55,9 @@ class BulletinScraper:
 
     def fetch_live_bulletin(self):
         all_matches = []
+        now_utc = datetime.utcnow()
+        now_tsi = now_utc + timedelta(hours=3) # Türkiye Saati (TSİ)
+        max_date_tsi = now_tsi + timedelta(days=4) # En fazla 4 gün ilerisi
 
         for league_name, league_slug in self.leagues.items():
             url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league_slug}/scoreboard"
@@ -66,6 +68,11 @@ class BulletinScraper:
 
                 events = res.json().get("events", [])
                 for ev in events:
+                    # 1. KONTROL: BİTMİŞ MAÇLARI KESİNLİKLE ELE
+                    status = ev.get("status", {}).get("type", {})
+                    if status.get("completed", False) or status.get("state") == "post":
+                        continue
+
                     competition = ev.get("competitions", [{}])[0]
                     competitors = competition.get("competitors", [])
                     if len(competitors) < 2:
@@ -77,19 +84,30 @@ class BulletinScraper:
                     if not home or not away:
                         continue
 
-                    # MAÇ SAATİ: UTC -> TÜRKİYE SAATİ (TSİ = UTC+3)
+                    # 2. KONTROL: SAAT & TARİH FİLTRESİ
                     raw_date = ev.get("date", "")
                     try:
                         dt_utc = datetime.strptime(raw_date, "%Y-%m-%dT%H:%MZ")
-                        dt_tsi = dt_utc + timedelta(hours=3) # 3 SAAT FARK EKLENDİ
-                        date_str = dt_tsi.strftime("%Y-%m-%d %H:%M")
+                        dt_tsi = dt_utc + timedelta(hours=3)
                     except Exception:
-                        date_str = (datetime.now() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M")
+                        continue
 
-                    match_id = str(ev.get("id", f"4{len(all_matches)+100}"))
+                    # Oynanıp bitmiş (geçmiş) veya başlamasının üzerinden 2 saat geçmiş maçları ele
+                    if dt_tsi < (now_tsi - timedelta(hours=2)):
+                        continue
+
+                    # 4 günden daha ileri tarihli maçları ele (Bülteni temiz tut)
+                    if dt_tsi > max_date_tsi:
+                        continue
+
+                    date_str = dt_tsi.strftime("%Y-%m-%d %H:%M")
+
+                    # 3. KONTROL: 5 HANELİ TEMİZ İDDAA KODU ÜRETİMİ
+                    raw_id = str(ev.get("id", ""))
+                    clean_code = raw_id[-5:] if len(raw_id) >= 5 else raw_id.zfill(5)
 
                     all_matches.append({
-                        "match_id": match_id,
+                        "match_id": clean_code,
                         "league": league_name,
                         "home_team": home,
                         "away_team": away,
@@ -99,5 +117,7 @@ class BulletinScraper:
             except Exception as e:
                 continue
 
-        print(f"-> Geniş Bülten Taraması: {len(all_matches)} adet resmi karşılaşma başarıyla çekildi.")
+        # Tarihe göre kronolojik sırala (En yakın maç en üstte)
+        all_matches.sort(key=lambda x: x["start_time"])
+        print(f"-> Filtrelenmiş Aktif Canlı Bülten: {len(all_matches)} karşılaşma hazırlandı.")
         return all_matches
