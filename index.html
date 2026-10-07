@@ -33,23 +33,22 @@
             font-family: var(--font-main);
             min-height: 100vh;
             background-image: 
-                radial-gradient(circle at 10% 10%, rgba(0, 255, 136, 0.08) 0%, transparent 45%),
-                radial-gradient(circle at 90% 15%, rgba(0, 210, 255, 0.07) 0%, transparent 45%),
-                radial-gradient(circle at 50% 90%, rgba(12, 19, 34, 0.9) 0%, transparent 70%);
+                radial-gradient(circle at 50% 10%, rgba(0, 255, 136, 0.09) 0%, transparent 50%),
+                radial-gradient(circle at 90% 20%, rgba(0, 210, 255, 0.06) 0%, transparent 45%);
             background-attachment: fixed;
         }
 
         .container { max-width: 1260px; margin: 0 auto; padding: 1.5rem; }
         .hidden { display: none !important; }
 
-        /* VİTRİN */
+        /* VİTRİN / LANDING */
         .landing-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding-bottom: 1.5rem;
             border-bottom: 1px solid var(--border-line);
-            margin-bottom: 3.5rem;
+            margin-bottom: 4rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
@@ -68,17 +67,10 @@
             box-shadow: 0 0 25px var(--accent-green-glow);
         }
 
-        .hero-section {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            align-items: center;
-            gap: 3rem;
-            margin-bottom: 4.5rem;
-        }
-
-        @media (max-width: 960px) {
-            .hero-section { grid-template-columns: 1fr; text-align: center; }
-            .hero-cta { justify-content: center; }
+        .hero-clean {
+            text-align: center;
+            max-width: 860px;
+            margin: 0 auto 5rem auto;
         }
 
         .hero-badge {
@@ -88,19 +80,19 @@
             background: rgba(0, 255, 136, 0.12);
             border: 1px solid rgba(0, 255, 136, 0.35);
             color: var(--accent-green);
-            padding: 0.45rem 1.1rem;
+            padding: 0.5rem 1.25rem;
             border-radius: 999px;
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             font-weight: 800;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.8rem;
         }
 
         .hero-title {
-            font-size: 3.2rem;
+            font-size: 3.6rem;
             font-weight: 900;
             line-height: 1.12;
             letter-spacing: -0.03em;
-            margin-bottom: 1.3rem;
+            margin-bottom: 1.5rem;
         }
 
         .hero-title span {
@@ -109,15 +101,26 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .hero-desc { font-size: 1.05rem; color: var(--text-sub); line-height: 1.65; margin-bottom: 2.2rem; }
-        .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .hero-desc {
+            font-size: 1.15rem;
+            color: var(--text-sub);
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+        }
+
+        .hero-cta {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
 
         .btn-glow {
             background: linear-gradient(135deg, var(--accent-green), #05c26b);
             color: #060911;
             font-weight: 800;
-            font-size: 0.95rem;
-            padding: 1rem 2rem;
+            font-size: 1rem;
+            padding: 1.1rem 2.4rem;
             border-radius: 14px;
             border: none;
             cursor: pointer;
@@ -125,89 +128,50 @@
             display: inline-flex;
             align-items: center;
             gap: 0.6rem;
-            box-shadow: 0 0 30px var(--accent-green-glow);
+            box-shadow: 0 0 35px var(--accent-green-glow);
             transition: all 0.25s ease;
         }
 
-        .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 0 45px rgba(0, 255, 136, 0.5); }
+        .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(0, 255, 136, 0.55); }
 
         .btn-outline {
             background: rgba(255, 255, 255, 0.04);
             color: var(--text-pure);
             border: 1px solid var(--border-line);
             font-weight: 700;
-            font-size: 0.95rem;
-            padding: 1rem 1.8rem;
+            font-size: 1rem;
+            padding: 1.1rem 2rem;
             border-radius: 14px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        /* GEÇMİŞ BAŞARILARIMIZ BÖLÜMÜ */
-        .track-record-section {
-            margin-bottom: 5rem;
-        }
+        .btn-outline:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.25); }
 
-        .track-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.25rem;
-        }
-
+        /* GEÇMİŞ BAŞARILAR */
+        .track-record-section { margin-bottom: 5rem; }
+        .track-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
         .track-card {
             background: var(--bg-surface);
             border: 1px solid var(--border-line);
             border-radius: 16px;
-            padding: 1.25rem;
-            position: relative;
+            padding: 1.3rem;
             transition: all 0.2s;
         }
-
-        .track-card:hover {
-            border-color: var(--accent-green);
-            transform: translateY(-2px);
-        }
-
-        .track-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-            font-size: 0.78rem;
-            color: var(--text-sub);
-        }
-
-        .track-match {
-            font-size: 1.05rem;
-            font-weight: 800;
-            margin-bottom: 0.4rem;
-        }
-
-        .track-score {
-            font-family: var(--font-code);
-            font-size: 0.88rem;
-            color: var(--accent-cyan);
-            margin-bottom: 0.85rem;
-        }
-
+        .track-card:hover { border-color: var(--accent-green); transform: translateY(-2px); }
+        .track-header { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-sub); margin-bottom: 0.75rem; }
+        .track-match { font-size: 1.05rem; font-weight: 800; margin-bottom: 0.35rem; }
+        .track-score { font-family: var(--font-code); font-size: 0.9rem; color: var(--accent-cyan); margin-bottom: 0.85rem; }
         .track-prediction {
             background: rgba(0, 255, 136, 0.08);
             border: 1px solid rgba(0, 255, 136, 0.25);
-            padding: 0.55rem 0.85rem;
+            padding: 0.6rem 0.85rem;
             border-radius: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        .badge-verified {
-            background: var(--accent-green);
-            color: #060911;
-            font-size: 0.72rem;
-            font-weight: 900;
-            padding: 3px 8px;
-            border-radius: 6px;
-        }
+        .badge-verified { background: var(--accent-green); color: #060911; font-size: 0.72rem; font-weight: 900; padding: 3px 8px; border-radius: 6px; }
 
         .disclaimer-banner {
             background: rgba(12, 19, 34, 0.6);
@@ -274,7 +238,6 @@
             cursor: pointer;
             white-space: nowrap;
         }
-
         .date-pill.active { background: var(--accent-green); color: #060911; font-weight: 800; border-color: var(--accent-green); }
 
         .match-list-header {
@@ -333,7 +296,7 @@
             border-radius: 8px;
         }
 
-        /* YÖNETİCİ */
+        /* YÖNETİCİ MASASI */
         .admin-nav-tabs { display: flex; gap: 0.75rem; }
         .admin-tab-btn {
             background: transparent;
@@ -346,6 +309,10 @@
             cursor: pointer;
         }
         .admin-tab-btn.active { background: rgba(255, 255, 255, 0.06); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .badge-active { background: rgba(0, 255, 136, 0.15); color: var(--accent-green); border: 1px solid rgba(0, 255, 136, 0.3); }
+        .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-expired { background: rgba(255, 51, 102, 0.15); color: var(--accent-red); border: 1px solid rgba(255, 51, 102, 0.3); }
 
         .btn-whatsapp-notify {
             background: #25d366;
@@ -377,9 +344,7 @@
             justify-content: center;
             padding: 1.5rem;
         }
-
         .modal.active { display: flex; }
-
         .modal-box {
             background: var(--bg-surface);
             border: 1px solid rgba(0, 255, 136, 0.3);
@@ -392,7 +357,6 @@
             position: relative;
         }
 
-        /* VOLATİLİTE UYARI BANNERI */
         .volatility-box {
             background: rgba(245, 158, 11, 0.12);
             border: 1px solid rgba(245, 158, 11, 0.35);
@@ -430,7 +394,7 @@
 </head>
 <body>
 
-<!-- 1. VİTRİN -->
+<!-- 1. VİTRİN (TEMİZ, ODAKLI VE SPORTİF HERO) -->
 <div id="view-landing" class="container">
     <nav class="landing-nav">
         <div class="brand-logo">
@@ -450,50 +414,24 @@
         </div>
     </nav>
 
-    <div class="hero-section">
-        <div>
-            <div class="hero-badge"><i class="fa-solid fa-bolt"></i> TÜRKİYE'NİN İLK ALGORİTMİK FUTBOL ANALİZ TERMİNALİ</div>
-            <h2 class="hero-title">Şansla Değil, <span>Matematiksel</span> Üstünlükle.</h2>
-            <p class="hero-desc">
-                MAS; klasik tahminler yerine tüm majör ve alt ligleri <strong>resmi lig puan durumu</strong>, 
-                <strong>takımların sezonluk hücum/savunma gol beklentileri (xG)</strong> ve <strong>Dixon-Coles matrisi</strong> ile analiz eder.
-            </p>
-            <div class="hero-cta">
-                <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
-                    <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
-                </a>
-                <button onclick="openModal('modal-login')" class="btn-outline">Mevcut Üye Terminali</button>
-            </div>
-        </div>
-
-        <div style="background: var(--bg-surface); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 24px; padding: 2rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-line); padding-bottom:1rem;">
-                <span style="font-size: 0.8rem; font-weight: 800; color: var(--accent-green); text-transform: uppercase;">
-                    <i class="fa-solid fa-server animate-pulse"></i> MAS Çekirdek Durumu
-                </span>
-                <span style="font-family: var(--font-code); font-size: 0.78rem; color: var(--accent-cyan);">ONLINE // v2.7 PRO</span>
-            </div>
-
-            <div style="display:flex; flex-direction:column; gap:1rem;">
-                <div style="background: rgba(6,9,17,0.7); border:1px solid var(--border-line); padding:1rem; border-radius:12px;">
-                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">DİXON-COLES DÜZELTMESİ</div>
-                    <div style="font-size:1.05rem; font-weight:800; color:#fff; margin-top:0.2rem;">Düşük Skor Frekans Kalibrasyonu</div>
-                </div>
-
-                <div style="background: rgba(6,9,17,0.7); border:1px solid var(--border-line); padding:1rem; border-radius:12px;">
-                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">DİNAMİK FORM AĞIRLIĞI</div>
-                    <div style="font-size:1.05rem; font-weight:800; color:#fff; margin-top:0.2rem;">Son 5 Hafta Performans Çarpanı</div>
-                </div>
-
-                <div style="background: rgba(6,9,17,0.7); border:1px solid var(--border-line); padding:1rem; border-radius:12px;">
-                    <div style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">VOLATİLİTE KORUMASI</div>
-                    <div style="font-size:1.05rem; font-weight:800; color:var(--accent-green); margin-top:0.2rem;">Derbi ve Tuzak Maç Erken Uyarısı</div>
-                </div>
-            </div>
+    <!-- ODAKLI HERO ALANI -->
+    <div class="hero-clean">
+        <div class="hero-badge"><i class="fa-solid fa-bolt"></i> TÜRKİYE'NİN İLK ALGORİTMİK FUTBOL ANALİZ TERMİNALİ</div>
+        <h2 class="hero-title">Şansla Değil, <span>Matematiksel</span> Üstünlükle.</h2>
+        <p class="hero-desc">
+            MAS; klasik tahminler yerine tüm majör ve alt ligleri <strong>resmi lig puan durumu</strong>, 
+            <strong>takımların sezonluk hücum/savunma gol beklentileri (xG)</strong> ve <strong>Dixon-Coles matrisi</strong> ile analiz eder. 
+            İlk 11'ler açıklandığında kadroları anında tarayıp en taze olasılıkları önünüze serer.
+        </p>
+        <div class="hero-cta">
+            <a href="https://www.shopier.com/VAKTINDEYAZILIM/51584594" target="_blank" class="btn-glow">
+                <i class="fa-solid fa-cart-shopping"></i> Shopier ile Hemen PRO Satın Al
+            </a>
+            <button onclick="openModal('modal-login')" class="btn-outline">Mevcut Üye Terminali</button>
         </div>
     </div>
 
-    <!-- GEÇMİŞ BAŞARILARIMIZ BÖLÜMÜ (NET VE ŞEFFAF) -->
+    <!-- GEÇMİŞ BAŞARILARIMIZ -->
     <div class="track-record-section">
         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
             <div>
@@ -506,12 +444,8 @@
         </div>
 
         <div class="track-grid">
-            <!-- 1 -->
             <div class="track-card">
-                <div class="track-header">
-                    <span>Premier League</span>
-                    <span>Bitti</span>
-                </div>
+                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
                 <div class="track-match">Arsenal vs Southampton</div>
                 <div class="track-score">Skor: <strong>3 - 1</strong></div>
                 <div class="track-prediction">
@@ -520,12 +454,8 @@
                 </div>
             </div>
 
-            <!-- 2 -->
             <div class="track-card">
-                <div class="track-header">
-                    <span>Premier League</span>
-                    <span>Bitti</span>
-                </div>
+                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
                 <div class="track-match">Manchester City vs Fulham</div>
                 <div class="track-score">Skor: <strong>3 - 2</strong></div>
                 <div class="track-prediction">
@@ -534,12 +464,8 @@
                 </div>
             </div>
 
-            <!-- 3 -->
             <div class="track-card">
-                <div class="track-header">
-                    <span>Premier League</span>
-                    <span>Bitti</span>
-                </div>
+                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
                 <div class="track-match">Aston Villa vs Manchester United</div>
                 <div class="track-score">Skor: <strong>0 - 0</strong></div>
                 <div class="track-prediction">
@@ -548,12 +474,8 @@
                 </div>
             </div>
 
-            <!-- 4 -->
             <div class="track-card">
-                <div class="track-header">
-                    <span>Premier League</span>
-                    <span>Bitti</span>
-                </div>
+                <div class="track-header"><span>Premier League</span><span>Bitti</span></div>
                 <div class="track-match">Brighton vs Tottenham</div>
                 <div class="track-score">Skor: <strong>3 - 2</strong></div>
                 <div class="track-prediction">
@@ -612,14 +534,14 @@
     <div id="match-list-container"></div>
 </div>
 
-<!-- 3. YÖNETİCİ MASASI -->
+<!-- 3. YÖNETİCİ MASASI (30 GÜNLÜK TAKİP & UZATMA) -->
 <div id="view-admin" class="container hidden">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-line); padding-bottom: 1rem;">
         <div class="brand-logo">
             <div class="brand-icon" style="background: var(--accent-amber); color: #000;"><i class="fa-solid fa-shield-halved"></i></div>
             <div>
                 <h1 style="font-size: 1.35rem; font-weight: 900;">MAS KONTROL MERKEZİ</h1>
-                <p style="font-size: 0.8rem; color: var(--text-sub);">Üye Yönetimi & WhatsApp Bildirim Masası</p>
+                <p style="font-size: 0.8rem; color: var(--text-sub);">30 Günlük Abonelik Takip & WhatsApp Bildirim Masası</p>
             </div>
         </div>
         <div style="display: flex; gap: 0.5rem;">
@@ -651,9 +573,9 @@
                 <tr>
                     <th>Kullanıcı Adı</th>
                     <th>Şifre</th>
-                    <th>WhatsApp Tel / İletişim</th>
+                    <th>WhatsApp Tel</th>
                     <th>Shopier Sipariş No</th>
-                    <th>Abonelik Durumu</th>
+                    <th>Abonelik Süresi</th>
                     <th style="text-align: right;">Yetki & WhatsApp Bildirimi</th>
                 </tr>
             </thead>
@@ -673,7 +595,6 @@
             <button onclick="closeModal('modal-match-detail')" style="background:transparent; border:none; color:#fff; font-size: 1.6rem; cursor:pointer;">&times;</button>
         </div>
 
-        <!-- YÜKSEK VOLATİLİTE / DERBİ UYARI PANOSU -->
         <div id="rep-volatility-box" class="volatility-box hidden">
             <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.1rem;"></i>
             <span id="rep-volatility-text"></span>
@@ -866,6 +787,7 @@
         });
     }
 
+    // 30 GÜNLÜK AKILLI YÖNETİCİ TABLOSU
     function renderAdminUsers() {
         const tbody = document.getElementById('admin-user-rows');
         tbody.innerHTML = '';
@@ -873,9 +795,12 @@
         const keys = Object.keys(adminUsersList);
         let totalCount = keys.length;
         let pendingCount = 0;
+        const now = Date.now();
 
         keys.forEach(k => {
-            if (!adminUsersList[k].isPro) pendingCount++;
+            const u = adminUsersList[k];
+            const isExpired = u.expiresAt && now > u.expiresAt;
+            if (!u.isPro || isExpired) pendingCount++;
         });
 
         document.getElementById('adm-count-all').innerText = totalCount;
@@ -883,7 +808,10 @@
 
         const filteredKeys = keys.filter(k => {
             const u = adminUsersList[k];
-            if (adminActiveTab === 'pending' && u.isPro) return false;
+            const isExpired = u.expiresAt && now > u.expiresAt;
+            const isEffectivePro = u.isPro && !isExpired;
+
+            if (adminActiveTab === 'pending' && isEffectivePro) return false;
             if (adminSearchTerm) {
                 const searchStr = `${u.username} ${u.phone || ''} ${u.shopierNo || ''}`.toLowerCase();
                 return searchStr.includes(adminSearchTerm);
@@ -901,7 +829,21 @@
             const cleanPhone = (u.phone || '').replace(/[^0-9]/g, '');
             const targetPhone = cleanPhone.startsWith('90') ? cleanPhone : (cleanPhone.startsWith('0') ? '9' + cleanPhone : '90' + cleanPhone);
 
-            const msg = encodeURIComponent(`Merhaba ${u.username}, MAS (Mine Analiz System) PRO Terminal aboneliğiniz ve Shopier siparişiniz onaylanmıştır! Kullanıcı adı ve şifrenizle https://mineoragame.com üzerinden anında giriş yapabilirsiniz. Bol şanslar dileriz.`);
+            // Kalan Gün Hesabı
+            let statusHtml = '';
+            const isExpired = u.expiresAt && now > u.expiresAt;
+            const isEffectivePro = u.isPro && !isExpired;
+
+            if (isEffectivePro) {
+                const daysLeft = Math.ceil((u.expiresAt - now) / (1000 * 60 * 60 * 24));
+                statusHtml = `<span class="badge-status badge-active"><i class="fa-solid fa-clock"></i> ${daysLeft} Gün Kaldı</span>`;
+            } else if (u.expiresAt && isExpired) {
+                statusHtml = `<span class="badge-status badge-expired"><i class="fa-solid fa-ban"></i> Süresi Doldu</span>`;
+            } else {
+                statusHtml = `<span class="badge-status badge-pending"><i class="fa-solid fa-hourglass-half"></i> Onay Bekliyor</span>`;
+            }
+
+            const msg = encodeURIComponent(`Merhaba ${u.username}, MAS PRO Terminal 30 günlük aboneliğiniz onaylanmıştır! Kullanıcı adı ve şifrenizle https://mineoragame.com adresinden terminale bağlanabilirsiniz. Bol şanslar dileriz.`);
             const waLink = `https://wa.me/${targetPhone}?text=${msg}`;
 
             const tr = document.createElement('tr');
@@ -910,15 +852,20 @@
                 <td style="font-family:var(--font-code); color:var(--text-sub);">${u.password}</td>
                 <td style="font-family:var(--font-code); color:var(--accent-cyan); font-weight:700;">${u.phone || '-'}</td>
                 <td style="font-family:var(--font-code); color:#fff;">${u.shopierNo || '-'}</td>
-                <td>
-                    <span style="padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800; ${u.isPro ? 'background:rgba(0,255,136,0.15); color:var(--accent-green);' : 'background:rgba(245,158,11,0.15); color:var(--accent-amber);'}">
-                        ${u.isPro ? 'PRO AKTİF' : 'ONAY BEKLİYOR'}
-                    </span>
-                </td>
+                <td>${statusHtml}</td>
                 <td style="text-align:right;">
-                    <button onclick="toggleUserPro('${u.username}', ${!u.isPro})" style="background:${u.isPro ? 'rgba(255,51,102,0.2)' : 'var(--accent-green)'}; color:${u.isPro ? 'var(--accent-red)' : '#060911'}; border:none; padding:6px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
-                        ${u.isPro ? 'Yetkiyi Al' : 'PRO Onayla'}
-                    </button>
+                    ${isEffectivePro ? `
+                        <button onclick="extendUserPro('${u.username}')" style="background:rgba(0,255,136,0.15); color:var(--accent-green); border:1px solid var(--accent-green); padding:6px 12px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem; margin-right:4px;">
+                            +30 Gün Ekle
+                        </button>
+                        <button onclick="revokeUserPro('${u.username}')" style="background:rgba(255,51,102,0.15); color:var(--accent-red); border:1px solid rgba(255,51,102,0.3); padding:6px 12px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
+                            Kapat
+                        </button>
+                    ` : `
+                        <button onclick="grantUserPro30Days('${u.username}')" style="background:var(--accent-green); color:#060911; border:none; padding:6px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
+                            30 Gün PRO Başlat
+                        </button>
+                    `}
                     ${u.phone ? `
                         <a href="${waLink}" target="_blank" class="btn-whatsapp-notify" title="WhatsApp ile Onay Bildir">
                             <i class="fa-brands fa-whatsapp"></i> Bildir
@@ -933,8 +880,35 @@
         });
     }
 
-    function toggleUserPro(username, status) {
-        db.ref('mas_users/' + username + '/isPro').set(status);
+    // 30 GÜNLÜK PRO YETKİLENDİRME
+    function grantUserPro30Days(username) {
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        db.ref('mas_users/' + username).update({
+            isPro: true,
+            approvedAt: now,
+            expiresAt: now + thirtyDaysMs
+        }).then(() => alert(`✅ ${username} için 30 günlük PRO abonelik başlatıldı!`));
+    }
+
+    // MEVCUT SÜRENİN ÜZERİNE +30 GÜN UZATMA
+    function extendUserPro(username) {
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        db.ref('mas_users/' + username).once('value', snap => {
+            const u = snap.val();
+            const currentExp = (u && u.expiresAt && u.expiresAt > Date.now()) ? u.expiresAt : Date.now();
+            db.ref('mas_users/' + username).update({
+                isPro: true,
+                expiresAt: currentExp + thirtyDaysMs
+            }).then(() => alert(`✅ ${username} aboneliğine +30 gün ilave edildi!`));
+        });
+    }
+
+    function revokeUserPro(username) {
+        db.ref('mas_users/' + username).update({
+            isPro: false,
+            expiresAt: 0
+        });
     }
 
     function deleteUser(username) {
@@ -959,6 +933,7 @@
             phone: phone,
             shopierNo: s,
             isPro: false,
+            expiresAt: 0,
             createdAt: Date.now()
         });
 
@@ -967,6 +942,7 @@
         openModal('modal-login');
     }
 
+    // 30 GÜN KONTROLLÜ GİRİŞ
     async function handleLogin() {
         const u = document.getElementById('login-user').value.trim().toLowerCase();
         const p = document.getElementById('login-pass').value.trim();
@@ -974,12 +950,21 @@
         const user = snap.val();
 
         if (!user || user.password !== p) return alert("Hatalı kullanıcı adı veya şifre!");
-        if (!user.isPro) return alert("⚠️ PRO aboneliğiniz henüz onaylanmadı!");
+
+        const now = Date.now();
+        if (user.expiresAt && now > user.expiresAt) {
+            return alert("⚠️ 30 Günlük PRO abonelik süreniz dolmuştur!\nYenilemek için lütfen Shopier üzerinden sipariş veriniz.");
+        }
+
+        if (!user.isPro) return alert("⚠️ PRO aboneliğiniz henüz onaylanmadı! Siparişiniz kontrol ediliyor.");
 
         CurrentUser = user;
         localStorage.setItem('mas_pro_session', JSON.stringify(CurrentUser));
         closeModal('modal-login');
-        document.getElementById('user-display').innerText = user.username.toUpperCase();
+        
+        // Kalan gün göstergesi
+        const daysLeft = Math.ceil((user.expiresAt - now) / (1000 * 60 * 60 * 24));
+        document.getElementById('user-display').innerText = `${user.username.toUpperCase()} (Kalan: ${daysLeft} Gün)`;
         switchView('terminal');
     }
 
@@ -1108,7 +1093,6 @@
         document.getElementById('rep-meta').innerText = `İDDAA KODU: ${m.match_id || '---'} • ${m.league || 'Futbol'} • ${m.date || ''} (TSİ)`;
         document.getElementById('rep-title').innerText = m.match;
 
-        // VOLATİLİTE UYARISI
         const volBox = document.getElementById('rep-volatility-box');
         if (m.volatility_warning) {
             document.getElementById('rep-volatility-text').innerText = m.volatility_warning;
@@ -1165,8 +1149,19 @@
         if (session) {
             try {
                 CurrentUser = JSON.parse(session);
-                document.getElementById('user-display').innerText = CurrentUser.username.toUpperCase();
-                switchView(savedView === 'admin' && CurrentUser.role === 'admin' ? 'admin' : 'terminal');
+                if (CurrentUser.role === 'admin') {
+                    document.getElementById('user-display').innerText = "KURUCU (ADMIN)";
+                    switchView(savedView === 'admin' ? 'admin' : 'terminal');
+                } else {
+                    const now = Date.now();
+                    if (CurrentUser.expiresAt && now > CurrentUser.expiresAt) {
+                        handleLogout();
+                    } else {
+                        const daysLeft = Math.ceil((CurrentUser.expiresAt - now) / (1000 * 60 * 60 * 24));
+                        document.getElementById('user-display').innerText = `${CurrentUser.username.toUpperCase()} (Kalan: ${daysLeft} Gün)`;
+                        switchView('terminal');
+                    }
+                }
             } catch(e) {
                 switchView('landing');
             }
