@@ -84,6 +84,7 @@ function checkMinesCooldown() {
         m.depleted = false;
         m.sealedAt = null;
         m.hp = 100;
+        m.rewardPool = 25.00;
         hasChanges = true;
       }
     }
@@ -97,12 +98,19 @@ function getStoredUser(username) {
   return raw ? JSON.parse(raw) : null;
 }
 
+// GÜVENLİ VE HATA FIRLATMAYAN KAYIT FONKSİYONU
 function saveStoredUser(userObj) {
   if (!userObj || !userObj.username) return;
   const uKey = userObj.username.toLowerCase();
+  
+  // 1. Tarayıcı hafızasına kesin kaydet
   localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(userObj));
+  
+  // 2. Firebase'e güvenli gönder (Yetki hatası çıksa bile buton kilitlenmez)
   if (fbDb) {
-    try { fbDb.ref('users/' + uKey).set(userObj); } catch(e) {}
+    fbDb.ref('users/' + uKey).set(userObj).catch(err => {
+      console.warn(`Firebase bulut yazma izni uyarısı (${uKey}):`, err.message);
+    });
   }
 }
 
@@ -225,8 +233,7 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
   
   const now = Date.now();
   if (CurrentUserWorld) {
-    // ESKİ HESAPLARI TL'YE GÖÇ ET
-    CurrentUserWorld.tl = Number(parseFloat(CurrentUserWorld.tl || CurrentUserWorld.usdt || 0).toFixed(2));
+    CurrentUserWorld.tl = Number(parseFloat(CurrentUserWorld.tl || CurrentUserWorld.usdt || CurrentUserWorld.ora || 0).toFixed(2));
     if (!CurrentUserWorld.workers) CurrentUserWorld.workers = [];
     if (!CurrentUserWorld.logs) CurrentUserWorld.logs = [];
     if (!CurrentUserWorld.referral_chain) CurrentUserWorld.referral_chain = [];
@@ -239,7 +246,7 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
       phone: extraProfile.phone || "",
       pass: defaultPass,
       email: extraProfile.email || `${username}@mineora.io`,
-      tl: 0.00, // TL CÜZDANI
+      tl: 0.00,
       alpCrystals: 0,
       role: "Candidate",
       isRootAdmin: (username.toLowerCase() === 'mourpheus'),
@@ -266,6 +273,8 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
         CurrentUserWorld = cloudUser;
         updateHUD();
       }
+    }, err => {
+      console.warn("Firebase okuma izni uyarısı:", err.message);
     });
   }
 }
@@ -323,8 +332,7 @@ function switchTab(tTab) {
     tTab = 'career'; 
   }
 
-  // P2P LİSTEDEN TAMAMEN KALDIRILDI
-  const allTabs = ['boss', 'owner', 'home', 'map', 'cave', 'crash', 'live', 'stake', 'career', 'settings'];
+  const allTabs = ['boss', 'owner', 'home', 'map', 'cave', 'crash', 'colony', 'live', 'stake', 'career', 'settings'];
   allTabs.forEach(tab => {
     const secEl = document.getElementById(`sec-${tab}`);
     if (secEl) {
@@ -400,11 +408,14 @@ function handleLogin() {
       } else {
         checkLocalUserLogin(u, p, storageKey);
       }
+    }).catch(() => {
+      checkLocalUserLogin(u, p, storageKey);
     });
   } else {
     checkLocalUserLogin(u, p, storageKey);
   }
 }
+window.handleLogin = handleLogin;
 
 function checkLocalUserLogin(u, p, storageKey) {
   const userRecord = localStorage.getItem(storageKey);
@@ -437,6 +448,7 @@ function handleRegister() {
   enterGame();
   showToast(`🎉 Tebrikler ${fullname}! Hesabınız oluşturuldu.`, "success");
 }
+window.handleRegister = handleRegister;
 
 function enterGame() {
   document.getElementById('screen-landing')?.classList.add('hidden');
@@ -455,4 +467,52 @@ function logoutSession() {
   document.getElementById('screen-game')?.classList.add('hidden');
   document.getElementById('screen-landing')?.classList.remove('hidden');
   showToast("🔒 Oturum kapatıldı.", "info");
+}
+window.logoutSession = logoutSession;
+
+function renderHierarchyUI() {
+  const container = document.getElementById('sec-owner');
+  if (!container || !CurrentUser) return;
+  
+  const activeRef = CurrentUser.customRefCode || CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;
+  const team = getFourDepthTeam(CurrentUser.username);
+
+  container.innerHTML = `
+    <div class="bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-5">
+        <div>
+          <h2 class="text-lg font-black text-white">${CurrentUser.username} • 4 Kademeli Referans Ağı</h2>
+          <p class="text-xs text-slate-400">Filo ekibinizi buradan takip edebilirsiniz.</p>
+        </div>
+        <div class="flex items-center gap-2 bg-mineora-bg p-2 rounded-xl border border-mineora-border">
+          <span class="text-xs text-slate-400">Referans Kodunuz: <strong class="text-cyan-400 font-mono">${activeRef}</strong></span>
+          <button type="button" onclick="navigator.clipboard.writeText('${activeRef}'); showToast('Kopyalandı!', 'success');" class="px-3 py-1 bg-cyan-600 text-white rounded-lg text-xs font-bold cursor-pointer">Kopyala</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto rounded-xl border border-mineora-border">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-black/40 text-slate-400 uppercase text-[10px]">
+            <tr>
+              <th class="py-3 px-4">Kullanıcı</th>
+              <th class="py-3 px-4">Kademe</th>
+              <th class="py-3 px-4">Sponsor</th>
+              <th class="py-3 px-4">Rol</th>
+              <th class="py-3 px-4 text-right">TL Kasası</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-mineora-border text-slate-200">
+            ${team.length === 0 ? `<tr><td colspan="5" class="py-8 text-center text-slate-500">Henüz altınızda kayıtlı üye bulunmuyor.</td></tr>` : team.map(m => `
+              <tr class="hover:bg-mineora-bg/50 transition">
+                <td class="py-3 px-4 font-bold text-white">${m.username}</td>
+                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">${m.depth}. Kademe</span></td>
+                <td class="py-3 px-4 font-mono text-slate-400">${m.sponsor}</td>
+                <td class="py-3 px-4 font-bold text-slate-300">${m.role}</td>
+                <td class="py-3 px-4 text-right font-mono text-emerald-400 font-bold">${Number(m.tl).toFixed(2)} ₺</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
