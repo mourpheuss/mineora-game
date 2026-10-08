@@ -1,4 +1,4 @@
-// ================= SİNEMATİK MADEN MOTORU & TL KAZANCI (mining.js) =================
+// ================= SİNEMATİK MADEN MOTORU & KRİSTAL BİLET DÜŞÜŞÜ (mining.js) =================
 let activeMineIdx = 0, wagonFill = 0, currentWagonStage = 1, isTransitLocked = false;
 let powerBarValue = 0, powerBarDirection = 1, powerBarSpeed = 2.4, powerBarInterval = null;
 let isSwinging = false, swingFrame = 0, lanternSway = 0, lanternFlicker = 1;
@@ -60,10 +60,11 @@ function performMiningStrike() {
 
     wagonFill = Math.min(100, wagonFill + fillAmount);
 
-    const crystalDropChance = isSweetSpot ? 0.08 : 0.03;
+    // KRİSTAL BİLET DÜŞME ŞANSI (Kritikte %18, normalde %8)
+    const crystalDropChance = isSweetSpot ? 0.18 : 0.08;
     if (Math.random() < crystalDropChance) {
       CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
-      showToast("💎 Nadir Alp Kristali Çıkarıldı! (+1 Asansör Bileti)", "success");
+      showToast("💎 1 Alp Kristali Çıkarıldı! (Asansör Oyunu Bileti)", "success");
       saveUserWorld();
       updateHUD();
     }
@@ -171,15 +172,19 @@ function startElevatorDispatch() {
         const m = CurrentUser.mines[activeMineIdx];
         m.depleted = true; m.sealedAt = Date.now(); m.hp = 0; wagonFill = 0;
 
+        // MADENİ BİTİREN OYUNCUYA KESİN +1 KRİSTAL BİLETİ HEDİYE
+        CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
+
+        // TOPLAM GÜNLÜK HAKKIN 5 MADENE EŞİT DAĞITILMASI
         const totalDailyTl = (typeof calculateTotalDailyReturnTl === 'function') ? calculateTotalDailyReturnTl(CurrentUser) : 0;
         const mineShareTl = Number((totalDailyTl / 5).toFixed(2));
 
         if (mineShareTl > 0) {
           CurrentUser.tl = Number(((CurrentUser.tl || 0) + mineShareTl).toFixed(2));
           addUserNotificationLog(CurrentUser, "Maden Kazısı Tamamlandı", `${m.name} tamamlandı. Günlük payınız aktarıldı.`, `+${mineShareTl.toFixed(2)} ₺`, "income");
-          showToast(`💰 Maden Tamamlandı! +${mineShareTl.toFixed(2)} ₺ cüzdanınıza yansıtıldı! (Toplam günlük hak: ${totalDailyTl.toFixed(2)} ₺)`, "success");
+          showToast(`💰 Maden Tamamlandı! +${mineShareTl.toFixed(2)} ₺ cüzdana yüklendi ve +1 Asansör Bileti Kristal verildi!`, "success");
         } else {
-          showToast(`⛏️ Maden Tamamlandı! Aktif lisansınız olmadığı için TL kazancı üretilmedi. Kariyer Lisansı alabilirsiniz.`, "info");
+          showToast(`⛏️ Maden Tamamlandı! +1 Asansör Kristal Bileti kazandınız. (Lisans alarak günlük TL kazancı üretebilirsiniz).`, "info");
         }
 
         saveUserWorld(); 
@@ -287,14 +292,12 @@ function showFloatingReward(text, color = '#f0b90b') {
   setTimeout(() => el.remove(), 900);
 }
 
-// === TAM SİNEMATİK GRAFİK DÖNGÜSÜ ===
 function renderMineLoop() {
   const sec = document.getElementById('sec-cave');
   if (!mCtx || !sec || sec.classList.contains('hidden')) return;
 
   const w = mCanvas.width, h = mCanvas.height;
 
-  // 1. Derin Mağara Arka Planı
   const caveBg = mCtx.createRadialGradient(w * 0.4, h * 0.4, 20, w * 0.5, h * 0.5, w * 0.8);
   caveBg.addColorStop(0, '#151118');
   caveBg.addColorStop(0.5, '#0c0a0e');
@@ -302,7 +305,6 @@ function renderMineLoop() {
   mCtx.fillStyle = caveBg;
   mCtx.fillRect(0, 0, w, h);
 
-  // 2. Tavan Sarkıtları
   mCtx.fillStyle = '#080709';
   mCtx.beginPath();
   mCtx.moveTo(0, 0);
@@ -317,7 +319,6 @@ function renderMineLoop() {
   mCtx.closePath();
   mCtx.fill();
 
-  // 3. Sol Kaya Cephesi ve Parlayan Altın Damarı
   const rockGrad = mCtx.createLinearGradient(0, 0, w * 0.42, 0);
   rockGrad.addColorStop(0, '#1c1713');
   rockGrad.addColorStop(0.7, '#2b2119');
@@ -332,7 +333,6 @@ function renderMineLoop() {
   mCtx.closePath();
   mCtx.fill();
 
-  // Çatlaklar
   mCtx.strokeStyle = 'rgba(0,0,0,0.55)';
   mCtx.lineWidth = 3;
   mCtx.beginPath();
@@ -340,7 +340,6 @@ function renderMineLoop() {
   mCtx.moveTo(w * 0.28, h * 0.38); mCtx.lineTo(w * 0.34, h * 0.48);
   mCtx.stroke();
 
-  // Parlayan Cevher Damarı
   const veinGlow = (Math.sin(Date.now() / 400) * 0.2) + 0.8;
   mCtx.save();
   mCtx.strokeStyle = currentWagonStage === 2 ? `rgba(192, 132, 252, ${veinGlow})` : `rgba(245, 158, 11, ${veinGlow})`;
@@ -360,7 +359,6 @@ function renderMineLoop() {
   });
   mCtx.restore();
 
-  // 4. Sallanan Gaz Feneri ve Işık Hüzmesi
   lanternSway = Math.sin(Date.now() / 700) * 6;
   lanternFlicker = 0.94 + Math.random() * 0.12;
   const lanternX = w * 0.52 + lanternSway, lanternY = 82;
@@ -388,7 +386,6 @@ function renderMineLoop() {
   mCtx.lineWidth = 1.5;
   mCtx.strokeRect(lanternX - 8, lanternY - 10, 16, 20);
 
-  // 5. Zemin & Raylar
   const groundY = h - 35;
   mCtx.fillStyle = '#0b0c10';
   mCtx.fillRect(0, groundY, w, 35);
@@ -415,7 +412,6 @@ function renderMineLoop() {
   mCtx.moveTo(w * 0.35, groundY + 11); mCtx.lineTo(w, groundY + 11);
   mCtx.stroke();
 
-  // 6. Vagon & Tekerlekler
   const wagonX = w * 0.70, wagonY = groundY - 48, wagonW = 110, wagonH = 46;
 
   [-1, 1].forEach(dir => {
@@ -461,7 +457,6 @@ function renderMineLoop() {
   mCtx.lineWidth = 3;
   mCtx.stroke();
 
-  // 7. Madenci, Kask Feneri Işık Konisi ve Kazma Vuruşu
   const minerX = w * 0.43, minerY = groundY - 82;
   mCtx.save();
   mCtx.translate(minerX, minerY);
@@ -487,7 +482,6 @@ function renderMineLoop() {
   mCtx.beginPath(); mCtx.arc(0, -2, 13, Math.PI, 0); mCtx.fill();
   mCtx.fillRect(-15, -4, 30, 4);
 
-  // Kask Feneri Işık Konisi
   const lampBeam = mCtx.createRadialGradient(-14, -2, 2, -140, 20, 180);
   lampBeam.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
   lampBeam.addColorStop(0.25, 'rgba(254, 240, 138, 0.45)');
@@ -501,7 +495,6 @@ function renderMineLoop() {
   mCtx.closePath();
   mCtx.fill();
 
-  // Kazma Çizimi ve Dönüşü
   mCtx.save();
   let hx1, hy1, hx2, hy2, headX, headY, headRot;
 
@@ -550,7 +543,6 @@ function renderMineLoop() {
   mCtx.restore();
   mCtx.restore();
 
-  // 8. Toz Taneleri & Kıvılcımlar
   ambientDust.forEach(d => {
     d.x += d.speedX; d.y += d.speedY; d.pulse += 0.03;
     if (d.y > h) d.y = -5;
