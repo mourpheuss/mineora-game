@@ -1,4 +1,4 @@
-// ================= LİSANSA GÖRE GÜNLÜK TL KAZANDIRAN MADEN KAZI MOTORU (mining.js) =================
+// ================= SİNEMATİK MADEN MOTORU & TL KAZANCI (mining.js) =================
 let activeMineIdx = 0, wagonFill = 0, currentWagonStage = 1, isTransitLocked = false;
 let powerBarValue = 0, powerBarDirection = 1, powerBarSpeed = 2.4, powerBarInterval = null;
 let isSwinging = false, swingFrame = 0, lanternSway = 0, lanternFlicker = 1;
@@ -20,7 +20,7 @@ function initMineCanvas() {
   if (!mCanvas) return;
   mCtx = mCanvas.getContext('2d');
   const w = mCanvas.clientWidth || 800;
-  const h = mCanvas.clientHeight || 420;
+  const h = mCanvas.clientHeight || 450;
   mCanvas.width = w;
   mCanvas.height = h;
 
@@ -29,6 +29,7 @@ function initMineCanvas() {
   renderMineLoop();
   startPowerBarLoop();
 }
+window.initMineCanvas = initMineCanvas;
 
 function startPowerBarLoop() {
   if (powerBarInterval) clearInterval(powerBarInterval);
@@ -86,7 +87,7 @@ window.performMiningStrike = performMiningStrike;
 
 function spawnRockDebris(isCritical) {
   const w = mCanvas ? mCanvas.width : 800;
-  const h = mCanvas ? mCanvas.height : 420;
+  const h = mCanvas ? mCanvas.height : 450;
   const strikeX = w * 0.35;
   const strikeY = h * 0.58;
 
@@ -170,7 +171,6 @@ function startElevatorDispatch() {
         const m = CurrentUser.mines[activeMineIdx];
         m.depleted = true; m.sealedAt = Date.now(); m.hp = 0; wagonFill = 0;
 
-        // TOPLAM GÜNLÜK HAKKIN 5 MADENE EŞİT DAĞITILMASI
         const totalDailyTl = (typeof calculateTotalDailyReturnTl === 'function') ? calculateTotalDailyReturnTl(CurrentUser) : 0;
         const mineShareTl = Number((totalDailyTl / 5).toFixed(2));
 
@@ -248,6 +248,7 @@ function renderAlpMapPins() {
     }, 1000);
   }
 }
+window.renderAlpMapPins = renderAlpMapPins;
 
 function selectMine(idx) {
   if (!CurrentUser) return;
@@ -274,6 +275,7 @@ function selectMine(idx) {
   switchTab('cave');
   showToast(`⛏️ ${m.name} sahasına girildi! Vagonu doldurmak için kazma vurun.`, "info");
 }
+window.selectMine = selectMine;
 
 function showFloatingReward(text, color = '#f0b90b') {
   const container = document.getElementById('floating-text-container');
@@ -285,11 +287,14 @@ function showFloatingReward(text, color = '#f0b90b') {
   setTimeout(() => el.remove(), 900);
 }
 
+// === TAM SİNEMATİK GRAFİK DÖNGÜSÜ ===
 function renderMineLoop() {
   const sec = document.getElementById('sec-cave');
   if (!mCtx || !sec || sec.classList.contains('hidden')) return;
 
   const w = mCanvas.width, h = mCanvas.height;
+
+  // 1. Derin Mağara Arka Planı
   const caveBg = mCtx.createRadialGradient(w * 0.4, h * 0.4, 20, w * 0.5, h * 0.5, w * 0.8);
   caveBg.addColorStop(0, '#151118');
   caveBg.addColorStop(0.5, '#0c0a0e');
@@ -297,6 +302,22 @@ function renderMineLoop() {
   mCtx.fillStyle = caveBg;
   mCtx.fillRect(0, 0, w, h);
 
+  // 2. Tavan Sarkıtları
+  mCtx.fillStyle = '#080709';
+  mCtx.beginPath();
+  mCtx.moveTo(0, 0);
+  mCtx.lineTo(w * 0.15, h * 0.12);
+  mCtx.lineTo(w * 0.22, 0);
+  mCtx.lineTo(w * 0.38, h * 0.16);
+  mCtx.lineTo(w * 0.45, 0);
+  mCtx.lineTo(w * 0.65, h * 0.11);
+  mCtx.lineTo(w * 0.75, 0);
+  mCtx.lineTo(w, h * 0.08);
+  mCtx.lineTo(w, 0);
+  mCtx.closePath();
+  mCtx.fill();
+
+  // 3. Sol Kaya Cephesi ve Parlayan Altın Damarı
   const rockGrad = mCtx.createLinearGradient(0, 0, w * 0.42, 0);
   rockGrad.addColorStop(0, '#1c1713');
   rockGrad.addColorStop(0.7, '#2b2119');
@@ -311,6 +332,35 @@ function renderMineLoop() {
   mCtx.closePath();
   mCtx.fill();
 
+  // Çatlaklar
+  mCtx.strokeStyle = 'rgba(0,0,0,0.55)';
+  mCtx.lineWidth = 3;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.12, h * 0.15); mCtx.lineTo(w * 0.28, h * 0.38); mCtx.lineTo(w * 0.22, h * 0.7);
+  mCtx.moveTo(w * 0.28, h * 0.38); mCtx.lineTo(w * 0.34, h * 0.48);
+  mCtx.stroke();
+
+  // Parlayan Cevher Damarı
+  const veinGlow = (Math.sin(Date.now() / 400) * 0.2) + 0.8;
+  mCtx.save();
+  mCtx.strokeStyle = currentWagonStage === 2 ? `rgba(192, 132, 252, ${veinGlow})` : `rgba(245, 158, 11, ${veinGlow})`;
+  mCtx.lineWidth = 4;
+  mCtx.shadowColor = currentWagonStage === 2 ? '#c084fc' : '#f59e0b';
+  mCtx.shadowBlur = 12;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.24, h * 0.22);
+  mCtx.lineTo(w * 0.33, h * 0.42);
+  mCtx.lineTo(w * 0.29, h * 0.68);
+  mCtx.stroke();
+
+  const noduleColor = currentWagonStage === 2 ? '#e9d5ff' : '#fef08a';
+  [{ x: w * 0.24, y: h * 0.22 }, { x: w * 0.33, y: h * 0.42 }, { x: w * 0.31, y: h * 0.55 }].forEach(nd => {
+    mCtx.fillStyle = noduleColor;
+    mCtx.beginPath(); mCtx.arc(nd.x, nd.y, 4, 0, Math.PI * 2); mCtx.fill();
+  });
+  mCtx.restore();
+
+  // 4. Sallanan Gaz Feneri ve Işık Hüzmesi
   lanternSway = Math.sin(Date.now() / 700) * 6;
   lanternFlicker = 0.94 + Math.random() * 0.12;
   const lanternX = w * 0.52 + lanternSway, lanternY = 82;
@@ -322,20 +372,80 @@ function renderMineLoop() {
   mCtx.lineTo(lanternX, lanternY - 14);
   mCtx.stroke();
 
+  const lanternLight = mCtx.createRadialGradient(lanternX, lanternY, 4, lanternX, lanternY, 280 * lanternFlicker);
+  lanternLight.addColorStop(0, 'rgba(254, 215, 170, 0.48)');
+  lanternLight.addColorStop(0.35, 'rgba(245, 158, 11, 0.16)');
+  lanternLight.addColorStop(0.7, 'rgba(180, 83, 9, 0.05)');
+  lanternLight.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  mCtx.fillStyle = lanternLight;
+  mCtx.fillRect(0, 0, w, h);
+
+  mCtx.fillStyle = '#0f172a';
+  mCtx.fillRect(lanternX - 9, lanternY - 14, 18, 5);
+  mCtx.fillStyle = '#fef08a';
+  mCtx.beginPath(); mCtx.arc(lanternX, lanternY, 7, 0, Math.PI * 2); mCtx.fill();
+  mCtx.strokeStyle = '#78350f';
+  mCtx.lineWidth = 1.5;
+  mCtx.strokeRect(lanternX - 8, lanternY - 10, 16, 20);
+
+  // 5. Zemin & Raylar
   const groundY = h - 35;
   mCtx.fillStyle = '#0b0c10';
   mCtx.fillRect(0, groundY, w, 35);
+  mCtx.fillStyle = 'rgba(255,255,255,0.03)';
+  mCtx.fillRect(0, groundY, w, 2);
 
+  mCtx.fillStyle = '#271b13';
+  for (let rx = w * 0.36; rx < w; rx += 28) {
+    mCtx.fillRect(rx, groundY + 8, 16, 18);
+    mCtx.fillStyle = '#170f0a';
+    mCtx.fillRect(rx + 13, groundY + 8, 3, 18);
+    mCtx.fillStyle = '#271b13';
+  }
+
+  mCtx.strokeStyle = '#475569';
+  mCtx.lineWidth = 4;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.35, groundY + 12); mCtx.lineTo(w, groundY + 12);
+  mCtx.moveTo(w * 0.35, groundY + 22); mCtx.lineTo(w, groundY + 22);
+  mCtx.stroke();
+  mCtx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
+  mCtx.lineWidth = 1.5;
+  mCtx.beginPath();
+  mCtx.moveTo(w * 0.35, groundY + 11); mCtx.lineTo(w, groundY + 11);
+  mCtx.stroke();
+
+  // 6. Vagon & Tekerlekler
   const wagonX = w * 0.70, wagonY = groundY - 48, wagonW = 110, wagonH = 46;
+
+  [-1, 1].forEach(dir => {
+    const wheelCenterX = (dir === -1) ? (wagonX + 24) : (wagonX + wagonW - 24);
+    const wheelCenterY = wagonY + wagonH + 5;
+    mCtx.fillStyle = '#0f172a';
+    mCtx.beginPath(); mCtx.arc(wheelCenterX, wheelCenterY, 11, 0, Math.PI * 2); mCtx.fill();
+    mCtx.fillStyle = '#334155';
+    mCtx.beginPath(); mCtx.arc(wheelCenterX, wheelCenterY, 8, 0, Math.PI * 2); mCtx.fill();
+    mCtx.fillStyle = '#cbd5e1';
+    mCtx.beginPath(); mCtx.arc(wheelCenterX, wheelCenterY, 3, 0, Math.PI * 2); mCtx.fill();
+  });
+
   if (wagonFill > 0) {
     const fillRatio = wagonFill / 100;
     const oreHeight = fillRatio * 32;
     mCtx.save();
-    mCtx.fillStyle = '#d97706';
+    mCtx.fillStyle = currentWagonStage === 2 ? '#9333ea' : '#d97706';
     mCtx.beginPath();
     mCtx.moveTo(wagonX + 6, wagonY + 6);
     mCtx.quadraticCurveTo(wagonX + wagonW / 2, wagonY - oreHeight, wagonX + wagonW - 6, wagonY + 6);
     mCtx.fill();
+
+    const nuggetCount = Math.floor(fillRatio * 14);
+    for (let ni = 0; ni < nuggetCount; ni++) {
+      const nx = wagonX + 18 + (ni * 5.8);
+      const ny = wagonY - (Math.sin(ni * 0.45) * oreHeight * 0.65) + 3;
+      mCtx.fillStyle = currentWagonStage === 2 ? '#c084fc' : '#fbbf24';
+      mCtx.fillRect(nx, ny, 4, 4);
+    }
     mCtx.restore();
   }
 
@@ -347,17 +457,109 @@ function renderMineLoop() {
   mCtx.lineTo(wagonX + 10, wagonY + wagonH);
   mCtx.closePath();
   mCtx.fill();
+  mCtx.strokeStyle = '#475569';
+  mCtx.lineWidth = 3;
+  mCtx.stroke();
 
+  // 7. Madenci, Kask Feneri Işık Konisi ve Kazma Vuruşu
   const minerX = w * 0.43, minerY = groundY - 82;
   mCtx.save();
   mCtx.translate(minerX, minerY);
+
+  mCtx.fillStyle = 'rgba(0,0,0,0.65)';
+  mCtx.beginPath(); mCtx.ellipse(0, 80, 24, 7, 0, 0, Math.PI * 2); mCtx.fill();
+
+  mCtx.fillStyle = '#0f172a';
+  mCtx.fillRect(-14, 48, 11, 34);
+  mCtx.fillRect(3, 48, 11, 34);
+  mCtx.fillStyle = '#334155';
+  mCtx.fillRect(-15, 74, 13, 8);
+  mCtx.fillRect(2, 74, 13, 8);
+
   mCtx.fillStyle = '#c2410c';
   mCtx.fillRect(-16, 14, 32, 38);
+  mCtx.fillStyle = '#facc15';
+  mCtx.fillRect(-16, 28, 32, 6);
+
   mCtx.fillStyle = '#fdba74';
   mCtx.beginPath(); mCtx.arc(0, 3, 11, 0, Math.PI * 2); mCtx.fill();
   mCtx.fillStyle = '#eab308';
   mCtx.beginPath(); mCtx.arc(0, -2, 13, Math.PI, 0); mCtx.fill();
+  mCtx.fillRect(-15, -4, 30, 4);
+
+  // Kask Feneri Işık Konisi
+  const lampBeam = mCtx.createRadialGradient(-14, -2, 2, -140, 20, 180);
+  lampBeam.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  lampBeam.addColorStop(0.25, 'rgba(254, 240, 138, 0.45)');
+  lampBeam.addColorStop(0.7, 'rgba(254, 240, 138, 0.08)');
+  lampBeam.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  mCtx.fillStyle = lampBeam;
+  mCtx.beginPath();
+  mCtx.moveTo(-14, -2);
+  mCtx.lineTo(-190, -50);
+  mCtx.lineTo(-190, 90);
+  mCtx.closePath();
+  mCtx.fill();
+
+  // Kazma Çizimi ve Dönüşü
+  mCtx.save();
+  let hx1, hy1, hx2, hy2, headX, headY, headRot;
+
+  if (swingFrame === 0) {
+    hx1 = -4; hy1 = 20; hx2 = -32; hy2 = 8;
+    headX = -32; headY = 8; headRot = -0.4;
+  } else if (swingFrame === 1) {
+    hx1 = -2; hy1 = 16; hx2 = 24; hy2 = -34;
+    headX = 24; headY = -34; headRot = 0.85;
+  } else {
+    hx1 = -4; hy1 = 20; hx2 = -60; hy2 = 38;
+    headX = -60; headY = 38; headRot = -1.65;
+    mCtx.strokeStyle = 'rgba(254, 240, 138, 0.45)';
+    mCtx.lineWidth = 3;
+    mCtx.beginPath(); mCtx.arc(0, 0, 68, -0.2, 0.9); mCtx.stroke();
+  }
+
+  mCtx.strokeStyle = '#78350f';
+  mCtx.lineWidth = 5;
+  mCtx.lineCap = 'round';
+  mCtx.beginPath();
+  mCtx.moveTo(hx1, hy1);
+  mCtx.lineTo(hx2, hy2);
+  mCtx.stroke();
+
+  mCtx.save();
+  mCtx.translate(headX, headY);
+  mCtx.rotate(headRot);
+  mCtx.fillStyle = '#94a3b8';
+  mCtx.strokeStyle = '#f8fafc';
+  mCtx.lineWidth = 1.2;
+  mCtx.beginPath();
+  mCtx.moveTo(-24, -3);
+  mCtx.lineTo(0, -5);
+  mCtx.lineTo(24, -3);
+  mCtx.lineTo(28, 0);
+  mCtx.lineTo(22, 3);
+  mCtx.lineTo(0, 5);
+  mCtx.lineTo(-22, 3);
+  mCtx.lineTo(-28, 0);
+  mCtx.closePath();
+  mCtx.fill();
+  mCtx.stroke();
   mCtx.restore();
+
+  mCtx.restore();
+  mCtx.restore();
+
+  // 8. Toz Taneleri & Kıvılcımlar
+  ambientDust.forEach(d => {
+    d.x += d.speedX; d.y += d.speedY; d.pulse += 0.03;
+    if (d.y > h) d.y = -5;
+    if (d.x > w) d.x = 0;
+    if (d.x < 0) d.x = w;
+    const alpha = (Math.sin(d.pulse) * 0.3 + 0.5) * d.opacity;
+    mCtx.fillStyle = `rgba(254, 240, 138, ${alpha})`;
+    mCtx.beginPath(); mCtx.arc(d.x, d.y, d.r, 0, Math.PI * 2); mCtx.fill();
+  });
 
   for (let i = rockParticles.length - 1; i >= 0; i--) {
     const p = rockParticles[i];
@@ -367,9 +569,13 @@ function renderMineLoop() {
       mCtx.fillStyle = p.color;
       mCtx.beginPath(); mCtx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2); mCtx.fill();
     } else {
-      p.vy += 0.38;
+      p.vy += 0.38; p.rot += p.vRot;
+      mCtx.save();
+      mCtx.translate(p.x, p.y);
+      mCtx.rotate(p.rot);
       mCtx.fillStyle = p.color;
-      mCtx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      mCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      mCtx.restore();
     }
     if (p.life <= 0) rockParticles.splice(i, 1);
   }
