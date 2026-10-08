@@ -1,4 +1,4 @@
-// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & HESAP MOTORU (state.js) =================
+// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & REFERANS MOTORU (state.js) =================
 const firebaseConfig = {
   apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
   authDomain: "mineora-web.firebaseapp.com",
@@ -107,7 +107,6 @@ function addUserNotificationLog(targetUserObj, title, desc, amountText = "", typ
 }
 window.addUserNotificationLog = addUserNotificationLog;
 
-// ================= HESAP BİLDİRİMLERİ PENCERESİNİ ÇİZEN MOTOR =================
 function renderNotificationsModal() {
   const container = document.getElementById('user-notifications-list');
   if (!container || !CurrentUser) return;
@@ -167,9 +166,21 @@ function checkMinesCooldown() {
 }
 window.checkMinesCooldown = checkMinesCooldown;
 
-function findUserByRefCode(refCode) {
+function findUserByRefCode(refCode, externalUsersMap = null) {
   if (!refCode) return null;
   const clean = refCode.trim().toUpperCase();
+
+  if (externalUsersMap) {
+    for (let k of Object.keys(externalUsersMap)) {
+      const u = externalUsersMap[k];
+      if (u) {
+        if ((u.refCode || '').toUpperCase() === clean || (u.username || '').toUpperCase() === clean) {
+          return u;
+        }
+      }
+    }
+  }
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith('mineora_user_')) {
@@ -186,37 +197,55 @@ function findUserByRefCode(refCode) {
 }
 window.findUserByRefCode = findUserByRefCode;
 
-// 4 KADEMELİ TL REFERANS GELİRİ (%10, %7, %5, %3)
+// 4 KADEMELİ CANLI REFERANS DAĞITIM MOTORU (%10, %7, %5, %3)
 function distributeFourDepthCommission(buyerUser, costTl) {
-  if (!buyerUser || !buyerUser.referral_chain || buyerUser.referral_chain.length === 0) return;
-  const chain = buyerUser.referral_chain;
-  const rates = [0.10, 0.07, 0.05, 0.03];
+  if (!buyerUser) return;
+  const chain = Array.isArray(buyerUser.referral_chain) ? buyerUser.referral_chain : [];
+  if (chain.length === 0) {
+    console.log("Referans zinciri boş, komisyon dağıtılmadı.");
+    return;
+  }
+  
+  const rates = [0.10, 0.07, 0.05, 0.03]; // 1. Kademe: %10, 2: %7, 3: %5, 4: %3
 
   for (let i = 0; i < rates.length; i++) {
     const sponsorIndex = chain.length - 1 - i;
     if (sponsorIndex < 0) break;
 
     const sponsorUsername = chain[sponsorIndex];
-    const sponsorObj = getStoredUser(sponsorUsername);
-    if (!sponsorObj) continue;
+    if (!sponsorUsername) continue;
+    const sponsorKey = sponsorUsername.toLowerCase();
 
     const rate = rates[i];
     const commissionTl = Number((costTl * rate).toFixed(2));
     const tierName = (i + 1) + ". Kademe Referans Primi (%" + Math.round(rate * 100) + ")";
 
-    sponsorObj.tl = Number(((sponsorObj.tl || 0) + commissionTl).toFixed(2));
-    addUserNotificationLog(sponsorObj, tierName, buyerUser.username + " lisans aldi.", "+" + commissionTl.toFixed(2) + " TL", "commission");
-    saveStoredUser(sponsorObj);
-
-    if (CurrentUser && CurrentUser.username.toLowerCase() === sponsorObj.username.toLowerCase()) {
-      CurrentUser.tl = sponsorObj.tl;
-      CurrentUser.logs = sponsorObj.logs;
-      updateHUD();
+    if (typeof fbDb !== 'undefined' && fbDb) {
+      fbDb.ref('users/' + sponsorKey).once('value').then(snap => {
+        let spData = snap.val() || getStoredUser(sponsorUsername);
+        if (spData) {
+          spData.tl = Number(((spData.tl || 0) + commissionTl).toFixed(2));
+          addUserNotificationLog(spData, tierName, buyerUser.username + " lisans aldı.", "+" + commissionTl.toFixed(2) + " TL", "commission");
+          saveStoredUser(spData);
+          if (CurrentUser && CurrentUser.username.toLowerCase() === sponsorKey) {
+            CurrentUser.tl = spData.tl;
+            CurrentUser.logs = spData.logs;
+            updateHUD();
+          }
+        }
+      });
+    } else {
+      const sponsorObj = getStoredUser(sponsorUsername);
+      if (sponsorObj) {
+        sponsorObj.tl = Number(((sponsorObj.tl || 0) + commissionTl).toFixed(2));
+        addUserNotificationLog(sponsorObj, tierName, buyerUser.username + " lisans aldı.", "+" + commissionTl.toFixed(2) + " TL", "commission");
+        saveStoredUser(sponsorObj);
+      }
     }
   }
 }
 
-// LİSANS GELİRİ HESAPLAYAN MOTOR (İşçi %2, Maden %2.25, Holding %3)
+// LİSANS GETİRİSİ (İşçi %2 = 60₺, Maden %2.25 = 112.50₺, Holding %3 = 300₺)
 function calculateTotalDailyReturnTl(userObj) {
   if (!userObj || !userObj.licenses) return 0;
   const wCount = userObj.licenses.worker || 0;
@@ -260,18 +289,30 @@ function purchaseLicense(type, costTl) {
 }
 window.purchaseLicense = purchaseLicense;
 
-function linkHierarchyByRefCode(newUsername, refCode) {
+// CİHAZLAR ARASI VE FİREBASE UYUMLU REFERANS BAĞLANTISI
+function linkHierarchyByRefCode(newUsername, refCode, externalUsersMap = null) {
   if (!refCode || !refCode.trim()) return;
-  const leader = findUserByRefCode(refCode);
+  const leader = findUserByRefCode(refCode, externalUsersMap);
   if (!leader) return;
 
-  const targetUser = getStoredUser(newUsername);
-  if (!targetUser) return;
-
   const parentChain = Array.isArray(leader.referral_chain) ? leader.referral_chain : [];
-  targetUser.referral_chain = [...parentChain, leader.username];
-  targetUser.referredBy = refCode;
-  saveStoredUser(targetUser);
+  const newChain = [...parentChain, leader.username];
+
+  if (CurrentUserWorld && CurrentUserWorld.username.toLowerCase() === newUsername.toLowerCase()) {
+    CurrentUserWorld.referral_chain = newChain;
+    CurrentUserWorld.referredBy = refCode;
+  }
+  if (CurrentUser && CurrentUser.username.toLowerCase() === newUsername.toLowerCase()) {
+    CurrentUser.referral_chain = newChain;
+    CurrentUser.referredBy = refCode;
+  }
+
+  const targetUser = getStoredUser(newUsername) || CurrentUserWorld;
+  if (targetUser) {
+    targetUser.referral_chain = newChain;
+    targetUser.referredBy = refCode;
+    saveStoredUser(targetUser);
+  }
 
   if (!leader.workers) leader.workers = [];
   const exists = leader.workers.some(w => (w.username || '').toLowerCase() === newUsername.toLowerCase());
@@ -281,6 +322,7 @@ function linkHierarchyByRefCode(newUsername, refCode) {
   }
 }
 
+// 4 DERİNLİKTEKİ EKİBİ ÇIKARAN MOTOR
 function getFourDepthTeam(targetUsername) {
   if (!targetUsername) return [];
   const target = targetUsername.toLowerCase();
@@ -350,7 +392,7 @@ function renderHierarchyUI() {
 
   let rowsHtml = '';
   if (team.length === 0) {
-    rowsHtml = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Henuz alt ekibinizde kayitli madenci bulunmuyor. Davet linkinizi paylasarak ekibinizi kurabilirsiniz.</td></tr>';
+    rowsHtml = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Henüz alt ekibinizde kayıtlı madenci bulunmuyor. Davet linkinizi paylaşarak ekibinizi kurabilirsiniz.</td></tr>';
   } else {
     team.forEach(m => {
       const l = m.licenses || {};
@@ -380,14 +422,14 @@ function renderHierarchyUI() {
           '</div>' +
           '<div>' +
             '<h2 class="text-lg font-black text-white flex items-center gap-2">' +
-              '<span>' + CurrentUser.username + '</span> - 4 Kademeli Referans Agi' +
+              '<span>' + CurrentUser.username + '</span> - 4 Kademeli Referans Ağı' +
             '</h2>' +
-            '<p class="text-xs text-slate-400">Alt ekibiniz lisans aldikca 4 kademeye kadar dogrudan TL primi kazanirsiniz.</p>' +
+            '<p class="text-xs text-slate-400">Alt ekibiniz lisans aldıkça 4 kademeye kadar doğrudan TL primi kazanırsınız.</p>' +
           '</div>' +
         '</div>' +
         '<div class="flex items-center gap-2 bg-mineora-bg p-2 rounded-2xl border border-mineora-border max-w-full">' +
           '<div class="overflow-hidden">' +
-            '<span class="text-[9px] text-slate-400 block font-bold uppercase">Ozel Davet Linkiniz</span>' +
+            '<span class="text-[9px] text-slate-400 block font-bold uppercase">Özel Davet Linkiniz</span>' +
             '<span class="text-cyan-400 font-mono text-xs font-bold truncate block select-all">' + inviteLink + '</span>' +
           '</div>' +
           '<button type="button" onclick="copyRefLink()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 shrink-0 transition">' +
@@ -399,19 +441,19 @@ function renderHierarchyUI() {
       '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">' +
         '<div class="p-4 bg-mineora-bg rounded-2xl border border-emerald-500/30">' +
           '<span class="text-slate-400 text-[10px] block font-bold uppercase">1. Kademe (%10 Prim)</span>' +
-          '<strong class="text-emerald-400 font-mono text-base block mt-1">' + d1 + ' Uye</strong>' +
+          '<strong class="text-emerald-400 font-mono text-base block mt-1">' + d1 + ' Üye</strong>' +
         '</div>' +
         '<div class="p-4 bg-mineora-bg rounded-2xl border border-cyan-500/30">' +
           '<span class="text-slate-400 text-[10px] block font-bold uppercase">2. Kademe (%7 Prim)</span>' +
-          '<strong class="text-cyan-400 font-mono text-base block mt-1">' + d2 + ' Uye</strong>' +
+          '<strong class="text-cyan-400 font-mono text-base block mt-1">' + d2 + ' Üye</strong>' +
         '</div>' +
         '<div class="p-4 bg-mineora-bg rounded-2xl border border-amber-500/30">' +
           '<span class="text-slate-400 text-[10px] block font-bold uppercase">3. Kademe (%5 Prim)</span>' +
-          '<strong class="text-amber-400 font-mono text-base block mt-1">' + d3 + ' Uye</strong>' +
+          '<strong class="text-amber-400 font-mono text-base block mt-1">' + d3 + ' Üye</strong>' +
         '</div>' +
         '<div class="p-4 bg-mineora-bg rounded-2xl border border-purple-500/30">' +
           '<span class="text-slate-400 text-[10px] block font-bold uppercase">4. Kademe (%3 Prim)</span>' +
-          '<strong class="text-purple-400 font-mono text-base block mt-1">' + d4 + ' Uye</strong>' +
+          '<strong class="text-purple-400 font-mono text-base block mt-1">' + d4 + ' Üye</strong>' +
         '</div>' +
       '</div>' +
 
@@ -420,17 +462,17 @@ function renderHierarchyUI() {
           '<h3 class="text-xs font-black uppercase text-slate-300 flex items-center gap-2">' +
             '<i class="fa-solid fa-users text-cyan-400"></i> Alt Ekip Listesi (Toplam ' + team.length + ' Madenci)' +
           '</h3>' +
-          '<span class="text-[10px] text-slate-500 font-mono">4. kademeden sonrasi gizlenir</span>' +
+          '<span class="text-[10px] text-slate-500 font-mono">4. kademeden sonrası gizlenir</span>' +
         '</div>' +
         '<div class="overflow-x-auto rounded-xl border border-mineora-border">' +
           '<table class="w-full text-left text-xs">' +
             '<thead class="bg-black/50 text-slate-400 uppercase text-[10px] border-b border-mineora-border">' +
               '<tr>' +
-                '<th class="py-3 px-4">Kullanici</th>' +
+                '<th class="py-3 px-4">Kullanıcı</th>' +
                 '<th class="py-3 px-4">Kademe</th>' +
                 '<th class="py-3 px-4">Direkt Sponsor</th>' +
                 '<th class="py-3 px-4">Aktif Lisanslar</th>' +
-                '<th class="py-3 px-4 text-right">TL Kasasi</th>' +
+                '<th class="py-3 px-4 text-right">TL Kasası</th>' +
               '</tr>' +
             '</thead>' +
             '<tbody class="divide-y divide-mineora-border text-slate-200">' + rowsHtml + '</tbody>' +
@@ -446,7 +488,7 @@ function copyRefLink() {
   const activeRef = CurrentUser.refCode || ("MINE-" + CurrentUser.username.toUpperCase() + "-777");
   const inviteLink = window.location.origin + window.location.pathname + "?ref=" + activeRef;
   navigator.clipboard.writeText(inviteLink).then(() => {
-    showToast("Davet linkiniz kopyalandi:\n" + inviteLink, "success");
+    showToast("Davet linkiniz kopyalandı:\n" + inviteLink, "success");
   });
 }
 window.copyRefLink = copyRefLink;
@@ -492,9 +534,6 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
       logs: []
     };
     saveUserWorld();
-    if (refCodeUsed) {
-      linkHierarchyByRefCode(username, refCodeUsed);
-    }
   }
   
   CurrentUser = CurrentUserWorld;
@@ -532,6 +571,12 @@ if (fbDb) {
       if (CurrentUser && CurrentUser.isRootAdmin && typeof renderAdminUserTable === 'function') {
         renderAdminUserTable();
       }
+      if (CurrentUser && typeof renderHierarchyUI === 'function') {
+        const ownerSec = document.getElementById('sec-owner');
+        if (ownerSec && !ownerSec.classList.contains('hidden')) {
+          renderHierarchyUI();
+        }
+      }
     }
   });
 }
@@ -550,12 +595,12 @@ function updateHUD() {
 
   const totalDaily = calculateTotalDailyReturnTl(CurrentUser);
   if (dailyStatusEl) {
-    dailyStatusEl.innerText = "Gunluk Kazanc Hakki: " + totalDaily.toFixed(2) + " TL";
+    dailyStatusEl.innerText = "Günlük Kazanç Hakkı: " + totalDaily.toFixed(2) + " TL";
   }
 
   if (activeLicEl && CurrentUser.licenses) {
     const l = CurrentUser.licenses;
-    activeLicEl.innerText = (l.worker || 0) + " Madenci | " + (l.mine || 0) + " Sahip | " + (l.holding || 0) + " Holding (Toplam: " + totalDaily.toFixed(2) + " TL/gun)";
+    activeLicEl.innerText = (l.worker || 0) + " Madenci | " + (l.mine || 0) + " Sahip | " + (l.holding || 0) + " Holding (Toplam: " + totalDaily.toFixed(2) + " TL/gün)";
   }
 
   updateNotificationBadge();
@@ -568,7 +613,7 @@ function switchTab(tTab) {
 
   const isBoss = CurrentUser && !!CurrentUser.isRootAdmin;
   if (tTab === 'boss' && !isBoss) { 
-    showToast("Erisim yetkiniz yok!", "warning"); 
+    showToast("Erişim yetkiniz yok!", "warning"); 
     tTab = 'career'; 
   }
 
@@ -665,7 +710,7 @@ function handleLogin() {
   const pInput = document.getElementById('login-pwd');
   const u = uInput?.value.trim();
   const p = pInput?.value.trim();
-  if (!u || !p) { showToast("Kullanici adi ve sifre girin!", "warning"); return; }
+  if (!u || !p) { showToast("Kullanıcı adı ve şifre girin!", "warning"); return; }
 
   const uKey = u.toLowerCase();
   const storageKey = 'mineora_user_' + uKey;
@@ -676,15 +721,15 @@ function handleLogin() {
         loadUserWorld('mourpheus', p);
         closeModal('modal-auth-login');
         enterGame();
-        showToast("Hos geldiniz Root Admin mourpheus!", "success");
+        showToast("Hoş geldiniz Root Admin mourpheus!", "success");
         return;
       }
-      showToast("Kullanici bulunamadi!", "warning");
+      showToast("Kullanıcı bulunamadı!", "warning");
       return;
     }
 
     if (userData.pass !== p) {
-      showToast("Hatali sifre!", "warning");
+      showToast("Hatalı şifre!", "warning");
       return;
     }
 
@@ -699,7 +744,7 @@ function handleLogin() {
         .catch(e => console.warn("Admin Auth:", e.message));
     }
     
-    showToast("Hos geldiniz " + userData.username + "!", "success");
+    showToast("Hoş geldiniz " + userData.username + "!", "success");
   };
 
   if (fbDb) {
@@ -730,31 +775,37 @@ function handleRegister() {
   const p = document.getElementById('reg-pwd')?.value.trim();
   const ref = document.getElementById('reg-ref-code')?.value.trim() || "";
 
-  if (!fullname || !phone || !u || !p) { showToast("Lutfen tum alanlari doldurun!", "warning"); return; }
+  if (!fullname || !phone || !u || !p) { showToast("Lütfen tüm alanları doldurun!", "warning"); return; }
   const uKey = u.toLowerCase();
 
-  const registerNewUser = () => {
+  const doRegister = (allUsersData = null) => {
     CurrentUser = null;
     CurrentUserWorld = null;
     loadUserWorld(u, p, ref, { fullname, phone, email: em });
+    
+    if (ref) {
+      linkHierarchyByRefCode(u, ref, allUsersData);
+    }
+
     closeModal('modal-auth-register');
     enterGame();
-    showToast("Tebrikler " + fullname + "! Hesabiniz olusturuldu.", "success");
+    showToast("Tebrikler " + fullname + "! Hesabınız oluşturuldu.", "success");
   };
 
   if (fbDb) {
-    fbDb.ref('users/' + uKey).once('value').then(snap => {
-      if (snap.val()) {
-        showToast("Bu kullanici adi zaten kayitli!", "warning");
+    fbDb.ref('users').once('value').then(snap => {
+      const allUsers = snap.val() || {};
+      if (allUsers[uKey]) {
+        showToast("Bu kullanıcı adı zaten kayıtlı!", "warning");
       } else {
-        registerNewUser();
+        doRegister(allUsers);
       }
-    }).catch(() => registerNewUser());
+    }).catch(() => doRegister());
   } else {
     if (getStoredUser(uKey)) {
-      showToast("Bu kullanici adi zaten kayitli!", "warning");
+      showToast("Bu kullanıcı adı zaten kayıtlı!", "warning");
     } else {
-      registerNewUser();
+      doRegister();
     }
   }
 }
@@ -790,7 +841,7 @@ function logoutSession() {
   const secBoss = document.getElementById('sec-boss');
   if (secBoss) secBoss.style.display = 'none';
 
-  showToast("Oturum kapatildi.", "info");
+  showToast("Oturum kapatıldı.", "info");
 }
 window.logoutSession = logoutSession;
 
@@ -798,16 +849,16 @@ function handlePasswordChange() {
   const oldP = document.getElementById('pwd-old')?.value;
   const newP = document.getElementById('pwd-new')?.value;
   const repP = document.getElementById('pwd-repeat')?.value;
-  if (!oldP || !newP || !repP) { showToast("Tum alanlari doldurun!", "warning"); return; }
-  if (oldP !== CurrentUser.pass) { showToast("Mevcut sifreniz hatali!", "warning"); return; }
-  if (newP !== repP) { showToast("Yeni sifreler eslesmiyor!", "warning"); return; }
-  if (newP.length < 4) { showToast("Sifre en az 4 karakter olmalidir!", "warning"); return; }
+  if (!oldP || !newP || !repP) { showToast("Tüm alanları doldurun!", "warning"); return; }
+  if (oldP !== CurrentUser.pass) { showToast("Mevcut şifreniz hatalı!", "warning"); return; }
+  if (newP !== repP) { showToast("Yeni şifreler eşleşmiyor!", "warning"); return; }
+  if (newP.length < 4) { showToast("Şifre en az 4 karakter olmalıdır!", "warning"); return; }
   
   CurrentUser.pass = newP;
   saveUserWorld();
   document.getElementById('pwd-old').value = "";
   document.getElementById('pwd-new').value = "";
   document.getElementById('pwd-repeat').value = "";
-  showToast("Sifreniz basariyla guncellendi!", "success");
+  showToast("Şifreniz başarıyla güncellendi!", "success");
 }
 window.handlePasswordChange = handlePasswordChange;
