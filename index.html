@@ -63,7 +63,7 @@
 
   <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- 1. BÖLÜM: KARŞILAMA EKRANI -->
+  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA (KAZANÇSIZ TAM OYUN TANITIMI) -->
   <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden">
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -91,19 +91,35 @@
 
     <main class="relative z-20 max-w-4xl mx-auto px-4 py-16 flex flex-col items-center text-center">
       <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-mineora-gold/10 border border-mineora-gold/30 text-mineora-gold text-xs font-black uppercase mb-6 animate-pulse">
-        <i class="fa-solid fa-gem"></i> Günlük Türk Lirası Üretim Havuzu
+        <i class="fa-solid fa-mountain"></i> Alplerin Derinliklerinde Madencilik ve Koloni Simülasyonu
       </div>
       <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">
         Derinlikleri Keşfet, Kaynakları Yönet, <br>
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">Kendi Maden İmparatorluğunu Kur!</span>
       </h1>
-      <p class="mt-4 text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed">
-        Lisanslarınızı aktif edin, günlük %2 ile %3 arası kazanç sağlayın. Çıkardığınız cevherleri doğrudan banka hesabınıza havale ile çekin.
+      <p class="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
+        Alplerin gizemli damarlarında kazma vurun, vagonları yüzeye ulaştırın ve Maden Asansörü ile derin şaftları keşfedin. Kendi koloninizi inşa edin, canlı odalarda strateji kurun ve madencilik filonuzu zirveye taşıyın.
       </p>
+
       <div class="mt-8 flex gap-4">
         <button type="button" onclick="openModal('modal-auth-login')" class="px-8 py-4 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm shadow-xl cursor-pointer">
           Hemen Katıl & Başla
         </button>
+      </div>
+
+      <div class="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl text-xs font-mono">
+        <div class="p-3 rounded-2xl bg-mineora-card/80 border border-mineora-border flex items-center justify-center gap-2 text-slate-300">
+          <i class="fa-solid fa-person-digging text-mineora-gold"></i>
+          <span>5 Farklı Alp Maden Sahası</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-mineora-card/80 border border-mineora-border flex items-center justify-center gap-2 text-slate-300">
+          <i class="fa-solid fa-elevator text-cyan-400"></i>
+          <span>Maden Asansörü Şaft Tahliyesi</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-mineora-card/80 border border-mineora-border flex items-center justify-center gap-2 text-slate-300">
+          <i class="fa-solid fa-mountain-city text-rose-400"></i>
+          <span>İzometrik Alp Kolonisi Şehri</span>
+        </div>
       </div>
     </main>
 
@@ -223,11 +239,9 @@
 
       <!-- İÇERİK SAHNESİ -->
       <main class="flex-1 p-3 sm:p-6 overflow-y-auto">
-        <!-- 0) KURUCU YÖNETİM MASASI (EKSİKSİZ ORİJİNAL MASA) -->
+        <!-- 0) KURUCU YÖNETİM MASASI -->
         <section id="sec-boss" style="display:none;" class="space-y-6">
           <div class="p-6 rounded-3xl bg-mineora-card border border-rose-500/40 shadow-2xl space-y-6">
-            
-            <!-- 1. Firebase Canlı Yetki Çubuğu -->
             <div id="admin-auth-status-bar" class="p-4 rounded-2xl bg-slate-900 border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xl">
               <div class="flex items-center gap-2.5">
                 <span id="auth-status-dot" class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
@@ -244,7 +258,6 @@
               </div>
             </div>
 
-            <!-- 2. Üst Başlık & Kasa Tara Butonu -->
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-4">
               <div class="flex items-center gap-3">
                 <div class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-2xl font-black">
@@ -267,7 +280,6 @@
               </div>
             </div>
 
-            <!-- 3. Canlı Kasa & Nakit Akış Röntgeni -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
               <div class="p-4 rounded-2xl bg-mineora-card border border-emerald-500/30 shadow-lg">
                 <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
@@ -303,9 +315,7 @@
               </div>
             </div>
 
-            <!-- 4. 3'lü Canlı Operasyon Masası (Genişletme Butonlu) -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <!-- Havale & Dekont Masası -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -319,7 +329,6 @@
                 <div id="admin-deposit-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
 
-              <!-- IBAN Çekim Masası -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -333,7 +342,6 @@
                 <div id="admin-withdrawal-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
 
-              <!-- Destek Mesajları -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/40 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -348,7 +356,6 @@
               </div>
             </div>
 
-            <!-- 5. Kullanıcı Röntgen Tablosu -->
             <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3 w-full shadow-xl">
               <div class="flex justify-between items-center border-b border-mineora-border pb-3">
                 <div class="flex items-center gap-2.5">
@@ -380,14 +387,12 @@
               </div>
             </div>
 
-            <!-- 6. Global Hiyerarşi Ağacı -->
             <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3">
               <h3 class="text-sm font-black text-white flex items-center gap-2">
                 <i class="fa-solid fa-sitemap text-purple-400"></i> Global Ekosistem Hiyerarşi Ağacı
               </h3>
               <div id="admin-global-hierarchy-tree"></div>
             </div>
-
           </div>
         </section>
 
@@ -446,7 +451,7 @@
           </div>
         </section>
 
-        <!-- 3) ASANSÖR -->
+        <!-- 3) ASANSÖR (CRASH) -->
         <section id="sec-crash" class="hidden space-y-4 max-w-5xl mx-auto">
           <div class="bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4">
             <div class="relative w-full h-[380px] bg-black rounded-2xl border border-mineora-border overflow-hidden flex items-center justify-center">
@@ -504,7 +509,7 @@
           </div>
         </section>
 
-        <!-- 5) KARİYER LİSANSLARI (3.000 / 5.000 / 10.000 TL) -->
+        <!-- 5) KARİYER LİSANSLARI -->
         <section id="sec-career" class="hidden space-y-6 max-w-5xl mx-auto">
           <div class="p-5 rounded-3xl bg-mineora-card border border-mineora-border flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -609,24 +614,53 @@
 
   <!-- ==================== TÜM MODALLAR ==================== -->
 
-  <!-- CANLI ODA KURMA MODALI -->
+  <!-- CANLI ODA KURMA MODALI (ŞİFRELİ / KİLİTLİ ODA SEÇENEKLİ) -->
   <div id="modal-create-live-room" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
         <h3 class="text-base font-black text-white flex items-center gap-2">
           <i class="fa-solid fa-tower-broadcast text-rose-500"></i> Canlı Oda Kur
         </h3>
-        <button type="button" onclick="closeModal('modal-create-live-room')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <button type="button" onclick="closeModal('modal-create-live-room')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
       </div>
       <div class="space-y-3">
         <div>
           <label class="text-[10px] text-slate-400 block font-bold mb-1">Oda Başlığı</label>
           <input type="text" id="new-room-title" placeholder="Örn: 1. Vardiya Koordinasyon Brifingi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none focus:border-rose-500">
         </div>
+        <div class="p-3 bg-mineora-bg rounded-2xl border border-mineora-border space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300 font-bold text-[11px] flex items-center gap-1.5">
+              <i class="fa-solid fa-lock text-amber-400"></i> Kilitli Oda Şifresi (Opsiyonel)
+            </span>
+            <span class="text-[9px] text-slate-500">Boşsa herkese açık</span>
+          </div>
+          <input type="password" id="new-room-pin" placeholder="Giriş şifresi belirleyin (boş bırakabilirsiniz)" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-amber-400">
+        </div>
       </div>
       <button type="button" onclick="handleCreateLiveRoomSubmit()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white font-black text-xs shadow-lg cursor-pointer">
         Yayını Başlat & Odayı Aç
       </button>
+    </div>
+  </div>
+
+  <!-- KİLİTLİ ODA ŞİFRE PROMPT MODALI -->
+  <div id="modal-room-pin-prompt" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-sm bg-mineora-card border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs text-center">
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-mineora-gold flex items-center justify-center text-xl mx-auto border border-mineora-gold/30">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-black text-white">Kilitli Oda</h3>
+        <p class="text-[11px] text-slate-400 mt-1">Bu odaya girmek için belirlenen şifreyi giriniz.</p>
+      </div>
+      <input type="password" id="input-room-pin" placeholder="Oda Şifresi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-center text-white font-mono text-sm outline-none focus:border-mineora-gold">
+      <div class="flex gap-2">
+        <button type="button" onclick="closeModal('modal-room-pin-prompt')" class="flex-1 py-3 rounded-xl bg-mineora-input text-slate-300 font-bold text-xs cursor-pointer">Vazgeç</button>
+        <button type="button" onclick="submitRoomPinCheck()" class="flex-1 py-3 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer shadow-lg">Giriş Yap</button>
+      </div>
     </div>
   </div>
 
@@ -720,9 +754,15 @@
     </div>
   </div>
 
+  <!-- GİRİŞ YAP MODALI (ÇARPI KAPATMA BUTONU EKLENDİ) -->
   <div id="modal-auth-login" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
-      <h3 class="text-base font-black text-white">Sisteme Giriş Yap</h3>
+    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Sisteme Giriş Yap</h3>
+        <button type="button" onclick="closeModal('modal-auth-login')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
       <div class="space-y-3">
         <input type="text" id="login-user" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
         <input type="password" id="login-pwd" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
@@ -731,16 +771,30 @@
     </div>
   </div>
 
+  <!-- KAYIT OL MODALI (KUSURSUZ ÇARPI BUTONU & REFERANS KODU ALANI EKLENDİ) -->
   <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-3 text-xs">
-      <h3 class="text-base font-black text-white">Madenci Hesabı Aç</h3>
+    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-3.5 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-mineora-gold/20 text-mineora-gold flex items-center justify-center text-xs font-bold">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <h3 class="text-base font-black text-white">Madenci Hesabı Aç</h3>
+        </div>
+        <button type="button" onclick="closeModal('modal-auth-register')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
       <input type="text" id="reg-fullname" placeholder="Ad Soyad" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
-      <input type="tel" id="reg-phone" placeholder="Telefon Numarası" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="tel" id="reg-phone" placeholder="Telefon Numarası" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
       <input type="email" id="reg-email" placeholder="E-Posta Adresi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
       <input type="text" id="reg-username" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
       <input type="password" id="reg-pwd" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
-      <input type="text" id="reg-ref-code" placeholder="Referans Kodu (Opsiyonel)" class="w-full bg-mineora-bg border border-cyan-500/40 rounded-xl px-3 py-2 text-cyan-300 font-mono uppercase">
-      <button type="button" onclick="handleRegister()" class="w-full py-3 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer shadow-lg">Kayıt Ol & Başla</button>
+      <div>
+        <label class="text-[10px] text-slate-400 font-bold block mb-1">Referans Kodu</label>
+        <input type="text" id="reg-ref-code" placeholder="Referans Kodu (Varsa)" class="w-full bg-mineora-bg border border-cyan-500/40 rounded-xl px-3 py-2 text-cyan-300 font-mono uppercase">
+      </div>
+      <button type="button" onclick="handleRegister()" class="w-full py-3.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow-lg transition">Kayıt Ol & Başla</button>
     </div>
   </div>
 
@@ -807,7 +861,7 @@
     <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
         <h3 class="text-sm font-black text-white">Mineora Destek Masası</h3>
-        <button type="button" onclick="closeModal('modal-contact')"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <button type="button" onclick="closeModal('modal-contact')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
       <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
       <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
