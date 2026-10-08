@@ -1,4 +1,4 @@
-// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & REFERANS MOTORU (state.js) =================
+// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & HESAP MOTORU (state.js) =================
 const firebaseConfig = {
   apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
   authDomain: "mineora-web.firebaseapp.com",
@@ -95,13 +95,58 @@ function addUserNotificationLog(targetUserObj, title, desc, amountText = "", typ
   if (!targetUserObj.logs) targetUserObj.logs = [];
   targetUserObj.logs.unshift({
     id: Date.now() + Math.floor(Math.random() * 1000),
-    title: title, desc: desc, amountText: amountText, type: type,
+    title: title, 
+    desc: desc, 
+    amountText: amountText, 
+    type: type,
     time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-    date: new Date().toLocaleDateString('tr-TR'), read: false
+    date: new Date().toLocaleDateString('tr-TR'), 
+    read: false
   });
   if (targetUserObj.logs.length > 50) targetUserObj.logs.pop();
 }
 window.addUserNotificationLog = addUserNotificationLog;
+
+// ================= HESAP BİLDİRİMLERİ PENCERESİNİ ÇİZEN MOTOR =================
+function renderNotificationsModal() {
+  const container = document.getElementById('user-notifications-list');
+  if (!container || !CurrentUser) return;
+
+  const logs = CurrentUser.logs || [];
+  if (logs.length === 0) {
+    container.innerHTML = '<div class="p-8 text-center text-slate-500 text-xs">Henüz bir hesap bildiriminiz bulunmuyor.</div>';
+    return;
+  }
+
+  let html = '';
+  logs.forEach(l => {
+    const isPos = (l.amountText || "").toString().startsWith('+');
+    const isNeg = (l.amountText || "").toString().startsWith('-');
+    let amtColor = 'text-slate-300';
+    if (isPos) amtColor = 'text-emerald-400';
+    else if (isNeg) amtColor = 'text-rose-400';
+
+    html += 
+      '<div class="p-3.5 rounded-2xl bg-mineora-bg border border-mineora-border flex items-center justify-between text-xs transition hover:border-slate-700 shadow-sm">' +
+        '<div class="space-y-0.5">' +
+          '<div class="flex items-center gap-2">' +
+            '<strong class="text-white font-bold">' + (l.title || 'İşlem Bildirimi') + '</strong>' +
+            '<span class="text-[10px] text-slate-500 font-mono">' + (l.time || '') + '</span>' +
+          '</div>' +
+          '<p class="text-[11px] text-slate-300 leading-relaxed">' + (l.desc || '') + '</p>' +
+          '<span class="text-[9px] text-slate-500 font-mono block">' + (l.date || '') + '</span>' +
+        '</div>' +
+        (l.amountText ? '<div class="font-mono font-bold text-xs whitespace-nowrap ml-3 ' + amtColor + '">' + l.amountText + '</div>' : '') +
+      '</div>';
+    
+    l.read = true;
+  });
+
+  container.innerHTML = html;
+  saveUserWorld();
+  updateNotificationBadge();
+}
+window.renderNotificationsModal = renderNotificationsModal;
 
 function checkMinesCooldown() {
   if (!CurrentUser || !CurrentUser.mines) return;
@@ -141,6 +186,7 @@ function findUserByRefCode(refCode) {
 }
 window.findUserByRefCode = findUserByRefCode;
 
+// 4 KADEMELİ TL REFERANS GELİRİ (%10, %7, %5, %3)
 function distributeFourDepthCommission(buyerUser, costTl) {
   if (!buyerUser || !buyerUser.referral_chain || buyerUser.referral_chain.length === 0) return;
   const chain = buyerUser.referral_chain;
@@ -170,15 +216,16 @@ function distributeFourDepthCommission(buyerUser, costTl) {
   }
 }
 
+// LİSANS GELİRİ HESAPLAYAN MOTOR (İşçi %2, Maden %2.25, Holding %3)
 function calculateTotalDailyReturnTl(userObj) {
   if (!userObj || !userObj.licenses) return 0;
   const wCount = userObj.licenses.worker || 0;
   const mCount = userObj.licenses.mine || 0;
   const hCount = userObj.licenses.holding || 0;
 
-  const dailyWorker = wCount * (3000 * 0.02);
-  const dailyMine = mCount * (5000 * 0.0225);
-  const dailyHolding = hCount * (10000 * 0.03);
+  const dailyWorker = wCount * (3000 * 0.02);     // 60 TL/gün
+  const dailyMine = mCount * (5000 * 0.0225);     // 112.50 TL/gün
+  const dailyHolding = hCount * (10000 * 0.03);   // 300 TL/gün
 
   return Number((dailyWorker + dailyMine + dailyHolding).toFixed(2));
 }
@@ -405,6 +452,7 @@ function copyRefLink() {
 window.copyRefLink = copyRefLink;
 
 function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extraProfile = {}) {
+  if (!username) return;
   const uKey = username.toLowerCase();
   const storageKey = 'mineora_user_' + uKey;
   
@@ -515,7 +563,6 @@ function updateHUD() {
 }
 window.updateHUD = updateHUD;
 
-// SEKMELER ARASI GEÇİŞ (KOLONİ ÇIKARILDI)
 function switchTab(tTab) {
   if (typeof toggleMobileMenu === 'function') toggleMobileMenu(false);
 
@@ -603,8 +650,12 @@ function updateNotificationBadge() {
   if (!CurrentUser) return;
   const unreadCount = (CurrentUser.logs || []).filter(l => !l.read).length;
   if (badge) {
-    if (unreadCount > 0) { badge.innerText = unreadCount; badge.classList.remove('hidden'); }
-    else { badge.classList.add('hidden'); }
+    if (unreadCount > 0) { 
+      badge.innerText = unreadCount; 
+      badge.classList.remove('hidden'); 
+    } else { 
+      badge.classList.add('hidden'); 
+    }
   }
 }
 window.updateNotificationBadge = updateNotificationBadge;
