@@ -72,7 +72,6 @@ function getStoredUser(username) {
 
 function saveStoredUser(userObj) {
   if (!userObj || !userObj.username) return;
-
   const uKey = userObj.username.toLowerCase();
   localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(userObj));
   
@@ -136,7 +135,6 @@ function findUserByRefCode(refCode) {
   return null;
 }
 
-// 4 KADEMELİ TL REFERANS GELİR MOTORU (1. Kademe: %10, 2. Kademe: %7, 3. Kademe: %5, 4. Kademe: %3)
 function distributeFourDepthCommission(buyerUser, costTl) {
   if (!buyerUser || !buyerUser.referral_chain || buyerUser.referral_chain.length === 0) return;
   const chain = buyerUser.referral_chain;
@@ -166,16 +164,12 @@ function distributeFourDepthCommission(buyerUser, costTl) {
   }
 }
 
-// KULLANICININ TOPLAM GÜNLÜK HAKKINI HESAPLAYAN MOTOR
 function calculateTotalDailyReturnTl(userObj) {
   if (!userObj || !userObj.licenses) return 0;
   const wCount = userObj.licenses.worker || 0;
   const mCount = userObj.licenses.mine || 0;
   const hCount = userObj.licenses.holding || 0;
 
-  // Madenci: 3000 TL * %2 = 60 TL
-  // Maden Sahibi: 5000 TL * %2.25 = 112.50 TL
-  // Holding Sahibi: 10000 TL * %3 = 300 TL
   const dailyWorker = wCount * (3000 * 0.02);
   const dailyMine = mCount * (5000 * 0.0225);
   const dailyHolding = hCount * (10000 * 0.03);
@@ -183,7 +177,6 @@ function calculateTotalDailyReturnTl(userObj) {
   return Number((dailyWorker + dailyMine + dailyHolding).toFixed(2));
 }
 
-// SINIRSIZ LİSANS SATIN ALMA MOTORU
 function purchaseLicense(type, costTl) {
   if (!CurrentUser) return;
   const currentTl = Number(parseFloat(CurrentUser.tl || 0).toFixed(2));
@@ -336,6 +329,7 @@ function switchTab(tTab) {
   if (tTab === 'crash' && typeof initCrashEngine === 'function') initCrashEngine();
   if (tTab === 'map' && typeof renderAlpMapPins === 'function') renderAlpMapPins();
   if (tTab === 'colony' && typeof ColonyEngine !== 'undefined') ColonyEngine.init();
+  if (tTab === 'live' && typeof initLiveRoomsLobby === 'function') initLiveRoomsLobby(); // CANLI ODALARI BAŞLATIR
   if (tTab === 'boss' && isBoss && typeof initAdminMasterPanel === 'function') initAdminMasterPanel();
 }
 window.switchTab = switchTab;
