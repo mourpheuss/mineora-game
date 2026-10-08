@@ -1,4 +1,4 @@
-// ================= MINEORA TEMEL DURUM & HESAP MOTORU (state.js) =================
+// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & HESAP MOTORU (state.js) =================
 const firebaseConfig = {
   apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
   authDomain: "mineora-web.firebaseapp.com",
@@ -214,6 +214,27 @@ function purchaseLicense(type, costTl) {
 }
 window.purchaseLicense = purchaseLicense;
 
+function linkHierarchyByRefCode(newUsername, refCode) {
+  if (!refCode || !refCode.trim()) return;
+  const leader = findUserByRefCode(refCode);
+  if (!leader) return;
+
+  const targetUser = getStoredUser(newUsername);
+  if (!targetUser) return;
+
+  const parentChain = Array.isArray(leader.referral_chain) ? leader.referral_chain : [];
+  targetUser.referral_chain = [...parentChain, leader.username];
+  targetUser.referredBy = refCode;
+  saveStoredUser(targetUser);
+
+  if (!leader.workers) leader.workers = [];
+  const exists = leader.workers.some(w => (w.username || '').toLowerCase() === newUsername.toLowerCase());
+  if (!exists) {
+    leader.workers.unshift({ username: newUsername, joinedAt: new Date().toLocaleDateString('tr-TR') });
+    saveStoredUser(leader);
+  }
+}
+
 function getFourDepthTeam(targetUsername) {
   if (!targetUsername) return [];
   const target = targetUsername.toLowerCase();
@@ -268,7 +289,6 @@ function getFourDepthTeam(targetUsername) {
 }
 window.getFourDepthTeam = getFourDepthTeam;
 
-// HATASIZ DÜZ METİN REFERANS AĞI TABLOSU
 function renderHierarchyUI() {
   const container = document.getElementById('sec-owner');
   if (!container || !CurrentUser) return;
@@ -385,33 +405,42 @@ function copyRefLink() {
 }
 window.copyRefLink = copyRefLink;
 
+// HESAPLARIN BİRBİRİNİ EZMESİNİ ENGELLEYEN KUSURSUZ loadUserWorld
 function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extraProfile = {}) {
+  if (!username) return;
   const uKey = username.toLowerCase();
   const storageKey = 'mineora_user_' + uKey;
-  let data = localStorage.getItem(storageKey);
-  if (data) {
-    try { CurrentUserWorld = JSON.parse(data); } catch(e) {}
+  
+  // Önceki hafızayı temizle!
+  CurrentUserWorld = null;
+  
+  let localData = localStorage.getItem(storageKey);
+  if (localData) {
+    try { CurrentUserWorld = JSON.parse(localData); } catch(e) { CurrentUserWorld = null; }
   }
   
   const now = Date.now();
-  if (CurrentUserWorld) {
+  if (CurrentUserWorld && CurrentUserWorld.username && CurrentUserWorld.username.toLowerCase() === uKey) {
     CurrentUserWorld.tl = Number(parseFloat(CurrentUserWorld.tl || 0).toFixed(2));
     if (!CurrentUserWorld.licenses) CurrentUserWorld.licenses = { worker: 0, mine: 0, holding: 0 };
     if (!CurrentUserWorld.logs) CurrentUserWorld.logs = [];
     if (!CurrentUserWorld.referral_chain) CurrentUserWorld.referral_chain = [];
     CurrentUserWorld.alpCrystals = CurrentUserWorld.alpCrystals || 0;
-    CurrentUserWorld.isRootAdmin = (username.toLowerCase() === 'mourpheus');
+    CurrentUserWorld.isRootAdmin = (uKey === 'mourpheus');
+    saveUserWorld();
   } else {
+    // Tamamen yeni ve bağımsız kullanıcı oluştur
     CurrentUserWorld = {
       username: username,
-      fullname: extraProfile.fullname || "Madenci",
+      fullname: extraProfile.fullname || username,
       phone: extraProfile.phone || "",
       pass: defaultPass,
       email: extraProfile.email || (username + "@mineora.io"),
       tl: 0.00,
       alpCrystals: 0,
-      licenses: { worker: 0, mine: 0, holding: 0 },
-      isRootAdmin: (username.toLowerCase() === 'mourpheus'),
+      role: (uKey === 'mourpheus') ? "Root Admin" : "Aday",
+      licenses: (uKey === 'mourpheus') ? { worker: 1, mine: 1, holding: 1 } : { worker: 0, mine: 0, holding: 0 },
+      isRootAdmin: (uKey === 'mourpheus'),
       isVaultLocked: false,
       createdAt: now,
       refCode: "MINE-" + username.toUpperCase() + "-777",
@@ -421,25 +450,50 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
       logs: []
     };
     saveUserWorld();
+    if (refCodeUsed) {
+      linkHierarchyByRefCode(username, refCodeUsed);
+    }
   }
+  
   CurrentUser = CurrentUserWorld;
   sessionStorage.setItem('mineora_active_session', CurrentUser.username);
   checkMinesCooldown();
 
   if (fbDb) {
-    fbDb.ref('users/' + uKey).on('value', snap => {
-      const cloudUser = snap.val();
-      if (cloudUser) {
-        CurrentUser = cloudUser;
-        CurrentUserWorld = cloudUser;
+    fbDb.ref('users/' + uKey).once('value').then(snap => {
+      const cloudData = snap.val();
+      if (cloudData) {
+        CurrentUserWorld = cloudData;
+        CurrentUser = cloudData;
+        localStorage.setItem(storageKey, JSON.stringify(cloudData));
         updateHUD();
+      } else {
+        fbDb.ref('users/' + uKey).set(CurrentUserWorld);
       }
-    }, err => {
-      console.warn("Firebase okuma uyarisi:", err.message);
     });
   }
 }
 window.loadUserWorld = loadUserWorld;
+
+// TÜM KULLANICILARI CANLI DİNLEYEN VE ADMIN TABLOSUNA ANINDA AKITAN MOTOR
+if (fbDb) {
+  fbDb.ref('users').on('value', snap => {
+    const allUsers = snap.val();
+    if (allUsers) {
+      Object.keys(allUsers).forEach(k => {
+        localStorage.setItem('mineora_user_' + k.toLowerCase(), JSON.stringify(allUsers[k]));
+      });
+      if (CurrentUser && allUsers[CurrentUser.username.toLowerCase()]) {
+        CurrentUser = allUsers[CurrentUser.username.toLowerCase()];
+        CurrentUserWorld = CurrentUser;
+        updateHUD();
+      }
+      if (CurrentUser && CurrentUser.isRootAdmin && typeof renderAdminUserTable === 'function') {
+        renderAdminUserTable();
+      }
+    }
+  });
+}
 
 function updateHUD() {
   if (!CurrentUser) return;
@@ -564,48 +618,66 @@ function updateNotificationBadge() {
 window.updateNotificationBadge = updateNotificationBadge;
 
 function handleLogin() {
-  const u = document.getElementById('login-user')?.value.trim();
-  const p = document.getElementById('login-pwd')?.value.trim();
+  const uInput = document.getElementById('login-user');
+  const pInput = document.getElementById('login-pwd');
+  const u = uInput?.value.trim();
+  const p = pInput?.value.trim();
   if (!u || !p) { showToast("Kullanici adi ve sifre girin!", "warning"); return; }
 
   const uKey = u.toLowerCase();
   const storageKey = 'mineora_user_' + uKey;
 
-  if (fbDb) {
-    fbDb.ref('users/' + uKey).once('value', snapshot => {
-      const cloudData = snapshot.val();
-      if (cloudData) {
-        if (cloudData.pass !== p) { showToast("Hatali sifre!", "warning"); return; }
-        localStorage.setItem(storageKey, JSON.stringify(cloudData));
-        loadUserWorld(u, p);
+  const proceedLogin = (userData) => {
+    if (!userData) {
+      if (uKey === 'mourpheus' && p === '4834754') {
+        loadUserWorld('mourpheus', p);
         closeModal('modal-auth-login');
         enterGame();
-        showToast("Hos geldiniz " + CurrentUser.username + "!", "success");
-      } else {
-        checkLocalUserLogin(u, p, storageKey);
+        showToast("Hos geldiniz Root Admin mourpheus!", "success");
+        return;
       }
-    }).catch(() => {
-      checkLocalUserLogin(u, p, storageKey);
-    });
-  } else {
-    checkLocalUserLogin(u, p, storageKey);
-  }
-}
-window.handleLogin = handleLogin;
+      showToast("Kullanici bulunamadi!", "warning");
+      return;
+    }
 
-function checkLocalUserLogin(u, p, storageKey) {
-  const userRecord = localStorage.getItem(storageKey);
-  if (userRecord) {
-    const parsed = JSON.parse(userRecord);
-    if (parsed.pass !== p) { showToast("Hatali sifre!", "warning"); return; }
+    if (userData.pass !== p) {
+      showToast("Hatali sifre!", "warning");
+      return;
+    }
+
+    localStorage.setItem(storageKey, JSON.stringify(userData));
     loadUserWorld(u, p);
     closeModal('modal-auth-login');
     enterGame();
-    showToast("Hos geldiniz " + CurrentUser.username + "!", "success");
+    
+    if (uKey === 'mourpheus' && typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", p)
+        .then(() => console.log("Firebase Admin Auth aktif."))
+        .catch(e => console.warn("Admin Auth:", e.message));
+    }
+    
+    showToast("Hos geldiniz " + userData.username + "!", "success");
+  };
+
+  if (fbDb) {
+    fbDb.ref('users/' + uKey).once('value').then(snap => {
+      const cloudData = snap.val();
+      if (cloudData) {
+        proceedLogin(cloudData);
+      } else {
+        const localData = getStoredUser(uKey);
+        proceedLogin(localData);
+      }
+    }).catch(() => {
+      const localData = getStoredUser(uKey);
+      proceedLogin(localData);
+    });
   } else {
-    showToast("Kullanici bulunamadi!", "warning");
+    const localData = getStoredUser(uKey);
+    proceedLogin(localData);
   }
 }
+window.handleLogin = handleLogin;
 
 function handleRegister() {
   const fullname = document.getElementById('reg-fullname')?.value.trim();
@@ -617,12 +689,31 @@ function handleRegister() {
 
   if (!fullname || !phone || !u || !p) { showToast("Lutfen tum alanlari doldurun!", "warning"); return; }
   const uKey = u.toLowerCase();
-  if (localStorage.getItem('mineora_user_' + uKey)) { showToast("Bu kullanici adi zaten kayitli!", "warning"); return; }
 
-  loadUserWorld(u, p, ref, { fullname, phone, email: em });
-  closeModal('modal-auth-register');
-  enterGame();
-  showToast("Tebrikler " + fullname + "! Hesabiniz olusturuldu.", "success");
+  const registerNewUser = () => {
+    CurrentUser = null;
+    CurrentUserWorld = null;
+    loadUserWorld(u, p, ref, { fullname, phone, email: em });
+    closeModal('modal-auth-register');
+    enterGame();
+    showToast("Tebrikler " + fullname + "! Hesabiniz olusturuldu.", "success");
+  };
+
+  if (fbDb) {
+    fbDb.ref('users/' + uKey).once('value').then(snap => {
+      if (snap.val()) {
+        showToast("Bu kullanici adi zaten kayitli!", "warning");
+      } else {
+        registerNewUser();
+      }
+    }).catch(() => registerNewUser());
+  } else {
+    if (getStoredUser(uKey)) {
+      showToast("Bu kullanici adi zaten kayitli!", "warning");
+    } else {
+      registerNewUser();
+    }
+  }
 }
 window.handleRegister = handleRegister;
 
@@ -639,10 +730,23 @@ window.enterGame = enterGame;
 
 function logoutSession() {
   sessionStorage.removeItem('mineora_active_session');
-  saveUserWorld();
+  if (CurrentUserWorld) {
+    saveUserWorld();
+  }
   CurrentUser = null;
+  CurrentUserWorld = null;
+
+  const loginUser = document.getElementById('login-user');
+  const loginPwd = document.getElementById('login-pwd');
+  if (loginUser) loginUser.value = "";
+  if (loginPwd) loginPwd.value = "";
+
   document.getElementById('screen-game')?.classList.add('hidden');
   document.getElementById('screen-landing')?.classList.remove('hidden');
+
+  const secBoss = document.getElementById('sec-boss');
+  if (secBoss) secBoss.style.display = 'none';
+
   showToast("Oturum kapatildi.", "info");
 }
 window.logoutSession = logoutSession;
