@@ -123,7 +123,7 @@ function renderAdminUserTable() {
       '<td class="py-3 px-4 font-mono text-emerald-400 font-bold">' + Number(u.tl || 0).toFixed(2) + ' TL</td>' +
       '<td class="py-3 px-4">' + (u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>') + '</td>' +
       '<td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">' +
-        '<button type="button" onclick="openAdminUserLogsModal(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer">Log Dökümü</button>' +
+        '<button type="button" onclick="openAdminUserLogsModal(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer transition shadow">Log Dökümü</button>' +
         (!u.isRootAdmin ? '<button type="button" onclick="toggleAdminVaultLock(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[11px] font-bold cursor-pointer">' + (u.isVaultLocked ? 'Kilidi Aç' : 'Kilitle') + '</button>' : '') +
         '<button type="button" onclick="openAdminModifyUserModal(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-cyan-600/30 text-cyan-300 hover:bg-cyan-600/50 text-[11px] font-bold cursor-pointer">Düzenle</button>' +
         (!u.isRootAdmin ? '<button type="button" onclick="deleteAdminUser(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-[11px] font-bold cursor-pointer transition">Sil</button>' : '') +
@@ -133,6 +133,143 @@ function renderAdminUserTable() {
   });
 }
 window.renderAdminUserTable = renderAdminUserTable;
+
+// ================= LOG DÖKÜMÜ & KAÇAK/HİLE DENETİM MOTORU =================
+function openAdminUserLogsModal(username) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const u = typeof getStoredUser === 'function' ? getStoredUser(username) : null;
+  if (!u) {
+    if (typeof showToast === 'function') showToast("Kullanıcı bulunamadı!", "warning");
+    return;
+  }
+
+  const targetNameEl = document.getElementById('audit-target-username');
+  const cardsContainer = document.getElementById('audit-summary-cards');
+  const alertBar = document.getElementById('audit-alert-bar');
+  const tbody = document.getElementById('audit-logs-table-body');
+  const countEl = document.getElementById('audit-log-count');
+
+  if (targetNameEl) targetNameEl.innerText = u.username;
+
+  const logs = Array.isArray(u.logs) ? u.logs : [];
+  if (countEl) countEl.innerText = logs.length;
+
+  let totalMinedTl = 0;
+  let totalCommissionTl = 0;
+  let totalDepositTl = 0;
+  let totalSpentTl = 0;
+  let totalWithdrawTl = 0;
+
+  logs.forEach(l => {
+    const txt = (l.amountText || "").toString();
+    const m = txt.match(/[\d\.]+/);
+    const val = m ? parseFloat(m[0]) : 0;
+    const desc = ((l.title || "") + " " + (l.desc || "")).toLowerCase();
+
+    if (txt.startsWith('+')) {
+      if (desc.includes('maden') || desc.includes('vardiya') || desc.includes('kazı')) totalMinedTl += val;
+      else if (desc.includes('referans') || desc.includes('komisyon') || desc.includes('prim')) totalCommissionTl += val;
+      else if (desc.includes('havale') || desc.includes('yatır') || desc.includes('yüklendi')) totalDepositTl += val;
+      else totalMinedTl += val;
+    } else if (txt.startsWith('-')) {
+      if (desc.includes('çekim') || desc.includes('çek')) totalWithdrawTl += val;
+      else totalSpentTl += val;
+    }
+  });
+
+  const curTl = Number(parseFloat(u.tl || 0).toFixed(2));
+  const netLoggedTl = Number((totalMinedTl + totalCommissionTl + totalDepositTl - totalSpentTl - totalWithdrawTl).toFixed(2));
+  const discrepancy = Number((curTl - netLoggedTl).toFixed(2));
+  const hasLeak = discrepancy > 5;
+
+  if (cardsContainer) {
+    cardsContainer.innerHTML = 
+      '<div class="p-3 rounded-2xl bg-mineora-bg border border-mineora-border">' +
+        '<span class="text-[10px] text-slate-400 block font-bold uppercase">MEVCUT CÜZDAN</span>' +
+        '<strong class="text-emerald-400 text-sm block mt-0.5">' + curTl.toFixed(2) + ' TL</strong>' +
+      '</div>' +
+      '<div class="p-3 rounded-2xl bg-mineora-bg border border-emerald-500/30">' +
+        '<span class="text-[10px] text-slate-400 block font-bold uppercase">MEŞRU ÜRETİM & PRİM</span>' +
+        '<strong class="text-emerald-400 text-sm block mt-0.5">+' + (totalMinedTl + totalCommissionTl).toFixed(2) + ' TL</strong>' +
+        '<span class="text-[9px] text-slate-500 block">(' + totalMinedTl.toFixed(1) + ' Kazı / ' + totalCommissionTl.toFixed(1) + ' Ref)</span>' +
+      '</div>' +
+      '<div class="p-3 rounded-2xl bg-mineora-bg border border-rose-500/30">' +
+        '<span class="text-[10px] text-slate-400 block font-bold uppercase">HARCANAN / ÇEKİLEN</span>' +
+        '<strong class="text-rose-400 text-sm block mt-0.5">-' + (totalSpentTl + totalWithdrawTl).toFixed(2) + ' TL</strong>' +
+      '</div>' +
+      '<div class="p-3 rounded-2xl bg-mineora-bg border ' + (hasLeak ? 'border-rose-500 bg-rose-950/20' : 'border-emerald-500/30') + '">' +
+        '<span class="text-[10px] text-slate-400 block font-bold uppercase">KAÇAK / FARK</span>' +
+        '<strong class="' + (hasLeak ? 'text-rose-500 animate-pulse' : 'text-emerald-400') + ' text-sm block mt-0.5">' + (discrepancy > 0 ? '+' : '') + discrepancy.toFixed(2) + ' TL</strong>' +
+      '</div>';
+  }
+
+  if (alertBar) {
+    if (hasLeak) {
+      alertBar.className = "p-3 rounded-2xl bg-rose-950/40 border border-rose-500 text-rose-300 flex items-center justify-between gap-3 text-xs";
+      alertBar.innerHTML = 
+        '<div class="flex items-center gap-2">' +
+          '<i class="fa-solid fa-triangle-exclamation text-base text-rose-400"></i>' +
+          '<span><strong>Şüpheli Hesap:</strong> Cüzdanda log kaydı bulunmayan <strong>+' + discrepancy.toFixed(2) + ' TL</strong> kaçak bakiye tespit edildi!</span>' +
+        '</div>' +
+        '<button type="button" onclick="correctTamperedUserBalance(\'' + u.username + '\', ' + Math.max(0, netLoggedTl) + ')" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow whitespace-nowrap">' +
+          'Kaçak Bakiyeyi Düzelt & Eşitle' +
+        '</button>';
+      alertBar.classList.remove('hidden');
+    } else {
+      alertBar.className = "p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2 text-xs";
+      alertBar.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i> <span>Tüm işlemler log kayıtlarıyla birebir tutarlı. Hesap güvenli.</span>';
+      alertBar.classList.remove('hidden');
+    }
+  }
+
+  if (tbody) {
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Bu kullanıcıya ait log kaydı bulunmuyor.</td></tr>';
+    } else {
+      tbody.innerHTML = logs.map(l => {
+        const isPos = (l.amountText || "").startsWith('+');
+        return '<tr class="hover:bg-mineora-bg/60 transition">' +
+          '<td class="py-2.5 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">' + (l.date || '-') + ' ' + (l.time || '') + '</td>' +
+          '<td class="py-2.5 px-3 font-bold text-white whitespace-nowrap">' +
+            '<span class="px-2 py-0.5 rounded text-[9px] uppercase ' + (isPos ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30') + '">' +
+              (l.type || 'işlem') +
+            '</span>' +
+          '</td>' +
+          '<td class="py-2.5 px-3 text-slate-300"><strong>' + (l.title || '-') + '</strong><span class="text-slate-400 block text-[10px]">' + (l.desc || '') + '</span></td>' +
+          '<td class="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap ' + (isPos ? 'text-emerald-400' : 'text-rose-400') + '">' + (l.amountText || '-') + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+  }
+
+  if (typeof openModal === 'function') openModal('modal-admin-user-logs');
+}
+window.openAdminUserLogsModal = openAdminUserLogsModal;
+
+// KAÇAK BAKİYEYİ MEŞRU LOG DÜZEYİNE İNDİREN FONKSİYON
+function correctTamperedUserBalance(username, targetTl) {
+  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
+  const ok = confirm("'" + username + "' adlı kullanıcının cüzdanındaki haksız/kaçak bakiyeyi silip, yalnızca meşru kayıtlı kazancı olan " + targetTl + " TL seviyesine çekmek istiyor musunuz?");
+  if (!ok) return;
+
+  const u = typeof getStoredUser === 'function' ? getStoredUser(username) : null;
+  if (!u) return;
+
+  const oldTl = u.tl || 0;
+  u.tl = Math.max(0, targetTl);
+  u.isVaultLocked = true;
+
+  if (typeof addUserNotificationLog === 'function') {
+    addUserNotificationLog(u, "Bakiye Düzeltmesi (Admin)", "Kayıtsız bakiye tespit edildiği için cüzdan meşru üretim seviyesine eşitlendi.", "-" + (oldTl - targetTl).toFixed(2) + " TL", "alert");
+  }
+
+  if (typeof saveStoredUser === 'function') saveStoredUser(u);
+  openAdminUserLogsModal(username);
+  renderAdminUserTable();
+  updateAdminFinancialVaultMetrics();
+  if (typeof showToast === 'function') showToast("✅ " + username + " hesabındaki haksız bakiye temizlendi!", "success");
+}
+window.correctTamperedUserBalance = correctTamperedUserBalance;
 
 function deleteAdminUser(username) {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
@@ -407,8 +544,8 @@ function renderAdminContactMessages() {
       const card = document.createElement('div');
       card.className = "p-3 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-1 text-xs";
       card.innerHTML = 
-        '<div class="flex justify-between items-center"><strong class="text-white">' + m.name + '</strong><span class="text-[10px] text-slate-400">' + m.reach + '</span></div>' +
-        '<p class="text-slate-300 mt-1">' + m.message + '</p>';
+        '<div class="flex justify-between items-center"><strong class="text-white">${m.name}</strong><span class="text-[10px] text-slate-400">${m.reach}</span></div>' +
+        '<p class="text-slate-300 mt-1">${m.message}</p>';
       container.appendChild(card);
     });
   });
