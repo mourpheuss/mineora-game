@@ -72,17 +72,14 @@
 
   <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA (SİNEMATİK ALTIN MADENİ ARKA PLANLI) -->
   <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden bg-black">
-    <!-- SİNEMATİK ALTIN MADENİ ARKA PLAN GÖRSELİ & DEGRADE KATMANI -->
     <div class="absolute inset-0 z-0 pointer-events-none select-none">
       <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop" 
            alt="Altın Madeni Damarı" 
            class="w-full h-full object-cover object-center opacity-40 filter brightness-90 contrast-125 scale-105 transition-transform duration-1000">
-      <!-- Karartma & Altın Parıltısı Degradesi (Yazıların ve butonların kusursuz okunması için) -->
       <div class="absolute inset-0 bg-gradient-to-b from-[#0b0e11]/90 via-[#0b0e11]/75 to-[#0b0e11]"></div>
       <div class="absolute inset-0 bg-radial-gradient from-amber-500/15 via-transparent to-black/80"></div>
     </div>
 
-    <!-- Ortam Işık Hüzmeleri -->
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/20 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-96 h-96 bg-yellow-500/15 rounded-full blur-[140px] pointer-events-none"></div>
 
@@ -145,6 +142,7 @@
       <p>© 2026 MINEORA • Medya Grup Dijital Yazılım Bilişim Hizmetleri San Tic Ltd Şti</p>
     </footer>
   </div>
+
   <!-- 2. BÖLÜM: OYUNCU & YÖNETİM TERMİNALİ -->
   <div id="screen-game" class="hidden min-h-screen flex flex-col justify-between">
     <header class="bg-mineora-card border-b border-mineora-border sticky top-0 z-40 px-3 sm:px-6 py-2.5 shadow-md">
@@ -198,7 +196,7 @@
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
       <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-      <!-- SOL DİKEY SİDEBAR -->
+      <!-- SOL DİKEY SİDEBAR (STAKE VE P2P TAMAMEN SİLİNDİ) -->
       <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:bg-mineora-card/60 lg:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
         <div class="space-y-4">
           <div class="space-y-1">
@@ -222,10 +220,6 @@
             <button type="button" onclick="switchTab('live')" id="tab-btn-live" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 cursor-pointer">
               <i class="fa-solid fa-tower-broadcast w-4 text-center animate-pulse"></i>
               <span>Canlı Odalar</span>
-            </button>
-            <button type="button" onclick="switchTab('stake')" id="tab-btn-stake" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 cursor-pointer">
-              <i class="fa-solid fa-vault w-4 text-center"></i>
-              <span>Vadeli TL Bankası</span>
             </button>
           </div>
 
@@ -490,49 +484,7 @@
           </div>
         </section>
 
-        <!-- 4) VADELİ TL BANKASI -->
-        <section id="sec-stake" class="hidden space-y-6 max-w-4xl mx-auto">
-          <div class="bg-mineora-card border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-6">
-            <div class="flex items-center gap-3 border-b border-mineora-border pb-4">
-              <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-mineora-gold flex items-center justify-center text-2xl font-black">
-                <i class="fa-solid fa-vault"></i>
-              </div>
-              <div>
-                <h2 class="text-xl font-black text-white">MINEORA Vadeli TL Kasası</h2>
-                <span class="text-xs text-slate-400">TL varlıklarınızı kilitleyerek günlük faiz getirisi elde edin.</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button type="button" onclick="setStakePlan(60)" id="stake-plan-btn-60" class="p-4 rounded-2xl bg-mineora-gold text-black font-black border-2 border-yellow-300 shadow-xl cursor-pointer text-left">
-                <span class="text-xs uppercase opacity-80 block">Standart Kasa</span>
-                <strong class="text-lg block font-mono">60 Gün</strong>
-                <span class="text-xs mt-1 block font-bold">Günlük %3.0 Getiri</span>
-              </button>
-              <button type="button" onclick="setStakePlan(90)" id="stake-plan-btn-90" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer text-left">
-                <span class="text-xs uppercase text-slate-400 block">Gümüş Kasa</span>
-                <strong class="text-lg block font-mono text-white">90 Gün</strong>
-                <span class="text-xs text-cyan-300 mt-1 block font-bold">Günlük %3.5 Getiri</span>
-              </button>
-              <button type="button" onclick="setStakePlan(120)" id="stake-plan-btn-120" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer text-left">
-                <span class="text-xs uppercase text-slate-400 block">VIP Altın Kasa</span>
-                <strong class="text-lg block font-mono text-white">120 Gün</strong>
-                <span class="text-xs text-mineora-gold mt-1 block font-bold">Günlük %4.0 Getiri</span>
-              </button>
-            </div>
-
-            <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-4">
-              <input type="number" id="stake-deposit-amount" placeholder="Min: 100 ₺" oninput="calculateStakePreview()" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-sm outline-none focus:border-mineora-gold">
-              <button type="button" onclick="executeDepositStake()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 text-black font-black text-xs transition shadow-xl cursor-pointer">
-                Varlıkları Kasaya Kilitle
-              </button>
-            </div>
-
-            <div id="active-stakes-list" class="space-y-3 pt-2"></div>
-          </div>
-        </section>
-
-        <!-- 5) KARİYER LİSANSLARI -->
+        <!-- 4) KARİYER LİSANSLARI -->
         <section id="sec-career" class="hidden space-y-6 max-w-5xl mx-auto">
           <div class="p-5 rounded-3xl bg-mineora-card border border-mineora-border flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -577,10 +529,10 @@
           </div>
         </section>
 
-        <!-- 6) REFERANS AĞI -->
+        <!-- 5) REFERANS AĞI -->
         <section id="sec-owner" class="hidden space-y-6"></section>
 
-        <!-- 7) ŞİFRE DEĞİŞTİR -->
+        <!-- 6) ŞİFRE DEĞİŞTİR -->
         <section id="sec-settings" class="hidden space-y-4 max-w-xl mx-auto">
           <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-border space-y-4 text-xs shadow-xl">
             <h3 class="text-sm font-black text-white flex items-center gap-2"><i class="fa-solid fa-key text-cyan-400"></i> Şifre Değiştir</h3>
@@ -593,7 +545,7 @@
           </div>
         </section>
 
-        <!-- 8) ALP KOLONİSİ -->
+        <!-- 7) ALP KOLONİSİ -->
         <section id="sec-colony" class="hidden space-y-4 max-w-6xl mx-auto">
           <div class="relative w-full h-[620px] sm:h-[720px] rounded-3xl border border-mineora-border overflow-hidden shadow-2xl bg-[#0b1329] select-none">
             <header class="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none gap-2">
@@ -637,8 +589,9 @@
           </div>
         </section>
 
-        <!-- 9) CANLI YAYIN ODALARI SAHNESİ -->
+        <!-- 8) CANLI YAYIN ODALARI SAHNESİ -->
         <section id="sec-live" class="hidden space-y-4 max-w-6xl mx-auto">
+          <!-- A) LOBİ GÖRÜNÜMÜ -->
           <div id="live-lobby-view" class="space-y-4">
             <div class="bg-mineora-card border border-rose-500/30 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-3">
@@ -657,6 +610,7 @@
             <div id="live-rooms-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
           </div>
 
+          <!-- B) YAYIN ODASI İÇİ EKRANI -->
           <div id="live-room-active-view" class="hidden space-y-4">
             <div class="bg-mineora-card border border-mineora-border rounded-2xl px-4 py-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -728,7 +682,7 @@
     </div>
   </div>
 
-  <!-- MODALLAR -->
+  <!-- TÜM MODALLAR -->
   <div id="modal-queue-expanded" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
@@ -826,7 +780,6 @@
         </button>
       </div>
 
-      <!-- BANKA İSİMLERİ SİLİNDİ, YALNIZCA ŞİRKET VE IBAN BIRAKILDI -->
       <div id="wallet-view-deposit" class="space-y-4">
         <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/30 space-y-2">
           <span class="text-[11px] text-slate-400 block font-bold">Resmi Şirket Banka Hesabı:</span>
@@ -1030,11 +983,11 @@
     </div>
   </div>
 
+  <!-- SCRIPT ENTEGRASYONLARI (STAKE TAMAMEN KALDIRILDI) -->
   <script src="lang.js"></script>
   <script src="state.js"></script>
   <script src="wallet.js"></script>
   <script src="mining.js"></script>
-  <script src="stake.js"></script>
   <script src="crash.js"></script>
   <script src="colony.js"></script>
   <script src="live.js"></script>
