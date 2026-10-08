@@ -1,10 +1,14 @@
-// ================= YÖNETİCİ MASASI, DEKONT İNCELEME & IBAN MASASI (admin.js) =================
+// ================= DEV YÖNETİCİ KOMUTA MASASI (admin.js) =================
 function initAdminMasterPanel() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
   renderAdminHUD();
+  updateAdminFinancialVaultMetrics();
   renderAdminUserTable();
+  renderAdminGlobalHierarchy();
   renderAdminDepositQueue();
   renderAdminWithdrawalQueue();
+  renderAdminContactMessages();
+  renderAdminLiveRoomsMonitor();
 }
 window.initAdminMasterPanel = initAdminMasterPanel;
 
@@ -23,6 +27,31 @@ function renderAdminHUD() {
   if (elTotal) elTotal.innerText = totalUserTl.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + " ₺";
 }
 window.renderAdminHUD = renderAdminHUD;
+
+function updateAdminFinancialVaultMetrics() {
+  let totalVaultTl = 0;
+  let totalLicVolume = 0;
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('mineora_user_')) {
+      try {
+        const u = JSON.parse(localStorage.getItem(k));
+        if (u) {
+          totalVaultTl += Number(u.tl || 0);
+          const l = u.licenses || {};
+          totalLicVolume += (l.worker || 0) * 3000 + (l.mine || 0) * 5000 + (l.holding || 0) * 10000;
+        }
+      } catch(e) {}
+    }
+  }
+
+  const elTotal = document.getElementById('admin-total-user-tl');
+  const elLic = document.getElementById('admin-total-license-volume');
+  if (elTotal) elTotal.innerText = totalVaultTl.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + " ₺";
+  if (elLic) elLic.innerText = totalLicVolume.toLocaleString('tr-TR') + " ₺";
+}
+window.updateAdminFinancialVaultMetrics = updateAdminFinancialVaultMetrics;
 
 function renderAdminUserTable() {
   const tbody = document.getElementById('admin-user-table-body');
@@ -43,7 +72,6 @@ function renderAdminUserTable() {
   allUsers.forEach(u => {
     const tr = document.createElement('tr');
     tr.className = "hover:bg-mineora-bg/60 transition";
-    
     const l = u.licenses || {};
     const licText = `${l.worker || 0} Madenci / ${l.mine || 0} Sahip / ${l.holding || 0} Holding`;
 
@@ -52,9 +80,7 @@ function renderAdminUserTable() {
       <td class="py-3 px-4 font-mono text-slate-400">${u.pass || '••••••'}</td>
       <td class="py-3 px-4 font-bold text-slate-300 text-[11px]">${licText}</td>
       <td class="py-3 px-4 font-mono text-emerald-400 font-bold">${Number(u.tl || 0).toFixed(2)} ₺</td>
-      <td class="py-3 px-4">
-        ${u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>'}
-      </td>
+      <td class="py-3 px-4">${u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>'}</td>
       <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
         <button type="button" onclick="openAdminUserLogsModal('${u.username}')" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer">Log Dökümü</button>
         ${!u.isRootAdmin ? `
@@ -76,7 +102,7 @@ function toggleAdminVaultLock(username) {
   u.isVaultLocked = !u.isVaultLocked;
   saveStoredUser(u);
   renderAdminUserTable();
-  showToast(`🔒 ${username} kasa kilidi güncellendi.`, "info");
+  showToast(`🔒 ${username} kasa durumu güncellendi.`, "info");
 }
 window.toggleAdminVaultLock = toggleAdminVaultLock;
 
@@ -85,7 +111,6 @@ function openAdminModifyUserModal(username) {
   const u = getStoredUser(username);
   if (!u) return;
   activeModTargetUser = u;
-
   document.getElementById('admin-target-user-name').innerText = u.username;
   document.getElementById('admin-mod-tl').value = u.tl || 0;
   openModal('modal-admin-modify-user');
@@ -95,20 +120,6 @@ window.openAdminModifyUserModal = openAdminModifyUserModal;
 function saveAdminUserModifications() {
   if (!activeModTargetUser) return;
   const newTl = parseFloat(document.getElementById('admin-mod-tl').value) || 0;
-  const oldTl = Number(activeModTargetUser.tl || 0);
-  const diffTl = Number((newTl - oldTl).toFixed(2));
-
-  if (Math.abs(diffTl) >= 0.01) {
-    const sign = diffTl > 0 ? "+" : "";
-    addUserNotificationLog(
-      activeModTargetUser,
-      "Yönetici Bakiye Düzenlemesi",
-      "Yönetim masası tarafından bakiye güncellendi.",
-      `${sign}${diffTl.toFixed(2)} ₺`,
-      diffTl > 0 ? "admin_grant" : "admin_deduct"
-    );
-  }
-
   activeModTargetUser.tl = Number(newTl.toFixed(2));
   saveStoredUser(activeModTargetUser);
   closeModal('modal-admin-modify-user');
@@ -117,7 +128,6 @@ function saveAdminUserModifications() {
 }
 window.saveAdminUserModifications = saveAdminUserModifications;
 
-// YATIRMA VE DEKONT GÖRÜNTÜLEME KUYRUĞU
 function queueDepositForAdminApproval(username, amount, senderName, receiptBase64) {
   if (!fbDb) return;
   const depId = `dep_${Date.now()}`;
@@ -136,12 +146,12 @@ function renderAdminDepositQueue() {
     const data = snap.val();
     container.innerHTML = "";
     if (!data) {
-      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">Bekleyen havale/dekont bildirimi yok.</div>`;
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">Bekleyen dekont/havale bildirimi yok.</div>`;
       return;
     }
     const items = Object.values(data).filter(d => d.status === 'pending');
     if (items.length === 0) {
-      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">Bekleyen havale/dekont bildirimi yok.</div>`;
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">Bekleyen dekont/havale bildirimi yok.</div>`;
       return;
     }
     items.forEach(d => {
@@ -155,15 +165,11 @@ function renderAdminDepositQueue() {
           </div>
           <span class="text-[10px] text-slate-400">${d.date}</span>
         </div>
-        <div class="text-[11px] text-slate-300">
-          Gönderen: <strong>${d.senderName}</strong>
-        </div>
+        <div class="text-[11px] text-slate-300">Gönderen: <strong>${d.senderName}</strong></div>
         ${d.receiptBase64 ? `
           <div class="p-2 bg-black/40 rounded-xl flex items-center justify-between border border-mineora-border">
             <span class="text-amber-300 font-bold text-[11px]"><i class="fa-solid fa-receipt mr-1"></i> Dekont Yüklendi</span>
-            <a href="${d.receiptBase64}" target="_blank" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[10px] font-bold">
-              <i class="fa-solid fa-eye mr-1"></i> Dekontu İncele
-            </a>
+            <a href="${d.receiptBase64}" target="_blank" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[10px] font-bold">Dekontu İncele</a>
           </div>
         ` : ''}
         <div class="flex gap-1.5 justify-end pt-1">
@@ -201,7 +207,6 @@ function rejectDepositOrder(depId) {
 }
 window.rejectDepositOrder = rejectDepositOrder;
 
-// ÇEKİM KUYRUĞU
 function queueWithdrawalForAdminApproval(username, amount, bankDetails) {
   if (!fbDb) return;
   const withId = `with_${Date.now()}`;
@@ -236,9 +241,7 @@ function renderAdminWithdrawalQueue() {
           <strong class="text-white text-sm">${d.username}</strong>
           <span class="text-amber-400 font-mono font-bold text-sm">-${d.amount} ₺</span>
         </div>
-        <div class="bg-mineora-bg p-2 rounded-lg text-cyan-300 font-mono text-[11px] select-all">
-          ${d.bankDetails}
-        </div>
+        <div class="bg-mineora-bg p-2 rounded-lg text-cyan-300 font-mono text-[11px] select-all">${d.bankDetails}</div>
         <div class="flex gap-2 justify-end">
           <button type="button" onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1 rounded bg-rose-600/20 text-rose-400 text-xs cursor-pointer">İptal & İade</button>
           <button type="button" onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-4 py-1 rounded bg-emerald-600 text-white font-bold text-xs cursor-pointer">Gönderildi (Kapat)</button>
@@ -277,25 +280,72 @@ function rejectWithdrawalOrder(withId, username, amount) {
 }
 window.rejectWithdrawalOrder = rejectWithdrawalOrder;
 
-function handleAdminCreateUserSubmit() {
-  const u = document.getElementById('admin-new-username')?.value.trim();
-  const p = document.getElementById('admin-new-pass')?.value.trim();
-  const em = document.getElementById('admin-new-email')?.value.trim();
+function renderAdminContactMessages() {
+  const container = document.getElementById('admin-contact-messages-list');
+  if (!container || !fbDb) return;
 
-  if (!u || !p) { showToast("⚠️ Kullanıcı adı ve şifre zorunludur!", "warning"); return; }
-  const uKey = u.toLowerCase();
-  if (localStorage.getItem(`mineora_user_${uKey}`)) { showToast("⚠️ Bu kullanıcı adı kayıtlı!", "warning"); return; }
-
-  const newUser = {
-    username: u, fullname: u, pass: p, email: em || `${u}@mineora.io`,
-    tl: 0.00, alpCrystals: 0, licenses: { worker: 0, mine: 0, holding: 0 },
-    isRootAdmin: false, isVaultLocked: false, createdAt: Date.now(),
-    refCode: `MINE-${u.toUpperCase()}-777`, mines: getDefaultMines(), logs: []
-  };
-
-  saveStoredUser(newUser);
-  closeModal('modal-admin-create-user');
-  renderAdminUserTable();
-  showToast(`🎉 ${u} kullanıcısı oluşturuldu!`, "success");
+  fbDb.ref('contactMessages').on('value', snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+    if (!data) {
+      container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">Gelen destek mesajı yok.</div>`;
+      return;
+    }
+    const msgs = Object.values(data);
+    msgs.forEach(m => {
+      const card = document.createElement('div');
+      card.className = "p-3 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-1 text-xs";
+      card.innerHTML = `
+        <div class="flex justify-between items-center"><strong class="text-white">${m.name}</strong><span class="text-[10px] text-slate-400">${m.reach}</span></div>
+        <p class="text-slate-300 mt-1">${m.message}</p>
+      `;
+      container.appendChild(card);
+    });
+  });
 }
-window.handleAdminCreateUserSubmit = handleAdminCreateUserSubmit;
+window.renderAdminContactMessages = renderAdminContactMessages;
+
+function renderAdminGlobalHierarchy() {
+  const container = document.getElementById('admin-global-hierarchy-tree');
+  if (!container) return;
+  let html = '<div class="space-y-2 max-h-60 overflow-y-auto pr-1">';
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('mineora_user_')) {
+      try {
+        const u = JSON.parse(localStorage.getItem(k));
+        if (u && u.username) {
+          html += `
+            <div class="p-3 rounded-xl bg-mineora-card border border-mineora-border flex justify-between items-center text-xs">
+              <div><strong class="text-white">${u.username}</strong><span class="text-[10px] text-slate-400 block">Sponsor: ${u.referredBy || 'Doğrudan'}</span></div>
+              <span class="text-emerald-400 font-mono font-bold">${Number(u.tl || 0).toFixed(2)} ₺</span>
+            </div>
+          `;
+        }
+      } catch(e) {}
+    }
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+window.renderAdminGlobalHierarchy = renderAdminGlobalHierarchy;
+
+function renderAdminLiveRoomsMonitor() {
+  // Canlı oda izleme çubuğu
+}
+window.renderAdminLiveRoomsMonitor = renderAdminLiveRoomsMonitor;
+
+async function executeDirectAdminAuthLogin() {
+  const pass = document.getElementById('admin-auth-direct-pass')?.value.trim();
+  if (!pass) { showToast("Şifre giriniz!", "warning"); return; }
+  try {
+    await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", pass);
+    showToast("Yetki başarıyla açıldı!", "success");
+    document.getElementById('auth-status-title').innerText = "Firebase Admin Yetkisi: AKTİF (Açık ✓)";
+    document.getElementById('auth-status-title').className = "text-emerald-400 font-bold block";
+    document.getElementById('auth-login-controls').classList.add('hidden');
+  } catch(e) {
+    showToast("Giriş başarısız!", "warning");
+  }
+}
+window.executeDirectAdminAuthLogin = executeDirectAdminAuthLogin;
