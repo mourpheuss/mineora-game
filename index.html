@@ -70,20 +70,14 @@
 
   <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA (SİNEMATİK ALTIN MADENİ ARKA PLANLI) -->
-  <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden bg-black">
-    <div class="absolute inset-0 z-0 pointer-events-none select-none">
-      <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop" 
-           alt="Altın Madeni Damarı" 
-           class="w-full h-full object-cover object-center opacity-40 filter brightness-90 contrast-125 scale-105 transition-transform duration-1000">
-      <div class="absolute inset-0 bg-gradient-to-b from-[#0b0e11]/90 via-[#0b0e11]/75 to-[#0b0e11]"></div>
-      <div class="absolute inset-0 bg-radial-gradient from-amber-500/15 via-transparent to-black/80"></div>
-    </div>
+  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA (CANLI ALTIN MADENİ ARKA PLANLI) -->
+  <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden" 
+       style="background: linear-gradient(to bottom, rgba(11, 14, 17, 0.70), rgba(11, 14, 17, 0.85)), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat fixed;">
 
-    <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/20 rounded-full blur-[140px] pointer-events-none"></div>
-    <div class="absolute top-1/2 -right-40 w-96 h-96 bg-yellow-500/15 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/25 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute top-1/2 -right-40 w-96 h-96 bg-yellow-500/20 rounded-full blur-[140px] pointer-events-none"></div>
 
-    <nav class="relative z-30 max-w-7xl mx-auto w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-mineora-border/80 backdrop-blur-md">
+    <nav class="relative z-30 max-w-7xl mx-auto w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-white/10 backdrop-blur-md">
       <div class="flex items-center gap-2.5">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-mineora-gold flex items-center justify-center text-black shadow-lg shadow-mineora-gold/20 font-black">
           <i class="fa-solid fa-mountain text-sm"></i>
@@ -95,7 +89,7 @@
         <button type="button" onclick="openModal('modal-contact')" class="px-3.5 py-1.5 rounded-xl bg-mineora-card/90 hover:bg-mineora-input border border-cyan-500/40 text-cyan-300 text-xs font-bold transition cursor-pointer backdrop-blur-md">
           <i class="fa-solid fa-headset mr-1"></i> Destek
         </button>
-        <button type="button" onclick="openModal('modal-auth-login')" class="px-4 py-2 rounded-xl bg-mineora-card/90 hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs font-bold transition cursor-pointer backdrop-blur-md">
+        <button type="button" onclick="openModal('modal-auth-login')" class="px-4 py-2 rounded-xl bg-mineora-card/90 hover:bg-mineora-input border border-white/10 text-slate-200 text-xs font-bold transition cursor-pointer backdrop-blur-md">
           Giriş Yap
         </button>
         <button type="button" onclick="openModal('modal-auth-register')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-mineora-gold hover:from-yellow-400 hover:to-amber-400 text-black text-xs font-black transition shadow-lg shadow-mineora-gold/25 cursor-pointer">
@@ -105,15 +99,15 @@
     </nav>
 
     <main class="relative z-20 max-w-4xl mx-auto px-4 py-16 flex flex-col items-center text-center">
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-mineora-gold/15 border border-mineora-gold/40 text-mineora-gold text-xs font-black uppercase mb-6 backdrop-blur-md shadow-lg shadow-mineora-gold/10 animate-pulse">
-        <i class="fa-solid fa-gem text-mineora-gold"></i> Alplerin Derinliklerinde Madencilik ve Koloni Simülasyonu
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-mineora-gold/20 border border-mineora-gold/40 text-mineora-gold text-xs font-black uppercase mb-6 backdrop-blur-md shadow-lg shadow-mineora-gold/10 animate-pulse">
+        <i class="fa-solid fa-gem text-mineora-gold"></i> Alplerin Derinliklerinde Madencilik Simülasyonu
       </div>
       <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]">
         Derinlikleri Keşfet, Kaynakları Yönet, <br>
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-mineora-gold to-yellow-200">Kendi Maden İmparatorluğunu Kur!</span>
       </h1>
-      <p class="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-        Alplerin gizemli damarlarında kazma vurun, vagonları yüzeye ulaştırın ve Maden Asansörü ile derin şaftları keşfedin. Kendi koloninizi inşa edin, canlı odalarda strateji kurun ve madencilik filonuzu zirveye taşıyın.
+      <p class="mt-4 text-sm sm:text-base text-slate-200 max-w-2xl leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+        Alplerin gizemli damarlarında kazma vurun, vagonları yüzeye ulaştırın ve Maden Asansörü ile derin şaftları keşfedin. Canlı odalarda ekiplerinizle strateji kurun ve madencilik filonuzu zirveye taşıyın.
       </p>
 
       <div class="mt-8 flex gap-4">
@@ -122,23 +116,19 @@
         </button>
       </div>
 
-      <div class="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl text-xs font-mono">
-        <div class="p-3.5 rounded-2xl bg-mineora-card/85 border border-mineora-border/80 backdrop-blur-md flex items-center justify-center gap-2 text-slate-200 shadow-xl">
+      <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl text-xs font-mono">
+        <div class="p-3.5 rounded-2xl bg-mineora-card/85 border border-white/10 backdrop-blur-md flex items-center justify-center gap-2 text-slate-200 shadow-xl">
           <i class="fa-solid fa-person-digging text-mineora-gold text-sm"></i>
           <span>5 Farklı Alp Maden Sahası</span>
         </div>
-        <div class="p-3.5 rounded-2xl bg-mineora-card/85 border border-mineora-border/80 backdrop-blur-md flex items-center justify-center gap-2 text-slate-200 shadow-xl">
+        <div class="p-3.5 rounded-2xl bg-mineora-card/85 border border-white/10 backdrop-blur-md flex items-center justify-center gap-2 text-slate-200 shadow-xl">
           <i class="fa-solid fa-elevator text-cyan-400 text-sm"></i>
           <span>Maden Asansörü Şaft Tahliyesi</span>
-        </div>
-        <div class="p-3.5 rounded-2xl bg-mineora-card/85 border border-mineora-border/80 backdrop-blur-md flex items-center justify-center gap-2 text-slate-200 shadow-xl">
-          <i class="fa-solid fa-mountain-city text-rose-400 text-sm"></i>
-          <span>İzometrik Alp Kolonisi Şehri</span>
         </div>
       </div>
     </main>
 
-    <footer class="relative z-20 border-t border-mineora-border/60 py-4 text-center text-xs text-slate-500 backdrop-blur-sm">
+    <footer class="relative z-20 border-t border-white/10 py-4 text-center text-xs text-slate-400 backdrop-blur-sm">
       <p>© 2026 MINEORA • Medya Grup Dijital Yazılım Bilişim Hizmetleri San Tic Ltd Şti</p>
     </footer>
   </div>
@@ -196,11 +186,11 @@
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
       <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-      <!-- SOL DİKEY SİDEBAR (STAKE VE P2P TAMAMEN SİLİNDİ) -->
+      <!-- SOL DİKEY SİDEBAR (ALP KOLONİSİ VE STAKE KALDIRILDI) -->
       <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:bg-mineora-card/60 lg:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
         <div class="space-y-4">
           <div class="space-y-1">
-            <span class="block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Madencilik</span>
+            <span class="block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Madencilik Operasyonları</span>
             <button type="button" onclick="switchTab('cave')" id="tab-btn-cave" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-mineora-gold text-black shadow cursor-pointer">
               <i class="fa-solid fa-person-digging w-4 text-center"></i>
               <span>Maden Sahası</span>
@@ -212,10 +202,6 @@
             <button type="button" onclick="switchTab('crash')" id="tab-btn-crash" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 cursor-pointer">
               <i class="fa-solid fa-elevator w-4 text-center animate-pulse"></i>
               <span>Maden Asansörü</span>
-            </button>
-            <button type="button" onclick="switchTab('colony')" id="tab-btn-colony" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 cursor-pointer">
-              <i class="fa-solid fa-mountain-city w-4 text-center"></i>
-              <span>Alp Kolonisi</span>
             </button>
             <button type="button" onclick="switchTab('live')" id="tab-btn-live" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 cursor-pointer">
               <i class="fa-solid fa-tower-broadcast w-4 text-center animate-pulse"></i>
@@ -327,7 +313,6 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <!-- Havale & Dekont Masası -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -341,7 +326,6 @@
                 <div id="admin-deposit-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
 
-              <!-- IBAN Çekim Masası -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -355,7 +339,6 @@
                 <div id="admin-withdrawal-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
 
-              <!-- Destek Mesajları -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/40 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -370,7 +353,6 @@
               </div>
             </div>
 
-            <!-- Kullanıcı Röntgen Tablosu -->
             <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3 w-full shadow-xl">
               <div class="flex justify-between items-center border-b border-mineora-border pb-3">
                 <div class="flex items-center gap-2.5">
@@ -403,7 +385,6 @@
               </div>
             </div>
 
-            <!-- Global Hiyerarşi Ağacı -->
             <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3">
               <h3 class="text-sm font-black text-white flex items-center gap-2">
                 <i class="fa-solid fa-sitemap text-purple-400"></i> Global Ekosistem Hiyerarşi Ağacı
@@ -545,53 +526,8 @@
           </div>
         </section>
 
-        <!-- 7) ALP KOLONİSİ -->
-        <section id="sec-colony" class="hidden space-y-4 max-w-6xl mx-auto">
-          <div class="relative w-full h-[620px] sm:h-[720px] rounded-3xl border border-mineora-border overflow-hidden shadow-2xl bg-[#0b1329] select-none">
-            <header class="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none gap-2">
-              <div class="pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-xl">
-                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm"><i class="fa-solid fa-mountain-sun"></i></div>
-                <div><h1 class="text-xs sm:text-sm font-black text-white" id="hud-city-name">Matterhorn</h1><span class="text-[8px] sm:text-[10px] font-bold text-cyan-400 block" id="colony-phase-tag">Maden Muhtarlığı</span></div>
-              </div>
-              <div class="pointer-events-auto flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-xl text-xs">
-                <span class="text-amber-200 font-mono font-bold" id="hud-colony-wood">40 🪵</span>
-                <span class="text-slate-300 font-mono font-bold" id="hud-colony-stone">25 🧱</span>
-                <span class="text-emerald-400 font-mono font-bold" id="hud-colony-emerald">15 💎</span>
-              </div>
-            </header>
-            <canvas id="colonyCanvas" class="w-full h-full block"></canvas>
-            <footer class="absolute bottom-5 sm:bottom-6 left-0 right-0 z-20 pointer-events-none px-2 flex justify-center">
-              <div class="pointer-events-auto max-w-full overflow-x-auto no-scrollbar flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-700/90 p-2 rounded-2xl shadow-2xl touch-pan-x">
-                <button type="button" onclick="ColonyEngine.selectBuild('road')" id="btn-build-road" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
-                  <i class="fa-solid fa-road text-amber-300"></i><span>Yol</span>
-                </button>
-                <button type="button" onclick="ColonyEngine.selectBuild('house')" id="btn-build-house" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
-                  <i class="fa-solid fa-house text-amber-400"></i><span>Ev</span>
-                </button>
-                <button type="button" onclick="ColonyEngine.selectBuild('school')" id="btn-build-school" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
-                  <i class="fa-solid fa-graduation-cap text-indigo-400"></i><span>Okul</span>
-                </button>
-                <button type="button" onclick="ColonyEngine.selectBuild('generator')" id="btn-build-generator" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
-                  <i class="fa-solid fa-industry text-amber-500"></i><span>Fırın</span>
-                </button>
-                <button type="button" onclick="ColonyEngine.selectBuild('tower')" id="btn-build-tower" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
-                  <i class="fa-solid fa-shield-halved text-rose-400"></i><span>Karakol</span>
-                </button>
-                <div class="h-6 w-px bg-slate-700 mx-0.5 flex-shrink-0"></div>
-                <button type="button" onclick="ColonyEngine.selectBuild('demolish')" id="btn-build-demolish" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-950/40 text-rose-300 text-xs font-bold border border-rose-800/50 active:scale-95 transition cursor-pointer">
-                  <i class="fa-solid fa-hammer"></i><span>Yık</span>
-                </button>
-                <button type="button" onclick="ColonyEngine.resetCamera()" title="Odaklan" class="flex-shrink-0 p-2 rounded-xl bg-slate-800 text-slate-300 text-xs border border-slate-700 active:scale-95 transition cursor-pointer">
-                  <i class="fa-solid fa-crosshairs"></i>
-                </button>
-              </div>
-            </footer>
-          </div>
-        </section>
-
-        <!-- 8) CANLI YAYIN ODALARI SAHNESİ -->
+        <!-- 7) CANLI YAYIN ODALARI SAHNESİ -->
         <section id="sec-live" class="hidden space-y-4 max-w-6xl mx-auto">
-          <!-- A) LOBİ GÖRÜNÜMÜ -->
           <div id="live-lobby-view" class="space-y-4">
             <div class="bg-mineora-card border border-rose-500/30 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-3">
@@ -610,7 +546,6 @@
             <div id="live-rooms-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
           </div>
 
-          <!-- B) YAYIN ODASI İÇİ EKRANI -->
           <div id="live-room-active-view" class="hidden space-y-4">
             <div class="bg-mineora-card border border-mineora-border rounded-2xl px-4 py-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -756,6 +691,7 @@
     </div>
   </div>
 
+  <!-- BANKA HAVALE, DEKONT YÜKLEME & ŞİRKET ADI KOPYALAMA ALANI -->
   <div id="modal-wallet" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -780,14 +716,28 @@
         </button>
       </div>
 
+      <!-- HEM ŞİRKET ADI HEM IBAN AYRI AYRI TEK TIKLA KOPYALANIR -->
       <div id="wallet-view-deposit" class="space-y-4">
-        <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/30 space-y-2">
+        <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/30 space-y-3">
           <span class="text-[11px] text-slate-400 block font-bold">Resmi Şirket Banka Hesabı:</span>
-          <div class="text-xs text-white space-y-1 font-mono">
-            <div>Şirket: <strong class="text-mineora-gold block text-[11px]">Medya Grup Dijital Yazılım Bilişim Hizmetleri San Tic Ltd Şti</strong></div>
-            <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl mt-1">
+          
+          <div>
+            <span class="text-[10px] text-slate-400 block font-bold mb-0.5">Alıcı / Şirket Ünvanı:</span>
+            <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl">
+              <span id="company-name-text" class="text-mineora-gold font-bold select-all text-[11px] truncate">Medya Grup Dijital Yazılım Bilişim Hizmetleri San Tic Ltd Şti</span>
+              <button type="button" onclick="copyCompanyName()" class="text-slate-300 hover:text-white text-xs cursor-pointer ml-2 shrink-0 p-1" title="Şirket Adını Kopyala">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <span class="text-[10px] text-slate-400 block font-bold mb-0.5">IBAN Numarası:</span>
+            <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl">
               <span class="text-emerald-400 font-bold select-all text-[11px]">TR25 0021 2000 0005 1028 9000 01</span>
-              <button type="button" onclick="copyCompanyIban()" class="text-slate-300 hover:text-white text-xs cursor-pointer"><i class="fa-solid fa-copy"></i></button>
+              <button type="button" onclick="copyCompanyIban()" class="text-slate-300 hover:text-white text-xs cursor-pointer ml-2 shrink-0 p-1" title="IBAN Kopyala">
+                <i class="fa-solid fa-copy"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -983,13 +933,11 @@
     </div>
   </div>
 
-  <!-- SCRIPT ENTEGRASYONLARI (STAKE TAMAMEN KALDIRILDI) -->
   <script src="lang.js"></script>
   <script src="state.js"></script>
   <script src="wallet.js"></script>
   <script src="mining.js"></script>
   <script src="crash.js"></script>
-  <script src="colony.js"></script>
   <script src="live.js"></script>
   <script src="admin.js"></script>
   <script src="main.js"></script>
