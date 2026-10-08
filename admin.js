@@ -8,7 +8,6 @@ function initAdminMasterPanel() {
   renderAdminDepositQueue();
   renderAdminWithdrawalQueue();
   renderAdminContactMessages();
-  renderAdminLiveRoomsMonitor();
 }
 window.initAdminMasterPanel = initAdminMasterPanel;
 
@@ -78,7 +77,8 @@ function renderAdminUserTable() {
     tr.innerHTML = `
       <td class="py-3 px-4 font-bold text-white">${u.username} ${u.isRootAdmin ? '<span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : ''}</td>
       <td class="py-3 px-4 font-mono text-slate-400">${u.pass || '••••••'}</td>
-      <td class="py-3 px-4 font-bold text-slate-300 text-[11px]">${licText}</td>
+      <td class="py-3 px-4 font-bold text-slate-300 text-[11px]">${u.role || 'Aday'}</td>
+      <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${licText}</td>
       <td class="py-3 px-4 font-mono text-emerald-400 font-bold">${Number(u.tl || 0).toFixed(2)} ₺</td>
       <td class="py-3 px-4">${u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>'}</td>
       <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
@@ -107,24 +107,63 @@ function toggleAdminVaultLock(username) {
 window.toggleAdminVaultLock = toggleAdminVaultLock;
 
 let activeModTargetUser = null;
+
+// ROL VE TL DEĞERLERİNİ MODALA DOLDURMA
 function openAdminModifyUserModal(username) {
   const u = getStoredUser(username);
   if (!u) return;
   activeModTargetUser = u;
+
   document.getElementById('admin-target-user-name').innerText = u.username;
-  document.getElementById('admin-mod-tl').value = u.tl || 0;
+  document.getElementById('admin-mod-tl').value = Number(u.tl || 0);
+
+  const roleSelect = document.getElementById('admin-mod-role');
+  if (roleSelect) {
+    roleSelect.value = u.role || 'Aday';
+  }
+
   openModal('modal-admin-modify-user');
 }
 window.openAdminModifyUserModal = openAdminModifyUserModal;
 
+// ROLÜ VE TL BAKİYESİNİ KAYDETME
 function saveAdminUserModifications() {
   if (!activeModTargetUser) return;
+
   const newTl = parseFloat(document.getElementById('admin-mod-tl').value) || 0;
+  const newRole = document.getElementById('admin-mod-role')?.value || activeModTargetUser.role || 'Aday';
+
+  const oldTl = Number(activeModTargetUser.tl || 0);
+  const diffTl = Number((newTl - oldTl).toFixed(2));
+
+  if (Math.abs(diffTl) >= 0.01) {
+    const sign = diffTl > 0 ? "+" : "";
+    addUserNotificationLog(
+      activeModTargetUser,
+      "Yönetici Bakiye Düzenlemesi",
+      "Yönetim masası tarafından bakiye güncellendi.",
+      `${sign}${diffTl.toFixed(2)} ₺`,
+      diffTl > 0 ? "admin_grant" : "admin_deduct"
+    );
+  }
+
   activeModTargetUser.tl = Number(newTl.toFixed(2));
+  activeModTargetUser.role = newRole;
+
+  if (!activeModTargetUser.licenses) activeModTargetUser.licenses = { worker: 0, mine: 0, holding: 0 };
+  if (newRole === 'Worker Miner' && activeModTargetUser.licenses.worker === 0) {
+    activeModTargetUser.licenses.worker = 1;
+  } else if (newRole === 'Mine Owner' && activeModTargetUser.licenses.mine === 0) {
+    activeModTargetUser.licenses.mine = 1;
+  } else if (newRole === 'Holding Owner' && activeModTargetUser.licenses.holding === 0) {
+    activeModTargetUser.licenses.holding = 1;
+  }
+
   saveStoredUser(activeModTargetUser);
   closeModal('modal-admin-modify-user');
   renderAdminUserTable();
-  showToast(`💾 ${activeModTargetUser.username} başarıyla güncellendi!`, "success");
+  updateAdminFinancialVaultMetrics();
+  showToast(`💾 ${activeModTargetUser.username} kullanıcısının rolü ve bakiyesi güncellendi!`, "success");
 }
 window.saveAdminUserModifications = saveAdminUserModifications;
 
@@ -194,6 +233,7 @@ function approveDepositOrder(depId, username, amount) {
       fbDb.ref(`users/${uKey}`).set(uData);
       fbDb.ref(`depositQueue/${depId}`).remove();
       renderAdminUserTable();
+      updateAdminFinancialVaultMetrics();
       showToast(`✅ ${username} hesabına ${amount} ₺ yüklendi!`, "success");
     }
   });
@@ -329,11 +369,6 @@ function renderAdminGlobalHierarchy() {
   container.innerHTML = html;
 }
 window.renderAdminGlobalHierarchy = renderAdminGlobalHierarchy;
-
-function renderAdminLiveRoomsMonitor() {
-  // Canlı oda izleme çubuğu
-}
-window.renderAdminLiveRoomsMonitor = renderAdminLiveRoomsMonitor;
 
 async function executeDirectAdminAuthLogin() {
   const pass = document.getElementById('admin-auth-direct-pass')?.value.trim();
