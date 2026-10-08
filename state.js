@@ -141,7 +141,6 @@ function findUserByRefCode(refCode) {
 }
 window.findUserByRefCode = findUserByRefCode;
 
-// 4 KADEMELİ TL REFERANS GELİRİ (%10, %7, %5, %3)
 function distributeFourDepthCommission(buyerUser, costTl) {
   if (!buyerUser || !buyerUser.referral_chain || buyerUser.referral_chain.length === 0) return;
   const chain = buyerUser.referral_chain;
@@ -171,16 +170,15 @@ function distributeFourDepthCommission(buyerUser, costTl) {
   }
 }
 
-// ALINAN LİSANSLARA GÖRE GÜNLÜK HAK HESAPLAYAN MOTOR (İşçi %2, Maden %2.25, Holding %3)
 function calculateTotalDailyReturnTl(userObj) {
   if (!userObj || !userObj.licenses) return 0;
   const wCount = userObj.licenses.worker || 0;
   const mCount = userObj.licenses.mine || 0;
   const hCount = userObj.licenses.holding || 0;
 
-  const dailyWorker = wCount * (3000 * 0.02);     // 60 TL/gün
-  const dailyMine = mCount * (5000 * 0.0225);     // 112.50 TL/gün
-  const dailyHolding = hCount * (10000 * 0.03);   // 300 TL/gün
+  const dailyWorker = wCount * (3000 * 0.02);
+  const dailyMine = mCount * (5000 * 0.0225);
+  const dailyHolding = hCount * (10000 * 0.03);
 
   return Number((dailyWorker + dailyMine + dailyHolding).toFixed(2));
 }
@@ -407,7 +405,6 @@ function copyRefLink() {
 window.copyRefLink = copyRefLink;
 
 function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extraProfile = {}) {
-  if (!username) return;
   const uKey = username.toLowerCase();
   const storageKey = 'mineora_user_' + uKey;
   
@@ -518,7 +515,7 @@ function updateHUD() {
 }
 window.updateHUD = updateHUD;
 
-// TÜM SEKMELERİ YÖNETEN MOTOR (STAKE ÇIKARILDI)
+// SEKMELER ARASI GEÇİŞ (KOLONİ ÇIKARILDI)
 function switchTab(tTab) {
   if (typeof toggleMobileMenu === 'function') toggleMobileMenu(false);
 
@@ -528,7 +525,7 @@ function switchTab(tTab) {
     tTab = 'career'; 
   }
 
-  const allTabs = ['boss', 'owner', 'map', 'cave', 'crash', 'colony', 'live', 'career', 'settings'];
+  const allTabs = ['boss', 'owner', 'map', 'cave', 'crash', 'live', 'career', 'settings'];
   allTabs.forEach(tab => {
     const secEl = document.getElementById('sec-' + tab);
     if (secEl) {
@@ -560,7 +557,6 @@ function switchTab(tTab) {
   if (tTab === 'cave' && typeof initMineCanvas === 'function') initMineCanvas();
   if (tTab === 'crash' && typeof initCrashEngine === 'function') initCrashEngine();
   if (tTab === 'map' && typeof renderAlpMapPins === 'function') renderAlpMapPins();
-  if (tTab === 'colony' && typeof ColonyEngine !== 'undefined') ColonyEngine.init();
   if (tTab === 'live' && typeof initLiveRoomsLobby === 'function') initLiveRoomsLobby();
   if (tTab === 'owner' && typeof renderHierarchyUI === 'function') renderHierarchyUI();
   if (tTab === 'boss' && isBoss && typeof initAdminMasterPanel === 'function') initAdminMasterPanel();
