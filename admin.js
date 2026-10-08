@@ -1,4 +1,4 @@
-// ================= YÖNETİCİ KOMUTA MASASI (admin.js) =================
+// ================= DEV YÖNETİCİ KOMUTA MASASI (admin.js) =================
 function initAdminMasterPanel() {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
   renderAdminHUD();
@@ -98,7 +98,7 @@ function toggleAdminVaultLock(username) {
   u.isVaultLocked = !u.isVaultLocked;
   saveStoredUser(u);
   renderAdminUserTable();
-  showToast(username + " kasa kilidi guncellendi.", "info");
+  showToast(username + " kasa kilidi güncellendi.", "info");
 }
 window.toggleAdminVaultLock = toggleAdminVaultLock;
 
@@ -121,7 +121,6 @@ function openAdminModifyUserModal(username) {
 }
 window.openAdminModifyUserModal = openAdminModifyUserModal;
 
-// ROLÜ VE TL BAKİYESİNİ KAYDETME
 function saveAdminUserModifications() {
   if (!activeModTargetUser) return;
 
@@ -135,8 +134,8 @@ function saveAdminUserModifications() {
     const sign = diffTl > 0 ? "+" : "";
     addUserNotificationLog(
       activeModTargetUser,
-      "Yonetici Bakiye Duzenlemesi",
-      "Yonetim masasi tarafindan bakiye guncellendi.",
+      "Yönetici Bakiye Düzenlemesi",
+      "Yönetim masası tarafından bakiye güncellendi.",
       sign + diffTl.toFixed(2) + " TL",
       diffTl > 0 ? "admin_grant" : "admin_deduct"
     );
@@ -158,7 +157,7 @@ function saveAdminUserModifications() {
   closeModal('modal-admin-modify-user');
   renderAdminUserTable();
   updateAdminFinancialVaultMetrics();
-  showToast(activeModTargetUser.username + " rol ve bakiyesi basariyla guncellendi!", "success");
+  showToast(activeModTargetUser.username + " rol ve bakiyesi başarıyla güncellendi!", "success");
 }
 window.saveAdminUserModifications = saveAdminUserModifications;
 
@@ -199,15 +198,15 @@ function renderAdminDepositQueue() {
           '</div>' +
           '<span class="text-[10px] text-slate-400">' + d.date + '</span>' +
         '</div>' +
-        '<div class="text-[11px] text-slate-300">Gonderen: <strong>' + d.senderName + '</strong></div>' +
+        '<div class="text-[11px] text-slate-300">Gönderen: <strong>' + d.senderName + '</strong></div>' +
         (d.receiptBase64 ? 
           '<div class="p-2 bg-black/40 rounded-xl flex items-center justify-between border border-mineora-border">' +
-            '<span class="text-amber-300 font-bold text-[11px]"><i class="fa-solid fa-receipt mr-1"></i> Dekont Yuklendi</span>' +
-            '<a href="' + d.receiptBase64 + '" target="_blank" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[10px] font-bold">Dekontu Incele</a>' +
+            '<span class="text-amber-300 font-bold text-[11px]"><i class="fa-solid fa-receipt mr-1"></i> Dekont Yüklendi</span>' +
+            '<a href="' + d.receiptBase64 + '" target="_blank" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[10px] font-bold">Dekontu İncele</a>' +
           '</div>' : '') +
         '<div class="flex gap-1.5 justify-end pt-1">' +
           '<button type="button" onclick="rejectDepositOrder(\'' + d.id + '\')" class="px-3 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-xs cursor-pointer font-bold">Reddet</button>' +
-          '<button type="button" onclick="approveDepositOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow">Onayla & Yukle</button>' +
+          '<button type="button" onclick="approveDepositOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow">Onayla & Yükle</button>' +
         '</div>';
       container.appendChild(card);
     });
@@ -218,16 +217,16 @@ window.renderAdminDepositQueue = renderAdminDepositQueue;
 function approveDepositOrder(depId, username, amount) {
   if (!fbDb) return;
   const uKey = username.toLowerCase();
-  fbDb.ref('users/' + uKey).once('value').then(snap => {
+  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
     const uData = snap.val();
     if (uData) {
       uData.tl = Number(((uData.tl || 0) + amount).toFixed(2));
-      addUserNotificationLog(uData, "Banka Havalesi Onaylandi", "Havale bildiriminiz onaylandi ve bakiyenize yuklendi.", "+" + amount.toFixed(2) + " TL", "income");
-      fbDb.ref('users/' + uKey).set(uData);
-      fbDb.ref('depositQueue/' + depId).remove();
+      addUserNotificationLog(uData, "Banka Havalesi Onaylandı", "Havale bildiriminiz onaylandı ve bakiyenize yüklendi.", "+" + amount.toFixed(2) + " TL", "income");
+      fbDb.ref(`users/${uKey}`).set(uData);
+      fbDb.ref(`depositQueue/${depId}`).remove();
       renderAdminUserTable();
       updateAdminFinancialVaultMetrics();
-      showToast(username + " hesabina " + amount + " TL yuklendi!", "success");
+      showToast(username + " hesabına " + amount + " TL yüklendi!", "success");
     }
   });
 }
@@ -235,8 +234,8 @@ window.approveDepositOrder = approveDepositOrder;
 
 function rejectDepositOrder(depId) {
   if (!fbDb) return;
-  fbDb.ref('depositQueue/' + depId).remove();
-  showToast("Yatirim bildirimi reddedildi.", "info");
+  fbDb.ref(`depositQueue/${depId}`).remove();
+  showToast("Yatırım bildirimi reddedildi.", "info");
 }
 window.rejectDepositOrder = rejectDepositOrder;
 
@@ -258,12 +257,12 @@ function renderAdminWithdrawalQueue() {
     const data = snap.val();
     container.innerHTML = "";
     if (!data) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen banka cekim talebi yok.</div>';
+      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen banka çekim talebi yok.</div>';
       return;
     }
     const items = Object.values(data).filter(d => d.status === 'pending');
     if (items.length === 0) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen banka cekim talebi yok.</div>';
+      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen banka çekim talebi yok.</div>';
       return;
     }
     items.forEach(d => {
@@ -276,8 +275,8 @@ function renderAdminWithdrawalQueue() {
         '</div>' +
         '<div class="bg-mineora-bg p-2 rounded-lg text-cyan-300 font-mono text-[11px] select-all">' + d.bankDetails + '</div>' +
         '<div class="flex gap-2 justify-end">' +
-          '<button type="button" onclick="rejectWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-3 py-1 rounded bg-rose-600/20 text-rose-400 text-xs cursor-pointer">Iptal & Iade</button>' +
-          '<button type="button" onclick="approveWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-4 py-1 rounded bg-emerald-600 text-white font-bold text-xs cursor-pointer">Gonderildi (Kapat)</button>' +
+          '<button type="button" onclick="rejectWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-3 py-1 rounded bg-rose-600/20 text-rose-400 text-xs cursor-pointer">İptal & İade</button>' +
+          '<button type="button" onclick="approveWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-4 py-1 rounded bg-emerald-600 text-white font-bold text-xs cursor-pointer">Gönderildi (Kapat)</button>' +
         '</div>';
       container.appendChild(card);
     });
@@ -287,25 +286,25 @@ window.renderAdminWithdrawalQueue = renderAdminWithdrawalQueue;
 
 function approveWithdrawalOrder(withId, username, amount) {
   if (!fbDb) return;
-  fbDb.ref('withdrawalQueue/' + withId).remove().then(() => {
-    showToast(username + " adli madencinin " + amount + " TL cekimi tamamlandi.", "success");
+  fbDb.ref(`withdrawalQueue/${withId}`).remove().then(() => {
+    showToast(username + " adlı madencinin " + amount + " TL çekimi tamamlandı.", "success");
   });
 }
 window.approveWithdrawalOrder = approveWithdrawalOrder;
 
 function rejectWithdrawalOrder(withId, username, amount) {
   if (!fbDb) return;
-  const ok = confirm(username + " kullanicisinin talebini iptal edip " + amount + " TL tutari hesabina geri iade etmek istiyor musunuz?");
+  const ok = confirm(username + " kullanıcısının talebini iptal edip " + amount + " TL tutarı hesabına geri iade etmek istiyor musunuz?");
   if (!ok) return;
 
   const uKey = username.toLowerCase();
-  fbDb.ref('users/' + uKey).once('value').then(snap => {
+  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
     const uData = snap.val();
     if (uData) {
       uData.tl = Number(((uData.tl || 0) + amount).toFixed(2));
-      addUserNotificationLog(uData, "Cekim Iptal Edildi", "Talebiniz iptal edildi ve tutar bakiyenize iade edildi.", "+" + amount.toFixed(2) + " TL", "income");
-      fbDb.ref('users/' + uKey).set(uData);
-      fbDb.ref('withdrawalQueue/' + withId).remove();
+      addUserNotificationLog(uData, "Çekim İptal Edildi", "Talebiniz iptal edildi ve tutar bakiyenize iade edildi.", "+" + amount.toFixed(2) + " TL", "income");
+      fbDb.ref(`users/${uKey}`).set(uData);
+      fbDb.ref(`withdrawalQueue/${withId}`).remove();
       showToast(amount + " TL hesaba iade edildi.", "info");
     }
   });
@@ -320,7 +319,7 @@ function renderAdminContactMessages() {
     const data = snap.val();
     container.innerHTML = "";
     if (!data) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Gelen destek mesaji yok.</div>';
+      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Gelen destek mesajı yok.</div>';
       return;
     }
     const msgs = Object.values(data);
@@ -348,7 +347,7 @@ function renderAdminGlobalHierarchy() {
         if (u && u.username) {
           html += 
             '<div class="p-3 rounded-xl bg-mineora-card border border-mineora-border flex justify-between items-center text-xs">' +
-              '<div><strong class="text-white">' + u.username + '</strong><span class="text-[10px] text-slate-400 block">Sponsor: ' + (u.referredBy || 'Dogrudan') + '</span></div>' +
+              '<div><strong class="text-white">' + u.username + '</strong><span class="text-[10px] text-slate-400 block">Sponsor: ' + (u.referredBy || 'Doğrudan') + '</span></div>' +
               '<span class="text-emerald-400 font-mono font-bold">' + Number(u.tl || 0).toFixed(2) + ' TL</span>' +
             '</div>';
         }
@@ -360,17 +359,165 @@ function renderAdminGlobalHierarchy() {
 }
 window.renderAdminGlobalHierarchy = renderAdminGlobalHierarchy;
 
+// ================= GENİŞ DETAYLI İNCELEME MASASI MOTORU =================
+let currentExpandedTab = 'deposit';
+
+function openQueueDetailModal(tab) {
+  currentExpandedTab = tab || 'deposit';
+  const modal = document.getElementById('modal-queue-expanded');
+  const title = document.getElementById('expanded-modal-title');
+  const icon = document.getElementById('expanded-modal-icon');
+
+  ['dep', 'with', 'msg'].forEach(t => {
+    const btn = document.getElementById('exp-tab-' + t);
+    if (btn) btn.className = "px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition";
+  });
+
+  if (tab === 'deposit') {
+    const b = document.getElementById('exp-tab-dep');
+    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-emerald-600 text-white cursor-pointer";
+    if (title) title.innerText = "Yatırma & Dekont Masası (Geniş İnceleme)";
+    if (icon) icon.innerHTML = '<i class="fa-solid fa-arrow-down text-emerald-400"></i>';
+    renderExpandedDeposits();
+  } else if (tab === 'withdraw') {
+    const b = document.getElementById('exp-tab-with');
+    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-amber-500 text-black cursor-pointer";
+    if (title) title.innerText = "IBAN Çekim Talepleri (Geniş İnceleme)";
+    if (icon) icon.innerHTML = '<i class="fa-solid fa-arrow-up text-amber-400"></i>';
+    renderExpandedWithdrawals();
+  } else {
+    const b = document.getElementById('exp-tab-msg');
+    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-cyan-600 text-white cursor-pointer";
+    if (title) title.innerText = "Destek Mesajları (Geniş Okuma Masası)";
+    if (icon) icon.innerHTML = '<i class="fa-solid fa-inbox text-cyan-400"></i>';
+    renderExpandedContactMessages();
+  }
+
+  openModal('modal-queue-expanded');
+}
+window.openQueueDetailModal = openQueueDetailModal;
+
+function renderExpandedDeposits() {
+  const container = document.getElementById('expanded-queue-container');
+  if (!container || !fbDb) return;
+
+  fbDb.ref('depositQueue').once('value').then(snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+    const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
+
+    if (items.length === 0) {
+      container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Bekleyen dekont/havale bildirimi yok.</div>';
+      return;
+    }
+
+    items.forEach(d => {
+      const card = document.createElement('div');
+      card.className = "p-4 rounded-2xl bg-mineora-bg border border-emerald-500/40 flex flex-col gap-3 text-xs shadow-lg";
+      card.innerHTML = 
+        '<div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">' +
+          '<div class="flex items-center gap-3">' +
+            '<strong class="text-white text-base font-bold">' + d.username + '</strong>' +
+            '<span class="text-emerald-400 font-mono font-black text-base">+' + d.amount + ' TL</span>' +
+          '</div>' +
+          '<span class="text-[11px] text-slate-400 font-mono">' + d.date + '</span>' +
+        '</div>' +
+        '<div class="text-slate-300">Gönderen Hesap Sahibi: <strong>' + d.senderName + '</strong></div>' +
+        (d.receiptBase64 ? 
+          '<div class="p-3 bg-black/50 rounded-xl flex items-center justify-between border border-mineora-border">' +
+            '<span class="text-amber-300 font-bold"><i class="fa-solid fa-receipt mr-1.5"></i> Yüklenen Dekont Görseli</span>' +
+            '<a href="' + d.receiptBase64 + '" target="_blank" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">' +
+              '<i class="fa-solid fa-up-right-from-square"></i> Dekontu Yeni Sekmede Tam Boy İncele' +
+            '</a>' +
+          '</div>' : '') +
+        '<div class="flex gap-2 justify-end pt-1">' +
+          '<button type="button" onclick="rejectDepositOrder(\'' + d.id + '\'); renderExpandedDeposits();" class="px-4 py-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">Reddet</button>' +
+          '<button type="button" onclick="approveDepositOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + '); renderExpandedDeposits();" class="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">Onayla & TL Yükle</button>' +
+        '</div>';
+      container.appendChild(card);
+    });
+  });
+}
+
+function renderExpandedWithdrawals() {
+  const container = document.getElementById('expanded-queue-container');
+  if (!container || !fbDb) return;
+
+  fbDb.ref('withdrawalQueue').once('value').then(snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+    const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
+
+    if (items.length === 0) {
+      container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Bekleyen banka çekim talebi yok.</div>';
+      return;
+    }
+
+    items.forEach(d => {
+      const card = document.createElement('div');
+      card.className = "p-4 rounded-2xl bg-mineora-bg border border-amber-500/40 flex flex-col gap-3 text-xs shadow-lg";
+      card.innerHTML = 
+        '<div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">' +
+          '<div class="flex items-center gap-3">' +
+            '<strong class="text-white text-base font-bold">' + d.username + '</strong>' +
+            '<span class="text-amber-400 font-mono font-black text-base">-' + d.amount + ' TL</span>' +
+          '</div>' +
+          '<span class="text-slate-400 font-mono text-xs">' + d.date + '</span>' +
+        '</div>' +
+        '<div class="flex items-center justify-between gap-3 bg-mineora-card p-3 rounded-xl border border-mineora-border">' +
+          '<span class="text-cyan-300 font-mono text-xs select-all truncate">' + d.bankDetails + '</span>' +
+          '<button type="button" onclick="navigator.clipboard.writeText(\'' + d.bankDetails + '\'); showToast(\'Bilgiler kopyalandı!\', \'success\');" class="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold cursor-pointer shrink-0">' +
+            'Kopyala' +
+          '</button>' +
+        '</div>' +
+        '<div class="flex gap-2 justify-end pt-1">' +
+          '<button type="button" onclick="rejectWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + '); renderExpandedWithdrawals();" class="px-4 py-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">İade Et</button>' +
+          '<button type="button" onclick="approveWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + '); renderExpandedWithdrawals();" class="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">Ödendi Olarak Kapat</button>' +
+        '</div>';
+      container.appendChild(card);
+    });
+  });
+}
+
+function renderExpandedContactMessages() {
+  const container = document.getElementById('expanded-queue-container');
+  if (!container || !fbDb) return;
+
+  fbDb.ref('contactMessages').once('value').then(snap => {
+    const data = snap.val();
+    container.innerHTML = "";
+    const msgs = data ? Object.values(data) : [];
+
+    if (msgs.length === 0) {
+      container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Gelen destek mesajı yok.</div>';
+      return;
+    }
+
+    msgs.forEach(m => {
+      const card = document.createElement('div');
+      card.className = "p-4 rounded-2xl bg-mineora-bg border border-cyan-500/30 flex flex-col gap-2 text-xs shadow-lg";
+      card.innerHTML = 
+        '<div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">' +
+          '<strong class="text-white text-sm">' + m.name + '</strong>' +
+          '<span class="text-cyan-400 font-mono text-xs">' + m.reach + '</span>' +
+        '</div>' +
+        '<p class="text-slate-200 bg-mineora-card p-3 rounded-xl border border-mineora-border/60 whitespace-pre-wrap">' + m.message + '</p>';
+      container.appendChild(card);
+    });
+  });
+}
+
 async function executeDirectAdminAuthLogin() {
   const pass = document.getElementById('admin-auth-direct-pass')?.value.trim();
-  if (!pass) { showToast("Sifre giriniz!", "warning"); return; }
+  if (!pass) { showToast("Şifre giriniz!", "warning"); return; }
   try {
     await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", pass);
-    showToast("Yetki basariyla acildi!", "success");
-    document.getElementById('auth-status-title').innerText = "Firebase Admin Yetkisi: AKTIF (Acik)";
+    showToast("Yetki başarıyla açıldı!", "success");
+    document.getElementById('auth-status-title').innerText = "Firebase Admin Yetkisi: AKTİF (Açık)";
     document.getElementById('auth-status-title').className = "text-emerald-400 font-bold block";
     document.getElementById('auth-login-controls').classList.add('hidden');
   } catch(e) {
-    showToast("Giris basarisiz!", "warning");
+    showToast("Giriş başarısız!", "warning");
   }
 }
 window.executeDirectAdminAuthLogin = executeDirectAdminAuthLogin;
