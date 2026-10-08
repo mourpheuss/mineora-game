@@ -188,7 +188,7 @@
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
       <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-      <!-- SOL MENÜ -->
+      <!-- SOL DİKEY SİDEBAR -->
       <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:bg-mineora-card/60 lg:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
         <div class="space-y-4">
           <div class="space-y-1">
@@ -583,11 +583,9 @@
           </div>
         </section>
 
-        <!-- 8) ALP KOLONİSİ (TAM İNŞAAT VE YÖNETİM BUTONLARIYLA) -->
+        <!-- 8) ALP KOLONİSİ -->
         <section id="sec-colony" class="hidden space-y-4 max-w-6xl mx-auto">
           <div class="relative w-full h-[620px] sm:h-[720px] rounded-3xl border border-mineora-border overflow-hidden shadow-2xl bg-[#0b1329] select-none">
-            
-            <!-- Üst Koloni HUD -->
             <header class="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none gap-2">
               <div class="pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-xl">
                 <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm"><i class="fa-solid fa-mountain-sun"></i></div>
@@ -599,10 +597,7 @@
                 <span class="text-emerald-400 font-mono font-bold" id="hud-colony-emerald">15 💎</span>
               </div>
             </header>
-
             <canvas id="colonyCanvas" class="w-full h-full block"></canvas>
-
-            <!-- ALT İNŞAAT BAR (GERİ YÜKLENEN TÜM BİNA BUTONLARI) -->
             <footer class="absolute bottom-5 sm:bottom-6 left-0 right-0 z-20 pointer-events-none px-2 flex justify-center">
               <div class="pointer-events-auto max-w-full overflow-x-auto no-scrollbar flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-700/90 p-2 rounded-2xl shadow-2xl touch-pan-x">
                 <button type="button" onclick="ColonyEngine.selectBuild('road')" id="btn-build-road" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
@@ -634,7 +629,6 @@
 
         <!-- 9) CANLI YAYIN ODALARI SAHNESİ -->
         <section id="sec-live" class="hidden space-y-4 max-w-6xl mx-auto">
-          <!-- A) LOBİ GÖRÜNÜMÜ -->
           <div id="live-lobby-view" class="space-y-4">
             <div class="bg-mineora-card border border-rose-500/30 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-3">
@@ -653,7 +647,6 @@
             <div id="live-rooms-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
           </div>
 
-          <!-- B) YAYIN ODASI İÇİ EKRANI -->
           <div id="live-room-active-view" class="hidden space-y-4">
             <div class="bg-mineora-card border border-mineora-border rounded-2xl px-4 py-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -665,11 +658,9 @@
                   <span id="current-room-host" class="text-[10px] text-slate-400 font-mono">Yayıncı: -</span>
                 </div>
               </div>
-              <div class="flex items-center gap-2">
-                <button type="button" onclick="leaveCurrentRoom()" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 font-bold text-xs cursor-pointer">
-                  Ayrıl
-                </button>
-              </div>
+              <button type="button" onclick="leaveCurrentRoom()" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 font-bold text-xs cursor-pointer">
+                Ayrıl
+              </button>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -727,9 +718,7 @@
     </div>
   </div>
 
-  <!-- ==================== MODALLAR ==================== -->
-
-  <!-- GENİŞ İNCELEME MASASI (SEKMELERİ GERİ EKLENDİ) -->
+  <!-- MODALLAR -->
   <div id="modal-queue-expanded" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
@@ -743,7 +732,6 @@
           </div>
         </div>
 
-        <!-- Hızlı Sekme Geçiş Butonları -->
         <div class="flex items-center gap-1.5 bg-mineora-bg p-1 rounded-xl border border-mineora-border">
           <button type="button" onclick="openQueueDetailModal('deposit')" id="exp-tab-dep" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Yatırmalar</button>
           <button type="button" onclick="openQueueDetailModal('withdraw')" id="exp-tab-with" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Çekimler</button>
@@ -756,7 +744,6 @@
     </div>
   </div>
 
-  <!-- CANLI ODA KURMA MODALI -->
   <div id="modal-create-live-room" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -788,7 +775,6 @@
     </div>
   </div>
 
-  <!-- KİLİTLİ ODA ŞİFRE PROMPT MODALI -->
   <div id="modal-room-pin-prompt" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-sm bg-mineora-card border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs text-center">
       <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-mineora-gold flex items-center justify-center text-xl mx-auto border border-mineora-gold/30">
@@ -806,7 +792,6 @@
     </div>
   </div>
 
-  <!-- BANKA HAVALE, DEKONT YÜKLEME & IBAN ÇEKİM MODALI -->
   <div id="modal-wallet" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -831,12 +816,12 @@
         </button>
       </div>
 
+      <!-- BANKA İSİMLERİ SİLİNDİ, YALNIZCA ŞİRKET VE IBAN BIRAKILDI -->
       <div id="wallet-view-deposit" class="space-y-4">
         <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/30 space-y-2">
           <span class="text-[11px] text-slate-400 block font-bold">Resmi Şirket Banka Hesabı:</span>
           <div class="text-xs text-white space-y-1 font-mono">
             <div>Şirket: <strong class="text-mineora-gold block text-[11px]">Medya Grup Dijital Yazılım Bilişim Hizmetleri San Tic Ltd Şti</strong></div>
-            <div>Banka: <strong class="text-slate-200">Garanti BBVA / Ziraat Bankası</strong></div>
             <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl mt-1">
               <span class="text-emerald-400 font-bold select-all text-[11px]">TR25 0021 2000 0005 1028 9000 01</span>
               <button type="button" onclick="copyCompanyIban()" class="text-slate-300 hover:text-white text-xs cursor-pointer"><i class="fa-solid fa-copy"></i></button>
@@ -896,7 +881,6 @@
     </div>
   </div>
 
-  <!-- GİRİŞ YAP MODALI -->
   <div id="modal-auth-login" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
@@ -913,7 +897,6 @@
     </div>
   </div>
 
-  <!-- KAYIT OL MODALI -->
   <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-3.5 text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
@@ -940,7 +923,6 @@
     </div>
   </div>
 
-  <!-- ADMIN ÜYE DÜZENLEME MODALI -->
   <div id="modal-admin-modify-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
