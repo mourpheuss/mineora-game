@@ -43,7 +43,7 @@
       if (!m) return;
       m.classList.remove('hidden');
       m.classList.add('flex');
-      m.style.display = 'flex'; // Kesin açılma garantisi
+      m.style.display = 'flex';
       if (id === 'modal-wallet' && typeof setWalletTab === 'function') setWalletTab('deposit');
       if (id === 'modal-notifications' && typeof renderNotificationsModal === 'function') renderNotificationsModal();
       if (id === 'modal-auth-login') setTimeout(() => { document.getElementById('login-user')?.focus(); }, 100);
@@ -54,7 +54,7 @@
       if (!m) return;
       m.classList.add('hidden');
       m.classList.remove('flex');
-      m.style.display = 'none'; // Kesin kapanma garantisi
+      m.style.display = 'none';
     }
 
     function openCreateRoomModal() {
@@ -70,7 +70,7 @@
 
   <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA -->
+  <!-- 1. BÖLÜM: KARŞILAMA EKRANI -->
   <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden">
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -383,6 +383,7 @@
                     <tr>
                       <th class="py-3.5 px-4">Kullanıcı</th>
                       <th class="py-3.5 px-4">Giriş Şifresi</th>
+                      <th class="py-3.5 px-4">Rol / Durum</th>
                       <th class="py-3.5 px-4">Aktif Lisanslar</th>
                       <th class="py-3.5 px-4">TL Bakiyesi</th>
                       <th class="py-3.5 px-4">Kasa Durumu</th>
@@ -595,8 +596,9 @@
           </div>
         </section>
 
-        <!-- 9) CANLI YAYIN ODALARI SAHNESİ -->
+        <!-- 9) CANLI YAYIN ODALARI SAHNESİ (LOBİ + ODA İÇİ EKRANI) -->
         <section id="sec-live" class="hidden space-y-4 max-w-6xl mx-auto">
+          <!-- A) LOBİ GÖRÜNÜMÜ -->
           <div id="live-lobby-view" class="space-y-4">
             <div class="bg-mineora-card border border-rose-500/30 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-3">
@@ -613,6 +615,93 @@
               </button>
             </div>
             <div id="live-rooms-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+          </div>
+
+          <!-- B) YAYIN ODASI İÇİ EKRANI (Video + Sahne + Canlı Chat) -->
+          <div id="live-room-active-view" class="hidden space-y-4">
+            <div class="bg-mineora-card border border-mineora-border rounded-2xl px-4 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="leaveCurrentRoom()" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-300 flex items-center justify-center cursor-pointer">
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div>
+                  <h3 id="current-room-title" class="font-black text-white text-sm">Oda Başlığı</h3>
+                  <span id="current-room-host" class="text-[10px] text-slate-400 font-mono">Yayıncı: -</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="current-room-viewer-count" class="px-2.5 py-1 rounded-xl bg-mineora-bg border border-mineora-border text-slate-300 font-mono text-xs flex items-center gap-1.5">
+                  <i class="fa-solid fa-eye text-rose-400"></i> <strong id="live-viewer-num">1</strong>
+                </span>
+                <button type="button" onclick="leaveCurrentRoom()" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 font-bold text-xs cursor-pointer">
+                  Ayrıl
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div class="lg:col-span-2 space-y-3">
+                <div class="relative w-full h-[320px] sm:h-[400px] bg-black rounded-3xl border border-mineora-border overflow-hidden shadow-2xl flex items-center justify-center">
+                  <video id="live-host-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                  <div id="live-video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 space-y-2 bg-gradient-to-b from-mineora-card to-black">
+                    <i class="fa-solid fa-video-slash text-4xl text-slate-600"></i>
+                    <span class="text-xs font-mono">Kamera kapalı veya görüntü bekleniyor</span>
+                  </div>
+                  <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 flex items-center gap-2 text-xs font-bold text-white">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    <span id="live-host-badge-name">Yayıncı</span>
+                  </div>
+                </div>
+
+                <div class="p-3.5 bg-mineora-card border border-mineora-border rounded-2xl space-y-2">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                      <i class="fa-solid fa-microphone-lines text-mineora-gold"></i> Sahnedeki Konuşmacılar
+                    </span>
+                    <span id="stage-speakers-count" class="text-[10px] text-slate-500 font-mono">0 Konuşmacı</span>
+                  </div>
+                  <div id="stage-speakers-list" class="flex flex-wrap gap-2 pt-1 notranslate" translate="no"></div>
+                </div>
+
+                <div class="p-3 bg-mineora-card border border-mineora-border rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div id="host-controls" class="hidden flex items-center gap-2">
+                    <button type="button" id="btn-toggle-cam" onclick="toggleHostCamera()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+                      <i class="fa-solid fa-video"></i> Kamera
+                    </button>
+                    <button type="button" id="btn-toggle-mic" onclick="toggleHostMic()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+                      <i class="fa-solid fa-microphone"></i> Mikrofon
+                    </button>
+                    <button type="button" id="btn-toggle-screen" onclick="toggleScreenShare()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+                      <i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş
+                    </button>
+                  </div>
+
+                  <div id="viewer-controls" class="flex items-center gap-2">
+                    <button type="button" id="btn-raise-hand" onclick="toggleRaiseHand()" class="px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black flex items-center gap-2 cursor-pointer shadow-lg">
+                      <i class="fa-solid fa-hand"></i> <span id="raise-hand-text">Söz İste (El Kaldır)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-mineora-card border border-mineora-border rounded-3xl p-4 flex flex-col justify-between h-[480px] shadow-xl notranslate" translate="no">
+                <div class="border-b border-mineora-border pb-2.5 flex justify-between items-center">
+                  <h4 class="font-black text-xs text-white flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-cyan-400"></i> Oda Sohbeti
+                  </h4>
+                  <span class="text-[9px] text-slate-500 uppercase tracking-widest font-mono">Realtime</span>
+                </div>
+
+                <div id="live-chat-messages" class="flex-1 overflow-y-auto space-y-2 py-3 pr-1 text-xs notranslate" translate="no"></div>
+
+                <div class="pt-2 border-t border-mineora-border flex gap-2">
+                  <input type="text" id="live-chat-input" placeholder="Mesaj yazın..." onkeydown="if(event.key==='Enter') sendLiveChatMessage()" class="flex-1 bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-rose-500 notranslate" translate="no" autocomplete="off" spellcheck="false">
+                  <button type="button" onclick="sendLiveChatMessage()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer">
+                    <i class="fa-solid fa-paper-plane"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>
@@ -805,6 +894,7 @@
     </div>
   </div>
 
+  <!-- ADMIN ÜYE DÜZENLEME MODALI (ROL ATAMA VE TL YÜKLEME ALANLARI GERİ GELDİ) -->
   <div id="modal-admin-modify-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -812,8 +902,23 @@
         <button type="button" onclick="closeModal('modal-admin-modify-user')"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
       <div>Kullanıcı: <strong id="admin-target-user-name" class="text-cyan-400">User</strong></div>
-      <input type="number" id="admin-mod-tl" step="any" placeholder="TL Bakiyesi (₺)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono">
-      <button onclick="saveAdminUserModifications()" class="w-full py-3 rounded-xl bg-rose-600 text-white font-black text-xs cursor-pointer">Değişiklikleri Kaydet</button>
+      
+      <div>
+        <label class="text-[10px] text-slate-400 block font-bold mb-1">Üye Rolü / Unvanı</label>
+        <select id="admin-mod-role" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-cyan-400">
+          <option value="Aday">Aday (Candidate)</option>
+          <option value="Worker Miner">İşçi Madenci (3.000 ₺)</option>
+          <option value="Mine Owner">Maden Sahibi (5.000 ₺)</option>
+          <option value="Holding Owner">Holding Sahibi (10.000 ₺)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 block font-bold mb-1">TL Cüzdan Bakiyesi (₺)</label>
+        <input type="number" id="admin-mod-tl" step="any" placeholder="TL Bakiyesi (₺)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-cyan-400">
+      </div>
+
+      <button type="button" onclick="saveAdminUserModifications()" class="w-full py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow-lg">Değişiklikleri Kaydet</button>
     </div>
   </div>
 
@@ -868,11 +973,11 @@
     <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
         <h3 class="text-sm font-black text-white">Mineora Destek Masası</h3>
-        <button type="button" onclick="closeModal('modal-contact')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <button type="button" onclick="closeModal('modal-contact')"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
-      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
-      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none"></textarea>
+      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none"></textarea>
       <button type="button" onclick="submitContactMessage()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Mesajı İlet</button>
     </div>
   </div>
