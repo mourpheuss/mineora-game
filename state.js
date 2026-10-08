@@ -683,4 +683,84 @@ function handleRegister() {
   const p = document.getElementById('reg-pwd')?.value.trim();
   const ref = document.getElementById('reg-ref-code')?.value.trim() || "";
 
-  if (!fullname || !phone || !u ||
+  if (!fullname || !phone || !u || !p) { showToast("Lutfen tum alanlari doldurun!", "warning"); return; }
+  const uKey = u.toLowerCase();
+
+  const registerNewUser = () => {
+    CurrentUser = null;
+    CurrentUserWorld = null;
+    loadUserWorld(u, p, ref, { fullname, phone, email: em });
+    closeModal('modal-auth-register');
+    enterGame();
+    showToast("Tebrikler " + fullname + "! Hesabiniz olusturuldu.", "success");
+  };
+
+  if (fbDb) {
+    fbDb.ref('users/' + uKey).once('value').then(snap => {
+      if (snap.val()) {
+        showToast("Bu kullanici adi zaten kayitli!", "warning");
+      } else {
+        registerNewUser();
+      }
+    }).catch(() => registerNewUser());
+  } else {
+    if (getStoredUser(uKey)) {
+      showToast("Bu kullanici adi zaten kayitli!", "warning");
+    } else {
+      registerNewUser();
+    }
+  }
+}
+window.handleRegister = handleRegister;
+
+function enterGame() {
+  document.getElementById('screen-landing')?.classList.add('hidden');
+  document.getElementById('screen-game')?.classList.remove('hidden');
+  updateHUD();
+  const isBoss = CurrentUser && !!CurrentUser.isRootAdmin;
+  const tabBoss = document.getElementById('tab-btn-boss');
+  if (tabBoss) tabBoss.style.display = isBoss ? 'flex' : 'none';
+  switchTab(isBoss ? 'boss' : 'cave');
+}
+window.enterGame = enterGame;
+
+function logoutSession() {
+  sessionStorage.removeItem('mineora_active_session');
+  if (CurrentUserWorld) {
+    saveUserWorld();
+  }
+  CurrentUser = null;
+  CurrentUserWorld = null;
+
+  const loginUser = document.getElementById('login-user');
+  const loginPwd = document.getElementById('login-pwd');
+  if (loginUser) loginUser.value = "";
+  if (loginPwd) loginPwd.value = "";
+
+  document.getElementById('screen-game')?.classList.add('hidden');
+  document.getElementById('screen-landing')?.classList.remove('hidden');
+
+  const secBoss = document.getElementById('sec-boss');
+  if (secBoss) secBoss.style.display = 'none';
+
+  showToast("Oturum kapatildi.", "info");
+}
+window.logoutSession = logoutSession;
+
+function handlePasswordChange() {
+  const oldP = document.getElementById('pwd-old')?.value;
+  const newP = document.getElementById('pwd-new')?.value;
+  const repP = document.getElementById('pwd-repeat')?.value;
+  if (!oldP || !newP || !repP) { showToast("Tum alanlari doldurun!", "warning"); return; }
+  if (oldP !== CurrentUser.pass) { showToast("Mevcut sifreniz hatali!", "warning"); return; }
+  if (newP !== repP) { showToast("Yeni sifreler eslesmiyor!", "warning"); return; }
+  if (newP.length < 4) { showToast("Sifre en az 4 karakter olmalidir!", "warning"); return; }
+  
+  CurrentUser.pass = newP;
+  saveUserWorld();
+  document.getElementById('pwd-old').value = "";
+  document.getElementById('pwd-new').value = "";
+  document.getElementById('pwd-repeat').value = "";
+  showToast("Sifreniz basariyla guncellendi!", "success");
+}
+window.handlePasswordChange = handlePasswordChange;
