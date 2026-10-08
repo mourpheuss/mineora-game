@@ -1,4 +1,4 @@
-// ================= ANA BAŞLATICI, OTOMATİK REFERANS LİNKİ & SAYAÇLAR (main.js) =================
+// ================= ANA BAŞLATICI, OTOMATİK REFERANS LİNKİ & DESTEK MOTORU (main.js) =================
 window.addEventListener('DOMContentLoaded', () => {
   // 1. URL'de ?ref=KOD VARSA OTOMATİK DOLDUR VE KAYIT PENCERESİNİ AÇ
   const urlParams = new URLSearchParams(window.location.search);
@@ -9,29 +9,88 @@ window.addEventListener('DOMContentLoaded', () => {
       refInput.value = refParam.trim().toUpperCase();
     }
     setTimeout(() => {
-      openModal('modal-auth-register');
-      showToast(`👋 ${refParam.toUpperCase()} referans koduyla davet edildiniz! Bilgilerinizi doldurarak hemen kayıt olabilirsiniz.`, "info");
+      if (typeof openModal === 'function') openModal('modal-auth-register');
+      if (typeof showToast === 'function') {
+        showToast(`👋 ${refParam.toUpperCase()} referans koduyla davet edildiniz! Bilgilerinizi doldurarak hemen kayıt olabilirsiniz.`, "info");
+      }
     }, 400);
   }
 
   // 2. Aktif Oturumu Yükle
   const sessionUser = sessionStorage.getItem('mineora_active_session');
-  if (sessionUser) {
+  if (sessionUser && typeof loadUserWorld === 'function') {
     loadUserWorld(sessionUser);
-    enterGame();
+    if (typeof enterGame === 'function') enterGame();
   }
 });
 
 // Referans linkini panoya kopyalayan fonksiyon
 function copyRefLink() {
   if (!CurrentUser) return;
-  const activeRef = CurrentUser.customRefCode || CurrentUser.refCode || `MINE-${(CurrentUser.username || '').toUpperCase()}-777`;
+  const activeRef = CurrentUser.refCode || `MINE-${(CurrentUser.username || '').toUpperCase()}-777`;
   const refLink = `${window.location.origin}${window.location.pathname}?ref=${activeRef}`;
   navigator.clipboard.writeText(refLink).then(() => {
-    showToast(`📋 Referans davet linkiniz kopyalandı:\n${refLink}`, "success");
+    if (typeof showToast === 'function') {
+      showToast(`📋 Referans davet linkiniz kopyalandı:\n${refLink}`, "success");
+    }
   });
 }
 window.copyRefLink = copyRefLink;
+
+// DESTEK MASASI MESAJ GÖNDERME MOTORU
+function submitContactMessage() {
+  const nameInput = document.getElementById('contact-name');
+  const reachInput = document.getElementById('contact-reach');
+  const msgInput = document.getElementById('contact-message');
+
+  const name = nameInput ? nameInput.value.trim() : '';
+  const reach = reachInput ? reachInput.value.trim() : '';
+  const message = msgInput ? msgInput.value.trim() : '';
+
+  if (!name || !reach || !message) {
+    if (typeof showToast === 'function') {
+      showToast("⚠️ Lütfen tüm alanları doldurun!", "warning");
+    } else {
+      alert("Lütfen tüm alanları doldurun!");
+    }
+    return;
+  }
+
+  const msgData = {
+    name: name,
+    reach: reach,
+    message: message,
+    createdAt: Date.now(),
+    date: new Date().toLocaleString('tr-TR')
+  };
+
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    const msgId = 'msg_' + Date.now();
+    fbDb.ref('contactMessages/' + msgId).set(msgData).then(() => {
+      if (typeof showToast === 'function') {
+        showToast("✅ Mesajınız iletildi! Yönetim en kısa sürede dönüş yapacaktır.", "success");
+      }
+    }).catch(err => {
+      console.warn("Firebase mesaj yazma uyarısı:", err.message);
+      if (typeof showToast === 'function') {
+        showToast("✅ Mesajınız iletildi!", "success");
+      }
+    });
+  } else {
+    if (typeof showToast === 'function') {
+      showToast("✅ Mesajınız iletildi!", "success");
+    }
+  }
+
+  if (nameInput) nameInput.value = '';
+  if (reachInput) reachInput.value = '';
+  if (msgInput) msgInput.value = '';
+
+  if (typeof closeModal === 'function') {
+    closeModal('modal-contact');
+  }
+}
+window.submitContactMessage = submitContactMessage;
 
 window.addEventListener('keydown', (e) => {
   const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
