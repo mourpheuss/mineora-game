@@ -1,4 +1,4 @@
-// ================= CANLI YAYIN & KİLİTLİ/ŞİFRELİ ODA MOTORU (live.js) =================
+// ================= CANLI YAYIN ODALARI MOTORU (live.js) =================
 let activeLiveRoom = null;
 let pendingPinRoomId = null;
 
@@ -19,16 +19,11 @@ function listenToLiveRooms() {
 }
 
 function openCreateRoomModal() {
-  if (!CurrentUser) {
-    showToast("⚠️ Canlı oda açmak için giriş yapmalısınız!", "warning");
-    return;
-  }
   openModal('modal-create-live-room');
 }
 window.openCreateRoomModal = openCreateRoomModal;
 
 async function handleCreateLiveRoomSubmit() {
-  if (!CurrentUser) return;
   const titleInput = document.getElementById('new-room-title');
   const pinInput = document.getElementById('new-room-pin');
 
@@ -40,33 +35,30 @@ async function handleCreateLiveRoomSubmit() {
     return;
   }
 
-  const roomId = `room_${CurrentUser.username}_${Date.now()}`;
+  const hostName = (CurrentUser && CurrentUser.username) ? CurrentUser.username : "Madenci";
+  const roomId = `room_${hostName}_${Date.now()}`;
   const roomData = {
     id: roomId,
     title: title,
-    host: CurrentUser.username,
+    host: hostName,
     hasPin: !!pin,
     createdAt: Date.now()
   };
   if (pin) roomData.pin = pin;
 
   if (typeof fbDb !== 'undefined' && fbDb) {
-    await fbDb.ref(`liveRooms/${roomId}`).set(roomData);
+    await fbDb.ref(`liveRooms/${roomId}`).set(roomData).catch(e => console.warn(e));
   }
 
   closeModal('modal-create-live-room');
   if (titleInput) titleInput.value = "";
   if (pinInput) pinInput.value = "";
   showToast(`🎉 '${title}' canlı yayın odası açıldı! ${pin ? '(Kilitli)' : ''}`, "success");
+  renderLiveRoomsList();
 }
 window.handleCreateLiveRoomSubmit = handleCreateLiveRoomSubmit;
 
 function attemptJoinRoom(roomId) {
-  if (!CurrentUser) {
-    showToast("⚠️ Odaya katılmak için giriş yapmalısınız!", "warning");
-    return;
-  }
-
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref(`liveRooms/${roomId}`).once('value').then(snap => {
       const room = snap.val();
@@ -75,7 +67,7 @@ function attemptJoinRoom(roomId) {
         return;
       }
 
-      const isHost = (room.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
+      const isHost = CurrentUser && (room.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
       if (room.hasPin && !isHost) {
         pendingPinRoomId = roomId;
         openModal('modal-room-pin-prompt');
@@ -85,14 +77,14 @@ function attemptJoinRoom(roomId) {
       enterRoom(room);
     });
   } else {
-    showToast("Bağlantı sağlanıyor...", "info");
+    showToast("Odaya bağlanılıyor...", "info");
   }
 }
 window.attemptJoinRoom = attemptJoinRoom;
 
 function submitRoomPinCheck() {
   const pinEntered = document.getElementById('input-room-pin')?.value.trim();
-  if (!pendingPinRoomId) return;
+  if (!pendingPinRoomId || !fbDb) return;
 
   fbDb.ref(`liveRooms/${pendingPinRoomId}`).once('value').then(snap => {
     const room = snap.val();
@@ -117,7 +109,7 @@ function renderLiveRoomsList(roomsData = null) {
 
   const mockRooms = {
     "mock_room_1": { id: "mock_room_1", title: "VIP Maden Sahipleri Koordinasyon Odası", host: "Alp_Holding", hasPin: false },
-    "mock_room_2": { id: "mock_room_2", title: "2. Vardiya Kilitli Strateji Odası", host: "Saha_Sorumlusu", hasPin: true }
+    "mock_room_2": { id: "mock_room_2", title: "2. Vardiya Kilitli Strateji Meclisi", host: "Saha_Sorumlusu", hasPin: true }
   };
 
   const allRooms = Object.assign({}, mockRooms, roomsData || {});
@@ -145,3 +137,8 @@ function renderLiveRoomsList(roomsData = null) {
   });
 }
 window.renderLiveRoomsList = renderLiveRoomsList;
+
+// Sayfa ilk açıldığında listeyi hazırla
+setTimeout(() => {
+  renderLiveRoomsList();
+}, 500);
