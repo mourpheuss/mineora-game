@@ -1,523 +1,1034 @@
-// ================= DEV YÖNETİCİ KOMUTA MASASI (admin.js) =================
-function initAdminMasterPanel() {
-  if (!CurrentUser || !CurrentUser.isRootAdmin) return;
-  renderAdminHUD();
-  updateAdminFinancialVaultMetrics();
-  renderAdminUserTable();
-  renderAdminGlobalHierarchy();
-  renderAdminDepositQueue();
-  renderAdminWithdrawalQueue();
-  renderAdminContactMessages();
-}
-window.initAdminMasterPanel = initAdminMasterPanel;
-
-function renderAdminHUD() {
-  let totalUserTl = 0;
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith('mineora_user_')) {
-      try {
-        const u = JSON.parse(localStorage.getItem(k));
-        if (u) totalUserTl += Number(u.tl || 0);
-      } catch(e) {}
-    }
-  }
-  const elTotal = document.getElementById('admin-total-user-tl');
-  if (elTotal) elTotal.innerText = totalUserTl.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + " TL";
-}
-window.renderAdminHUD = renderAdminHUD;
-
-function updateAdminFinancialVaultMetrics() {
-  let totalVaultTl = 0;
-  let totalLicVolume = 0;
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith('mineora_user_')) {
-      try {
-        const u = JSON.parse(localStorage.getItem(k));
-        if (u) {
-          totalVaultTl += Number(u.tl || 0);
-          const l = u.licenses || {};
-          totalLicVolume += (l.worker || 0) * 3000 + (l.mine || 0) * 5000 + (l.holding || 0) * 10000;
+<!DOCTYPE html>
+<html lang="tr" class="dark notranslate" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="google" content="notranslate">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <title>MINEORA • Madencilik ve Holding Simülasyonu</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#f59e0b', 600: '#d97706' },
+            mineora: {
+              bg: '#0b0e11', card: '#181a20', input: '#2b313a',
+              border: '#23272e', green: '#0ecb81', red: '#f6465d', gold: '#f0b90b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            cinzel: ['Cinzel', 'serif']
+          }
         }
-      } catch(e) {}
-    }
-  }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
 
-  const elTotal = document.getElementById('admin-total-user-tl');
-  const elLic = document.getElementById('admin-total-license-volume');
-  if (elTotal) elTotal.innerText = totalVaultTl.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + " TL";
-  if (elLic) elLic.innerText = totalLicVolume.toLocaleString('tr-TR') + " TL";
-}
-window.updateAdminFinancialVaultMetrics = updateAdminFinancialVaultMetrics;
-
-function renderAdminUserTable() {
-  const tbody = document.getElementById('admin-user-table-body');
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  const allUsers = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith('mineora_user_')) {
-      try {
-        const u = JSON.parse(localStorage.getItem(k));
-        if (u && u.username) allUsers.push(u);
-      } catch(e) {}
-    }
-  }
-
-  allUsers.forEach(u => {
-    const tr = document.createElement('tr');
-    tr.className = "hover:bg-mineora-bg/60 transition";
-    const l = u.licenses || {};
-    const licText = (l.worker || 0) + " Madenci / " + (l.mine || 0) + " Sahip / " + (l.holding || 0) + " Holding";
-
-    tr.innerHTML = 
-      '<td class="py-3 px-4 font-bold text-white">' + u.username + (u.isRootAdmin ? ' <span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : '') + '</td>' +
-      '<td class="py-3 px-4 font-mono text-slate-400">' + (u.pass || '••••••') + '</td>' +
-      '<td class="py-3 px-4 font-bold text-slate-300 text-[11px]">' + (u.role || 'Aday') + '</td>' +
-      '<td class="py-3 px-4 font-mono text-slate-400 text-[11px]">' + licText + '</td>' +
-      '<td class="py-3 px-4 font-mono text-emerald-400 font-bold">' + Number(u.tl || 0).toFixed(2) + ' TL</td>' +
-      '<td class="py-3 px-4">' + (u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>') + '</td>' +
-      '<td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">' +
-        '<button type="button" onclick="openAdminUserLogsModal(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer">Log Dökümü</button>' +
-        (!u.isRootAdmin ? '<button type="button" onclick="toggleAdminVaultLock(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[11px] font-bold cursor-pointer">' + (u.isVaultLocked ? 'Kilidi Aç' : 'Kilitle') + '</button>' : '') +
-        '<button type="button" onclick="openAdminModifyUserModal(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-cyan-600/30 text-cyan-300 hover:bg-cyan-600/50 text-[11px] font-bold cursor-pointer">Düzenle</button>' +
-      '</td>';
-
-    tbody.appendChild(tr);
-  });
-}
-window.renderAdminUserTable = renderAdminUserTable;
-
-function toggleAdminVaultLock(username) {
-  const u = getStoredUser(username);
-  if (!u || u.isRootAdmin) return;
-  u.isVaultLocked = !u.isVaultLocked;
-  saveStoredUser(u);
-  renderAdminUserTable();
-  showToast(username + " kasa kilidi güncellendi.", "info");
-}
-window.toggleAdminVaultLock = toggleAdminVaultLock;
-
-let activeModTargetUser = null;
-
-function openAdminModifyUserModal(username) {
-  const u = getStoredUser(username);
-  if (!u) return;
-  activeModTargetUser = u;
-
-  document.getElementById('admin-target-user-name').innerText = u.username;
-  document.getElementById('admin-mod-tl').value = Number(u.tl || 0);
-
-  const roleSelect = document.getElementById('admin-mod-role');
-  if (roleSelect) {
-    roleSelect.value = u.role || 'Aday';
-  }
-
-  openModal('modal-admin-modify-user');
-}
-window.openAdminModifyUserModal = openAdminModifyUserModal;
-
-function saveAdminUserModifications() {
-  if (!activeModTargetUser) return;
-
-  const newTl = parseFloat(document.getElementById('admin-mod-tl').value) || 0;
-  const newRole = document.getElementById('admin-mod-role')?.value || activeModTargetUser.role || 'Aday';
-
-  const oldTl = Number(activeModTargetUser.tl || 0);
-  const diffTl = Number((newTl - oldTl).toFixed(2));
-
-  if (Math.abs(diffTl) >= 0.01) {
-    const sign = diffTl > 0 ? "+" : "";
-    addUserNotificationLog(
-      activeModTargetUser,
-      "Yönetici Bakiye Düzenlemesi",
-      "Yönetim masası tarafından bakiye güncellendi.",
-      sign + diffTl.toFixed(2) + " TL",
-      diffTl > 0 ? "admin_grant" : "admin_deduct"
-    );
-  }
-
-  activeModTargetUser.tl = Number(newTl.toFixed(2));
-  activeModTargetUser.role = newRole;
-
-  if (!activeModTargetUser.licenses) activeModTargetUser.licenses = { worker: 0, mine: 0, holding: 0 };
-  if (newRole === 'Worker Miner' && activeModTargetUser.licenses.worker === 0) {
-    activeModTargetUser.licenses.worker = 1;
-  } else if (newRole === 'Mine Owner' && activeModTargetUser.licenses.mine === 0) {
-    activeModTargetUser.licenses.mine = 1;
-  } else if (newRole === 'Holding Owner' && activeModTargetUser.licenses.holding === 0) {
-    activeModTargetUser.licenses.holding = 1;
-  }
-
-  saveStoredUser(activeModTargetUser);
-  closeModal('modal-admin-modify-user');
-  renderAdminUserTable();
-  updateAdminFinancialVaultMetrics();
-  showToast(activeModTargetUser.username + " rol ve bakiyesi başarıyla güncellendi!", "success");
-}
-window.saveAdminUserModifications = saveAdminUserModifications;
-
-function queueDepositForAdminApproval(username, amount, senderName, receiptBase64) {
-  if (!fbDb) return;
-  const depId = 'dep_' + Date.now();
-  fbDb.ref('depositQueue/' + depId).set({
-    id: depId, username: username, amount: amount, senderName: senderName,
-    receiptBase64: receiptBase64, date: new Date().toLocaleString('tr-TR'), status: 'pending'
-  });
-}
-window.queueDepositForAdminApproval = queueDepositForAdminApproval;
-
-function renderAdminDepositQueue() {
-  const container = document.getElementById('admin-deposit-queue-list');
-  if (!container || !fbDb) return;
-
-  fbDb.ref('depositQueue').on('value', snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-    if (!data) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen dekont/havale bildirimi yok.</div>';
-      return;
-    }
-    const items = Object.values(data).filter(d => d.status === 'pending');
-    if (items.length === 0) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen dekont/havale bildirimi yok.</div>';
-      return;
-    }
-    items.forEach(d => {
-      const card = document.createElement('div');
-      card.className = "p-3 rounded-xl bg-mineora-card border border-emerald-500/40 flex flex-col gap-2 text-xs";
-      card.innerHTML = 
-        '<div class="flex items-center justify-between">' +
-          '<div class="flex items-center gap-2">' +
-            '<strong class="text-white text-sm">' + d.username + '</strong>' +
-            '<span class="text-emerald-400 font-mono font-black">+' + d.amount + ' TL</span>' +
-          '</div>' +
-          '<span class="text-[10px] text-slate-400">' + d.date + '</span>' +
-        '</div>' +
-        '<div class="text-[11px] text-slate-300">Gönderen: <strong>' + d.senderName + '</strong></div>' +
-        (d.receiptBase64 ? 
-          '<div class="p-2 bg-black/40 rounded-xl flex items-center justify-between border border-mineora-border">' +
-            '<span class="text-amber-300 font-bold text-[11px]"><i class="fa-solid fa-receipt mr-1"></i> Dekont Yüklendi</span>' +
-            '<a href="' + d.receiptBase64 + '" target="_blank" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[10px] font-bold">Dekontu İncele</a>' +
-          '</div>' : '') +
-        '<div class="flex gap-1.5 justify-end pt-1">' +
-          '<button type="button" onclick="rejectDepositOrder(\'' + d.id + '\')" class="px-3 py-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-xs cursor-pointer font-bold">Reddet</button>' +
-          '<button type="button" onclick="approveDepositOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow">Onayla & Yükle</button>' +
-        '</div>';
-      container.appendChild(card);
-    });
-  });
-}
-window.renderAdminDepositQueue = renderAdminDepositQueue;
-
-function approveDepositOrder(depId, username, amount) {
-  if (!fbDb) return;
-  const uKey = username.toLowerCase();
-  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
-    const uData = snap.val();
-    if (uData) {
-      uData.tl = Number(((uData.tl || 0) + amount).toFixed(2));
-      addUserNotificationLog(uData, "Banka Havalesi Onaylandı", "Havale bildiriminiz onaylandı ve bakiyenize yüklendi.", "+" + amount.toFixed(2) + " TL", "income");
-      fbDb.ref(`users/${uKey}`).set(uData);
-      fbDb.ref(`depositQueue/${depId}`).remove();
-      renderAdminUserTable();
-      updateAdminFinancialVaultMetrics();
-      showToast(username + " hesabına " + amount + " TL yüklendi!", "success");
-    }
-  });
-}
-window.approveDepositOrder = approveDepositOrder;
-
-function rejectDepositOrder(depId) {
-  if (!fbDb) return;
-  fbDb.ref(`depositQueue/${depId}`).remove();
-  showToast("Yatırım bildirimi reddedildi.", "info");
-}
-window.rejectDepositOrder = rejectDepositOrder;
-
-function queueWithdrawalForAdminApproval(username, amount, bankDetails) {
-  if (!fbDb) return;
-  const withId = 'with_' + Date.now();
-  fbDb.ref('withdrawalQueue/' + withId).set({
-    id: withId, username: username, amount: amount, bankDetails: bankDetails,
-    date: new Date().toLocaleString('tr-TR'), status: 'pending'
-  });
-}
-window.queueWithdrawalForAdminApproval = queueWithdrawalForAdminApproval;
-
-function renderAdminWithdrawalQueue() {
-  const container = document.getElementById('admin-withdrawal-queue-list');
-  if (!container || !fbDb) return;
-
-  fbDb.ref('withdrawalQueue').on('value', snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-    if (!data) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen banka çekim talebi yok.</div>';
-      return;
-    }
-    const items = Object.values(data).filter(d => d.status === 'pending');
-    if (items.length === 0) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Bekleyen banka çekim talebi yok.</div>';
-      return;
-    }
-    items.forEach(d => {
-      const card = document.createElement('div');
-      card.className = "p-3 rounded-xl bg-mineora-card border border-amber-500/40 flex flex-col gap-2 text-xs";
-      card.innerHTML = 
-        '<div class="flex items-center justify-between">' +
-          '<strong class="text-white text-sm">' + d.username + '</strong>' +
-          '<span class="text-amber-400 font-mono font-bold text-sm">-' + d.amount + ' TL</span>' +
-        '</div>' +
-        '<div class="bg-mineora-bg p-2 rounded-lg text-cyan-300 font-mono text-[11px] select-all">' + d.bankDetails + '</div>' +
-        '<div class="flex gap-2 justify-end">' +
-          '<button type="button" onclick="rejectWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-3 py-1 rounded bg-rose-600/20 text-rose-400 text-xs cursor-pointer">İptal & İade</button>' +
-          '<button type="button" onclick="approveWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + ')" class="px-4 py-1 rounded bg-emerald-600 text-white font-bold text-xs cursor-pointer">Gönderildi (Kapat)</button>' +
-        '</div>';
-      container.appendChild(card);
-    });
-  });
-}
-window.renderAdminWithdrawalQueue = renderAdminWithdrawalQueue;
-
-function approveWithdrawalOrder(withId, username, amount) {
-  if (!fbDb) return;
-  fbDb.ref(`withdrawalQueue/${withId}`).remove().then(() => {
-    showToast(username + " adlı madencinin " + amount + " TL çekimi tamamlandı.", "success");
-  });
-}
-window.approveWithdrawalOrder = approveWithdrawalOrder;
-
-function rejectWithdrawalOrder(withId, username, amount) {
-  if (!fbDb) return;
-  const ok = confirm(username + " kullanıcısının talebini iptal edip " + amount + " TL tutarı hesabına geri iade etmek istiyor musunuz?");
-  if (!ok) return;
-
-  const uKey = username.toLowerCase();
-  fbDb.ref(`users/${uKey}`).once('value').then(snap => {
-    const uData = snap.val();
-    if (uData) {
-      uData.tl = Number(((uData.tl || 0) + amount).toFixed(2));
-      addUserNotificationLog(uData, "Çekim İptal Edildi", "Talebiniz iptal edildi ve tutar bakiyenize iade edildi.", "+" + amount.toFixed(2) + " TL", "income");
-      fbDb.ref(`users/${uKey}`).set(uData);
-      fbDb.ref(`withdrawalQueue/${withId}`).remove();
-      showToast(amount + " TL hesaba iade edildi.", "info");
-    }
-  });
-}
-window.rejectWithdrawalOrder = rejectWithdrawalOrder;
-
-function renderAdminContactMessages() {
-  const container = document.getElementById('admin-contact-messages-list');
-  if (!container || !fbDb) return;
-
-  fbDb.ref('contactMessages').on('value', snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-    if (!data) {
-      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Gelen destek mesajı yok.</div>';
-      return;
-    }
-    const msgs = Object.values(data);
-    msgs.forEach(m => {
-      const card = document.createElement('div');
-      card.className = "p-3 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-1 text-xs";
-      card.innerHTML = 
-        '<div class="flex justify-between items-center"><strong class="text-white">' + m.name + '</strong><span class="text-[10px] text-slate-400">' + m.reach + '</span></div>' +
-        '<p class="text-slate-300 mt-1">' + m.message + '</p>';
-      container.appendChild(card);
-    });
-  });
-}
-window.renderAdminContactMessages = renderAdminContactMessages;
-
-function renderAdminGlobalHierarchy() {
-  const container = document.getElementById('admin-global-hierarchy-tree');
-  if (!container) return;
-  let html = '<div class="space-y-2 max-h-60 overflow-y-auto pr-1">';
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith('mineora_user_')) {
-      try {
-        const u = JSON.parse(localStorage.getItem(k));
-        if (u && u.username) {
-          html += 
-            '<div class="p-3 rounded-xl bg-mineora-card border border-mineora-border flex justify-between items-center text-xs">' +
-              '<div><strong class="text-white">' + u.username + '</strong><span class="text-[10px] text-slate-400 block">Sponsor: ' + (u.referredBy || 'Doğrudan') + '</span></div>' +
-              '<span class="text-emerald-400 font-mono font-bold">' + Number(u.tl || 0).toFixed(2) + ' TL</span>' +
-            '</div>';
-        }
-      } catch(e) {}
-    }
-  }
-  html += '</div>';
-  container.innerHTML = html;
-}
-window.renderAdminGlobalHierarchy = renderAdminGlobalHierarchy;
-
-// ================= GENİŞ DETAYLI İNCELEME MASASI MOTORU =================
-let currentExpandedTab = 'deposit';
-
-function openQueueDetailModal(tab) {
-  currentExpandedTab = tab || 'deposit';
-  const modal = document.getElementById('modal-queue-expanded');
-  const title = document.getElementById('expanded-modal-title');
-  const icon = document.getElementById('expanded-modal-icon');
-
-  ['dep', 'with', 'msg'].forEach(t => {
-    const btn = document.getElementById('exp-tab-' + t);
-    if (btn) btn.className = "px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition";
-  });
-
-  if (tab === 'deposit') {
-    const b = document.getElementById('exp-tab-dep');
-    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-emerald-600 text-white cursor-pointer";
-    if (title) title.innerText = "Yatırma & Dekont Masası (Geniş İnceleme)";
-    if (icon) icon.innerHTML = '<i class="fa-solid fa-arrow-down text-emerald-400"></i>';
-    renderExpandedDeposits();
-  } else if (tab === 'withdraw') {
-    const b = document.getElementById('exp-tab-with');
-    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-amber-500 text-black cursor-pointer";
-    if (title) title.innerText = "IBAN Çekim Talepleri (Geniş İnceleme)";
-    if (icon) icon.innerHTML = '<i class="fa-solid fa-arrow-up text-amber-400"></i>';
-    renderExpandedWithdrawals();
-  } else {
-    const b = document.getElementById('exp-tab-msg');
-    if (b) b.className = "px-3 py-1 rounded-lg text-xs font-black bg-cyan-600 text-white cursor-pointer";
-    if (title) title.innerText = "Destek Mesajları (Geniş Okuma Masası)";
-    if (icon) icon.innerHTML = '<i class="fa-solid fa-inbox text-cyan-400"></i>';
-    renderExpandedContactMessages();
-  }
-
-  openModal('modal-queue-expanded');
-}
-window.openQueueDetailModal = openQueueDetailModal;
-
-function renderExpandedDeposits() {
-  const container = document.getElementById('expanded-queue-container');
-  if (!container || !fbDb) return;
-
-  fbDb.ref('depositQueue').once('value').then(snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-    const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
-
-    if (items.length === 0) {
-      container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Bekleyen dekont/havale bildirimi yok.</div>';
-      return;
+  <script>
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if (!m) return;
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      m.style.display = 'flex';
+      if (id === 'modal-wallet' && typeof setWalletTab === 'function') setWalletTab('deposit');
+      if (id === 'modal-notifications' && typeof renderNotificationsModal === 'function') renderNotificationsModal();
+      if (id === 'modal-auth-login') setTimeout(() => { document.getElementById('login-user')?.focus(); }, 100);
     }
 
-    items.forEach(d => {
-      const card = document.createElement('div');
-      card.className = "p-4 rounded-2xl bg-mineora-bg border border-emerald-500/40 flex flex-col gap-3 text-xs shadow-lg";
-      card.innerHTML = 
-        '<div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">' +
-          '<div class="flex items-center gap-3">' +
-            '<strong class="text-white text-base font-bold">' + d.username + '</strong>' +
-            '<span class="text-emerald-400 font-mono font-black text-base">+' + d.amount + ' TL</span>' +
-          '</div>' +
-          '<span class="text-[11px] text-slate-400 font-mono">' + d.date + '</span>' +
-        '</div>' +
-        '<div class="text-slate-300">Gönderen Hesap Sahibi: <strong>' + d.senderName + '</strong></div>' +
-        (d.receiptBase64 ? 
-          '<div class="p-3 bg-black/50 rounded-xl flex items-center justify-between border border-mineora-border">' +
-            '<span class="text-amber-300 font-bold"><i class="fa-solid fa-receipt mr-1.5"></i> Yüklenen Dekont Görseli</span>' +
-            '<a href="' + d.receiptBase64 + '" target="_blank" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">' +
-              '<i class="fa-solid fa-up-right-from-square"></i> Dekontu Yeni Sekmede Tam Boy İncele' +
-            '</a>' +
-          '</div>' : '') +
-        '<div class="flex gap-2 justify-end pt-1">' +
-          '<button type="button" onclick="rejectDepositOrder(\'' + d.id + '\'); renderExpandedDeposits();" class="px-4 py-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">Reddet</button>' +
-          '<button type="button" onclick="approveDepositOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + '); renderExpandedDeposits();" class="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">Onayla & TL Yükle</button>' +
-        '</div>';
-      container.appendChild(card);
-    });
-  });
-}
-
-function renderExpandedWithdrawals() {
-  const container = document.getElementById('expanded-queue-container');
-  if (!container || !fbDb) return;
-
-  fbDb.ref('withdrawalQueue').once('value').then(snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-    const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
-
-    if (items.length === 0) {
-      container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Bekleyen banka çekim talebi yok.</div>';
-      return;
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      if (!m) return;
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+      m.style.display = 'none';
     }
 
-    items.forEach(d => {
-      const card = document.createElement('div');
-      card.className = "p-4 rounded-2xl bg-mineora-bg border border-amber-500/40 flex flex-col gap-3 text-xs shadow-lg";
-      card.innerHTML = 
-        '<div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">' +
-          '<div class="flex items-center gap-3">' +
-            '<strong class="text-white text-base font-bold">' + d.username + '</strong>' +
-            '<span class="text-amber-400 font-mono font-black text-base">-' + d.amount + ' TL</span>' +
-          '</div>' +
-          '<span class="text-slate-400 font-mono text-xs">' + d.date + '</span>' +
-        '</div>' +
-        '<div class="flex items-center justify-between gap-3 bg-mineora-card p-3 rounded-xl border border-mineora-border">' +
-          '<span class="text-cyan-300 font-mono text-xs select-all truncate">' + d.bankDetails + '</span>' +
-          '<button type="button" onclick="navigator.clipboard.writeText(\'' + d.bankDetails + '\'); showToast(\'Bilgiler kopyalandı!\', \'success\');" class="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold cursor-pointer shrink-0">' +
-            'Kopyala' +
-          '</button>' +
-        '</div>' +
-        '<div class="flex gap-2 justify-end pt-1">' +
-          '<button type="button" onclick="rejectWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + '); renderExpandedWithdrawals();" class="px-4 py-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs cursor-pointer">İade Et</button>' +
-          '<button type="button" onclick="approveWithdrawalOrder(\'' + d.id + '\', \'' + d.username + '\', ' + d.amount + '); renderExpandedWithdrawals();" class="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">Ödendi Olarak Kapat</button>' +
-        '</div>';
-      container.appendChild(card);
-    });
-  });
-}
-
-function renderExpandedContactMessages() {
-  const container = document.getElementById('expanded-queue-container');
-  if (!container || !fbDb) return;
-
-  fbDb.ref('contactMessages').once('value').then(snap => {
-    const data = snap.val();
-    container.innerHTML = "";
-    const msgs = data ? Object.values(data) : [];
-
-    if (msgs.length === 0) {
-      container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Gelen destek mesajı yok.</div>';
-      return;
+    function openCreateRoomModal() {
+      openModal('modal-create-live-room');
     }
 
-    msgs.forEach(m => {
-      const card = document.createElement('div');
-      card.className = "p-4 rounded-2xl bg-mineora-bg border border-cyan-500/30 flex flex-col gap-2 text-xs shadow-lg";
-      card.innerHTML = 
-        '<div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">' +
-          '<strong class="text-white text-sm">' + m.name + '</strong>' +
-          '<span class="text-cyan-400 font-mono text-xs">' + m.reach + '</span>' +
-        '</div>' +
-        '<p class="text-slate-200 bg-mineora-card p-3 rounded-xl border border-mineora-border/60 whitespace-pre-wrap">' + m.message + '</p>';
-      container.appendChild(card);
-    });
-  });
-}
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.openCreateRoomModal = openCreateRoomModal;
+  </script>
+</head>
+<body class="bg-mineora-bg text-slate-100 min-h-screen flex flex-col justify-between selection:bg-mineora-gold selection:text-black">
 
-async function executeDirectAdminAuthLogin() {
-  const pass = document.getElementById('admin-auth-direct-pass')?.value.trim();
-  if (!pass) { showToast("Şifre giriniz!", "warning"); return; }
-  try {
-    await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", pass);
-    showToast("Yetki başarıyla açıldı!", "success");
-    document.getElementById('auth-status-title').innerText = "Firebase Admin Yetkisi: AKTİF (Açık)";
-    document.getElementById('auth-status-title').className = "text-emerald-400 font-bold block";
-    document.getElementById('auth-login-controls').classList.add('hidden');
-  } catch(e) {
-    showToast("Giriş başarısız!", "warning");
-  }
-}
-window.executeDirectAdminAuthLogin = executeDirectAdminAuthLogin;
+  <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA -->
+  <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+
+    <nav class="relative z-30 max-w-7xl mx-auto w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-mineora-border backdrop-blur-md">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-mineora-gold flex items-center justify-center text-black shadow-lg font-black">
+          <i class="fa-solid fa-mountain text-sm"></i>
+        </div>
+        <span class="text-lg sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 font-cinzel">MINEORA</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="openModal('modal-contact')" class="px-3.5 py-1.5 rounded-xl bg-mineora-card hover:bg-mineora-input border border-cyan-500/40 text-cyan-300 text-xs font-bold transition cursor-pointer">
+          <i class="fa-solid fa-headset mr-1"></i> Destek
+        </button>
+        <button type="button" onclick="openModal('modal-auth-login')" class="px-4 py-2 rounded-xl bg-mineora-card hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs font-bold transition cursor-pointer">
+          Giriş Yap
+        </button>
+        <button type="button" onclick="openModal('modal-auth-register')" class="px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-xs font-black transition shadow-lg cursor-pointer">
+          Kayıt Ol
+        </button>
+      </div>
+    </nav>
+
+    <main class="relative z-20 max-w-4xl mx-auto px-4 py-16 flex flex-col items-center text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-mineora-gold/10 border border-mineora-gold/30 text-mineora-gold text-xs font-black uppercase mb-6 animate-pulse">
+        <i class="fa-solid fa-mountain"></i> Alplerin Derinliklerinde Madencilik ve Koloni Simülasyonu
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">
+        Derinlikleri Keşfet, Kaynakları Yönet, <br>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">Kendi Maden İmparatorluğunu Kur!</span>
+      </h1>
+      <p class="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
+        Alplerin gizemli damarlarında kazma vurun, vagonları yüzeye ulaştırın ve Maden Asansörü ile derin şaftları keşfedin. Kendi koloninizi inşa edin, canlı odalarda strateji kurun ve madencilik filonuzu zirveye taşıyın.
+      </p>
+
+      <div class="mt-8 flex gap-4">
+        <button type="button" onclick="openModal('modal-auth-login')" class="px-8 py-4 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm shadow-xl cursor-pointer">
+          Hemen Katıl & Başla
+        </button>
+      </div>
+
+      <div class="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl text-xs font-mono">
+        <div class="p-3 rounded-2xl bg-mineora-card/80 border border-mineora-border flex items-center justify-center gap-2 text-slate-300">
+          <i class="fa-solid fa-person-digging text-mineora-gold"></i>
+          <span>5 Farklı Alp Maden Sahası</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-mineora-card/80 border border-mineora-border flex items-center justify-center gap-2 text-slate-300">
+          <i class="fa-solid fa-elevator text-cyan-400"></i>
+          <span>Maden Asansörü Şaft Tahliyesi</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-mineora-card/80 border border-mineora-border flex items-center justify-center gap-2 text-slate-300">
+          <i class="fa-solid fa-mountain-city text-rose-400"></i>
+          <span>İzometrik Alp Kolonisi Şehri</span>
+        </div>
+      </div>
+    </main>
+
+    <footer class="border-t border-mineora-border py-4 text-center text-xs text-slate-500">
+      <p>© 2026 MINEORA • Medya Grup Dijital Yazılım Bilişim Hizmetleri San Tic Ltd Şti</p>
+    </footer>
+  </div>
+
+  <!-- 2. BÖLÜM: OYUNCU & YÖNETİM TERMİNALİ -->
+  <div id="screen-game" class="hidden min-h-screen flex flex-col justify-between">
+    <header class="bg-mineora-card border-b border-mineora-border sticky top-0 z-40 px-3 sm:px-6 py-2.5 shadow-md">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="toggleMobileMenu()" class="lg:hidden w-8 h-8 rounded-xl bg-mineora-bg border border-mineora-border text-mineora-gold text-xs flex items-center justify-center cursor-pointer shrink-0">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-600 to-mineora-gold flex items-center justify-center text-black font-black">
+            <i class="fa-solid fa-mountain text-xs"></i>
+          </div>
+          <div>
+            <span class="text-xs sm:text-sm font-black text-mineora-gold font-cinzel tracking-wider block">MINEORA</span>
+            <span id="player-username-display" class="text-[11px] text-slate-300 font-bold">-</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <div class="bg-mineora-bg px-3.5 py-1.5 rounded-xl border border-emerald-500/40 flex items-center gap-2 shadow-inner">
+            <i class="fa-solid fa-turkish-lira-sign text-emerald-400 text-sm"></i>
+            <div class="leading-none">
+              <span class="text-[8px] sm:text-[9px] text-slate-400 block font-bold uppercase">TL Cüzdanı</span>
+              <span id="hud-tl-balance" class="text-xs sm:text-sm font-black text-emerald-400 font-mono leading-none">0.00 ₺</span>
+            </div>
+          </div>
+
+          <div class="bg-mineora-bg px-3 py-1.5 rounded-xl border border-cyan-500/30 flex items-center gap-2">
+            <i class="fa-solid fa-gem text-cyan-400 text-xs"></i>
+            <div class="leading-none">
+              <span class="text-[8px] text-slate-400 block font-bold uppercase">Kristal</span>
+              <span id="hud-crystal-balance" class="text-xs font-black text-cyan-300 font-mono leading-none">0</span>
+            </div>
+          </div>
+
+          <button type="button" onclick="openModal('modal-wallet')" class="px-3.5 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black text-xs font-black flex items-center gap-1.5 transition shadow cursor-pointer">
+            <i class="fa-solid fa-building-columns"></i> <span class="hidden sm:inline">Banka Masası</span>
+          </button>
+
+          <button type="button" onclick="openModal('modal-notifications')" class="relative px-3 py-2 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-200 text-xs cursor-pointer">
+            <i class="fa-solid fa-bell text-mineora-gold"></i>
+            <span id="notif-badge" class="hidden absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse">0</span>
+          </button>
+
+          <button type="button" onclick="logoutSession()" class="px-3 py-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-xs font-bold transition cursor-pointer">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
+      <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+
+      <!-- SOL DİKEY SİDEBAR -->
+      <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:bg-mineora-card/60 lg:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
+        <div class="space-y-4">
+          <div class="space-y-1">
+            <span class="block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Madencilik</span>
+            <button type="button" onclick="switchTab('cave')" id="tab-btn-cave" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-mineora-gold text-black shadow cursor-pointer">
+              <i class="fa-solid fa-person-digging w-4 text-center"></i>
+              <span>Maden Sahası</span>
+            </button>
+            <button type="button" onclick="switchTab('map')" id="tab-btn-map" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 cursor-pointer">
+              <i class="fa-solid fa-map w-4 text-center"></i>
+              <span>Alp Haritası</span>
+            </button>
+            <button type="button" onclick="switchTab('crash')" id="tab-btn-crash" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 cursor-pointer">
+              <i class="fa-solid fa-elevator w-4 text-center animate-pulse"></i>
+              <span>Maden Asansörü</span>
+            </button>
+            <button type="button" onclick="switchTab('colony')" id="tab-btn-colony" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 cursor-pointer">
+              <i class="fa-solid fa-mountain-city w-4 text-center"></i>
+              <span>Alp Kolonisi</span>
+            </button>
+            <button type="button" onclick="switchTab('live')" id="tab-btn-live" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 cursor-pointer">
+              <i class="fa-solid fa-tower-broadcast w-4 text-center animate-pulse"></i>
+              <span>Canlı Odalar</span>
+            </button>
+            <button type="button" onclick="switchTab('stake')" id="tab-btn-stake" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 cursor-pointer">
+              <i class="fa-solid fa-vault w-4 text-center"></i>
+              <span>Vadeli TL Bankası</span>
+            </button>
+          </div>
+
+          <div class="space-y-1">
+            <span class="block text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-1">Kariyer & Filo</span>
+            <button type="button" onclick="switchTab('career')" id="tab-btn-career" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-purple-300 bg-purple-500/10 border border-purple-500/20 cursor-pointer">
+              <i class="fa-solid fa-ranking-star w-4 text-center"></i>
+              <span>Kariyer Lisansları</span>
+            </button>
+            <button type="button" onclick="switchTab('owner')" id="tab-btn-owner" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 cursor-pointer">
+              <i class="fa-solid fa-sitemap w-4 text-center text-mineora-gold"></i>
+              <span>Referans Ağı</span>
+            </button>
+            <button type="button" onclick="switchTab('settings')" id="tab-btn-settings" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-mineora-input/50 cursor-pointer">
+              <i class="fa-solid fa-key w-4 text-center text-cyan-400"></i>
+              <span>Şifre Değiştir</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-mineora-border/50">
+          <button type="button" onclick="switchTab('boss')" id="tab-btn-boss" style="display:none;" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 cursor-pointer">
+            <i class="fa-solid fa-crown w-4 text-center"></i>
+            <span>Yönetici Masası</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- İÇERİK SAHNESİ -->
+      <main class="flex-1 p-3 sm:p-6 overflow-y-auto">
+        <!-- 0) KURUCU YÖNETİM MASASI -->
+        <section id="sec-boss" style="display:none;" class="space-y-6">
+          <div class="p-6 rounded-3xl bg-mineora-card border border-rose-500/40 shadow-2xl space-y-6">
+            <div id="admin-auth-status-bar" class="p-4 rounded-2xl bg-slate-900 border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xl">
+              <div class="flex items-center gap-2.5">
+                <span id="auth-status-dot" class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+                <div>
+                  <strong id="auth-status-title" class="text-white block">Firebase Admin Yetkisi: Kontrol Ediliyor...</strong>
+                  <span id="auth-status-desc" class="text-[10px] text-slate-400 font-mono">ersinulasduzyol@gmail.com</span>
+                </div>
+              </div>
+              <div id="auth-login-controls" class="flex items-center gap-2">
+                <input type="password" id="admin-auth-direct-pass" placeholder="Firebase Şifresi" class="bg-mineora-bg border border-mineora-border rounded-xl px-3 py-1.5 text-white font-mono text-xs outline-none focus:border-emerald-500">
+                <button type="button" onclick="executeDirectAdminAuthLogin()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow transition">
+                  Yetkiyi Aç
+                </button>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-2xl font-black">
+                  <i class="fa-solid fa-crown"></i>
+                </div>
+                <div>
+                  <h2 class="text-xl font-black text-white">Yönetici Protokol Komuta Masası</h2>
+                  <span class="text-xs text-slate-400">Banka Havale, Dekont Doğrulama & Çekim Kontrol Merkezi</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="updateAdminFinancialVaultMetrics()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer transition">
+                  <i class="fa-solid fa-calculator text-sm"></i> Kasayı Hesapla / Tara
+                </button>
+                <button type="button" onclick="openModal('modal-admin-create-user')" class="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 shadow cursor-pointer">
+                  <i class="fa-solid fa-user-plus"></i> Kullanıcı Ekle
+                </button>
+                <span class="px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs font-black">Root Yetkisi Aktif</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 my-4">
+              <div class="p-4 rounded-2xl bg-mineora-card border border-emerald-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Kullanıcı Kasaları (TL)</span>
+                  <i class="fa-solid fa-vault text-emerald-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-emerald-400" id="admin-total-user-tl">0.00 ₺</div>
+                <span class="text-[9px] text-slate-500">Tüm üyelerin şahsi toplamı</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-mineora-card border border-amber-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Aktif Lisans Hacmi</span>
+                  <i class="fa-solid fa-coins text-amber-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-amber-300" id="admin-total-license-volume">0.00 ₺</div>
+                <span class="text-[9px] text-slate-500">Satılan toplam lisans tutarı</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-mineora-card border border-cyan-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Günlük Havale Girişi (24s)</span>
+                  <i class="fa-solid fa-arrow-down-left-bracket text-cyan-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-cyan-300" id="admin-daily-inflow-tl">+0.00 ₺</div>
+                <span class="text-[9px] text-cyan-500/80">Son 24 saat onaylanan havale</span>
+              </div>
+              <div class="p-4 rounded-2xl bg-mineora-card border border-rose-500/30 shadow-lg">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <span>Günlük IBAN Çıkışı (24s)</span>
+                  <i class="fa-solid fa-arrow-up-right-bracket text-rose-400"></i>
+                </div>
+                <div class="text-xl font-black font-mono text-rose-400" id="admin-daily-outflow-tl">-0.00 ₺</div>
+                <span class="text-[9px] text-rose-500/80">Son 24 saat ödenen çekim</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <!-- Havale & Dekont Masası -->
+              <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 flex flex-col justify-between space-y-3">
+                <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
+                  <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-down text-emerald-400"></i> Havale / Dekont Masası
+                  </h3>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="openQueueDetailModal('deposit')" class="px-2.5 py-1 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-[11px] font-bold cursor-pointer transition">Genişlet</button>
+                    <button type="button" onclick="renderAdminDepositQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer"><i class="fa-solid fa-rotate-right"></i></button>
+                  </div>
+                </div>
+                <div id="admin-deposit-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
+              </div>
+
+              <!-- IBAN Çekim Masası -->
+              <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 flex flex-col justify-between space-y-3">
+                <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
+                  <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-up text-amber-400"></i> IBAN Çekim Masası
+                  </h3>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="openQueueDetailModal('withdraw')" class="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/30 text-[11px] font-bold cursor-pointer transition">Genişlet</button>
+                    <button type="button" onclick="renderAdminWithdrawalQueue()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer"><i class="fa-solid fa-rotate-right"></i></button>
+                  </div>
+                </div>
+                <div id="admin-withdrawal-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
+              </div>
+
+              <!-- Destek Mesajları -->
+              <div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/40 flex flex-col justify-between space-y-3">
+                <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
+                  <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-inbox text-cyan-400"></i> Destek Mesajları
+                  </h3>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="openQueueDetailModal('contact')" class="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-black border border-cyan-500/30 text-[11px] font-bold cursor-pointer transition">Genişlet</button>
+                    <button type="button" onclick="renderAdminContactMessages()" class="px-2.5 py-1 rounded-xl bg-mineora-card border border-mineora-border text-[11px] text-slate-300 hover:text-white cursor-pointer"><i class="fa-solid fa-rotate-right"></i></button>
+                  </div>
+                </div>
+                <div id="admin-contact-messages-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
+              </div>
+            </div>
+
+            <!-- Kullanıcı Röntgen Tablosu -->
+            <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3 w-full shadow-xl">
+              <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-users-viewfinder"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-white">Sistem Kullanıcı Röntgen Listesi</h3>
+                    <span class="text-[10px] text-slate-400">Hesap güvenliği, lisans portföyü ve acil kilit müdahalesi</span>
+                  </div>
+                </div>
+                <button type="button" onclick="renderAdminUserTable()" class="px-3 py-1.5 rounded-xl bg-mineora-card border border-mineora-border text-xs text-slate-300 hover:text-white cursor-pointer"><i class="fa-solid fa-rotate-right mr-1"></i> Yenile</button>
+              </div>
+
+              <div class="overflow-x-auto rounded-xl border border-mineora-border">
+                <table class="w-full text-left text-xs min-w-[750px]">
+                  <thead class="bg-black/50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-mineora-border">
+                    <tr>
+                      <th class="py-3.5 px-4">Kullanıcı</th>
+                      <th class="py-3.5 px-4">Giriş Şifresi</th>
+                      <th class="py-3.5 px-4">Rol / Durum</th>
+                      <th class="py-3.5 px-4">Aktif Lisanslar</th>
+                      <th class="py-3.5 px-4">TL Bakiyesi</th>
+                      <th class="py-3.5 px-4">Kasa Durumu</th>
+                      <th class="py-3.5 px-4 text-right">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-user-table-body" class="divide-y divide-mineora-border/60 text-slate-200"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Global Hiyerarşi Ağacı -->
+            <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3">
+              <h3 class="text-sm font-black text-white flex items-center gap-2">
+                <i class="fa-solid fa-sitemap text-purple-400"></i> Global Ekosistem Hiyerarşi Ağacı
+              </h3>
+              <div id="admin-global-hierarchy-tree"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 1) MADEN KAZI SAHNESİ -->
+        <section id="sec-cave" class="space-y-4 max-w-5xl mx-auto">
+          <div class="flex flex-wrap justify-between items-center bg-mineora-card px-4 sm:px-6 py-3 rounded-2xl border border-mineora-border text-xs gap-3">
+            <div>
+              <span id="active-mine-title" class="font-black text-mineora-gold text-sm sm:text-base block">Silverstream Alpine Mine</span>
+              <div class="flex items-center gap-2 text-slate-400 text-[11px] mt-0.5 font-mono">
+                <span id="daily-earned-status-text" class="text-emerald-400 font-bold">Günlük Hak: 0.00 ₺</span>
+                <span>•</span>
+                <span class="text-cyan-400 font-bold" id="wagon-round-indicator">Vagon: 1 / 2</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[9px] text-slate-400 block font-bold uppercase tracking-wider">Vagon Kapasitesi</span>
+              <strong id="wagon-fill-text" class="text-mineora-gold font-mono text-base sm:text-lg font-black">0%</strong>
+            </div>
+          </div>
+
+          <div id="mine-viewport" class="relative w-full h-[400px] sm:h-[480px] rounded-3xl border border-mineora-border overflow-hidden shadow-2xl bg-black">
+            <canvas id="mine-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+            <div id="transit-overlay" class="absolute inset-0 z-40 hidden bg-black/90 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 space-y-4">
+              <div class="w-16 h-16 rounded-2xl bg-mineora-gold/20 text-mineora-gold flex items-center justify-center text-3xl border border-mineora-gold/40 animate-bounce">
+                <i class="fa-solid fa-train-subway"></i>
+              </div>
+              <div class="space-y-1 max-w-md">
+                <h3 id="transit-title" class="text-lg font-black text-white">1. Vagon Doldu!</h3>
+                <p id="transit-desc" class="text-xs text-slate-300 leading-relaxed">Yüklenen vagonu asansöre sevk edin.</p>
+              </div>
+              <div id="transit-timer-box" class="hidden text-center space-y-2">
+                <div class="text-4xl font-black font-mono text-cyan-400" id="transit-countdown">15</div>
+                <p class="text-[11px] text-slate-400" id="transit-subtext">Asansör tahliye ediliyor...</p>
+              </div>
+              <button type="button" id="btn-dispatch-wagon" onclick="startElevatorDispatch()" class="px-8 py-3.5 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs shadow-xl cursor-pointer">
+                <span id="btn-dispatch-text">Vagonu Asansöre Sevk Et</span>
+              </button>
+            </div>
+            <div id="floating-text-container" class="absolute inset-0 pointer-events-none z-30"></div>
+          </div>
+
+          <div class="p-4 sm:p-5 bg-mineora-card border border-mineora-border rounded-3xl space-y-3">
+            <div class="relative w-full h-5 bg-mineora-bg rounded-full overflow-hidden border border-mineora-border p-0.5">
+              <div id="power-bar-indicator" class="relative h-full w-4 bg-mineora-gold rounded-full shadow-lg transition-all duration-75"></div>
+            </div>
+            <button type="button" onclick="performMiningStrike()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 text-black font-black text-sm sm:text-base shadow-xl transition flex items-center justify-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-hammer text-lg"></i> KAZMA VUR [BOŞLUK / TIKLA]
+            </button>
+          </div>
+        </section>
+
+        <!-- 2) HARİTA -->
+        <section id="sec-map" class="hidden space-y-4">
+          <div id="alp-map-container" class="relative w-full h-[520px] rounded-3xl overflow-hidden border border-mineora-border bg-mineora-bg shadow-2xl">
+            <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" alt="Alps" class="absolute inset-0 w-full h-full object-cover opacity-50 filter brightness-90">
+          </div>
+        </section>
+
+        <!-- 3) ASANSÖR -->
+        <section id="sec-crash" class="hidden space-y-4 max-w-5xl mx-auto">
+          <div class="bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div class="relative w-full h-[380px] bg-black rounded-2xl border border-mineora-border overflow-hidden flex items-center justify-center">
+              <canvas id="crash-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+              <div class="relative z-10 text-center pointer-events-none">
+                <span id="crash-multiplier-text" class="text-6xl font-black font-mono text-white">1.00x</span>
+                <span id="crash-sub-status" class="text-xs font-bold text-slate-400 block mt-2 uppercase tracking-widest font-mono">Asansör Hazırlanıyor...</span>
+              </div>
+            </div>
+            <button type="button" id="btn-crash-action" onclick="handleCrashActionBtn()" class="w-full py-4 rounded-2xl bg-mineora-green text-white font-black text-sm shadow-xl cursor-pointer">
+              <span id="btn-crash-action-text">Şafta Gir (1 Kristal Kullan)</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- 4) VADELİ TL BANKASI -->
+        <section id="sec-stake" class="hidden space-y-6 max-w-4xl mx-auto">
+          <div class="bg-mineora-card border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div class="flex items-center gap-3 border-b border-mineora-border pb-4">
+              <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-mineora-gold flex items-center justify-center text-2xl font-black">
+                <i class="fa-solid fa-vault"></i>
+              </div>
+              <div>
+                <h2 class="text-xl font-black text-white">MINEORA Vadeli TL Kasası</h2>
+                <span class="text-xs text-slate-400">TL varlıklarınızı kilitleyerek günlük faiz getirisi elde edin.</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button type="button" onclick="setStakePlan(60)" id="stake-plan-btn-60" class="p-4 rounded-2xl bg-mineora-gold text-black font-black border-2 border-yellow-300 shadow-xl cursor-pointer text-left">
+                <span class="text-xs uppercase opacity-80 block">Standart Kasa</span>
+                <strong class="text-lg block font-mono">60 Gün</strong>
+                <span class="text-xs mt-1 block font-bold">Günlük %3.0 Getiri</span>
+              </button>
+              <button type="button" onclick="setStakePlan(90)" id="stake-plan-btn-90" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer text-left">
+                <span class="text-xs uppercase text-slate-400 block">Gümüş Kasa</span>
+                <strong class="text-lg block font-mono text-white">90 Gün</strong>
+                <span class="text-xs text-cyan-300 mt-1 block font-bold">Günlük %3.5 Getiri</span>
+              </button>
+              <button type="button" onclick="setStakePlan(120)" id="stake-plan-btn-120" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer text-left">
+                <span class="text-xs uppercase text-slate-400 block">VIP Altın Kasa</span>
+                <strong class="text-lg block font-mono text-white">120 Gün</strong>
+                <span class="text-xs text-mineora-gold mt-1 block font-bold">Günlük %4.0 Getiri</span>
+              </button>
+            </div>
+
+            <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-4">
+              <input type="number" id="stake-deposit-amount" placeholder="Min: 100 ₺" oninput="calculateStakePreview()" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-sm outline-none focus:border-mineora-gold">
+              <button type="button" onclick="executeDepositStake()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-mineora-gold to-yellow-400 text-black font-black text-xs transition shadow-xl cursor-pointer">
+                Varlıkları Kasaya Kilitle
+              </button>
+            </div>
+
+            <div id="active-stakes-list" class="space-y-3 pt-2"></div>
+          </div>
+        </section>
+
+        <!-- 5) KARİYER LİSANSLARI -->
+        <section id="sec-career" class="hidden space-y-6 max-w-5xl mx-auto">
+          <div class="p-5 rounded-3xl bg-mineora-card border border-mineora-border flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 class="text-base font-black text-white">Sahip Olduğunuz Aktif Lisanslar</h3>
+              <p class="text-xs text-slate-400">İstediğiniz paketten dilediğiniz kadar alabilirsiniz. Kazançlar katlanarak toplanır.</p>
+            </div>
+            <div id="my-active-licenses-badge" class="flex items-center gap-2 font-mono text-xs font-bold text-mineora-gold">
+              0 Adet Aktif Lisans
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="p-6 rounded-3xl bg-mineora-card border border-cyan-500/40 space-y-4 flex flex-col justify-between shadow-xl">
+              <div class="space-y-3">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase">Günlük %2.00</span>
+                <h4 class="text-lg font-black text-white">İşçi Madenci</h4>
+                <p class="text-xs text-slate-400">Günde <strong>60 ₺</strong> net kazanç sağlar.</p>
+                <div class="p-3 rounded-xl bg-mineora-bg font-mono text-cyan-300 font-black text-base">3.000 ₺</div>
+              </div>
+              <button type="button" onclick="purchaseLicense('worker', 3000)" class="w-full py-3.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer shadow-lg">Lisans Satın Al (3.000 ₺)</button>
+            </div>
+
+            <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-gold/40 space-y-4 flex flex-col justify-between shadow-xl">
+              <div class="space-y-3">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase">Günlük %2.25</span>
+                <h4 class="text-lg font-black text-white">Maden Sahibi</h4>
+                <p class="text-xs text-slate-400">Günde <strong>112.50 ₺</strong> net kazanç sağlar.</p>
+                <div class="p-3 rounded-xl bg-mineora-bg font-mono text-mineora-gold font-black text-base">5.000 ₺</div>
+              </div>
+              <button type="button" onclick="purchaseLicense('mine', 5000)" class="w-full py-3.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow-lg">İşletme Satın Al (5.000 ₺)</button>
+            </div>
+
+            <div class="p-6 rounded-3xl bg-mineora-card border border-purple-500/50 space-y-4 flex flex-col justify-between shadow-2xl">
+              <div class="space-y-3">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase animate-pulse">Günlük %3.00</span>
+                <h4 class="text-lg font-black text-white">Holding Sahibi</h4>
+                <p class="text-xs text-slate-400">Günde <strong>300 ₺</strong> net kazanç sağlar.</p>
+                <div class="p-3 rounded-xl bg-mineora-bg font-mono text-purple-300 font-black text-base">10.000 ₺</div>
+              </div>
+              <button type="button" onclick="purchaseLicense('holding', 10000)" class="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs cursor-pointer shadow-lg">Holding Satın Al (10.000 ₺)</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6) REFERANS AĞI -->
+        <section id="sec-owner" class="hidden space-y-6"></section>
+
+        <!-- 7) ŞİFRE DEĞİŞTİR -->
+        <section id="sec-settings" class="hidden space-y-4 max-w-xl mx-auto">
+          <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-border space-y-4 text-xs shadow-xl">
+            <h3 class="text-sm font-black text-white flex items-center gap-2"><i class="fa-solid fa-key text-cyan-400"></i> Şifre Değiştir</h3>
+            <div class="space-y-3">
+              <input type="password" id="pwd-old" placeholder="Mevcut Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+              <input type="password" id="pwd-new" placeholder="Yeni Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+              <input type="password" id="pwd-repeat" placeholder="Yeni Şifre Tekrar" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+            </div>
+            <button type="button" onclick="handlePasswordChange()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Şifreyi Güncelle</button>
+          </div>
+        </section>
+
+        <!-- 8) ALP KOLONİSİ -->
+        <section id="sec-colony" class="hidden space-y-4 max-w-6xl mx-auto">
+          <div class="relative w-full h-[620px] sm:h-[720px] rounded-3xl border border-mineora-border overflow-hidden shadow-2xl bg-[#0b1329] select-none">
+            <header class="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none gap-2">
+              <div class="pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-xl">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm"><i class="fa-solid fa-mountain-sun"></i></div>
+                <div><h1 class="text-xs sm:text-sm font-black text-white" id="hud-city-name">Matterhorn</h1><span class="text-[8px] sm:text-[10px] font-bold text-cyan-400 block" id="colony-phase-tag">Maden Muhtarlığı</span></div>
+              </div>
+              <div class="pointer-events-auto flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-xl text-xs">
+                <span class="text-amber-200 font-mono font-bold" id="hud-colony-wood">40 🪵</span>
+                <span class="text-slate-300 font-mono font-bold" id="hud-colony-stone">25 🧱</span>
+                <span class="text-emerald-400 font-mono font-bold" id="hud-colony-emerald">15 💎</span>
+              </div>
+            </header>
+            <canvas id="colonyCanvas" class="w-full h-full block"></canvas>
+            <footer class="absolute bottom-5 sm:bottom-6 left-0 right-0 z-20 pointer-events-none px-2 flex justify-center">
+              <div class="pointer-events-auto max-w-full overflow-x-auto no-scrollbar flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-700/90 p-2 rounded-2xl shadow-2xl touch-pan-x">
+                <button type="button" onclick="ColonyEngine.selectBuild('road')" id="btn-build-road" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-road text-amber-300"></i><span>Yol</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('house')" id="btn-build-house" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-house text-amber-400"></i><span>Ev</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('school')" id="btn-build-school" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-graduation-cap text-indigo-400"></i><span>Okul</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('generator')" id="btn-build-generator" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-industry text-amber-500"></i><span>Fırın</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('tower')" id="btn-build-tower" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-shield-halved text-rose-400"></i><span>Karakol</span>
+                </button>
+                <div class="h-6 w-px bg-slate-700 mx-0.5 flex-shrink-0"></div>
+                <button type="button" onclick="ColonyEngine.selectBuild('demolish')" id="btn-build-demolish" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-950/40 text-rose-300 text-xs font-bold border border-rose-800/50 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-hammer"></i><span>Yık</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.resetCamera()" title="Odaklan" class="flex-shrink-0 p-2 rounded-xl bg-slate-800 text-slate-300 text-xs border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-crosshairs"></i>
+                </button>
+              </div>
+            </footer>
+          </div>
+        </section>
+
+        <!-- 9) CANLI YAYIN ODALARI SAHNESİ -->
+        <section id="sec-live" class="hidden space-y-4 max-w-6xl mx-auto">
+          <div id="live-lobby-view" class="space-y-4">
+            <div class="bg-mineora-card border border-rose-500/30 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-2xl font-black border border-rose-500/30">
+                  <i class="fa-solid fa-tower-broadcast"></i>
+                </div>
+                <div>
+                  <h2 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">Maden & Holding Canlı Odaları</h2>
+                  <p class="text-xs text-slate-400">Ekiplerinizle sesli/görüntülü strateji toplantıları yapın.</p>
+                </div>
+              </div>
+              <button type="button" onclick="openCreateRoomModal()" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 text-white font-black text-xs shadow-xl cursor-pointer">
+                Canlı Oda Kur
+              </button>
+            </div>
+            <div id="live-rooms-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+          </div>
+
+          <div id="live-room-active-view" class="hidden space-y-4">
+            <div class="bg-mineora-card border border-mineora-border rounded-2xl px-4 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="leaveCurrentRoom()" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-300 flex items-center justify-center cursor-pointer">
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div>
+                  <h3 id="current-room-title" class="font-black text-white text-sm">Oda Başlığı</h3>
+                  <span id="current-room-host" class="text-[10px] text-slate-400 font-mono">Yayıncı: -</span>
+                </div>
+              </div>
+              <button type="button" onclick="leaveCurrentRoom()" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 font-bold text-xs cursor-pointer">
+                Ayrıl
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div class="lg:col-span-2 space-y-3">
+                <div class="relative w-full h-[320px] sm:h-[400px] bg-black rounded-3xl border border-mineora-border overflow-hidden shadow-2xl flex items-center justify-center">
+                  <video id="live-host-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                  <div id="live-video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 space-y-2 bg-gradient-to-b from-mineora-card to-black">
+                    <i class="fa-solid fa-video-slash text-4xl text-slate-600"></i>
+                    <span class="text-xs font-mono">Kamera kapalı veya görüntü bekleniyor</span>
+                  </div>
+                  <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 flex items-center gap-2 text-xs font-bold text-white">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    <span id="live-host-badge-name">Yayıncı</span>
+                  </div>
+                </div>
+
+                <div class="p-3 bg-mineora-card border border-mineora-border rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div id="host-controls" class="hidden flex items-center gap-2">
+                    <button type="button" id="btn-toggle-cam" onclick="toggleHostCamera()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+                      <i class="fa-solid fa-video"></i> Kamera
+                    </button>
+                    <button type="button" id="btn-toggle-mic" onclick="toggleHostMic()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+                      <i class="fa-solid fa-microphone"></i> Mikrofon
+                    </button>
+                    <button type="button" id="btn-toggle-screen" onclick="toggleScreenShare()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+                      <i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş
+                    </button>
+                  </div>
+                  <div id="viewer-controls" class="flex items-center gap-2">
+                    <button type="button" id="btn-raise-hand" onclick="toggleRaiseHand()" class="px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black flex items-center gap-2 cursor-pointer shadow-lg">
+                      <i class="fa-solid fa-hand"></i> <span id="raise-hand-text">Söz İste (El Kaldır)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-mineora-card border border-mineora-border rounded-3xl p-4 flex flex-col justify-between h-[480px] shadow-xl notranslate">
+                <div class="border-b border-mineora-border pb-2.5">
+                  <h4 class="font-black text-xs text-white flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-cyan-400"></i> Oda Sohbeti
+                  </h4>
+                </div>
+                <div id="live-chat-messages" class="flex-1 overflow-y-auto space-y-2 py-3 pr-1 text-xs"></div>
+                <div class="pt-2 border-t border-mineora-border flex gap-2">
+                  <input type="text" id="live-chat-input" placeholder="Mesaj yazın..." onkeydown="if(event.key==='Enter') sendLiveChatMessage()" class="flex-1 bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-rose-500">
+                  <button type="button" onclick="sendLiveChatMessage()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer">
+                    <i class="fa-solid fa-paper-plane"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- MODALLAR -->
+  <div id="modal-queue-expanded" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2">
+          <div id="expanded-modal-icon" class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-list-check"></i>
+          </div>
+          <div>
+            <h3 id="expanded-modal-title" class="text-base font-black text-white">Detaylı İnceleme Masası</h3>
+            <span class="text-[10px] text-slate-400">Tüm talepleri geniş ekranda denetleyin</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-mineora-bg p-1 rounded-xl border border-mineora-border">
+          <button type="button" onclick="openQueueDetailModal('deposit')" id="exp-tab-dep" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Yatırmalar</button>
+          <button type="button" onclick="openQueueDetailModal('withdraw')" id="exp-tab-with" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Çekimler</button>
+          <button type="button" onclick="openQueueDetailModal('contact')" id="exp-tab-msg" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Mesajlar</button>
+        </div>
+
+        <button type="button" onclick="closeModal('modal-queue-expanded')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="expanded-queue-container" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+    </div>
+  </div>
+
+  <div id="modal-create-live-room" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <i class="fa-solid fa-tower-broadcast text-rose-500"></i> Canlı Oda Kur
+        </h3>
+        <button type="button" onclick="closeModal('modal-create-live-room')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-[10px] text-slate-400 block font-bold mb-1">Oda Başlığı</label>
+          <input type="text" id="new-room-title" placeholder="Örn: 1. Vardiya Koordinasyon Brifingi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none focus:border-rose-500">
+        </div>
+        <div class="p-3 bg-mineora-bg rounded-2xl border border-mineora-border space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300 font-bold text-[11px] flex items-center gap-1.5">
+              <i class="fa-solid fa-lock text-amber-400"></i> Kilitli Oda Şifresi (Opsiyonel)
+            </span>
+            <span class="text-[9px] text-slate-500">Boşsa herkese açık</span>
+          </div>
+          <input type="password" id="new-room-pin" placeholder="Giriş şifresi belirleyin (boş bırakabilirsiniz)" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-amber-400">
+        </div>
+      </div>
+      <button type="button" onclick="handleCreateLiveRoomSubmit()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white font-black text-xs shadow-lg cursor-pointer">
+        Yayını Başlat & Odayı Aç
+      </button>
+    </div>
+  </div>
+
+  <div id="modal-room-pin-prompt" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-sm bg-mineora-card border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs text-center">
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-mineora-gold flex items-center justify-center text-xl mx-auto border border-mineora-gold/30">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-black text-white">Kilitli Oda</h3>
+        <p class="text-[11px] text-slate-400 mt-1">Bu odaya girmek için belirlenen şifreyi giriniz.</p>
+      </div>
+      <input type="password" id="input-room-pin" placeholder="Oda Şifresi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-center text-white font-mono text-sm outline-none focus:border-mineora-gold">
+      <div class="flex gap-2">
+        <button type="button" onclick="closeModal('modal-room-pin-prompt')" class="flex-1 py-3 rounded-xl bg-mineora-input text-slate-300 font-bold text-xs cursor-pointer">Vazgeç</button>
+        <button type="button" onclick="submitRoomPinCheck()" class="flex-1 py-3 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer shadow-lg">Giriş Yap</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-wallet" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="w-full max-w-lg bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-5 text-xs max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-building-columns"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-white">Banka Transfer Masası (TL)</h3>
+            <span class="text-[10px] text-slate-400">Havale & EFT ile 7/24 Kesintisiz İşlem</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-wallet')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="flex bg-mineora-bg p-1.5 rounded-2xl border border-mineora-border gap-2">
+        <button type="button" onclick="setWalletTab('deposit')" id="wallet-tab-btn-deposit" class="flex-1 py-3 rounded-2xl font-black text-xs bg-gradient-to-r from-amber-500 to-mineora-gold text-black shadow-lg cursor-pointer">
+          <i class="fa-solid fa-arrow-down mr-1"></i> Para Yatır (Havale)
+        </button>
+        <button type="button" onclick="setWalletTab('withdraw')" id="wallet-tab-btn-withdraw" class="flex-1 py-3 rounded-2xl font-bold text-xs text-slate-400 hover:text-white cursor-pointer">
+          <i class="fa-solid fa-arrow-up mr-1"></i> Para Çek (IBAN)
+        </button>
+      </div>
+
+      <!-- BANKA İSİMLERİ SİLİNDİ, YALNIZCA ŞİRKET VE IBAN BIRAKILDI -->
+      <div id="wallet-view-deposit" class="space-y-4">
+        <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/30 space-y-2">
+          <span class="text-[11px] text-slate-400 block font-bold">Resmi Şirket Banka Hesabı:</span>
+          <div class="text-xs text-white space-y-1 font-mono">
+            <div>Şirket: <strong class="text-mineora-gold block text-[11px]">Medya Grup Dijital Yazılım Bilişim Hizmetleri San Tic Ltd Şti</strong></div>
+            <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl mt-1">
+              <span class="text-emerald-400 font-bold select-all text-[11px]">TR25 0021 2000 0005 1028 9000 01</span>
+              <button type="button" onclick="copyCompanyIban()" class="text-slate-300 hover:text-white text-xs cursor-pointer"><i class="fa-solid fa-copy"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="text-[10px] text-slate-400 font-bold block mb-1">Havale / EFT Yapan Adı Soyadı</label>
+            <input type="text" id="deposit-sender-name" placeholder="Banka hesabındaki ad soyad" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white text-xs outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 font-bold block mb-1">Gönderilen Tutar (₺)</label>
+            <input type="number" id="deposit-amount-input" placeholder="Min: 100 ₺" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="text-[10px] text-amber-300 font-bold block mb-1">
+              <i class="fa-solid fa-file-arrow-up mr-1"></i> Banka Dekontu Görseli (Zorunlu)
+            </label>
+            <input type="file" id="deposit-receipt-file" accept="image/*" class="w-full bg-mineora-bg border border-dashed border-amber-500/40 rounded-xl px-3 py-2 text-slate-300 text-xs outline-none file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-500 file:text-black hover:file:bg-yellow-400 cursor-pointer">
+          </div>
+        </div>
+
+        <button type="button" onclick="submitDepositReceipt()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-xl cursor-pointer">
+          <i class="fa-solid fa-circle-check mr-1"></i> Dekontu Yükle & Onaya Gönder
+        </button>
+      </div>
+
+      <div id="wallet-view-withdraw" class="hidden space-y-4">
+        <div class="space-y-3">
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Hesap Sahibi Adı Soyadı</label>
+            <input type="text" id="withdraw-holder-name" placeholder="Adınız Soyadınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white text-xs outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Alıcı IBAN Numarası</label>
+            <input type="text" id="withdraw-target-iban" placeholder="TR..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none">
+          </div>
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-[10px] text-slate-400 font-bold">Çekilecek Tutar (₺)</label>
+              <button type="button" onclick="fillMaxWithdraw()" class="text-mineora-gold text-[10px] font-bold hover:underline cursor-pointer">TÜMÜ</button>
+            </div>
+            <input type="number" id="withdraw-amount-tl" placeholder="Min: 100 ₺" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Hesap Şifresi</label>
+            <input type="password" id="withdraw-auth-password" placeholder="Şifrenizi onaylayın" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white text-xs outline-none">
+          </div>
+        </div>
+
+        <button type="button" onclick="executeWithdrawal()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-xl cursor-pointer">
+          <i class="fa-solid fa-paper-plane mr-1"></i> Çekim Talebi Oluştur
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-auth-login" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Sisteme Giriş Yap</h3>
+        <button type="button" onclick="closeModal('modal-auth-login')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <div class="space-y-3">
+        <input type="text" id="login-user" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+        <input type="password" id="login-pwd" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+        <button type="button" onclick="handleLogin()" class="w-full py-3 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer shadow-lg">Giriş Yap</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-3.5 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-mineora-gold/20 text-mineora-gold flex items-center justify-center text-xs font-bold">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <h3 class="text-base font-black text-white">Madenci Hesabı Aç</h3>
+        </div>
+        <button type="button" onclick="closeModal('modal-auth-register')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <input type="text" id="reg-fullname" placeholder="Ad Soyad" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="tel" id="reg-phone" placeholder="Telefon Numarası" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
+      <input type="email" id="reg-email" placeholder="E-Posta Adresi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="text" id="reg-username" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="password" id="reg-pwd" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <div>
+        <label class="text-[10px] text-slate-400 font-bold block mb-1">Referans Kodu</label>
+        <input type="text" id="reg-ref-code" placeholder="Referans Kodu (Varsa)" class="w-full bg-mineora-bg border border-cyan-500/40 rounded-xl px-3 py-2 text-cyan-300 font-mono uppercase">
+      </div>
+      <button type="button" onclick="handleRegister()" class="w-full py-3.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow-lg transition">Kayıt Ol & Başla</button>
+    </div>
+  </div>
+
+  <div id="modal-admin-modify-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Madenci Verilerini Düzenle</h3>
+        <button type="button" onclick="closeModal('modal-admin-modify-user')"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div>Kullanıcı: <strong id="admin-target-user-name" class="text-cyan-400">User</strong></div>
+      
+      <div>
+        <label class="text-[10px] text-slate-400 block font-bold mb-1">Üye Rolü / Unvanı</label>
+        <select id="admin-mod-role" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-cyan-400">
+          <option value="Aday">Aday (Candidate)</option>
+          <option value="Worker Miner">İşçi Madenci (3.000 ₺)</option>
+          <option value="Mine Owner">Maden Sahibi (5.000 ₺)</option>
+          <option value="Holding Owner">Holding Sahibi (10.000 ₺)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 block font-bold mb-1">TL Cüzdan Bakiyesi (₺)</label>
+        <input type="number" id="admin-mod-tl" step="any" placeholder="TL Bakiyesi (₺)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-cyan-400">
+      </div>
+
+      <button type="button" onclick="saveAdminUserModifications()" class="w-full py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow-lg">Değişiklikleri Kaydet</button>
+    </div>
+  </div>
+
+  <div id="modal-admin-user-logs" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg font-black border border-cyan-500/30">
+            <i class="fa-solid fa-book-journal-whills"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <span id="audit-target-username">Kullanıcı</span> • Finansal Log Röntgeni
+            </h3>
+            <span class="text-[10px] text-slate-400">Tüm kazı, transfer ve bakiye hareketlerinin denetim defteri</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-admin-user-logs')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="audit-summary-cards" class="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono"></div>
+      <div id="audit-alert-bar" class="p-3 rounded-2xl hidden flex items-center justify-between gap-3 text-xs"></div>
+      <div class="overflow-x-auto rounded-xl border border-mineora-border flex-1 max-h-[360px] overflow-y-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-black/60 text-slate-400 uppercase text-[10px] sticky top-0 border-b border-mineora-border z-10">
+            <tr>
+              <th class="py-2.5 px-3">Tarih / Saat</th>
+              <th class="py-2.5 px-3">İşlem Türü</th>
+              <th class="py-2.5 px-3">Açıklama</th>
+              <th class="py-2.5 px-3 text-right">Tutar</th>
+            </tr>
+          </thead>
+          <tbody id="audit-logs-table-body" class="divide-y divide-mineora-border/60 text-slate-200"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-admin-create-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/50 rounded-3xl p-6 shadow-2xl space-y-3 text-xs">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-2">
+        <h3 class="text-base font-black text-white">Yeni Madenci Oluştur (Admin)</h3>
+        <button type="button" onclick="closeModal('modal-admin-create-user')"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <input type="text" id="admin-new-username" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
+      <input type="text" id="admin-new-pass" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
+      <input type="email" id="admin-new-email" placeholder="E-Posta" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
+      <button onclick="handleAdminCreateUserSubmit()" class="w-full py-3 rounded-xl bg-cyan-600 text-white font-black text-xs cursor-pointer">Hesabı Aç</button>
+    </div>
+  </div>
+
+  <div id="modal-contact" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <h3 class="text-sm font-black text-white">Mineora Destek Masası</h3>
+        <button type="button" onclick="closeModal('modal-contact')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none"></textarea>
+      <button type="button" onclick="submitContactMessage()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Mesajı İlet</button>
+    </div>
+  </div>
+
+  <div id="modal-notifications" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Hesap Bildirimleri</h3>
+        <button type="button" onclick="closeModal('modal-notifications')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="user-notifications-list" class="space-y-2 overflow-y-auto flex-1 pr-1"></div>
+    </div>
+  </div>
+
+  <script src="lang.js"></script>
+  <script src="state.js"></script>
+  <script src="wallet.js"></script>
+  <script src="mining.js"></script>
+  <script src="stake.js"></script>
+  <script src="crash.js"></script>
+  <script src="colony.js"></script>
+  <script src="live.js"></script>
+  <script src="admin.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
