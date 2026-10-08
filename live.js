@@ -19,11 +19,16 @@ function listenToLiveRooms() {
 }
 
 function openCreateRoomModal() {
-  openModal('modal-create-live-room');
+  const modal = document.getElementById('modal-create-live-room');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  modal.style.display = 'flex';
 }
 window.openCreateRoomModal = openCreateRoomModal;
 
 async function handleCreateLiveRoomSubmit() {
+  if (!CurrentUser) return;
   const titleInput = document.getElementById('new-room-title');
   const pinInput = document.getElementById('new-room-pin');
 
@@ -35,19 +40,18 @@ async function handleCreateLiveRoomSubmit() {
     return;
   }
 
-  const hostName = (CurrentUser && CurrentUser.username) ? CurrentUser.username : "Madenci";
-  const roomId = `room_${hostName}_${Date.now()}`;
+  const roomId = `room_${CurrentUser.username}_${Date.now()}`;
   const roomData = {
     id: roomId,
     title: title,
-    host: hostName,
+    host: CurrentUser.username,
     hasPin: !!pin,
     createdAt: Date.now()
   };
   if (pin) roomData.pin = pin;
 
   if (typeof fbDb !== 'undefined' && fbDb) {
-    await fbDb.ref(`liveRooms/${roomId}`).set(roomData).catch(e => console.warn(e));
+    await fbDb.ref(`liveRooms/${roomId}`).set(roomData);
   }
 
   closeModal('modal-create-live-room');
@@ -59,6 +63,11 @@ async function handleCreateLiveRoomSubmit() {
 window.handleCreateLiveRoomSubmit = handleCreateLiveRoomSubmit;
 
 function attemptJoinRoom(roomId) {
+  if (!CurrentUser) {
+    showToast("⚠️ Odaya katılmak için giriş yapmalısınız!", "warning");
+    return;
+  }
+
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref(`liveRooms/${roomId}`).once('value').then(snap => {
       const room = snap.val();
@@ -67,7 +76,7 @@ function attemptJoinRoom(roomId) {
         return;
       }
 
-      const isHost = CurrentUser && (room.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
+      const isHost = (room.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
       if (room.hasPin && !isHost) {
         pendingPinRoomId = roomId;
         openModal('modal-room-pin-prompt');
@@ -84,7 +93,7 @@ window.attemptJoinRoom = attemptJoinRoom;
 
 function submitRoomPinCheck() {
   const pinEntered = document.getElementById('input-room-pin')?.value.trim();
-  if (!pendingPinRoomId || !fbDb) return;
+  if (!pendingPinRoomId) return;
 
   fbDb.ref(`liveRooms/${pendingPinRoomId}`).once('value').then(snap => {
     const room = snap.val();
@@ -109,7 +118,7 @@ function renderLiveRoomsList(roomsData = null) {
 
   const mockRooms = {
     "mock_room_1": { id: "mock_room_1", title: "VIP Maden Sahipleri Koordinasyon Odası", host: "Alp_Holding", hasPin: false },
-    "mock_room_2": { id: "mock_room_2", title: "2. Vardiya Kilitli Strateji Meclisi", host: "Saha_Sorumlusu", hasPin: true }
+    "mock_room_2": { id: "mock_room_2", title: "2. Vardiya Kilitli Strateji Odası", host: "Saha_Sorumlusu", hasPin: true }
   };
 
   const allRooms = Object.assign({}, mockRooms, roomsData || {});
@@ -137,8 +146,3 @@ function renderLiveRoomsList(roomsData = null) {
   });
 }
 window.renderLiveRoomsList = renderLiveRoomsList;
-
-// Sayfa ilk açıldığında listeyi hazırla
-setTimeout(() => {
-  renderLiveRoomsList();
-}, 500);
