@@ -1,4 +1,4 @@
-// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & HESAP MOTORU (state.js) =================
+// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & REFERANS MOTORU (state.js) =================
 const firebaseConfig = {
   apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
   authDomain: "mineora-web.firebaseapp.com",
@@ -171,15 +171,16 @@ function distributeFourDepthCommission(buyerUser, costTl) {
   }
 }
 
+// ALINAN LİSANSLARA GÖRE GÜNLÜK HAK HESAPLAYAN MOTOR (İşçi %2, Maden %2.25, Holding %3)
 function calculateTotalDailyReturnTl(userObj) {
   if (!userObj || !userObj.licenses) return 0;
   const wCount = userObj.licenses.worker || 0;
   const mCount = userObj.licenses.mine || 0;
   const hCount = userObj.licenses.holding || 0;
 
-  const dailyWorker = wCount * (3000 * 0.02);
-  const dailyMine = mCount * (5000 * 0.0225);
-  const dailyHolding = hCount * (10000 * 0.03);
+  const dailyWorker = wCount * (3000 * 0.02);     // 60 TL/gün
+  const dailyMine = mCount * (5000 * 0.0225);     // 112.50 TL/gün
+  const dailyHolding = hCount * (10000 * 0.03);   // 300 TL/gün
 
   return Number((dailyWorker + dailyMine + dailyHolding).toFixed(2));
 }
@@ -405,15 +406,12 @@ function copyRefLink() {
 }
 window.copyRefLink = copyRefLink;
 
-// HESAPLARIN BİRBİRİNİ EZMESİNİ ENGELLEYEN KUSURSUZ loadUserWorld
 function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extraProfile = {}) {
   if (!username) return;
   const uKey = username.toLowerCase();
   const storageKey = 'mineora_user_' + uKey;
   
-  // Önceki hafızayı temizle!
   CurrentUserWorld = null;
-  
   let localData = localStorage.getItem(storageKey);
   if (localData) {
     try { CurrentUserWorld = JSON.parse(localData); } catch(e) { CurrentUserWorld = null; }
@@ -429,7 +427,6 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
     CurrentUserWorld.isRootAdmin = (uKey === 'mourpheus');
     saveUserWorld();
   } else {
-    // Tamamen yeni ve bağımsız kullanıcı oluştur
     CurrentUserWorld = {
       username: username,
       fullname: extraProfile.fullname || username,
@@ -475,7 +472,6 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
 }
 window.loadUserWorld = loadUserWorld;
 
-// TÜM KULLANICILARI CANLI DİNLEYEN VE ADMIN TABLOSUNA ANINDA AKITAN MOTOR
 if (fbDb) {
   fbDb.ref('users').on('value', snap => {
     const allUsers = snap.val();
@@ -522,6 +518,7 @@ function updateHUD() {
 }
 window.updateHUD = updateHUD;
 
+// TÜM SEKMELERİ YÖNETEN MOTOR (STAKE ÇIKARILDI)
 function switchTab(tTab) {
   if (typeof toggleMobileMenu === 'function') toggleMobileMenu(false);
 
@@ -531,7 +528,7 @@ function switchTab(tTab) {
     tTab = 'career'; 
   }
 
-  const allTabs = ['boss', 'owner', 'map', 'cave', 'crash', 'colony', 'live', 'stake', 'career', 'settings'];
+  const allTabs = ['boss', 'owner', 'map', 'cave', 'crash', 'colony', 'live', 'career', 'settings'];
   allTabs.forEach(tab => {
     const secEl = document.getElementById('sec-' + tab);
     if (secEl) {
@@ -566,7 +563,6 @@ function switchTab(tTab) {
   if (tTab === 'colony' && typeof ColonyEngine !== 'undefined') ColonyEngine.init();
   if (tTab === 'live' && typeof initLiveRoomsLobby === 'function') initLiveRoomsLobby();
   if (tTab === 'owner' && typeof renderHierarchyUI === 'function') renderHierarchyUI();
-  if (tTab === 'stake' && typeof renderActiveStakes === 'function') renderActiveStakes();
   if (tTab === 'boss' && isBoss && typeof initAdminMasterPanel === 'function') initAdminMasterPanel();
 }
 window.switchTab = switchTab;
@@ -687,84 +683,4 @@ function handleRegister() {
   const p = document.getElementById('reg-pwd')?.value.trim();
   const ref = document.getElementById('reg-ref-code')?.value.trim() || "";
 
-  if (!fullname || !phone || !u || !p) { showToast("Lutfen tum alanlari doldurun!", "warning"); return; }
-  const uKey = u.toLowerCase();
-
-  const registerNewUser = () => {
-    CurrentUser = null;
-    CurrentUserWorld = null;
-    loadUserWorld(u, p, ref, { fullname, phone, email: em });
-    closeModal('modal-auth-register');
-    enterGame();
-    showToast("Tebrikler " + fullname + "! Hesabiniz olusturuldu.", "success");
-  };
-
-  if (fbDb) {
-    fbDb.ref('users/' + uKey).once('value').then(snap => {
-      if (snap.val()) {
-        showToast("Bu kullanici adi zaten kayitli!", "warning");
-      } else {
-        registerNewUser();
-      }
-    }).catch(() => registerNewUser());
-  } else {
-    if (getStoredUser(uKey)) {
-      showToast("Bu kullanici adi zaten kayitli!", "warning");
-    } else {
-      registerNewUser();
-    }
-  }
-}
-window.handleRegister = handleRegister;
-
-function enterGame() {
-  document.getElementById('screen-landing')?.classList.add('hidden');
-  document.getElementById('screen-game')?.classList.remove('hidden');
-  updateHUD();
-  const isBoss = CurrentUser && !!CurrentUser.isRootAdmin;
-  const tabBoss = document.getElementById('tab-btn-boss');
-  if (tabBoss) tabBoss.style.display = isBoss ? 'flex' : 'none';
-  switchTab(isBoss ? 'boss' : 'cave');
-}
-window.enterGame = enterGame;
-
-function logoutSession() {
-  sessionStorage.removeItem('mineora_active_session');
-  if (CurrentUserWorld) {
-    saveUserWorld();
-  }
-  CurrentUser = null;
-  CurrentUserWorld = null;
-
-  const loginUser = document.getElementById('login-user');
-  const loginPwd = document.getElementById('login-pwd');
-  if (loginUser) loginUser.value = "";
-  if (loginPwd) loginPwd.value = "";
-
-  document.getElementById('screen-game')?.classList.add('hidden');
-  document.getElementById('screen-landing')?.classList.remove('hidden');
-
-  const secBoss = document.getElementById('sec-boss');
-  if (secBoss) secBoss.style.display = 'none';
-
-  showToast("Oturum kapatildi.", "info");
-}
-window.logoutSession = logoutSession;
-
-function handlePasswordChange() {
-  const oldP = document.getElementById('pwd-old')?.value;
-  const newP = document.getElementById('pwd-new')?.value;
-  const repP = document.getElementById('pwd-repeat')?.value;
-  if (!oldP || !newP || !repP) { showToast("Tum alanlari doldurun!", "warning"); return; }
-  if (oldP !== CurrentUser.pass) { showToast("Mevcut sifreniz hatali!", "warning"); return; }
-  if (newP !== repP) { showToast("Yeni sifreler eslesmiyor!", "warning"); return; }
-  if (newP.length < 4) { showToast("Sifre en az 4 karakter olmalidir!", "warning"); return; }
-  
-  CurrentUser.pass = newP;
-  saveUserWorld();
-  document.getElementById('pwd-old').value = "";
-  document.getElementById('pwd-new').value = "";
-  document.getElementById('pwd-repeat').value = "";
-  showToast("Sifreniz basariyla guncellendi!", "success");
-}
-window.handlePasswordChange = handlePasswordChange;
+  if (!fullname || !phone || !u ||
