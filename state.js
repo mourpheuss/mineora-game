@@ -1,4 +1,4 @@
-// ================= MINEORA TEMEL DURUM, ÇOKLU LİSANS & REFERANS MOTORU (state.js) =================
+// ================= MINEORA TEMEL DURUM & HESAP MOTORU (state.js) =================
 const firebaseConfig = {
   apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
   authDomain: "mineora-web.firebaseapp.com",
@@ -16,7 +16,7 @@ try {
     fbDb = firebase.database();
   }
 } catch(e) {
-  console.warn("Firebase bağlantı uyarısı:", e);
+  console.warn("Firebase baglanti uyarisi:", e);
 }
 
 const COOLDOWN_24H_MS = 24 * 60 * 60 * 1000;
@@ -53,11 +53,11 @@ function playPickaxeSound(isCritical = false) {
 
 function getDefaultMines() {
   return [
-    { id: 0, name: "Silverstream Alpine Mine", mineral: "Bakır & Kristal Damarı", hp: 100, depleted: false, sealedAt: null },
-    { id: 1, name: "Firepath Magmatic Trench", mineral: "Yakut & Akik Yatağı", hp: 100, depleted: false, sealedAt: null },
-    { id: 2, name: "Dark Valley Obsidian Shaft", mineral: "Saf Obsidyen Damarı", hp: 100, depleted: false, sealedAt: null },
-    { id: 3, name: "Densepine Emerald Basin", mineral: "Zümrüt ve Granit Havzası", hp: 100, depleted: false, sealedAt: null },
-    { id: 4, name: "Goldpeak Apex Vein", mineral: "Doğal Dağ Altını", hp: 100, depleted: false, sealedAt: null }
+    { id: 0, name: "Silverstream Alpine Mine", mineral: "Bakir & Kristal Damari", hp: 100, depleted: false, sealedAt: null },
+    { id: 1, name: "Firepath Magmatic Trench", mineral: "Yakut & Akik Yatagi", hp: 100, depleted: false, sealedAt: null },
+    { id: 2, name: "Dark Valley Obsidian Shaft", mineral: "Saf Obsidyen Damari", hp: 100, depleted: false, sealedAt: null },
+    { id: 3, name: "Densepine Emerald Basin", mineral: "Zumrut ve Granit Havzasi", hp: 100, depleted: false, sealedAt: null },
+    { id: 4, name: "Goldpeak Apex Vein", mineral: "Dogal Dag Altini", hp: 100, depleted: false, sealedAt: null }
   ];
 }
 
@@ -66,26 +66,29 @@ let CurrentUserWorld = null;
 
 function getStoredUser(username) {
   if (!username) return null;
-  const raw = localStorage.getItem(`mineora_user_${username.toLowerCase()}`);
+  const raw = localStorage.getItem('mineora_user_' + username.toLowerCase());
   return raw ? JSON.parse(raw) : null;
 }
+window.getStoredUser = getStoredUser;
 
 function saveStoredUser(userObj) {
   if (!userObj || !userObj.username) return;
   const uKey = userObj.username.toLowerCase();
-  localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(userObj));
+  localStorage.setItem('mineora_user_' + uKey, JSON.stringify(userObj));
   
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref('users/' + uKey).set(userObj).catch(err => {
-      console.warn(`Firebase yazma uyarısı (${uKey}):`, err.message);
+      console.warn("Firebase yazma uyarisi (" + uKey + "):", err.message);
     });
   }
 }
+window.saveStoredUser = saveStoredUser;
 
 function saveUserWorld() {
   if (!CurrentUserWorld) return;
   saveStoredUser(CurrentUserWorld);
 }
+window.saveUserWorld = saveUserWorld;
 
 function addUserNotificationLog(targetUserObj, title, desc, amountText = "", type = "income") {
   if (!targetUserObj) return;
@@ -98,6 +101,7 @@ function addUserNotificationLog(targetUserObj, title, desc, amountText = "", typ
   });
   if (targetUserObj.logs.length > 50) targetUserObj.logs.pop();
 }
+window.addUserNotificationLog = addUserNotificationLog;
 
 function checkMinesCooldown() {
   if (!CurrentUser || !CurrentUser.mines) return;
@@ -116,6 +120,7 @@ function checkMinesCooldown() {
   });
   if (hasChanges) saveUserWorld();
 }
+window.checkMinesCooldown = checkMinesCooldown;
 
 function findUserByRefCode(refCode) {
   if (!refCode) return null;
@@ -134,8 +139,9 @@ function findUserByRefCode(refCode) {
   }
   return null;
 }
+window.findUserByRefCode = findUserByRefCode;
 
-// 4 KADEMELİ TL REFERANS GELİR MOTORU (%10, %7, %5, %3)
+// 4 KADEMELİ TL REFERANS GELİRİ (%10, %7, %5, %3)
 function distributeFourDepthCommission(buyerUser, costTl) {
   if (!buyerUser || !buyerUser.referral_chain || buyerUser.referral_chain.length === 0) return;
   const chain = buyerUser.referral_chain;
@@ -151,10 +157,10 @@ function distributeFourDepthCommission(buyerUser, costTl) {
 
     const rate = rates[i];
     const commissionTl = Number((costTl * rate).toFixed(2));
-    const tierName = `${i + 1}. Kademe Referans Primi (%${(rate * 100).toFixed(0)})`;
+    const tierName = (i + 1) + ". Kademe Referans Primi (%" + Math.round(rate * 100) + ")";
 
     sponsorObj.tl = Number(((sponsorObj.tl || 0) + commissionTl).toFixed(2));
-    addUserNotificationLog(sponsorObj, tierName, `${buyerUser.username} lisans aldı.`, `+${commissionTl.toFixed(2)} ₺`, "commission");
+    addUserNotificationLog(sponsorObj, tierName, buyerUser.username + " lisans aldi.", "+" + commissionTl.toFixed(2) + " TL", "commission");
     saveStoredUser(sponsorObj);
 
     if (CurrentUser && CurrentUser.username.toLowerCase() === sponsorObj.username.toLowerCase()) {
@@ -177,13 +183,14 @@ function calculateTotalDailyReturnTl(userObj) {
 
   return Number((dailyWorker + dailyMine + dailyHolding).toFixed(2));
 }
+window.calculateTotalDailyReturnTl = calculateTotalDailyReturnTl;
 
 function purchaseLicense(type, costTl) {
   if (!CurrentUser) return;
   const currentTl = Number(parseFloat(CurrentUser.tl || 0).toFixed(2));
 
   if (currentTl < costTl) {
-    showToast(`⚠️ Yetersiz bakiye! Lisans bedeli: ${costTl.toLocaleString()} ₺. Mevcut: ${currentTl.toLocaleString()} ₺`, "warning");
+    showToast("Yetersiz bakiye! Lisans bedeli: " + costTl.toLocaleString() + " TL", "warning");
     return;
   }
 
@@ -194,20 +201,19 @@ function purchaseLicense(type, costTl) {
 
   CurrentUser.licenses[type] = (CurrentUser.licenses[type] || 0) + 1;
 
-  let typeName = "İşçi Madenci";
+  let typeName = "Isci Madenci";
   if (type === 'mine') typeName = "Maden Sahibi";
   if (type === 'holding') typeName = "Holding Sahibi";
 
-  addUserNotificationLog(CurrentUser, "Lisans Satın Alındı", `1 Adet ${typeName} lisansı portföye eklendi.`, `-${costTl.toLocaleString()} ₺`, "upgrade");
+  addUserNotificationLog(CurrentUser, "Lisans Satın Alindi", "1 Adet " + typeName + " lisansi portfoye eklendi.", "-" + costTl.toLocaleString() + " TL", "upgrade");
 
   distributeFourDepthCommission(CurrentUser, costTl);
   saveUserWorld();
   updateHUD();
-  showToast(`🎉 Tebrikler! 1 adet ${typeName} lisansı başarıyla alındı!`, "success");
+  showToast("Tebrikler! 1 adet " + typeName + " lisansi basariyla alindi!", "success");
 }
 window.purchaseLicense = purchaseLicense;
 
-// 4 KADEMELİ EKİP LİSTESİNİ ÇIKARAN FONKSİYON
 function getFourDepthTeam(targetUsername) {
   if (!targetUsername) return [];
   const target = targetUsername.toLowerCase();
@@ -240,7 +246,7 @@ function getFourDepthTeam(targetUsername) {
 
     if (depth === -1 && member.referredBy) {
       const refVal = member.referredBy.trim().toUpperCase();
-      const myRef = (CurrentUser?.refCode || "").toUpperCase();
+      const myRef = (CurrentUser && CurrentUser.refCode ? CurrentUser.refCode : "").toUpperCase();
       if (refVal === myRef || refVal === target.toUpperCase()) {
         depth = 1;
         directSponsor = targetUsername;
@@ -260,14 +266,15 @@ function getFourDepthTeam(targetUsername) {
 
   return team.sort((a, b) => a.depth - b.depth);
 }
+window.getFourDepthTeam = getFourDepthTeam;
 
-// REFERANS AĞI EKRANINI ÇİZEN VE LİNK KOPYALATAN MOTOR (SİYAH EKRANI ÇÖZER)
+// HATASIZ DÜZ METİN REFERANS AĞI TABLOSU
 function renderHierarchyUI() {
   const container = document.getElementById('sec-owner');
   if (!container || !CurrentUser) return;
 
-  const activeRef = CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;
-  const inviteLink = `${window.location.origin}${window.location.pathname}?ref=${activeRef}`;
+  const activeRef = CurrentUser.refCode || ("MINE-" + CurrentUser.username.toUpperCase() + "-777");
+  const inviteLink = window.location.origin + window.location.pathname + "?ref=" + activeRef;
 
   const team = getFourDepthTeam(CurrentUser.username);
   const d1 = team.filter(m => m.depth === 1).length;
@@ -275,122 +282,112 @@ function renderHierarchyUI() {
   const d3 = team.filter(m => m.depth === 3).length;
   const d4 = team.filter(m => m.depth === 4).length;
 
-  container.innerHTML = `
-    <div class="bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-6">
-      
-      <!-- Üst Başlık & Davet Linki Kutusu -->
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-5">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-mineora-gold/20 text-mineora-gold flex items-center justify-center text-xl font-black border border-current">
-            <i class="fa-solid fa-sitemap"></i>
-          </div>
-          <div>
-            <h2 class="text-lg font-black text-white flex items-center gap-2">
-              <span>${CurrentUser.username}</span> • 4 Kademeli Referans Ağı
-            </h2>
-            <p class="text-xs text-slate-400">Alt ekibiniz lisans aldıkça 4 kademeye kadar doğrudan TL primi kazanırsınız.</p>
-          </div>
-        </div>
+  let rowsHtml = '';
+  if (team.length === 0) {
+    rowsHtml = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Henuz alt ekibinizde kayitli madenci bulunmuyor. Davet linkinizi paylasarak ekibinizi kurabilirsiniz.</td></tr>';
+  } else {
+    team.forEach(m => {
+      const l = m.licenses || {};
+      const licStr = (l.worker || 0) + ' Madenci / ' + (l.mine || 0) + ' Sahip / ' + (l.holding || 0) + ' Holding';
+      let badgeStyle = 'bg-slate-700 text-slate-300';
+      if (m.depth === 1) badgeStyle = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+      else if (m.depth === 2) badgeStyle = 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30';
+      else if (m.depth === 3) badgeStyle = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      else if (m.depth === 4) badgeStyle = 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
 
-        <!-- Tek Tıkla Kopyalanabilir Referans Linki -->
-        <div class="flex items-center gap-2 bg-mineora-bg p-2 rounded-2xl border border-mineora-border max-w-full">
-          <div class="overflow-hidden">
-            <span class="text-[9px] text-slate-400 block font-bold uppercase">Özel Davet Linkiniz</span>
-            <span class="text-cyan-400 font-mono text-xs font-bold truncate block select-all" title="${inviteLink}">${inviteLink}</span>
-          </div>
-          <button type="button" onclick="copyRefLink()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 shrink-0 transition">
-            <i class="fa-solid fa-link"></i> Linki Kopyala
-          </button>
-        </div>
-      </div>
+      rowsHtml += '<tr class="hover:bg-mineora-bg/50 transition">' +
+        '<td class="py-3 px-4 font-bold text-white">' + m.username + '</td>' +
+        '<td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold ' + badgeStyle + '">' + m.depth + '. Kademe</span></td>' +
+        '<td class="py-3 px-4 font-mono text-slate-400">' + m.sponsor + '</td>' +
+        '<td class="py-3 px-4 text-slate-300 font-bold text-[11px]">' + licStr + '</td>' +
+        '<td class="py-3 px-4 text-right font-mono text-emerald-400 font-bold">' + Number(m.tl || 0).toFixed(2) + ' TL</td>' +
+        '</tr>';
+    });
+  }
 
-      <!-- 4 Kademe Komisyon Kartları -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div class="p-4 bg-mineora-bg rounded-2xl border border-emerald-500/30">
-          <span class="text-slate-400 text-[10px] block font-bold uppercase">1. Kademe (%10 Prim)</span>
-          <strong class="text-emerald-400 font-mono text-base block mt-1">${d1} Üye</strong>
-        </div>
-        <div class="p-4 bg-mineora-bg rounded-2xl border border-cyan-500/30">
-          <span class="text-slate-400 text-[10px] block font-bold uppercase">2. Kademe (%7 Prim)</span>
-          <strong class="text-cyan-400 font-mono text-base block mt-1">${d2} Üye</strong>
-        </div>
-        <div class="p-4 bg-mineora-bg rounded-2xl border border-amber-500/30">
-          <span class="text-slate-400 text-[10px] block font-bold uppercase">3. Kademe (%5 Prim)</span>
-          <strong class="text-amber-400 font-mono text-base block mt-1">${d3} Üye</strong>
-        </div>
-        <div class="p-4 bg-mineora-bg rounded-2xl border border-purple-500/30">
-          <span class="text-slate-400 text-[10px] block font-bold uppercase">4. Kademe (%3 Prim)</span>
-          <strong class="text-purple-400 font-mono text-base block mt-1">${d4} Üye</strong>
-        </div>
-      </div>
+  container.innerHTML = 
+    '<div class="bg-mineora-card border border-mineora-gold/40 rounded-3xl p-6 shadow-2xl space-y-6">' +
+      '<div class="flex flex-wrap items-center justify-between gap-4 border-b border-mineora-border pb-5">' +
+        '<div class="flex items-center gap-3">' +
+          '<div class="w-12 h-12 rounded-2xl bg-mineora-gold/20 text-mineora-gold flex items-center justify-center text-xl font-black border border-current">' +
+            '<i class="fa-solid fa-sitemap"></i>' +
+          '</div>' +
+          '<div>' +
+            '<h2 class="text-lg font-black text-white flex items-center gap-2">' +
+              '<span>' + CurrentUser.username + '</span> - 4 Kademeli Referans Agi' +
+            '</h2>' +
+            '<p class="text-xs text-slate-400">Alt ekibiniz lisans aldikca 4 kademeye kadar dogrudan TL primi kazanirsiniz.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="flex items-center gap-2 bg-mineora-bg p-2 rounded-2xl border border-mineora-border max-w-full">' +
+          '<div class="overflow-hidden">' +
+            '<span class="text-[9px] text-slate-400 block font-bold uppercase">Ozel Davet Linkiniz</span>' +
+            '<span class="text-cyan-400 font-mono text-xs font-bold truncate block select-all">' + inviteLink + '</span>' +
+          '</div>' +
+          '<button type="button" onclick="copyRefLink()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black text-xs cursor-pointer shadow flex items-center gap-1.5 shrink-0 transition">' +
+            '<i class="fa-solid fa-link"></i> Linki Kopyala' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
 
-      <!-- Ekip Tablosu -->
-      <div class="space-y-3 pt-2">
-        <div class="flex justify-between items-center px-1">
-          <h3 class="text-xs font-black uppercase text-slate-300 flex items-center gap-2">
-            <i class="fa-solid fa-users text-cyan-400"></i> Alt Ekip Listesi (Toplam ${team.length} Madenci)
-          </h3>
-          <span class="text-[10px] text-slate-500 font-mono">4. kademeden sonrası gizlenir</span>
-        </div>
+      '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">' +
+        '<div class="p-4 bg-mineora-bg rounded-2xl border border-emerald-500/30">' +
+          '<span class="text-slate-400 text-[10px] block font-bold uppercase">1. Kademe (%10 Prim)</span>' +
+          '<strong class="text-emerald-400 font-mono text-base block mt-1">' + d1 + ' Uye</strong>' +
+        '</div>' +
+        '<div class="p-4 bg-mineora-bg rounded-2xl border border-cyan-500/30">' +
+          '<span class="text-slate-400 text-[10px] block font-bold uppercase">2. Kademe (%7 Prim)</span>' +
+          '<strong class="text-cyan-400 font-mono text-base block mt-1">' + d2 + ' Uye</strong>' +
+        '</div>' +
+        '<div class="p-4 bg-mineora-bg rounded-2xl border border-amber-500/30">' +
+          '<span class="text-slate-400 text-[10px] block font-bold uppercase">3. Kademe (%5 Prim)</span>' +
+          '<strong class="text-amber-400 font-mono text-base block mt-1">' + d3 + ' Uye</strong>' +
+        '</div>' +
+        '<div class="p-4 bg-mineora-bg rounded-2xl border border-purple-500/30">' +
+          '<span class="text-slate-400 text-[10px] block font-bold uppercase">4. Kademe (%3 Prim)</span>' +
+          '<strong class="text-purple-400 font-mono text-base block mt-1">' + d4 + ' Uye</strong>' +
+        '</div>' +
+      '</div>' +
 
-        <div class="overflow-x-auto rounded-xl border border-mineora-border">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-black/50 text-slate-400 uppercase text-[10px] border-b border-mineora-border">
-              <tr>
-                <th class="py-3 px-4">Kullanıcı</th>
-                <th class="py-3 px-4">Kademe</th>
-                <th class="py-3 px-4">Direkt Sponsor</th>
-                <th class="py-3 px-4">Aktif Lisanslar</th>
-                <th class="py-3 px-4 text-right">TL Kasası</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-mineora-border text-slate-200">
-              ${team.length === 0 ? `
-                <tr><td colspan="5" class="py-8 text-center text-slate-500">Henüz alt ekibinizde kayıtlı madenci bulunmuyor. Davet linkinizi paylaşarak ekibinizi kurabilirsiniz.</td></tr>
-              ` : team.map(m => {
-                const l = m.licenses || {};
-                const licStr = `${l.worker||0} Madenci / ${l.mine\vert{}\vert{}0} Sahip / ${l.holding||0} Holding`;
-                return `
-                  <tr class="hover:bg-mineora-bg/50 transition">
-                    <td class="py-3 px-4 font-bold text-white">${m.username}</td>
-                    <td class="py-3 px-4">
-                      <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
-                        m.depth === 1 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                        m.depth === 2 ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' :
-                        m.depth === 3 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                        'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                      }">
-                        ${m.depth}. Kademe
-                      </span>
-                    </td>
-                    <td class="py-3 px-4 font-mono text-slate-400">${m.sponsor}</td>
-                    <td class="py-3 px-4 text-slate-300 font-bold text-[11px]">${licStr}</td>
-                    <td class="py-3 px-4 text-right font-mono text-emerald-400 font-bold">${Number(m.tl).toFixed(2)} ₺</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
+      '<div class="space-y-3 pt-2">' +
+        '<div class="flex justify-between items-center px-1">' +
+          '<h3 class="text-xs font-black uppercase text-slate-300 flex items-center gap-2">' +
+            '<i class="fa-solid fa-users text-cyan-400"></i> Alt Ekip Listesi (Toplam ' + team.length + ' Madenci)' +
+          '</h3>' +
+          '<span class="text-[10px] text-slate-500 font-mono">4. kademeden sonrasi gizlenir</span>' +
+        '</div>' +
+        '<div class="overflow-x-auto rounded-xl border border-mineora-border">' +
+          '<table class="w-full text-left text-xs">' +
+            '<thead class="bg-black/50 text-slate-400 uppercase text-[10px] border-b border-mineora-border">' +
+              '<tr>' +
+                '<th class="py-3 px-4">Kullanici</th>' +
+                '<th class="py-3 px-4">Kademe</th>' +
+                '<th class="py-3 px-4">Direkt Sponsor</th>' +
+                '<th class="py-3 px-4">Aktif Lisanslar</th>' +
+                '<th class="py-3 px-4 text-right">TL Kasasi</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody class="divide-y divide-mineora-border text-slate-200">' + rowsHtml + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
 }
 window.renderHierarchyUI = renderHierarchyUI;
 
 function copyRefLink() {
   if (!CurrentUser) return;
-  const activeRef = CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;
-  const inviteLink = `${window.location.origin}${window.location.pathname}?ref=${activeRef}`;
+  const activeRef = CurrentUser.refCode || ("MINE-" + CurrentUser.username.toUpperCase() + "-777");
+  const inviteLink = window.location.origin + window.location.pathname + "?ref=" + activeRef;
   navigator.clipboard.writeText(inviteLink).then(() => {
-    showToast(`📋 Özel referans linkiniz kopyalandı:\n${inviteLink}`, "success");
+    showToast("Davet linkiniz kopyalandi:\n" + inviteLink, "success");
   });
 }
 window.copyRefLink = copyRefLink;
 
 function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extraProfile = {}) {
   const uKey = username.toLowerCase();
-  const storageKey = `mineora_user_${uKey}`;
+  const storageKey = 'mineora_user_' + uKey;
   let data = localStorage.getItem(storageKey);
   if (data) {
     try { CurrentUserWorld = JSON.parse(data); } catch(e) {}
@@ -410,14 +407,14 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
       fullname: extraProfile.fullname || "Madenci",
       phone: extraProfile.phone || "",
       pass: defaultPass,
-      email: extraProfile.email || `${username}@mineora.io`,
+      email: extraProfile.email || (username + "@mineora.io"),
       tl: 0.00,
       alpCrystals: 0,
       licenses: { worker: 0, mine: 0, holding: 0 },
       isRootAdmin: (username.toLowerCase() === 'mourpheus'),
       isVaultLocked: false,
       createdAt: now,
-      refCode: `MINE-${username.toUpperCase()}-777`,
+      refCode: "MINE-" + username.toUpperCase() + "-777",
       referredBy: refCodeUsed || "",
       referral_chain: [],
       mines: getDefaultMines(),
@@ -438,10 +435,11 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
         updateHUD();
       }
     }, err => {
-      console.warn("Firebase okuma uyarısı:", err.message);
+      console.warn("Firebase okuma uyarisi:", err.message);
     });
   }
 }
+window.loadUserWorld = loadUserWorld;
 
 function updateHUD() {
   if (!CurrentUser) return;
@@ -451,37 +449,37 @@ function updateHUD() {
   const activeLicEl = document.getElementById('my-active-licenses-badge');
   const dailyStatusEl = document.getElementById('daily-earned-status-text');
 
-  if (tlEl) tlEl.innerText = Number(parseFloat(CurrentUser.tl || 0)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+  if (tlEl) tlEl.innerText = Number(parseFloat(CurrentUser.tl || 0)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
   if (crystalEl) crystalEl.innerText = CurrentUser.alpCrystals || 0;
   if (userDisp) userDisp.innerText = CurrentUser.username;
 
   const totalDaily = calculateTotalDailyReturnTl(CurrentUser);
   if (dailyStatusEl) {
-    dailyStatusEl.innerText = `Günlük Kazanç Hakkı: ${totalDaily.toFixed(2)} ₺`;
+    dailyStatusEl.innerText = "Gunluk Kazanc Hakki: " + totalDaily.toFixed(2) + " TL";
   }
 
   if (activeLicEl && CurrentUser.licenses) {
     const l = CurrentUser.licenses;
-    activeLicEl.innerText = `${l.worker || 0} Madenci • ${l.mine || 0} Maden Sahibi • ${l.holding || 0} Holding (Toplam: ${totalDaily.toFixed(2)} ₺/gün)`;
+    activeLicEl.innerText = (l.worker || 0) + " Madenci | " + (l.mine || 0) + " Sahip | " + (l.holding || 0) + " Holding (Toplam: " + totalDaily.toFixed(2) + " TL/gun)";
   }
 
   updateNotificationBadge();
   if (typeof renderAdminHUD === 'function') renderAdminHUD();
 }
+window.updateHUD = updateHUD;
 
-// TÜM SEKMELERİN SORUNSUZ AÇILMASINI SAĞLAYAN MOTOR
 function switchTab(tTab) {
   if (typeof toggleMobileMenu === 'function') toggleMobileMenu(false);
 
   const isBoss = CurrentUser && !!CurrentUser.isRootAdmin;
   if (tTab === 'boss' && !isBoss) { 
-    showToast("⛔ Erişim yetkiniz yok!", "warning"); 
+    showToast("Erisim yetkiniz yok!", "warning"); 
     tTab = 'career'; 
   }
 
   const allTabs = ['boss', 'owner', 'map', 'cave', 'crash', 'colony', 'live', 'stake', 'career', 'settings'];
   allTabs.forEach(tab => {
-    const secEl = document.getElementById(`sec-${tab}`);
+    const secEl = document.getElementById('sec-' + tab);
     if (secEl) {
       if (tab === 'boss') {
         secEl.style.display = (isBoss && tTab === 'boss') ? '' : 'none';
@@ -489,7 +487,7 @@ function switchTab(tTab) {
         secEl.classList.toggle('hidden', tab !== tTab);
       }
     }
-    const b = document.getElementById(`tab-btn-${tab}`);
+    const b = document.getElementById('tab-btn-' + tab);
     if (b) {
       const isActive = (tab === tTab);
       if (tab === 'boss') {
@@ -547,11 +545,12 @@ function showToast(msg, type = "info") {
     warning: 'bg-amber-500 text-black border-yellow-300 font-bold',
     info: 'bg-mineora-card text-slate-200 border-mineora-border'
   };
-  tEl.className = `px-4 py-3 rounded-2xl border shadow-2xl text-xs font-bold transition transform duration-300 pointer-events-auto ${colors[type] || colors.info}`;
+  tEl.className = 'px-4 py-3 rounded-2xl border shadow-2xl text-xs font-bold transition transform duration-300 pointer-events-auto ' + (colors[type] || colors.info);
   tEl.innerHTML = msg;
   container.appendChild(tEl);
   setTimeout(() => tEl.remove(), 3200);
 }
+window.showToast = showToast;
 
 function updateNotificationBadge() {
   const badge = document.getElementById('notif-badge');
@@ -562,25 +561,26 @@ function updateNotificationBadge() {
     else { badge.classList.add('hidden'); }
   }
 }
+window.updateNotificationBadge = updateNotificationBadge;
 
 function handleLogin() {
   const u = document.getElementById('login-user')?.value.trim();
   const p = document.getElementById('login-pwd')?.value.trim();
-  if (!u || !p) { showToast("⚠️ Kullanıcı adı ve şifre girin!", "warning"); return; }
+  if (!u || !p) { showToast("Kullanici adi ve sifre girin!", "warning"); return; }
 
   const uKey = u.toLowerCase();
-  const storageKey = `mineora_user_${uKey}`;
+  const storageKey = 'mineora_user_' + uKey;
 
   if (fbDb) {
     fbDb.ref('users/' + uKey).once('value', snapshot => {
       const cloudData = snapshot.val();
       if (cloudData) {
-        if (cloudData.pass !== p) { showToast("⚠️ Hatalı şifre!", "warning"); return; }
+        if (cloudData.pass !== p) { showToast("Hatali sifre!", "warning"); return; }
         localStorage.setItem(storageKey, JSON.stringify(cloudData));
         loadUserWorld(u, p);
         closeModal('modal-auth-login');
         enterGame();
-        showToast(`👋 Hoş geldiniz ${CurrentUser.username}!`, "success");
+        showToast("Hos geldiniz " + CurrentUser.username + "!", "success");
       } else {
         checkLocalUserLogin(u, p, storageKey);
       }
@@ -597,13 +597,13 @@ function checkLocalUserLogin(u, p, storageKey) {
   const userRecord = localStorage.getItem(storageKey);
   if (userRecord) {
     const parsed = JSON.parse(userRecord);
-    if (parsed.pass !== p) { showToast("⚠️ Hatalı şifre!", "warning"); return; }
+    if (parsed.pass !== p) { showToast("Hatali sifre!", "warning"); return; }
     loadUserWorld(u, p);
     closeModal('modal-auth-login');
     enterGame();
-    showToast(`👋 Hoş geldiniz ${CurrentUser.username}!`, "success");
+    showToast("Hos geldiniz " + CurrentUser.username + "!", "success");
   } else {
-    showToast("⛔ Kullanıcı bulunamadı!", "warning");
+    showToast("Kullanici bulunamadi!", "warning");
   }
 }
 
@@ -615,14 +615,14 @@ function handleRegister() {
   const p = document.getElementById('reg-pwd')?.value.trim();
   const ref = document.getElementById('reg-ref-code')?.value.trim() || "";
 
-  if (!fullname || !phone || !u || !p) { showToast("⚠️ Lütfen tüm alanları doldurun!", "warning"); return; }
+  if (!fullname || !phone || !u || !p) { showToast("Lutfen tum alanlari doldurun!", "warning"); return; }
   const uKey = u.toLowerCase();
-  if (localStorage.getItem(`mineora_user_${uKey}`)) { showToast("⚠️ Bu kullanıcı adı zaten kayıtlı!", "warning"); return; }
+  if (localStorage.getItem('mineora_user_' + uKey)) { showToast("Bu kullanici adi zaten kayitli!", "warning"); return; }
 
   loadUserWorld(u, p, ref, { fullname, phone, email: em });
   closeModal('modal-auth-register');
   enterGame();
-  showToast(`🎉 Tebrikler ${fullname}! Hesabınız oluşturuldu.`, "success");
+  showToast("Tebrikler " + fullname + "! Hesabiniz olusturuldu.", "success");
 }
 window.handleRegister = handleRegister;
 
@@ -635,6 +635,7 @@ function enterGame() {
   if (tabBoss) tabBoss.style.display = isBoss ? 'flex' : 'none';
   switchTab(isBoss ? 'boss' : 'cave');
 }
+window.enterGame = enterGame;
 
 function logoutSession() {
   sessionStorage.removeItem('mineora_active_session');
@@ -642,7 +643,7 @@ function logoutSession() {
   CurrentUser = null;
   document.getElementById('screen-game')?.classList.add('hidden');
   document.getElementById('screen-landing')?.classList.remove('hidden');
-  showToast("🔒 Oturum kapatıldı.", "info");
+  showToast("Oturum kapatildi.", "info");
 }
 window.logoutSession = logoutSession;
 
@@ -650,16 +651,16 @@ function handlePasswordChange() {
   const oldP = document.getElementById('pwd-old')?.value;
   const newP = document.getElementById('pwd-new')?.value;
   const repP = document.getElementById('pwd-repeat')?.value;
-  if (!oldP || !newP || !repP) { showToast("⚠️ Tüm alanları doldurun!", "warning"); return; }
-  if (oldP !== CurrentUser.pass) { showToast("⚠️ Mevcut şifreniz hatalı!", "warning"); return; }
-  if (newP !== repP) { showToast("⚠️ Yeni şifreler eşleşmiyor!", "warning"); return; }
-  if (newP.length < 4) { showToast("⚠️ Şifre en az 4 karakter olmalıdır!", "warning"); return; }
+  if (!oldP || !newP || !repP) { showToast("Tum alanlari doldurun!", "warning"); return; }
+  if (oldP !== CurrentUser.pass) { showToast("Mevcut sifreniz hatali!", "warning"); return; }
+  if (newP !== repP) { showToast("Yeni sifreler eslesmiyor!", "warning"); return; }
+  if (newP.length < 4) { showToast("Sifre en az 4 karakter olmalidir!", "warning"); return; }
   
   CurrentUser.pass = newP;
   saveUserWorld();
   document.getElementById('pwd-old').value = "";
   document.getElementById('pwd-new').value = "";
   document.getElementById('pwd-repeat').value = "";
-  showToast("🔐 Şifreniz başarıyla güncellendi!", "success");
+  showToast("Sifreniz basariyla guncellendi!", "success");
 }
 window.handlePasswordChange = handlePasswordChange;
