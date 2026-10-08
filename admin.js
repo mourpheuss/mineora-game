@@ -134,7 +134,6 @@ function renderAdminUserTable() {
 }
 window.renderAdminUserTable = renderAdminUserTable;
 
-// ================= LOG DÖKÜMÜ & KAÇAK/HİLE DENETİM MOTORU =================
 function openAdminUserLogsModal(username) {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
   const u = typeof getStoredUser === 'function' ? getStoredUser(username) : null;
@@ -246,7 +245,6 @@ function openAdminUserLogsModal(username) {
 }
 window.openAdminUserLogsModal = openAdminUserLogsModal;
 
-// KAÇAK BAKİYEYİ MEŞRU LOG DÜZEYİNE İNDİREN FONKSİYON
 function correctTamperedUserBalance(username, targetTl) {
   if (!CurrentUser || !CurrentUser.isRootAdmin) return;
   const ok = confirm("'" + username + "' adlı kullanıcının cüzdanındaki haksız/kaçak bakiyeyi silip, yalnızca meşru kayıtlı kazancı olan " + targetTl + " TL seviyesine çekmek istiyor musunuz?");
@@ -528,6 +526,7 @@ function rejectWithdrawalOrder(withId, username, amount) {
 }
 window.rejectWithdrawalOrder = rejectWithdrawalOrder;
 
+// ================= DESTEK MESAJLARI (GERÇEK DEĞİŞKENLER & OKUNDU/SİL BUTONU) =================
 function renderAdminContactMessages() {
   const container = document.getElementById('admin-contact-messages-list');
   if (!container || typeof fbDb === 'undefined' || !fbDb) return;
@@ -539,18 +538,46 @@ function renderAdminContactMessages() {
       container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Gelen destek mesajı yok.</div>';
       return;
     }
-    const msgs = Object.values(data);
-    msgs.forEach(m => {
+    const keys = Object.keys(data);
+    if (keys.length === 0) {
+      container.innerHTML = '<div class="p-3 text-center text-slate-500 text-xs">Gelen destek mesajı yok.</div>';
+      return;
+    }
+
+    keys.forEach(msgKey => {
+      const m = data[msgKey];
       const card = document.createElement('div');
-      card.className = "p-3 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-1 text-xs";
+      card.className = "p-3 rounded-xl bg-mineora-card border border-mineora-border flex flex-col gap-1.5 text-xs shadow-md";
       card.innerHTML = 
-        '<div class="flex justify-between items-center"><strong class="text-white">${m.name}</strong><span class="text-[10px] text-slate-400">${m.reach}</span></div>' +
-        '<p class="text-slate-300 mt-1">${m.message}</p>';
+        '<div class="flex justify-between items-center border-b border-mineora-border/60 pb-1">' +
+          '<strong class="text-white font-bold">' + (m.name || 'İsimsiz') + '</strong>' +
+          '<span class="text-[10px] text-cyan-400 font-mono">' + (m.reach || '-') + '</span>' +
+        '</div>' +
+        '<p class="text-slate-200 text-[11px] leading-relaxed break-words py-1">' + (m.message || '') + '</p>' +
+        '<div class="flex justify-between items-center pt-1 border-t border-mineora-border/40">' +
+          '<span class="text-[9px] text-slate-500 font-mono">' + (m.date || '') + '</span>' +
+          '<button type="button" onclick="deleteContactMessage(\'' + msgKey + '\')" class="px-2.5 py-1 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white text-[10px] font-bold cursor-pointer transition flex items-center gap-1">' +
+            '<i class="fa-solid fa-check"></i> Okundu (Sil)' +
+          '</button>' +
+        '</div>';
       container.appendChild(card);
     });
   });
 }
 window.renderAdminContactMessages = renderAdminContactMessages;
+
+// MESAJI SİLİP KAYBEDEN FONKSİYON
+function deleteContactMessage(msgKey) {
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref('contactMessages/' + msgKey).remove().then(() => {
+      if (typeof showToast === 'function') showToast("Mesaj okundu olarak işaretlendi ve silindi.", "info");
+      if (typeof renderExpandedContactMessages === 'function' && currentExpandedTab === 'contact') {
+        renderExpandedContactMessages();
+      }
+    });
+  }
+}
+window.deleteContactMessage = deleteContactMessage;
 
 function renderAdminGlobalHierarchy() {
   const container = document.getElementById('admin-global-hierarchy-tree');
@@ -701,22 +728,34 @@ function renderExpandedContactMessages() {
   fbDb.ref('contactMessages').once('value').then(snap => {
     const data = snap.val();
     container.innerHTML = "";
-    const msgs = data ? Object.values(data) : [];
-
-    if (msgs.length === 0) {
+    if (!data) {
+      container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Gelen destek mesajı yok.</div>';
+      return;
+    }
+    const keys = Object.keys(data);
+    if (keys.length === 0) {
       container.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Gelen destek mesajı yok.</div>';
       return;
     }
 
-    msgs.forEach(m => {
+    keys.forEach(msgKey => {
+      const m = data[msgKey];
       const card = document.createElement('div');
-      card.className = "p-4 rounded-2xl bg-mineora-bg border border-cyan-500/30 flex flex-col gap-2 text-xs shadow-lg";
+      card.className = "p-4 rounded-2xl bg-mineora-bg border border-cyan-500/30 flex flex-col gap-2.5 text-xs shadow-lg";
       card.innerHTML = 
         '<div class="flex items-center justify-between border-b border-mineora-border/60 pb-2">' +
-          '<strong class="text-white text-sm">' + m.name + '</strong>' +
-          '<span class="text-cyan-400 font-mono text-xs">' + m.reach + '</span>' +
+          '<div class="flex items-center gap-2">' +
+            '<strong class="text-white text-sm font-bold">' + (m.name || 'İsimsiz') + '</strong>' +
+            '<span class="text-cyan-400 font-mono text-xs">(' + (m.reach || '-') + ')</span>' +
+          '</div>' +
+          '<span class="text-[10px] text-slate-500 font-mono">' + (m.date || '') + '</span>' +
         '</div>' +
-        '<p class="text-slate-200 bg-mineora-card p-3 rounded-xl border border-mineora-border/60 whitespace-pre-wrap">' + m.message + '</p>';
+        '<p class="text-slate-200 bg-mineora-card p-3 rounded-xl border border-mineora-border/60 whitespace-pre-wrap leading-relaxed">' + (m.message || '') + '</p>' +
+        '<div class="flex justify-end pt-1">' +
+          '<button type="button" onclick="deleteContactMessage(\'' + msgKey + '\')" class="px-4 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white font-bold text-xs cursor-pointer transition flex items-center gap-1.5">' +
+            '<i class="fa-solid fa-check"></i> Okundu / Sil' +
+          '</button>' +
+        '</div>';
       container.appendChild(card);
     });
   });
