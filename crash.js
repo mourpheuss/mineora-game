@@ -1,7 +1,10 @@
-// ================= 7. MADEN ASANSÖRÜ / CRASH MOTORU (crash.js) =================
+// ================= 7. MADEN ASANSÖRÜ / CRASH MOTORU (KURUŞ BAZLI TL) (crash.js) =================
 let crashCanvas, crashCtx, crashFrame, crashState = "waiting", currentMultiplier = 1.00, crashPoint = 2.00, countdownTimer = 5, crashTickerInterval = null;
 let hasPlacedBet = false, hasCashedOut = false, userCashOutMultiplier = 1.00, userWonAmount = 0.00, crashHistory = [1.24, 1.05, 1.68, 1.12, 3.40];
 let shaftYOffset = 0, sparks = [], debris = [], cageY = 0, cageVy = 0, cageAngle = 0, cableSnapY = 0, cableSnapVy = 0;
+
+// TABAN KAZANÇ: 0.10 TL (10 Kuruş) - Sembolik, düşük eğlence kazancı
+const BASE_REWARD_TL = 0.10;
 
 function initCrashEngine() {
   crashCanvas = document.getElementById('crash-canvas');
@@ -22,6 +25,7 @@ function initCrashEngine() {
   cancelAnimationFrame(crashFrame); 
   renderCrashCanvasLoop();
 }
+window.initCrashEngine = initCrashEngine;
 
 function generateCrashPoint() {
   const roll = Math.random();
@@ -51,10 +55,9 @@ function startCrashCountdown() {
   crashTickerInterval = setInterval(() => {
     countdownTimer--;
     if (statusBadge) {
-      statusBadge.innerHTML = `<i class="fa-solid fa-clock animate-spin"></i> ${t('crash_bets_open')} (${countdownTimer}s)`;
-      statusBadge.className = "px-4 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold flex items-center gap-2";
+      statusBadge.innerHTML = `<i class="fa-solid fa-clock animate-spin"></i> Asansör Hazırlanıyor (${countdownTimer}s)`;
     }
-    if (subStatus) subStatus.innerText = `${t('crash_preparing')} (${countdownTimer}s)`;
+    if (subStatus) subStatus.innerText = `Asansör Hazırlanıyor (${countdownTimer}s)`;
 
     if (countdownTimer <= 0) {
       clearInterval(crashTickerInterval); crashTickerInterval = null; launchCrashElevator();
@@ -70,10 +73,9 @@ function launchCrashElevator() {
   const multText = document.getElementById('crash-multiplier-text');
 
   if (statusBadge) {
-    statusBadge.innerHTML = `<i class="fa-solid fa-arrow-trend-up animate-pulse"></i> ${t('crash_running')}`;
-    statusBadge.className = "px-4 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold flex items-center gap-2";
+    statusBadge.innerHTML = `<i class="fa-solid fa-arrow-trend-up animate-pulse"></i> Derin Şafta İniyor...`;
   }
-  if (subStatus) subStatus.innerText = t('crash_running');
+  if (subStatus) subStatus.innerText = "Derin Şafta İniyor...";
   updateCrashActionBtn();
 
   function step() {
@@ -109,10 +111,9 @@ function triggerCrashExplosion() {
     multText.className = "text-5xl sm:text-7xl font-black font-mono tracking-tight text-rose-500 fire-pulse drop-shadow-[0_4px_25px_rgba(244,63,94,0.7)]";
   }
   if (statusBadge) {
-    statusBadge.innerHTML = `<i class="fa-solid fa-burst"></i> ${t('crash_crashed')}`;
-    statusBadge.className = "px-4 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400 font-mono text-xs font-bold flex items-center gap-2";
+    statusBadge.innerHTML = `<i class="fa-solid fa-burst"></i> HALAT KOPTU!`;
   }
-  if (subStatus) subStatus.innerText = `${t('crash_crashed')} @ ${crashPoint.toFixed(2)}x`;
+  if (subStatus) subStatus.innerText = `Halat Koptu @ ${crashPoint.toFixed(2)}x`;
 
   cageVy = 2.0; cageAngle = (Math.random() - 0.5) * 0.15; cableSnapVy = -12.0;
   const w = crashCanvas ? crashCanvas.width : 800, h = crashCanvas ? crashCanvas.height : 400;
@@ -127,9 +128,10 @@ function triggerCrashExplosion() {
     });
   }
 
+  // TL BAKİYESİ ASLA EKSİLMEZ, YALNIZCA BİLET YANAR
   if (hasPlacedBet && !hasCashedOut) {
-    showToast(`💥 ${t('crash_crashed')} @ ${crashPoint.toFixed(2)}x! Crystal lost, ORA wallet intact.`, "warning");
-    addUserNotificationLog(CurrentUser, "Elevator Exploration", `${crashPoint.toFixed(2)}x crash occurred.`, "0 ORA", "alert");
+    showToast(`💥 Halat Koptu @ ${crashPoint.toFixed(2)}x! Kristal bilet kullanıldı, TL kasanız güvende.`, "warning");
+    addUserNotificationLog(CurrentUser, "Asansör Deneyimi", `${crashPoint.toFixed(2)}x seviyesinde halat koptu.`, "0.00 TL", "alert");
   }
 
   crashHistory.unshift(crashPoint);
@@ -145,57 +147,52 @@ function triggerCrashExplosion() {
 function calculateCrashEstProfit() {
   const estEl = document.getElementById('crash-est-profit');
   if (estEl) {
-    if (hasCashedOut) { estEl.innerText = `+${userWonAmount.toFixed(2)} ORA (${t('crash_cashed_out')})`; return; }
-    const liveWin = Number((1.00 * currentMultiplier).toFixed(2));
-    estEl.innerText = `+${liveWin.toFixed(2)} ORA`;
+    if (hasCashedOut) { 
+      estEl.innerText = `+${userWonAmount.toFixed(2)} TL (Tahliye Olundu)`; 
+      return; 
+    }
+    const liveWin = Number((BASE_REWARD_TL * currentMultiplier).toFixed(2));
+    estEl.innerText = `+${liveWin.toFixed(2)} TL`;
   }
-}
-
-function fillMaxCrashBet() {
-  const crystalCount = CurrentUser ? (CurrentUser.alpCrystals || 0) : 0;
-  showToast(`ℹ️ Available: ${crystalCount} Alp Crystals`, "info");
 }
 
 function handleCrashActionBtn() {
   if (!CurrentUser) return;
-
-  if (typeof isCandidateTrialExpired === 'function' && isCandidateTrialExpired(CurrentUser)) {
-    showToast(`⛔ ${t('trial_expired')}`, "warning");
-    return;
-  }
 
   if (crashState === "waiting") {
     if (hasPlacedBet) {
       CurrentUser.alpCrystals = (CurrentUser.alpCrystals || 0) + 1;
       hasPlacedBet = false;
       saveUserWorld(); updateHUD(); updateCrashActionBtn();
-      showToast(currentLang === 'ru' ? "↩️ Спуск отменен, 1 Кристалл возвращен." : "↩️ Descent cancelled, 1 Crystal refunded.", "info");
+      showToast("↩️ İniş iptal edildi, 1 Kristal Bilet iade edildi.", "info");
       return;
     }
 
     const crystals = CurrentUser.alpCrystals || 0;
     if (crystals < 1) {
-      showToast(currentLang === 'ru' ? "⚠️ Требуется минимум 1 Кристалл Альп! Добывайте его в забое." : "⚠️ At least 1 Alp Crystal required! Extract in mining tunnels.", "warning");
+      showToast("⚠️ En az 1 Kristal Bilet gereklidir! Maden sahalarında kazı yaparak ücretsiz toplayabilirsiniz.", "warning");
       return;
     }
 
     CurrentUser.alpCrystals = crystals - 1;
     hasPlacedBet = true; hasCashedOut = false; userWonAmount = 0;
     saveUserWorld(); updateHUD(); updateCrashActionBtn();
-    showToast(currentLang === 'ru' ? "🎫 1 Кристалл использован. Лифт готовится!" : "🎫 1 Alp Crystal consumed. Elevator readying!", "success");
+    showToast("🎫 1 Kristal Bilet kullanıldı. Asansör hazırlanıyor!", "success");
   } else if (crashState === "running") {
     if (!hasPlacedBet || hasCashedOut) return;
     hasCashedOut = true;
     userCashOutMultiplier = currentMultiplier;
 
-    userWonAmount = Number((1.00 * userCashOutMultiplier).toFixed(2));
-    CurrentUser.ora = Number(((CurrentUser.ora || 0) + userWonAmount).toFixed(2));
+    // KURUŞ CİNSİNDEN SEMBOLİK TL HESABI: 0.10 TL * Çarpan
+    userWonAmount = Number((BASE_REWARD_TL * userCashOutMultiplier).toFixed(2));
+    CurrentUser.tl = Number(((CurrentUser.tl || 0) + userWonAmount).toFixed(2));
 
     saveUserWorld(); updateHUD(); updateCrashActionBtn();
-    addUserNotificationLog(CurrentUser, "Elevator Evacuated", `${userCashOutMultiplier.toFixed(2)}x depth escaped.`, `+${userWonAmount.toFixed(2)} ORA`, "income");
-    showToast(`🎉 ${t('crash_cashed_out')} @ ${userCashOutMultiplier.toFixed(2)}x (+${userWonAmount.toFixed(2)} ORA)!`, "success");
+    addUserNotificationLog(CurrentUser, "Asansör Tahliyesi", `${userCashOutMultiplier.toFixed(2)}x seviyesinden tahliye olundu.`, `+${userWonAmount.toFixed(2)} TL`, "income");
+    showToast(`🎉 ${userCashOutMultiplier.toFixed(2)}x seviyesinden tahliye olundu! (+${userWonAmount.toFixed(2)} TL cüzdanınıza eklendi)`, "success");
   }
 }
+window.handleCrashActionBtn = handleCrashActionBtn;
 
 function updateCrashActionBtn() {
   const btn = document.getElementById('btn-crash-action');
@@ -204,27 +201,27 @@ function updateCrashActionBtn() {
 
   if (crashState === "waiting") {
     if (hasPlacedBet) {
-      btn.className = "w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm transition shadow-lg cursor-pointer";
-      btnText.innerText = t('crash_cancel_bet');
+      btn.className = "w-full py-4 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm transition shadow-lg cursor-pointer";
+      btnText.innerText = "İnişi İptal Et (Kristali Geri Al)";
     } else {
-      btn.className = "w-full py-3.5 rounded-2xl bg-mineora-green hover:opacity-90 text-white font-black text-sm transition shadow-lg cursor-pointer";
-      btnText.innerText = t('crash_confirm_bet');
+      btn.className = "w-full py-4 rounded-2xl bg-mineora-green hover:opacity-90 text-white font-black text-sm transition shadow-lg cursor-pointer";
+      btnText.innerText = "Şafta Gir (1 Kristal Bilet Kullan)";
     }
   } else if (crashState === "running") {
     if (hasPlacedBet && !hasCashedOut) {
-      const liveWin = (1.00 * currentMultiplier).toFixed(2);
-      btn.className = "w-full py-3.5 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm transition shadow-2xl shadow-mineora-gold/40 cursor-pointer animate-pulse";
-      btnText.innerText = `${t('crash_cashout')} (+${liveWin} ORA)`;
+      const liveWin = (BASE_REWARD_TL * currentMultiplier).toFixed(2);
+      btn.className = "w-full py-4 rounded-2xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-sm transition shadow-2xl cursor-pointer animate-pulse";
+      btnText.innerText = `Tahliye Ol (+${liveWin} TL)`;
     } else if (hasCashedOut) {
-      btn.className = "w-full py-3.5 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm cursor-not-allowed";
-      btnText.innerText = `${t('crash_cashed_out')}: ${userCashOutMultiplier.toFixed(2)}x (+${userWonAmount.toFixed(2)} ORA)`;
+      btn.className = "w-full py-4 rounded-2xl bg-slate-800 text-slate-400 font-black text-sm cursor-not-allowed";
+      btnText.innerText = `Tahliye Olundu: ${userCashOutMultiplier.toFixed(2)}x (+${userWonAmount.toFixed(2)} TL)`;
     } else {
-      btn.className = "w-full py-3.5 rounded-2xl bg-slate-800 text-slate-500 font-black text-sm cursor-not-allowed";
-      btnText.innerText = t('crash_running');
+      btn.className = "w-full py-4 rounded-2xl bg-slate-800 text-slate-500 font-black text-sm cursor-not-allowed";
+      btnText.innerText = "Asansör İniyor...";
     }
   } else {
-    btn.className = "w-full py-3.5 rounded-2xl bg-rose-600 text-white font-black text-sm cursor-not-allowed";
-    btnText.innerText = t('crash_crashed');
+    btn.className = "w-full py-4 rounded-2xl bg-rose-600 text-white font-black text-sm cursor-not-allowed";
+    btnText.innerText = "Halat Koptu!";
   }
 }
 
@@ -270,9 +267,6 @@ function renderCrashCanvasLoop() {
     crashCtx.fillStyle = '#3a2518';
     crashCtx.fillRect(0, y, wallW, 14);
     crashCtx.fillRect(w - wallW, y, wallW, 14);
-    crashCtx.strokeStyle = '#1e293b';
-    crashCtx.strokeRect(0, y, wallW, 14);
-    crashCtx.strokeRect(w - wallW, y, wallW, 14);
   }
 
   const railLeftX = wallW + 18, railRightX = w - wallW - 18;
@@ -282,15 +276,6 @@ function renderCrashCanvasLoop() {
   crashCtx.moveTo(railLeftX, 0); crashCtx.lineTo(railLeftX, h);
   crashCtx.moveTo(railRightX, 0); crashCtx.lineTo(railRightX, h);
   crashCtx.stroke();
-
-  crashCtx.strokeStyle = '#1e242c';
-  crashCtx.lineWidth = 2;
-  for (let y = -45 + (shaftYOffset % 45); y < h + 45; y += 45) {
-    crashCtx.beginPath();
-    crashCtx.moveTo(railLeftX - 10, y); crashCtx.lineTo(railLeftX + 5, y);
-    crashCtx.moveTo(railRightX - 5, y); crashCtx.lineTo(railRightX + 10, y);
-    crashCtx.stroke();
-  }
 
   const centerX = w / 2;
   let currentCageY = h * 0.52;
@@ -303,14 +288,6 @@ function renderCrashCanvasLoop() {
     crashCtx.moveTo(centerX - 16 + jitter, 0); crashCtx.lineTo(centerX - 16 + jitter, currentCageY - 45);
     crashCtx.moveTo(centerX + 16 - jitter, 0); crashCtx.lineTo(centerX + 16 - jitter, currentCageY - 45);
     crashCtx.stroke();
-
-    crashCtx.strokeStyle = '#f59e0b';
-    crashCtx.lineWidth = 4;
-    crashCtx.beginPath();
-    crashCtx.moveTo(centerX - 24, currentCageY - 20);
-    crashCtx.lineTo(centerX, currentCageY - 45);
-    crashCtx.lineTo(centerX + 24, currentCageY - 20);
-    crashCtx.stroke();
   } else {
     cableSnapY += cableSnapVy;
     cableSnapVy += 0.5;
@@ -318,7 +295,6 @@ function renderCrashCanvasLoop() {
     crashCtx.lineWidth = 3;
     crashCtx.beginPath();
     crashCtx.moveTo(centerX - 16, 0); crashCtx.lineTo(centerX - 22 + (Math.random() - 0.5) * 10, Math.max(10, 45 + cableSnapY));
-    crashCtx.moveTo(centerX + 16, 0); crashCtx.lineTo(centerX + 14 + (Math.random() - 0.5) * 10, Math.max(10, 35 + cableSnapY));
     crashCtx.stroke();
   }
 
@@ -342,34 +318,10 @@ function renderCrashCanvasLoop() {
   crashCtx.lineWidth = 2;
   crashCtx.strokeRect(-cageW / 2, -cageH / 2, cageW, cageH);
 
-  crashCtx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
-  crashCtx.lineWidth = 2;
-  for (let bx = -cageW / 2 + 10; bx < cageW / 2; bx += 11) {
-    crashCtx.beginPath();
-    crashCtx.moveTo(bx, -cageH / 2 + 10);
-    crashCtx.lineTo(bx, cageH / 2 - 10);
-    crashCtx.stroke();
-  }
-
   crashCtx.fillStyle = '#ea580c';
   crashCtx.fillRect(-10, -5, 20, 26);
   crashCtx.fillStyle = '#facc15';
   crashCtx.beginPath(); crashCtx.arc(0, -14, 9, Math.PI, 0); crashCtx.fill();
-  crashCtx.fillStyle = '#ffffff';
-  crashCtx.fillRect(-3, -16, 6, 4);
-
-  if (crashState !== "crashed") {
-    const lightGrad = crashCtx.createRadialGradient(0, -14, 2, 0, 80, 100);
-    lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.7)');
-    lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-    crashCtx.fillStyle = lightGrad;
-    crashCtx.beginPath();
-    crashCtx.moveTo(0, -14); crashCtx.lineTo(-60, 120); crashCtx.lineTo(60, 120);
-    crashCtx.closePath(); crashCtx.fill();
-  }
-
-  crashCtx.fillStyle = crashState === "crashed" ? '#f43f5e' : (Math.floor(Date.now() / 200) % 2 === 0 ? '#f59e0b' : '#78350f');
-  crashCtx.beginPath(); crashCtx.arc(0, -cageH / 2 - 4, 5, 0, Math.PI * 2); crashCtx.fill();
   crashCtx.restore();
 
   if (crashState === "running" && Math.random() < 0.75) {
