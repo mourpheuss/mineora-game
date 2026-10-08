@@ -43,6 +43,7 @@
       if (!m) return;
       m.classList.remove('hidden');
       m.classList.add('flex');
+      m.style.display = 'flex'; // Kesin açılma garantisi
       if (id === 'modal-wallet' && typeof setWalletTab === 'function') setWalletTab('deposit');
       if (id === 'modal-notifications' && typeof renderNotificationsModal === 'function') renderNotificationsModal();
       if (id === 'modal-auth-login') setTimeout(() => { document.getElementById('login-user')?.focus(); }, 100);
@@ -53,17 +54,23 @@
       if (!m) return;
       m.classList.add('hidden');
       m.classList.remove('flex');
+      m.style.display = 'none'; // Kesin kapanma garantisi
+    }
+
+    function openCreateRoomModal() {
+      openModal('modal-create-live-room');
     }
 
     window.openModal = openModal;
     window.closeModal = closeModal;
+    window.openCreateRoomModal = openCreateRoomModal;
   </script>
 </head>
 <body class="bg-mineora-bg text-slate-100 min-h-screen flex flex-col justify-between selection:bg-mineora-gold selection:text-black">
 
   <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA (KAZANÇSIZ TAM OYUN TANITIMI) -->
+  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA -->
   <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden">
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -451,7 +458,7 @@
           </div>
         </section>
 
-        <!-- 3) ASANSÖR (CRASH) -->
+        <!-- 3) ASANSÖR -->
         <section id="sec-crash" class="hidden space-y-4 max-w-5xl mx-auto">
           <div class="bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4">
             <div class="relative w-full h-[380px] bg-black rounded-2xl border border-mineora-border overflow-hidden flex items-center justify-center">
@@ -614,7 +621,7 @@
 
   <!-- ==================== TÜM MODALLAR ==================== -->
 
-  <!-- CANLI ODA KURMA MODALI (ŞİFRELİ / KİLİTLİ ODA SEÇENEKLİ) -->
+  <!-- CANLI ODA KURMA MODALI -->
   <div id="modal-create-live-room" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -754,7 +761,7 @@
     </div>
   </div>
 
-  <!-- GİRİŞ YAP MODALI (ÇARPI KAPATMA BUTONU EKLENDİ) -->
+  <!-- GİRİŞ YAP MODALI -->
   <div id="modal-auth-login" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
@@ -771,7 +778,7 @@
     </div>
   </div>
 
-  <!-- KAYIT OL MODALI (KUSURSUZ ÇARPI BUTONU & REFERANS KODU ALANI EKLENDİ) -->
+  <!-- KAYIT OL MODALI -->
   <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-3.5 text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
@@ -863,9 +870,9 @@
         <h3 class="text-sm font-black text-white">Mineora Destek Masası</h3>
         <button type="button" onclick="closeModal('modal-contact')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
-      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
-      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none"></textarea>
+      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none"></textarea>
       <button type="button" onclick="submitContactMessage()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Mesajı İlet</button>
     </div>
   </div>
