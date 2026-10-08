@@ -70,7 +70,7 @@
 
   <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- 1. BÖLÜM: KARŞILAMA EKRANI -->
+  <!-- 1. BÖLÜM: KARŞILAMA / ANA SAYFA -->
   <div id="screen-landing" class="relative min-h-screen flex flex-col justify-between overflow-hidden">
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -188,7 +188,7 @@
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
       <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-      <!-- SOL DİKEY SİDEBAR -->
+      <!-- SOL MENÜ -->
       <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:bg-mineora-card/60 lg:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
         <div class="space-y-4">
           <div class="space-y-1">
@@ -323,6 +323,7 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <!-- Havale & Dekont Masası -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-emerald-500/30 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -336,6 +337,7 @@
                 <div id="admin-deposit-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
 
+              <!-- IBAN Çekim Masası -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-amber-500/30 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -349,6 +351,7 @@
                 <div id="admin-withdrawal-queue-list" class="space-y-2 flex-1 max-h-64 overflow-y-auto pr-1"></div>
               </div>
 
+              <!-- Destek Mesajları -->
               <div class="p-5 rounded-2xl bg-mineora-bg border border-cyan-500/40 flex flex-col justify-between space-y-3">
                 <div class="flex justify-between items-center border-b border-mineora-border/60 pb-2.5">
                   <h3 class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
@@ -363,6 +366,7 @@
               </div>
             </div>
 
+            <!-- Kullanıcı Röntgen Tablosu -->
             <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3 w-full shadow-xl">
               <div class="flex justify-between items-center border-b border-mineora-border pb-3">
                 <div class="flex items-center gap-2.5">
@@ -395,6 +399,7 @@
               </div>
             </div>
 
+            <!-- Global Hiyerarşi Ağacı -->
             <div class="p-5 rounded-2xl bg-mineora-bg border border-mineora-border space-y-3">
               <h3 class="text-sm font-black text-white flex items-center gap-2">
                 <i class="fa-solid fa-sitemap text-purple-400"></i> Global Ekosistem Hiyerarşi Ağacı
@@ -492,17 +497,17 @@
               <button type="button" onclick="setStakePlan(60)" id="stake-plan-btn-60" class="p-4 rounded-2xl bg-mineora-gold text-black font-black border-2 border-yellow-300 shadow-xl cursor-pointer text-left">
                 <span class="text-xs uppercase opacity-80 block">Standart Kasa</span>
                 <strong class="text-lg block font-mono">60 Gün</strong>
-                <span class="text-xs mt-1 block font-bold">2.0x Getiri</span>
+                <span class="text-xs mt-1 block font-bold">Günlük %3.0 Getiri</span>
               </button>
               <button type="button" onclick="setStakePlan(90)" id="stake-plan-btn-90" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer text-left">
                 <span class="text-xs uppercase text-slate-400 block">Gümüş Kasa</span>
                 <strong class="text-lg block font-mono text-white">90 Gün</strong>
-                <span class="text-xs text-cyan-300 mt-1 block font-bold">3.0x Getiri</span>
+                <span class="text-xs text-cyan-300 mt-1 block font-bold">Günlük %3.5 Getiri</span>
               </button>
               <button type="button" onclick="setStakePlan(120)" id="stake-plan-btn-120" class="p-4 rounded-2xl bg-mineora-bg text-slate-300 border border-mineora-border hover:border-mineora-gold/50 cursor-pointer text-left">
                 <span class="text-xs uppercase text-slate-400 block">VIP Altın Kasa</span>
                 <strong class="text-lg block font-mono text-white">120 Gün</strong>
-                <span class="text-xs text-mineora-gold mt-1 block font-bold">4.0x Getiri</span>
+                <span class="text-xs text-mineora-gold mt-1 block font-bold">Günlük %4.0 Getiri</span>
               </button>
             </div>
 
@@ -578,9 +583,11 @@
           </div>
         </section>
 
-        <!-- 8) ALP KOLONİSİ -->
+        <!-- 8) ALP KOLONİSİ (TAM İNŞAAT VE YÖNETİM BUTONLARIYLA) -->
         <section id="sec-colony" class="hidden space-y-4 max-w-6xl mx-auto">
           <div class="relative w-full h-[620px] sm:h-[720px] rounded-3xl border border-mineora-border overflow-hidden shadow-2xl bg-[#0b1329] select-none">
+            
+            <!-- Üst Koloni HUD -->
             <header class="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none gap-2">
               <div class="pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-xl">
                 <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm"><i class="fa-solid fa-mountain-sun"></i></div>
@@ -592,11 +599,40 @@
                 <span class="text-emerald-400 font-mono font-bold" id="hud-colony-emerald">15 💎</span>
               </div>
             </header>
+
             <canvas id="colonyCanvas" class="w-full h-full block"></canvas>
+
+            <!-- ALT İNŞAAT BAR (GERİ YÜKLENEN TÜM BİNA BUTONLARI) -->
+            <footer class="absolute bottom-5 sm:bottom-6 left-0 right-0 z-20 pointer-events-none px-2 flex justify-center">
+              <div class="pointer-events-auto max-w-full overflow-x-auto no-scrollbar flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-700/90 p-2 rounded-2xl shadow-2xl touch-pan-x">
+                <button type="button" onclick="ColonyEngine.selectBuild('road')" id="btn-build-road" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-road text-amber-300"></i><span>Yol</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('house')" id="btn-build-house" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-house text-amber-400"></i><span>Ev</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('school')" id="btn-build-school" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-graduation-cap text-indigo-400"></i><span>Okul</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('generator')" id="btn-build-generator" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-industry text-amber-500"></i><span>Fırın</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.selectBuild('tower')" id="btn-build-tower" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-shield-halved text-rose-400"></i><span>Karakol</span>
+                </button>
+                <div class="h-6 w-px bg-slate-700 mx-0.5 flex-shrink-0"></div>
+                <button type="button" onclick="ColonyEngine.selectBuild('demolish')" id="btn-build-demolish" class="build-btn flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-950/40 text-rose-300 text-xs font-bold border border-rose-800/50 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-hammer"></i><span>Yık</span>
+                </button>
+                <button type="button" onclick="ColonyEngine.resetCamera()" title="Odaklan" class="flex-shrink-0 p-2 rounded-xl bg-slate-800 text-slate-300 text-xs border border-slate-700 active:scale-95 transition cursor-pointer">
+                  <i class="fa-solid fa-crosshairs"></i>
+                </button>
+              </div>
+            </footer>
           </div>
         </section>
 
-        <!-- 9) CANLI YAYIN ODALARI SAHNESİ (LOBİ + ODA İÇİ EKRANI) -->
+        <!-- 9) CANLI YAYIN ODALARI SAHNESİ -->
         <section id="sec-live" class="hidden space-y-4 max-w-6xl mx-auto">
           <!-- A) LOBİ GÖRÜNÜMÜ -->
           <div id="live-lobby-view" class="space-y-4">
@@ -617,7 +653,7 @@
             <div id="live-rooms-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
           </div>
 
-          <!-- B) YAYIN ODASI İÇİ EKRANI (Video + Sahne + Canlı Chat) -->
+          <!-- B) YAYIN ODASI İÇİ EKRANI -->
           <div id="live-room-active-view" class="hidden space-y-4">
             <div class="bg-mineora-card border border-mineora-border rounded-2xl px-4 py-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -630,9 +666,6 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <span id="current-room-viewer-count" class="px-2.5 py-1 rounded-xl bg-mineora-bg border border-mineora-border text-slate-300 font-mono text-xs flex items-center gap-1.5">
-                  <i class="fa-solid fa-eye text-rose-400"></i> <strong id="live-viewer-num">1</strong>
-                </span>
                 <button type="button" onclick="leaveCurrentRoom()" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 font-bold text-xs cursor-pointer">
                   Ayrıl
                 </button>
@@ -653,16 +686,6 @@
                   </div>
                 </div>
 
-                <div class="p-3.5 bg-mineora-card border border-mineora-border rounded-2xl space-y-2">
-                  <div class="flex justify-between items-center text-xs">
-                    <span class="font-bold text-slate-300 flex items-center gap-1.5">
-                      <i class="fa-solid fa-microphone-lines text-mineora-gold"></i> Sahnedeki Konuşmacılar
-                    </span>
-                    <span id="stage-speakers-count" class="text-[10px] text-slate-500 font-mono">0 Konuşmacı</span>
-                  </div>
-                  <div id="stage-speakers-list" class="flex flex-wrap gap-2 pt-1 notranslate" translate="no"></div>
-                </div>
-
                 <div class="p-3 bg-mineora-card border border-mineora-border rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div id="host-controls" class="hidden flex items-center gap-2">
                     <button type="button" id="btn-toggle-cam" onclick="toggleHostCamera()" class="px-3 py-2 rounded-xl bg-mineora-input hover:bg-slate-700 text-white font-bold flex items-center gap-1.5 cursor-pointer">
@@ -675,7 +698,6 @@
                       <i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş
                     </button>
                   </div>
-
                   <div id="viewer-controls" class="flex items-center gap-2">
                     <button type="button" id="btn-raise-hand" onclick="toggleRaiseHand()" class="px-4 py-2 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black flex items-center gap-2 cursor-pointer shadow-lg">
                       <i class="fa-solid fa-hand"></i> <span id="raise-hand-text">Söz İste (El Kaldır)</span>
@@ -684,18 +706,15 @@
                 </div>
               </div>
 
-              <div class="bg-mineora-card border border-mineora-border rounded-3xl p-4 flex flex-col justify-between h-[480px] shadow-xl notranslate" translate="no">
-                <div class="border-b border-mineora-border pb-2.5 flex justify-between items-center">
+              <div class="bg-mineora-card border border-mineora-border rounded-3xl p-4 flex flex-col justify-between h-[480px] shadow-xl notranslate">
+                <div class="border-b border-mineora-border pb-2.5">
                   <h4 class="font-black text-xs text-white flex items-center gap-2">
                     <i class="fa-solid fa-comments text-cyan-400"></i> Oda Sohbeti
                   </h4>
-                  <span class="text-[9px] text-slate-500 uppercase tracking-widest font-mono">Realtime</span>
                 </div>
-
-                <div id="live-chat-messages" class="flex-1 overflow-y-auto space-y-2 py-3 pr-1 text-xs notranslate" translate="no"></div>
-
+                <div id="live-chat-messages" class="flex-1 overflow-y-auto space-y-2 py-3 pr-1 text-xs"></div>
                 <div class="pt-2 border-t border-mineora-border flex gap-2">
-                  <input type="text" id="live-chat-input" placeholder="Mesaj yazın..." onkeydown="if(event.key==='Enter') sendLiveChatMessage()" class="flex-1 bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-rose-500 notranslate" translate="no" autocomplete="off" spellcheck="false">
+                  <input type="text" id="live-chat-input" placeholder="Mesaj yazın..." onkeydown="if(event.key==='Enter') sendLiveChatMessage()" class="flex-1 bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-rose-500">
                   <button type="button" onclick="sendLiveChatMessage()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer">
                     <i class="fa-solid fa-paper-plane"></i>
                   </button>
@@ -708,7 +727,34 @@
     </div>
   </div>
 
-  <!-- ==================== TÜM MODALLAR ==================== -->
+  <!-- ==================== MODALLAR ==================== -->
+
+  <!-- GENİŞ İNCELEME MASASI (SEKMELERİ GERİ EKLENDİ) -->
+  <div id="modal-queue-expanded" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2">
+          <div id="expanded-modal-icon" class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-list-check"></i>
+          </div>
+          <div>
+            <h3 id="expanded-modal-title" class="text-base font-black text-white">Detaylı İnceleme Masası</h3>
+            <span class="text-[10px] text-slate-400">Tüm talepleri geniş ekranda denetleyin</span>
+          </div>
+        </div>
+
+        <!-- Hızlı Sekme Geçiş Butonları -->
+        <div class="flex items-center gap-1.5 bg-mineora-bg p-1 rounded-xl border border-mineora-border">
+          <button type="button" onclick="openQueueDetailModal('deposit')" id="exp-tab-dep" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Yatırmalar</button>
+          <button type="button" onclick="openQueueDetailModal('withdraw')" id="exp-tab-with" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Çekimler</button>
+          <button type="button" onclick="openQueueDetailModal('contact')" id="exp-tab-msg" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer transition">Mesajlar</button>
+        </div>
+
+        <button type="button" onclick="closeModal('modal-queue-expanded')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="expanded-queue-container" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+    </div>
+  </div>
 
   <!-- CANLI ODA KURMA MODALI -->
   <div id="modal-create-live-room" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
@@ -894,7 +940,7 @@
     </div>
   </div>
 
-  <!-- ADMIN ÜYE DÜZENLEME MODALI (ROL ATAMA VE TL YÜKLEME ALANLARI GERİ GELDİ) -->
+  <!-- ADMIN ÜYE DÜZENLEME MODALI -->
   <div id="modal-admin-modify-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
@@ -973,30 +1019,12 @@
     <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
       <div class="flex items-center justify-between border-b border-mineora-border pb-3">
         <h3 class="text-sm font-black text-white">Mineora Destek Masası</h3>
-        <button type="button" onclick="closeModal('modal-contact')"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <button type="button" onclick="closeModal('modal-contact')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
-      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
-      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none"></textarea>
+      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none"></textarea>
       <button type="button" onclick="submitContactMessage()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Mesajı İlet</button>
-    </div>
-  </div>
-
-  <div id="modal-queue-expanded" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
-        <div class="flex items-center gap-2">
-          <div id="expanded-modal-icon" class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
-            <i class="fa-solid fa-list-check"></i>
-          </div>
-          <div>
-            <h3 id="expanded-modal-title" class="text-base font-black text-white">Detaylı İnceleme Masası</h3>
-            <span class="text-[10px] text-slate-400">Tüm talepleri geniş ekranda denetleyin</span>
-          </div>
-        </div>
-        <button type="button" onclick="closeModal('modal-queue-expanded')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-      <div id="expanded-queue-container" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
     </div>
   </div>
 
