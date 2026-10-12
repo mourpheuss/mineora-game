@@ -114,43 +114,17 @@ function renderAdminUserTable() {
     tr.className = "hover:bg-mineora-bg/60 transition";
     const l = u.licenses || {};
     const licText = (l.worker || 0) + " Madenci / " + (l.mine || 0) + " Sahip / " + (l.holding || 0) + " Holding";
-    
-    // Telefon verisini al (kayıt esnasında u.phone veya u.tel olarak tutulmuş olabilir)
     const phoneText = u.phone || u.tel || '<span class="text-slate-500 font-normal">Belirtilmedi</span>';
 
     tr.innerHTML = 
-      '<td class="py-3 px-4">' + 
+      '<td class="py-3 px-4">' +
         '<div class="font-bold text-white flex items-center gap-1.5">' + 
-          u.username + (u.isRootAdmin ? ' <span class="text-rose-400 text-[10px]">[ADMIN]</span>' : '') + 
+          u.username + (u.isRootAdmin ? ' <span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : '') + 
         '</div>' +
         '<div class="text-[11px] text-cyan-400 font-mono mt-0.5 flex items-center gap-1">' +
           '<i class="fa-solid fa-phone text-[9px] text-cyan-500"></i> ' + phoneText +
         '</div>' +
       '</td>' +
-      '<td class="py-3 px-4 font-mono text-slate-400">' + (u.pass || '••••••') + '</td>' +
-      '<td class="py-3 px-4 font-bold text-slate-300 text-[11px]">' + (u.role || 'Aday') + '</td>' +
-      '<td class="py-3 px-4 font-mono text-slate-400 text-[11px]">' + licText + '</td>' +
-      '<td class="py-3 px-4 font-mono text-emerald-400 font-bold">' + Number(u.tl || 0).toFixed(2) + ' TL</td>' +
-      '<td class="py-3 px-4">' + (u.isVaultLocked ? '<span class="text-rose-400 font-bold">KİLİTLİ</span>' : '<span class="text-emerald-400">Açık</span>') + '</td>' +
-      '<td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">' +
-        '<button type="button" onclick="openAdminUserLogsModal(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer transition shadow">Log Dökümü</button>' +
-        (!u.isRootAdmin ? '<button type="button" onclick="toggleAdminVaultLock(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[11px] font-bold cursor-pointer">' + (u.isVaultLocked ? 'Kilidi Aç' : 'Kilitle') + '</button>' : '') +
-        '<button type="button" onclick="openAdminModifyUserModal(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-cyan-600/30 text-cyan-300 hover:bg-cyan-600/50 text-[11px] font-bold cursor-pointer">Düzenle</button>' +
-        (!u.isRootAdmin ? '<button type="button" onclick="deleteAdminUser(\'' + u.username + '\')" class="px-2.5 py-1 rounded bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-[11px] font-bold cursor-pointer transition">Sil</button>' : '') +
-      '</td>';
-
-    tbody.appendChild(tr);
-  });
-}
-
-  allUsers.forEach(u => {
-    const tr = document.createElement('tr');
-    tr.className = "hover:bg-mineora-bg/60 transition";
-    const l = u.licenses || {};
-    const licText = (l.worker || 0) + " Madenci / " + (l.mine || 0) + " Sahip / " + (l.holding || 0) + " Holding";
-
-    tr.innerHTML = 
-      '<td class="py-3 px-4 font-bold text-white">' + u.username + (u.isRootAdmin ? ' <span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : '') + '</td>' +
       '<td class="py-3 px-4 font-mono text-slate-400">' + (u.pass || '••••••') + '</td>' +
       '<td class="py-3 px-4 font-bold text-slate-300 text-[11px]">' + (u.role || 'Aday') + '</td>' +
       '<td class="py-3 px-4 font-mono text-slate-400 text-[11px]">' + licText + '</td>' +
