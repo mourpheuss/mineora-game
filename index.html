@@ -186,7 +186,7 @@
     <div class="flex-1 flex max-w-7xl mx-auto w-full overflow-hidden">
       <div id="sidebar-backdrop" onclick="toggleMobileMenu(false)" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-      <!-- SOL DİKEY SİDEBAR (ALP KOLONİSİ VE STAKE KALDIRILDI) -->
+      <!-- SOL DİKEY SİDEBAR -->
       <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-mineora-card border-r border-mineora-border flex flex-col justify-between p-4 shrink-0 overflow-y-auto transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:bg-mineora-card/60 lg:backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
         <div class="space-y-4">
           <div class="space-y-1">
@@ -465,12 +465,12 @@
           </div>
         </section>
 
-        <!-- 4) KARİYER LİSANSLARI -->
+        <!-- 4) KARİYER LİSANSLARI (GÜNLÜK SABİT %1.5 & SINIRSIZ ÇOKLU ADET) -->
         <section id="sec-career" class="hidden space-y-6 max-w-5xl mx-auto">
           <div class="p-5 rounded-3xl bg-mineora-card border border-mineora-border flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 class="text-base font-black text-white">Sahip Olduğunuz Aktif Lisanslar</h3>
-              <p class="text-xs text-slate-400">İstediğiniz paketten dilediğiniz kadar alabilirsiniz. Kazançlar katlanarak toplanır.</p>
+              <p class="text-xs text-slate-400">İstediğiniz paketten dilediğiniz kadar adet alabilirsiniz. Her paket günlük net <strong>%1.5</strong> kazanç üretir ve kazançlar katlanarak toplanır.</p>
             </div>
             <div id="my-active-licenses-badge" class="flex items-center gap-2 font-mono text-xs font-bold text-mineora-gold">
               0 Adet Aktif Lisans
@@ -478,34 +478,37 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- İŞÇİ MADENCİ KARTI -->
             <div class="p-6 rounded-3xl bg-mineora-card border border-cyan-500/40 space-y-4 flex flex-col justify-between shadow-xl">
               <div class="space-y-3">
-                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase">Günlük %2.00</span>
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase">Günlük %1.50</span>
                 <h4 class="text-lg font-black text-white">İşçi Madenci</h4>
-                <p class="text-xs text-slate-400">Günde <strong>60 ₺</strong> net kazanç sağlar.</p>
+                <p class="text-xs text-slate-400">Adet başına günde <strong>45.00 ₺</strong> net kazanç sağlar.</p>
                 <div class="p-3 rounded-xl bg-mineora-bg font-mono text-cyan-300 font-black text-base">3.000 ₺</div>
               </div>
-              <button type="button" onclick="purchaseLicense('worker', 3000)" class="w-full py-3.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer shadow-lg">Lisans Satın Al (3.000 ₺)</button>
+              <button type="button" onclick="purchaseLicense('worker', 3000)" class="w-full py-3.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer shadow-lg">+1 Lisans Satın Al (3.000 ₺)</button>
             </div>
 
+            <!-- MADEN SAHİBİ KARTI -->
             <div class="p-6 rounded-3xl bg-mineora-card border border-mineora-gold/40 space-y-4 flex flex-col justify-between shadow-xl">
               <div class="space-y-3">
-                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase">Günlük %2.25</span>
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase">Günlük %1.50</span>
                 <h4 class="text-lg font-black text-white">Maden Sahibi</h4>
-                <p class="text-xs text-slate-400">Günde <strong>112.50 ₺</strong> net kazanç sağlar.</p>
+                <p class="text-xs text-slate-400">Adet başına günde <strong>75.00 ₺</strong> net kazanç sağlar.</p>
                 <div class="p-3 rounded-xl bg-mineora-bg font-mono text-mineora-gold font-black text-base">5.000 ₺</div>
               </div>
-              <button type="button" onclick="purchaseLicense('mine', 5000)" class="w-full py-3.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow-lg">İşletme Satın Al (5.000 ₺)</button>
+              <button type="button" onclick="purchaseLicense('mine', 5000)" class="w-full py-3.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow-lg">+1 İşletme Satın Al (5.000 ₺)</button>
             </div>
 
+            <!-- HOLDİNG SAHİBİ KARTI -->
             <div class="p-6 rounded-3xl bg-mineora-card border border-purple-500/50 space-y-4 flex flex-col justify-between shadow-2xl">
               <div class="space-y-3">
-                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase animate-pulse">Günlük %3.00</span>
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase animate-pulse">Günlük %1.50</span>
                 <h4 class="text-lg font-black text-white">Holding Sahibi</h4>
-                <p class="text-xs text-slate-400">Günde <strong>300 ₺</strong> net kazanç sağlar.</p>
+                <p class="text-xs text-slate-400">Adet başına günde <strong>150.00 ₺</strong> net kazanç sağlar.</p>
                 <div class="p-3 rounded-xl bg-mineora-bg font-mono text-purple-300 font-black text-base">10.000 ₺</div>
               </div>
-              <button type="button" onclick="purchaseLicense('holding', 10000)" class="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs cursor-pointer shadow-lg">Holding Satın Al (10.000 ₺)</button>
+              <button type="button" onclick="purchaseLicense('holding', 10000)" class="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs cursor-pointer shadow-lg">+1 Holding Satın Al (10.000 ₺)</button>
             </div>
           </div>
         </section>
@@ -716,7 +719,6 @@
         </button>
       </div>
 
-      <!-- HEM ŞİRKET ADI HEM IBAN AYRI AYRI TEK TIKLA KOPYALANIR -->
       <div id="wallet-view-deposit" class="space-y-4">
         <div class="p-4 bg-mineora-bg rounded-2xl border border-mineora-gold/30 space-y-3">
           <span class="text-[11px] text-slate-400 block font-bold">Resmi Şirket Banka Hesabı:</span>
@@ -740,20 +742,21 @@
               </button>
             </div>
           </div>
+
           <div>
-      <span class="text-[10px] text-amber-400 block font-bold mb-0.5">
-        <i class="fa-solid fa-circle-exclamation mr-1"></i>Havale / EFT Açıklaması (Zorunlu):
-      </span>
-      <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl border border-amber-500/40">
-        <span class="text-amber-300 font-bold select-all text-[11px] tracking-wide">WEB YAZILIM BEDELİ</span>
-        <button type="button" onclick="copyTransferDescription()" class="text-slate-300 hover:text-white text-xs cursor-pointer ml-2 shrink-0 p-1" title="Açıklamayı Kopyala">
-          <i class="fa-solid fa-copy"></i>
-        </button>
-      </div>
-      <p class="text-[10px] text-amber-400/90 mt-1 flex items-center gap-1">
-        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Açıklama kısmına yalnızca <strong>WEB YAZILIM BEDELİ</strong> yazınız.
-      </p>
-    </div>
+            <span class="text-[10px] text-amber-400 block font-bold mb-0.5">
+              <i class="fa-solid fa-circle-exclamation mr-1"></i>Havale / EFT Açıklaması (Zorunlu):
+            </span>
+            <div class="flex items-center justify-between bg-mineora-input p-2 rounded-xl border border-amber-500/40">
+              <span class="text-amber-300 font-bold select-all text-[11px] tracking-wide">WEB YAZILIM BEDELİ</span>
+              <button type="button" onclick="copyTransferDescription()" class="text-slate-300 hover:text-white text-xs cursor-pointer ml-2 shrink-0 p-1" title="Açıklamayı Kopyala">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+            <p class="text-[10px] text-amber-400/90 mt-1 flex items-center gap-1">
+              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Açıklama kısmına yalnızca <strong>WEB YAZILIM BEDELİ</strong> yazınız.
+            </p>
+          </div>
         </div>
 
         <div class="space-y-3">
@@ -850,11 +853,12 @@
     </div>
   </div>
 
+  <!-- YÖNETİCİ KULLANICI & ÇOKLU LİSANS DÜZENLEME MODALI -->
   <div id="modal-admin-modify-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+    <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-mineora-border pb-3">
         <h3 class="text-base font-black text-white">Madenci Verilerini Düzenle</h3>
-        <button type="button" onclick="closeModal('modal-admin-modify-user')"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <button type="button" onclick="closeModal('modal-admin-modify-user')"><i class="fa-solid fa-xmark text-lg text-slate-400 hover:text-white"></i></button>
       </div>
       <div>Kullanıcı: <strong id="admin-target-user-name" class="text-cyan-400">User</strong></div>
       
@@ -866,6 +870,34 @@
           <option value="Mine Owner">Maden Sahibi (5.000 ₺)</option>
           <option value="Holding Owner">Holding Sahibi (10.000 ₺)</option>
         </select>
+      </div>
+
+      <!-- ÇOKLU LİSANS ADET TANIMLAMA ALANI (İSTEDİĞİNİZ KADAR ADET VEREBİLİRSİNİZ) -->
+      <div class="p-3 bg-mineora-bg rounded-2xl border border-mineora-border space-y-2.5">
+        <span class="text-[11px] text-mineora-gold block font-bold">
+          <i class="fa-solid fa-layer-group mr-1"></i> Aktif Rol Lisans Adetleri (Sınırsız Çoklu Lisans):
+        </span>
+        
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="text-[9px] text-cyan-300 block font-bold mb-1">İşçi (3.000 ₺)</label>
+            <input type="number" id="admin-mod-worker" min="0" placeholder="0" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2.5 py-1.5 text-white font-mono text-xs outline-none focus:border-cyan-400 text-center">
+            <span class="text-[8px] text-slate-500 block text-center mt-0.5">45 ₺/gün</span>
+          </div>
+          <div>
+            <label class="text-[9px] text-mineora-gold block font-bold mb-1">Maden (5.000 ₺)</label>
+            <input type="number" id="admin-mod-mine" min="0" placeholder="0" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2.5 py-1.5 text-white font-mono text-xs outline-none focus:border-mineora-gold text-center">
+            <span class="text-[8px] text-slate-500 block text-center mt-0.5">75 ₺/gün</span>
+          </div>
+          <div>
+            <label class="text-[9px] text-purple-300 block font-bold mb-1">Holding (10.000 ₺)</label>
+            <input type="number" id="admin-mod-holding" min="0" placeholder="0" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2.5 py-1.5 text-white font-mono text-xs outline-none focus:border-purple-400 text-center">
+            <span class="text-[8px] text-slate-500 block text-center mt-0.5">150 ₺/gün</span>
+          </div>
+        </div>
+        <p class="text-[9px] text-slate-400 leading-tight">
+          Her 1 lisans günlük sabit <strong>%1.5</strong> kazandırır. İstediğiniz paketten dilediğiniz adet tanımlayabilirsiniz.
+        </p>
       </div>
 
       <div>
