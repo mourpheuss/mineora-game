@@ -9,7 +9,7 @@ let screenStream = null;
 let pendingPinRoomId = null;
 let isLiveRoomsListening = false;
 
-// WEBRTC VE SES MİKSERİ DEĞİŞKENLERİ
+// WEBRTC VE SES MİKSERİ YAPILANDIRMASI
 const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -18,13 +18,13 @@ const RTC_CONFIG = {
   ]
 };
 
-let hostPeerConnections = {}; // Yayıncı tarafında izleyicilerle kurulan bağlantılar
-let viewerPC = null;          // İzleyici tarafındaki tekil bağlantı
-let viewerMicStream = null;   // İzleyiciye söz hakkı verildiğinde açılan mikrofon
-let hostAudioCtx = null;      // Yayıncının ses mikseri
+let hostPeerConnections = {}; 
+let viewerPC = null;          
+let viewerMicStream = null;   
+let hostAudioCtx = null;      
 let hostAudioDest = null;
 let hostMicSource = null;
-let activeSpeakerUser = null; // Şu an söz hakkı olan kullanıcı
+let activeSpeakerUser = null; 
 
 function initLiveRoomsLobby() {
   const lobbyView = document.getElementById('live-lobby-view');
@@ -103,10 +103,15 @@ async function enterRoomView(room, isHost) {
   document.getElementById('current-room-host').innerText = `Yayıncı: ${room.host}`;
   document.getElementById('live-host-badge-name').innerText = room.host;
 
+  const isAdmin = !!(CurrentUser && CurrentUser.isRootAdmin);
+  const isGhostAdmin = isAdmin && !isHost;
+
   const hostCtrl = document.getElementById('host-controls');
   const viewerCtrl = document.getElementById('viewer-controls');
+  
   if (hostCtrl) hostCtrl.classList.toggle('hidden', !isHost);
-  if (viewerCtrl) viewerCtrl.classList.toggle('hidden', isHost);
+  // Hayalet moddaki adminin kontrol paneli gizlenir (sadece izler)
+  if (viewerCtrl) viewerCtrl.classList.toggle('hidden', isHost || isGhostAdmin);
 
   const videoEl = document.getElementById('live-host-video');
   const placeholderEl = document.getElementById('live-video-placeholder');
@@ -116,18 +121,13 @@ async function enterRoomView(room, isHost) {
       localMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoEl) {
         videoEl.srcObject = localMediaStream;
-        videoEl.muted = true; // Yayıncı kendi sesini hoparlörden duyup yankı yapmasın
+        videoEl.muted = true;
         videoEl.play().catch(() => {});
       }
       if (placeholderEl) placeholderEl.classList.add('hidden');
 
-      // Web Audio Mikserini başlat (Söz hakkı alanların sesini tüm odaya aktarmak için)
       setupHostAudioMixer(localMediaStream);
-
-      // Katılan izleyicileri dinle ve WebRTC bağlantısı kur
       initHostWebRTC(room.id);
-
-      // El kaldıran madencileri dinle
       initHostHandRequestsListener(room.id);
     } catch (err) {
       console.warn("Kamera/Mikrofon erişimi alınamadı:", err);
@@ -136,10 +136,10 @@ async function enterRoomView(room, isHost) {
     }
   } else {
     if (placeholderEl) placeholderEl.classList.remove('hidden');
-    // İzleyici olarak odaya bağlan ve yayını al
     initViewerWebRTC(room.id);
-    // Söz hakkı durumunu dinle
-    listenToMySpeechStatus(room.id);
+    if (!isGhostAdmin) {
+      listenToMySpeechStatus(room.id);
+    }
   }
 
   initRoomChat(room.id);
@@ -157,7 +157,7 @@ function setupHostAudioMixer(stream) {
     hostMicSource = hostAudioCtx.createMediaStreamSource(stream);
     hostMicSource.connect(hostAudioDest);
   } catch (e) {
-    console.warn("Audio mixer hatası:", e);
+    console.warn("Ses mikseri hatası:", e);
   }
 }
 
@@ -174,7 +174,6 @@ function initHostWebRTC(roomId) {
 
   const peersRef = fbDb.ref(`liveRooms/${roomId}/peers`);
 
-  // Yeni izleyici odaya girdiğinde
   peersRef.on('child_added', async snap => {
     const viewerName = snap.key;
     if (!viewerName || viewerName.toLowerCase() === CurrentUser.username.toLowerCase()) return;
@@ -182,7 +181,6 @@ function initHostWebRTC(roomId) {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     hostPeerConnections[viewerName] = pc;
 
-    // Yayıncının video ve mikslenmiş sesini ekle
     if (localMediaStream) {
       const vTrack = isScreenSharing && screenStream 
         ? screenStream.getVideoTracks()[0] 
@@ -193,29 +191,25 @@ function initHostWebRTC(roomId) {
       if (aTrack) pc.addTrack(aTrack, localMediaStream);
     }
 
-    // İzleyici söz hakkı aldığında sesi yayıncıya gelir
     pc.ontrack = (event) => {
       const incomingStream = event.streams[0] || new MediaStream([event.track]);
-      // Sesi hem yayıncının hoparlörüne ver hem miksere bağla (tüm izleyiciler duysun)
       if (hostAudioCtx && hostAudioDest) {
         try {
           const vSource = hostAudioCtx.createMediaStreamSource(incomingStream);
-          vSource.connect(hostAudioDest);          // Diğer izleyicilere ilet
-          vSource.connect(hostAudioCtx.destination); // Yayıncının kendi hoparlörüne ilet
+          vSource.connect(hostAudioDest);          
+          vSource.connect(hostAudioCtx.destination); 
         } catch (e) {
           console.warn("İzleyici sesi mikslenemedi:", e);
         }
       }
     };
 
-    // ICE adaylarını Firebase'e gönder
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         fbDb.ref(`liveRooms/${roomId}/peers/${viewerName}/hostCandidates`).push(event.candidate.toJSON());
       }
     };
 
-    // SDP Offer oluştur ve izleyiciye sun
     try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -227,7 +221,6 @@ function initHostWebRTC(roomId) {
       console.warn("Offer hatası:", e);
     }
 
-    // İzleyiciden gelen Answer'ı bekle
     fbDb.ref(`liveRooms/${roomId}/peers/${viewerName}/answer`).on('value', async aSnap => {
       const ans = aSnap.val();
       if (ans && pc.signalingState !== 'stable') {
@@ -237,7 +230,6 @@ function initHostWebRTC(roomId) {
       }
     });
 
-    // İzleyicinin ICE adaylarını ekle
     fbDb.ref(`liveRooms/${roomId}/peers/${viewerName}/viewerCandidates`).on('child_added', cSnap => {
       const c = cSnap.val();
       if (c) {
@@ -246,7 +238,6 @@ function initHostWebRTC(roomId) {
     });
   });
 
-  // İzleyici ayrıldığında bağlantıyı kapat
   peersRef.on('child_removed', snap => {
     const viewerName = snap.key;
     if (hostPeerConnections[viewerName]) {
@@ -256,41 +247,44 @@ function initHostWebRTC(roomId) {
   });
 }
 
-// ================= WEBRTC: İZLEYİCİ TARAFI =================
+// ================= WEBRTC: İZLEYİCİ TARAFI (ADMİN İÇİN GİZLİ TEFTİŞ) =================
 async function initViewerWebRTC(roomId) {
   if (typeof fbDb === 'undefined' || !fbDb || !CurrentUser) return;
-  const myName = CurrentUser.username;
+  
+  const isAdmin = !!CurrentUser.isRootAdmin;
+  const isHost = (activeLiveRoom?.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
+  
+  // Admin ise yayıncının listesinde adının çıkmaması için anonim kimlik kullanılır
+  const peerKey = (isAdmin && !isHost) 
+    ? `ghost_spectator_${Date.now()}` 
+    : CurrentUser.username;
 
   viewerPC = new RTCPeerConnection(RTC_CONFIG);
 
-  // Ses alış-verişi için transceiver aç (Söz hakkı verildiğinde mikrofon anında bağlanabilsin)
   viewerPC.addTransceiver('audio', { direction: 'sendrecv' });
   viewerPC.addTransceiver('video', { direction: 'recvonly' });
 
-  // Yayıncının görüntüsü ve sesi geldiğinde ekrana bas
   viewerPC.ontrack = (event) => {
     const videoEl = document.getElementById('live-host-video');
     const placeholderEl = document.getElementById('live-video-placeholder');
     if (videoEl) {
       videoEl.srcObject = event.streams[0];
-      videoEl.muted = false; // İzleyici yayıncının sesini duyar
+      videoEl.muted = false;
       videoEl.play().catch(() => {});
     }
     if (placeholderEl) placeholderEl.classList.add('hidden');
   };
 
-  // ICE adaylarını yayıncıya ilet
   viewerPC.onicecandidate = (event) => {
     if (event.candidate) {
-      fbDb.ref(`liveRooms/${roomId}/peers/${myName}/viewerCandidates`).push(event.candidate.toJSON());
+      fbDb.ref(`liveRooms/${roomId}/peers/${peerKey}/viewerCandidates`).push(event.candidate.toJSON());
     }
   };
 
-  const peerNode = fbDb.ref(`liveRooms/${roomId}/peers/${myName}`);
-  await peerNode.set({ joinedAt: Date.now() });
+  const peerNode = fbDb.ref(`liveRooms/${roomId}/peers/${peerKey}`);
+  await peerNode.set({ joinedAt: Date.now(), isGhost: (isAdmin && !isHost) });
   peerNode.onDisconnect().remove();
 
-  // Yayıncının gönderdiği Offer'ı dinle
   peerNode.child('offer').on('value', async snap => {
     const offer = snap.val();
     if (offer && viewerPC && viewerPC.signalingState !== 'closed') {
@@ -308,7 +302,6 @@ async function initViewerWebRTC(roomId) {
     }
   });
 
-  // Yayıncının ICE adaylarını ekle
   peerNode.child('hostCandidates').on('child_added', snap => {
     const c = snap.val();
     if (c && viewerPC) {
@@ -323,7 +316,6 @@ function toggleRaiseHand() {
   const myName = CurrentUser.username;
 
   if (activeSpeakerUser === myName) {
-    // Zaten konuşuyorsa sözü bırakır
     stopViewerSpeaking();
     fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${myName}`).remove();
     activeSpeakerUser = null;
@@ -347,7 +339,6 @@ function toggleRaiseHand() {
 }
 window.toggleRaiseHand = toggleRaiseHand;
 
-// İZLEYİCİ: SÖZ HAKKI VERİLDİ Mİ KONTROLÜ
 function listenToMySpeechStatus(roomId) {
   if (typeof fbDb === 'undefined' || !fbDb || !CurrentUser) return;
   const myName = CurrentUser.username;
@@ -375,7 +366,6 @@ function listenToMySpeechStatus(roomId) {
   });
 }
 
-// İZLEYİCİ: MİKROFONUNU YAYINA BAĞLA
 async function startViewerSpeaking() {
   try {
     viewerMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -395,7 +385,6 @@ async function startViewerSpeaking() {
   }
 }
 
-// İZLEYİCİ: MİKROFONU KAPAT
 function stopViewerSpeaking() {
   if (viewerMicStream) {
     viewerMicStream.getTracks().forEach(t => t.stop());
@@ -515,7 +504,14 @@ function leaveCurrentRoom() {
       fbDb.ref(`liveRooms/${activeLiveRoom.id}`).onDisconnect().cancel();
       fbDb.ref(`liveRooms/${activeLiveRoom.id}`).remove();
     } else {
-      fbDb.ref(`liveRooms/${activeLiveRoom.id}/peers/${CurrentUser.username}`).remove();
+      fbDb.ref(`liveRooms/${activeLiveRoom.id}/peers`).once('value', snap => {
+        const peers = snap.val() || {};
+        Object.keys(peers).forEach(pKey => {
+          if (pKey === CurrentUser.username || (CurrentUser.isRootAdmin && pKey.startsWith('ghost_spectator_'))) {
+            fbDb.ref(`liveRooms/${activeLiveRoom.id}/peers/${pKey}`).remove();
+          }
+        });
+      });
       fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${CurrentUser.username}`).remove();
     }
     fbDb.ref(`liveRooms/${activeLiveRoom.id}/chat`).off();
@@ -568,7 +564,6 @@ async function toggleScreenShare() {
       isScreenSharing = true;
       if (btn) btn.innerHTML = `<i class="fa-solid fa-stop text-rose-400"></i> Durdur`;
 
-      // Tüm izleyicilerde kamerayı ekran görüntüsüyle değiştir (WebRTC replaceTrack)
       Object.values(hostPeerConnections).forEach(pc => {
         const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
         if (sender) sender.replaceTrack(screenTrack);
@@ -603,7 +598,7 @@ function stopScreenShare() {
   if (btn) btn.innerHTML = `<i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş`;
 }
 
-// ================= GÜVENLİ ODA SOHBETİ =================
+// ================= GÜVENLİ ODA SOHBETİ (XSS KORUMALI) =================
 function initRoomChat(roomId) {
   const container = document.getElementById('live-chat-messages');
   if (!container) return;
@@ -650,7 +645,7 @@ function sendLiveChatMessage() {
 }
 window.sendLiveChatMessage = sendLiveChatMessage;
 
-// ================= ODAYA GİRİŞ & ŞİFRE KONTROLÜ =================
+// ================= ADMİN GİZLİ TEFTİŞ & MASTER KEY GİRİŞİ =================
 function attemptJoinRoom(roomId) {
   if (!CurrentUser) {
     showToast("⚠️ Odaya katılmak için giriş yapmalısınız!", "warning");
@@ -664,14 +659,23 @@ function attemptJoinRoom(roomId) {
         showToast("⛔ Bu oda artık mevcut değil!", "warning");
         return;
       }
+      
       const isHost = (room.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
-      if (room.hasPin && !isHost) {
+      const isAdmin = !!CurrentUser.isRootAdmin;
+
+      // ADMİN İSE ŞİFRE SORMAZ (MASTER KEY)
+      if (room.hasPin && !isHost && !isAdmin) {
         pendingPinRoomId = roomId;
         const pinInput = document.getElementById('input-room-pin');
         if (pinInput) pinInput.value = "";
         openModal('modal-room-pin-prompt');
         return;
       }
+
+      if (isAdmin && !isHost) {
+        showToast("👁️ Yönetici Modu: Odaya şifresiz ve GÖRÜNMEZ olarak bağlanıyorsunuz.", "info");
+      }
+
       enterRoomView(room, isHost);
     });
   }
