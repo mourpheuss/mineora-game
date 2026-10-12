@@ -1,4 +1,4 @@
-// ================= CANLI YAYIN ODALARI & ODA İÇİ YAYIN MOTORU (live.js) =================
+// ================= CANLI YAYIN ODALARI & WEBRTC YAYIN MOTORU (live.js) =================
 let activeLiveRoom = null;
 let localMediaStream = null;
 let isCamActive = true;
@@ -9,12 +9,29 @@ let screenStream = null;
 let pendingPinRoomId = null;
 let isLiveRoomsListening = false;
 
+// WEBRTC VE SES MİKSERİ DEĞİŞKENLERİ
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ]
+};
+
+let hostPeerConnections = {}; // Yayıncı tarafında izleyicilerle kurulan bağlantılar
+let viewerPC = null;          // İzleyici tarafındaki tekil bağlantı
+let viewerMicStream = null;   // İzleyiciye söz hakkı verildiğinde açılan mikrofon
+let hostAudioCtx = null;      // Yayıncının ses mikseri
+let hostAudioDest = null;
+let hostMicSource = null;
+let activeSpeakerUser = null; // Şu an söz hakkı olan kullanıcı
+
 function initLiveRoomsLobby() {
   const lobbyView = document.getElementById('live-lobby-view');
   const activeView = document.getElementById('live-room-active-view');
   if (lobbyView) lobbyView.classList.remove('hidden');
   if (activeView) activeView.classList.add('hidden');
-  
+
   if (!isLiveRoomsListening) {
     listenToLiveRooms();
   }
@@ -35,7 +52,7 @@ function openCreateRoomModal() {
 }
 window.openCreateRoomModal = openCreateRoomModal;
 
-// ODA KURMA, ON-DISCONNECT İLE ASILI KALMAYI ENGELLEME & EKRANA GEÇİŞ
+// ODA KURMA & YAYINI BAŞLATMA
 async function handleCreateLiveRoomSubmit() {
   if (!CurrentUser) return;
   const titleInput = document.getElementById('new-room-title');
@@ -63,7 +80,6 @@ async function handleCreateLiveRoomSubmit() {
   if (typeof fbDb !== 'undefined' && fbDb) {
     const roomRef = fbDb.ref(`liveRooms/${roomId}`);
     await roomRef.set(roomData).catch(e => console.warn(e));
-    // Yayıncı interneti koparsa veya sekmeyi kapatırsa odayı otomatik sil
     roomRef.onDisconnect().remove();
   }
 
@@ -76,7 +92,7 @@ async function handleCreateLiveRoomSubmit() {
 }
 window.handleCreateLiveRoomSubmit = handleCreateLiveRoomSubmit;
 
-// YAYIN ODASI İÇİ EKRANI
+// YAYIN ODASI İÇİ EKRANI & WEBRTC BAŞLATICI
 async function enterRoomView(room, isHost) {
   activeLiveRoom = room;
 
@@ -100,25 +116,365 @@ async function enterRoomView(room, isHost) {
       localMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoEl) {
         videoEl.srcObject = localMediaStream;
-        videoEl.muted = true;
+        videoEl.muted = true; // Yayıncı kendi sesini hoparlörden duyup yankı yapmasın
         videoEl.play().catch(() => {});
       }
       if (placeholderEl) placeholderEl.classList.add('hidden');
-    } catch (err) {
-      console.warn("Kamera erişimi alınamadı:", err);
-      if (placeholderEl) placeholderEl.classList.remove('hidden');
-    }
 
-    // Yayıncı için el kaldıranları dinle
-    listenToRaisedHands(room.id);
+      // Web Audio Mikserini başlat (Söz hakkı alanların sesini tüm odaya aktarmak için)
+      setupHostAudioMixer(localMediaStream);
+
+      // Katılan izleyicileri dinle ve WebRTC bağlantısı kur
+      initHostWebRTC(room.id);
+
+      // El kaldıran madencileri dinle
+      initHostHandRequestsListener(room.id);
+    } catch (err) {
+      console.warn("Kamera/Mikrofon erişimi alınamadı:", err);
+      if (placeholderEl) placeholderEl.classList.remove('hidden');
+      showToast("⚠️ Kamera veya mikrofon izni verilmedi!", "warning");
+    }
   } else {
     if (placeholderEl) placeholderEl.classList.remove('hidden');
+    // İzleyici olarak odaya bağlan ve yayını al
+    initViewerWebRTC(room.id);
+    // Söz hakkı durumunu dinle
+    listenToMySpeechStatus(room.id);
   }
 
   initRoomChat(room.id);
 }
 window.enterRoomView = enterRoomView;
 
+// ================= WEBRTC: YAYINCI TARAFI =================
+function setupHostAudioMixer(stream) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!hostAudioCtx) hostAudioCtx = new AudioCtx();
+    if (hostAudioCtx.state === 'suspended') hostAudioCtx.resume();
+
+    hostAudioDest = hostAudioCtx.createMediaStreamDestination();
+    hostMicSource = hostAudioCtx.createMediaStreamSource(stream);
+    hostMicSource.connect(hostAudioDest);
+  } catch (e) {
+    console.warn("Audio mixer hatası:", e);
+  }
+}
+
+function getHostBroadcastAudioTrack() {
+  if (hostAudioDest && hostAudioDest.stream.getAudioTracks().length > 0) {
+    return hostAudioDest.stream.getAudioTracks()[0];
+  }
+  return localMediaStream ? localMediaStream.getAudioTracks()[0] : null;
+}
+
+function initHostWebRTC(roomId) {
+  if (typeof fbDb === 'undefined' || !fbDb) return;
+  hostPeerConnections = {};
+
+  const peersRef = fbDb.ref(`liveRooms/${roomId}/peers`);
+
+  // Yeni izleyici odaya girdiğinde
+  peersRef.on('child_added', async snap => {
+    const viewerName = snap.key;
+    if (!viewerName || viewerName.toLowerCase() === CurrentUser.username.toLowerCase()) return;
+
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    hostPeerConnections[viewerName] = pc;
+
+    // Yayıncının video ve mikslenmiş sesini ekle
+    if (localMediaStream) {
+      const vTrack = isScreenSharing && screenStream 
+        ? screenStream.getVideoTracks()[0] 
+        : localMediaStream.getVideoTracks()[0];
+      const aTrack = getHostBroadcastAudioTrack();
+
+      if (vTrack) pc.addTrack(vTrack, localMediaStream);
+      if (aTrack) pc.addTrack(aTrack, localMediaStream);
+    }
+
+    // İzleyici söz hakkı aldığında sesi yayıncıya gelir
+    pc.ontrack = (event) => {
+      const incomingStream = event.streams[0] || new MediaStream([event.track]);
+      // Sesi hem yayıncının hoparlörüne ver hem miksere bağla (tüm izleyiciler duysun)
+      if (hostAudioCtx && hostAudioDest) {
+        try {
+          const vSource = hostAudioCtx.createMediaStreamSource(incomingStream);
+          vSource.connect(hostAudioDest);          // Diğer izleyicilere ilet
+          vSource.connect(hostAudioCtx.destination); // Yayıncının kendi hoparlörüne ilet
+        } catch (e) {
+          console.warn("İzleyici sesi mikslenemedi:", e);
+        }
+      }
+    };
+
+    // ICE adaylarını Firebase'e gönder
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        fbDb.ref(`liveRooms/${roomId}/peers/${viewerName}/hostCandidates`).push(event.candidate.toJSON());
+      }
+    };
+
+    // SDP Offer oluştur ve izleyiciye sun
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await fbDb.ref(`liveRooms/${roomId}/peers/${viewerName}/offer`).set({
+        type: offer.type,
+        sdp: offer.sdp
+      });
+    } catch (e) {
+      console.warn("Offer hatası:", e);
+    }
+
+    // İzleyiciden gelen Answer'ı bekle
+    fbDb.ref(`liveRooms/${roomId}/peers/${viewerName}/answer`).on('value', async aSnap => {
+      const ans = aSnap.val();
+      if (ans && pc.signalingState !== 'stable') {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(ans));
+        } catch (e) {}
+      }
+    });
+
+    // İzleyicinin ICE adaylarını ekle
+    fbDb.ref(`liveRooms/${roomId}/peers/${viewerName}/viewerCandidates`).on('child_added', cSnap => {
+      const c = cSnap.val();
+      if (c) {
+        pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+      }
+    });
+  });
+
+  // İzleyici ayrıldığında bağlantıyı kapat
+  peersRef.on('child_removed', snap => {
+    const viewerName = snap.key;
+    if (hostPeerConnections[viewerName]) {
+      hostPeerConnections[viewerName].close();
+      delete hostPeerConnections[viewerName];
+    }
+  });
+}
+
+// ================= WEBRTC: İZLEYİCİ TARAFI =================
+async function initViewerWebRTC(roomId) {
+  if (typeof fbDb === 'undefined' || !fbDb || !CurrentUser) return;
+  const myName = CurrentUser.username;
+
+  viewerPC = new RTCPeerConnection(RTC_CONFIG);
+
+  // Ses alış-verişi için transceiver aç (Söz hakkı verildiğinde mikrofon anında bağlanabilsin)
+  viewerPC.addTransceiver('audio', { direction: 'sendrecv' });
+  viewerPC.addTransceiver('video', { direction: 'recvonly' });
+
+  // Yayıncının görüntüsü ve sesi geldiğinde ekrana bas
+  viewerPC.ontrack = (event) => {
+    const videoEl = document.getElementById('live-host-video');
+    const placeholderEl = document.getElementById('live-video-placeholder');
+    if (videoEl) {
+      videoEl.srcObject = event.streams[0];
+      videoEl.muted = false; // İzleyici yayıncının sesini duyar
+      videoEl.play().catch(() => {});
+    }
+    if (placeholderEl) placeholderEl.classList.add('hidden');
+  };
+
+  // ICE adaylarını yayıncıya ilet
+  viewerPC.onicecandidate = (event) => {
+    if (event.candidate) {
+      fbDb.ref(`liveRooms/${roomId}/peers/${myName}/viewerCandidates`).push(event.candidate.toJSON());
+    }
+  };
+
+  const peerNode = fbDb.ref(`liveRooms/${roomId}/peers/${myName}`);
+  await peerNode.set({ joinedAt: Date.now() });
+  peerNode.onDisconnect().remove();
+
+  // Yayıncının gönderdiği Offer'ı dinle
+  peerNode.child('offer').on('value', async snap => {
+    const offer = snap.val();
+    if (offer && viewerPC && viewerPC.signalingState !== 'closed') {
+      try {
+        await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await viewerPC.createAnswer();
+        await viewerPC.setLocalDescription(answer);
+        await peerNode.child('answer').set({
+          type: answer.type,
+          sdp: answer.sdp
+        });
+      } catch (e) {
+        console.warn("Viewer answer hatası:", e);
+      }
+    }
+  });
+
+  // Yayıncının ICE adaylarını ekle
+  peerNode.child('hostCandidates').on('child_added', snap => {
+    const c = snap.val();
+    if (c && viewerPC) {
+      viewerPC.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+    }
+  });
+}
+
+// ================= SÖZ HAKKI (EL KALDIRMA) MOTORU =================
+function toggleRaiseHand() {
+  if (!activeLiveRoom || !CurrentUser || typeof fbDb === 'undefined' || !fbDb) return;
+  const myName = CurrentUser.username;
+
+  if (activeSpeakerUser === myName) {
+    // Zaten konuşuyorsa sözü bırakır
+    stopViewerSpeaking();
+    fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${myName}`).remove();
+    activeSpeakerUser = null;
+    showToast("Sözü bıraktınız, mikrofon kapatıldı.", "info");
+    return;
+  }
+
+  hasHandRaised = !hasHandRaised;
+  const txt = document.getElementById('raise-hand-text');
+  const handRef = fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${myName}`);
+
+  if (hasHandRaised) {
+    handRef.set({ username: myName, status: 'pending', time: Date.now() });
+    if (txt) txt.innerText = "İsteği Geri Çek";
+    showToast("✋ El kaldırıldı, yayıncıya iletildi.", "info");
+  } else {
+    handRef.remove();
+    if (txt) txt.innerText = "Söz İste (El Kaldır)";
+    showToast("El indirme talebiniz iletildi.", "info");
+  }
+}
+window.toggleRaiseHand = toggleRaiseHand;
+
+// İZLEYİCİ: SÖZ HAKKI VERİLDİ Mİ KONTROLÜ
+function listenToMySpeechStatus(roomId) {
+  if (typeof fbDb === 'undefined' || !fbDb || !CurrentUser) return;
+  const myName = CurrentUser.username;
+
+  fbDb.ref(`liveRooms/${roomId}/hands/${myName}`).on('value', async snap => {
+    const data = snap.val();
+    const txt = document.getElementById('raise-hand-text');
+
+    if (data && data.status === 'granted') {
+      if (activeSpeakerUser !== myName) {
+        activeSpeakerUser = myName;
+        if (txt) txt.innerText = "🎤 Sözdesiniz (Sözü Bırak)";
+        showToast("🎉 Yayıncı size söz hakkı verdi! Mikrofonunuz açılıyor...", "success");
+        await startViewerSpeaking();
+      }
+    } else {
+      if (activeSpeakerUser === myName) {
+        stopViewerSpeaking();
+        activeSpeakerUser = null;
+        if (txt) txt.innerText = "Söz İste (El Kaldır)";
+        hasHandRaised = false;
+        showToast("Söz hakkınız sona erdi.", "info");
+      }
+    }
+  });
+}
+
+// İZLEYİCİ: MİKROFONUNU YAYINA BAĞLA
+async function startViewerSpeaking() {
+  try {
+    viewerMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const micTrack = viewerMicStream.getAudioTracks()[0];
+
+    if (viewerPC) {
+      const audioSender = viewerPC.getSenders().find(s => s.kind === 'audio' || (s.track && s.track.kind === 'audio'));
+      if (audioSender) {
+        await audioSender.replaceTrack(micTrack);
+      } else {
+        viewerPC.addTrack(micTrack, viewerMicStream);
+      }
+    }
+    showToast("🎤 Mikrofon yayına bağlandı, konuşabilirsiniz!", "success");
+  } catch (err) {
+    showToast("⚠️ Mikrofon erişim izni alınamadı!", "warning");
+  }
+}
+
+// İZLEYİCİ: MİKROFONU KAPAT
+function stopViewerSpeaking() {
+  if (viewerMicStream) {
+    viewerMicStream.getTracks().forEach(t => t.stop());
+    viewerMicStream = null;
+  }
+  if (viewerPC) {
+    const audioSender = viewerPC.getSenders().find(s => s.kind === 'audio' || (s.track && s.track.kind === 'audio'));
+    if (audioSender) {
+      audioSender.replaceTrack(null);
+    }
+  }
+}
+
+// YAYINCI: EL KALDIRANLARI KONTROL ET & SÖZ VER / REDDET PANELİ
+function initHostHandRequestsListener(roomId) {
+  if (typeof fbDb === 'undefined' || !fbDb) return;
+
+  const hostCtrl = document.getElementById('host-controls');
+  let panel = document.getElementById('host-hand-panel');
+  if (!panel && hostCtrl) {
+    panel = document.createElement('div');
+    panel.id = 'host-hand-panel';
+    panel.className = 'w-full flex flex-wrap items-center gap-2 pt-2.5 border-t border-mineora-border';
+    hostCtrl.parentNode.insertBefore(panel, hostCtrl.nextSibling);
+  }
+
+  fbDb.ref(`liveRooms/${roomId}/hands`).on('value', snap => {
+    const hands = snap.val() || {};
+    if (!panel) return;
+    panel.innerHTML = "";
+
+    const userKeys = Object.keys(hands);
+    if (userKeys.length === 0) return;
+
+    userKeys.forEach(uName => {
+      const item = hands[uName];
+      const isGranted = item.status === 'granted';
+
+      const tag = document.createElement('div');
+      tag.className = "flex items-center gap-2 px-3 py-1.5 rounded-xl bg-mineora-bg border border-mineora-border text-xs";
+      tag.innerHTML = `
+        <span class="font-bold text-white flex items-center gap-1.5">
+          <i class="fa-solid ${isGranted ? 'fa-microphone text-emerald-400 animate-pulse' : 'fa-hand text-amber-400'}"></i>
+          ${uName} ${isGranted ? '<span class="text-[10px] text-emerald-400 font-mono">(Yayında)</span>' : ''}
+        </span>
+        ${!isGranted ? `
+          <button type="button" onclick="grantSpeech('${uName}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] cursor-pointer">Söz Ver</button>
+          <button type="button" onclick="rejectSpeech('${uName}')" class="px-2 py-1 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-[10px] cursor-pointer">Reddet</button>
+        ` : `
+          <button type="button" onclick="revokeSpeech('${uName}')" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] cursor-pointer">Sözü Al</button>
+        `}
+      `;
+      panel.appendChild(tag);
+    });
+  });
+}
+
+function grantSpeech(viewerName) {
+  if (!activeLiveRoom || typeof fbDb === 'undefined' || !fbDb) return;
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${viewerName}`).update({ status: 'granted' });
+  showToast(`🎤 ${viewerName} adlı üyeye söz hakkı verildi.`, "success");
+}
+window.grantSpeech = grantSpeech;
+
+function revokeSpeech(viewerName) {
+  if (!activeLiveRoom || typeof fbDb === 'undefined' || !fbDb) return;
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${viewerName}`).remove();
+  showToast(`${viewerName} adlı üyenin söz hakkı geri alındı.`, "info");
+}
+window.revokeSpeech = revokeSpeech;
+
+function rejectSpeech(viewerName) {
+  if (!activeLiveRoom || typeof fbDb === 'undefined' || !fbDb) return;
+  fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${viewerName}`).remove();
+  showToast(`${viewerName} söz hakkı talebi reddedildi.`, "info");
+}
+window.rejectSpeech = rejectSpeech;
+
+// ================= YAYINDAN AYRILMA =================
 function leaveCurrentRoom() {
   if (localMediaStream) {
     localMediaStream.getTracks().forEach(t => t.stop());
@@ -128,32 +484,55 @@ function leaveCurrentRoom() {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
   }
+  stopViewerSpeaking();
+
+  if (viewerPC) {
+    viewerPC.close();
+    viewerPC = null;
+  }
+
+  if (hostPeerConnections) {
+    Object.keys(hostPeerConnections).forEach(k => {
+      hostPeerConnections[k]?.close();
+    });
+    hostPeerConnections = {};
+  }
+
+  if (hostAudioCtx) {
+    hostAudioCtx.close().catch(() => {});
+    hostAudioCtx = null;
+  }
 
   const videoEl = document.getElementById('live-host-video');
   if (videoEl) videoEl.srcObject = null;
 
-  if (activeLiveRoom && fbDb) {
-    const isHost = (activeLiveRoom.host || '').toLowerCase() === (CurrentUser?.username || '').toLowerCase();
+  const panel = document.getElementById('host-hand-panel');
+  if (panel) panel.remove();
+
+  if (activeLiveRoom && fbDb && CurrentUser) {
+    const isHost = (activeLiveRoom.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
     if (isHost) {
       fbDb.ref(`liveRooms/${activeLiveRoom.id}`).onDisconnect().cancel();
       fbDb.ref(`liveRooms/${activeLiveRoom.id}`).remove();
-    } else if (hasHandRaised) {
-      // İzleyici ayrılırken kalkan elini indir
-      fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${CurrentUser?.username}`).remove();
-      hasHandRaised = false;
+    } else {
+      fbDb.ref(`liveRooms/${activeLiveRoom.id}/peers/${CurrentUser.username}`).remove();
+      fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${CurrentUser.username}`).remove();
     }
-    // Chat dinleyicisini kapat
     fbDb.ref(`liveRooms/${activeLiveRoom.id}/chat`).off();
     fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands`).off();
   }
 
   activeLiveRoom = null;
+  activeSpeakerUser = null;
+  hasHandRaised = false;
+
   document.getElementById('live-room-active-view')?.classList.add('hidden');
   document.getElementById('live-lobby-view')?.classList.remove('hidden');
   showToast("Yayından ayrıldınız.", "info");
 }
 window.leaveCurrentRoom = leaveCurrentRoom;
 
+// ================= YAYINCI BUTON KONTROLLERİ =================
 function toggleHostCamera() {
   if (!localMediaStream) return;
   const videoTrack = localMediaStream.getVideoTracks()[0];
@@ -183,10 +562,19 @@ async function toggleScreenShare() {
   if (!isScreenSharing) {
     try {
       screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenTrack = screenStream.getVideoTracks()[0];
+
       if (videoEl) videoEl.srcObject = screenStream;
       isScreenSharing = true;
       if (btn) btn.innerHTML = `<i class="fa-solid fa-stop text-rose-400"></i> Durdur`;
-      screenStream.getVideoTracks()[0].onended = () => stopScreenShare();
+
+      // Tüm izleyicilerde kamerayı ekran görüntüsüyle değiştir (WebRTC replaceTrack)
+      Object.values(hostPeerConnections).forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) sender.replaceTrack(screenTrack);
+      });
+
+      screenTrack.onended = () => stopScreenShare();
     } catch (e) {}
   } else {
     stopScreenShare();
@@ -201,42 +589,21 @@ function stopScreenShare() {
   }
   const videoEl = document.getElementById('live-host-video');
   if (videoEl && localMediaStream) videoEl.srcObject = localMediaStream;
+
+  if (localMediaStream) {
+    const camTrack = localMediaStream.getVideoTracks()[0];
+    Object.values(hostPeerConnections).forEach(pc => {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender && camTrack) sender.replaceTrack(camTrack);
+    });
+  }
+
   isScreenSharing = false;
   const btn = document.getElementById('btn-toggle-screen');
   if (btn) btn.innerHTML = `<i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş`;
 }
 
-// EL KALDIRMA (FIREBASE ENTEGRELİ)
-function toggleRaiseHand() {
-  if (!activeLiveRoom || !CurrentUser || typeof fbDb === 'undefined' || !fbDb) return;
-  
-  hasHandRaised = !hasHandRaised;
-  const txt = document.getElementById('raise-hand-text');
-  if (txt) txt.innerText = hasHandRaised ? "İsteği Geri Çek" : "Söz İste (El Kaldır)";
-  
-  const handRef = fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${CurrentUser.username}`);
-  if (hasHandRaised) {
-    handRef.set({ username: CurrentUser.username, time: Date.now() });
-    showToast("✋ El kaldırıldı, yayıncıya iletildi.", "info");
-  } else {
-    handRef.remove();
-    showToast("El indirildi.", "info");
-  }
-}
-window.toggleRaiseHand = toggleRaiseHand;
-
-// YAYINCI EKRANINDA EL KALDIRANLARI DİNLEME
-function listenToRaisedHands(roomId) {
-  if (typeof fbDb === 'undefined' || !fbDb) return;
-  fbDb.ref(`liveRooms/${roomId}/hands`).on('child_added', snap => {
-    const data = snap.val();
-    if (data && data.username) {
-      showToast(`✋ <strong>${data.username}</strong> söz hakkı istiyor!`, "warning");
-    }
-  });
-}
-
-// GÜVENLİ SOHBET MOTORU (XSS KORUMALI)
+// ================= GÜVENLİ ODA SOHBETİ =================
 function initRoomChat(roomId) {
   const container = document.getElementById('live-chat-messages');
   if (!container) return;
@@ -249,16 +616,16 @@ function initRoomChat(roomId) {
       const d = document.createElement('div');
       d.className = "p-2 rounded-xl bg-mineora-bg border border-mineora-border text-xs";
       
-      const senderBold = document.createElement('strong');
-      senderBold.className = "text-mineora-gold";
-      senderBold.textContent = (m.sender || 'Madenci') + ": ";
-      
-      const msgSpan = document.createElement('span');
-      msgSpan.className = "text-slate-200";
-      msgSpan.textContent = m.text || ''; // XSS koruması (HTML çalıştırmaz)
-      
-      d.appendChild(senderBold);
-      d.appendChild(msgSpan);
+      const b = document.createElement('strong');
+      b.className = "text-mineora-gold";
+      b.textContent = (m.sender || 'Madenci') + ": ";
+
+      const span = document.createElement('span');
+      span.className = "text-slate-200";
+      span.textContent = m.text || '';
+
+      d.appendChild(b);
+      d.appendChild(span);
       container.appendChild(d);
       container.scrollTop = container.scrollHeight;
     });
@@ -283,6 +650,7 @@ function sendLiveChatMessage() {
 }
 window.sendLiveChatMessage = sendLiveChatMessage;
 
+// ================= ODAYA GİRİŞ & ŞİFRE KONTROLÜ =================
 function attemptJoinRoom(roomId) {
   if (!CurrentUser) {
     showToast("⚠️ Odaya katılmak için giriş yapmalısınız!", "warning");
@@ -328,7 +696,7 @@ function submitRoomPinCheck() {
 }
 window.submitRoomPinCheck = submitRoomPinCheck;
 
-// LOBİ LİSTESİ (SADECE GERÇEK ODALARI GÖSTERİR)
+// LOBİ LİSTESİ (SADECE AÇIK OLAN GERÇEK ODALARI LİSTELER)
 function renderLiveRoomsList(roomsData = null) {
   const grid = document.getElementById('live-rooms-grid');
   if (!grid) return;
@@ -338,7 +706,7 @@ function renderLiveRoomsList(roomsData = null) {
   const roomKeys = Object.keys(rooms);
 
   if (roomKeys.length === 0) {
-    grid.innerHTML = '<div class="col-span-full p-8 text-center text-slate-500 text-xs">Şu anda açık canlı oda bulunmuyor. Yeni bir oda kurarak ilk yayını başlatabilirsiniz!</div>';
+    grid.innerHTML = '<div class="col-span-full p-8 text-center text-slate-500 text-xs">Şu anda açık canlı oda bulunmuyor. Yeni bir oda kurarak ilk toplantıyı başlatabilirsiniz!</div>';
     return;
   }
 
