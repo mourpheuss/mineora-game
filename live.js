@@ -7,19 +7,23 @@ let hasHandRaised = false;
 let isScreenSharing = false;
 let screenStream = null;
 let pendingPinRoomId = null;
+let isLiveRoomsListening = false;
 
 function initLiveRoomsLobby() {
   const lobbyView = document.getElementById('live-lobby-view');
   const activeView = document.getElementById('live-room-active-view');
   if (lobbyView) lobbyView.classList.remove('hidden');
   if (activeView) activeView.classList.add('hidden');
-  renderLiveRoomsList();
-  listenToLiveRooms();
+  
+  if (!isLiveRoomsListening) {
+    listenToLiveRooms();
+  }
 }
 window.initLiveRoomsLobby = initLiveRoomsLobby;
 
 function listenToLiveRooms() {
   if (typeof fbDb !== 'undefined' && fbDb) {
+    isLiveRoomsListening = true;
     fbDb.ref('liveRooms').on('value', snapshot => {
       renderLiveRoomsList(snapshot.val());
     });
@@ -31,7 +35,7 @@ function openCreateRoomModal() {
 }
 window.openCreateRoomModal = openCreateRoomModal;
 
-// ODA KURMA VE ANINDA YAYIN ODASI EKRANINA GEÇİŞ
+// ODA KURMA, ON-DISCONNECT İLE ASILI KALMAYI ENGELLEME & EKRANA GEÇİŞ
 async function handleCreateLiveRoomSubmit() {
   if (!CurrentUser) return;
   const titleInput = document.getElementById('new-room-title');
@@ -46,7 +50,7 @@ async function handleCreateLiveRoomSubmit() {
   }
 
   const hostName = CurrentUser.username || "Madenci";
-  const roomId = `room_${hostName}_${Date.now()}`;
+  const roomId = `room_${hostName.toLowerCase()}_${Date.now()}`;
   const roomData = {
     id: roomId,
     title: title,
@@ -57,7 +61,10 @@ async function handleCreateLiveRoomSubmit() {
   if (pin) roomData.pin = pin;
 
   if (typeof fbDb !== 'undefined' && fbDb) {
-    await fbDb.ref(`liveRooms/${roomId}`).set(roomData).catch(e => console.warn(e));
+    const roomRef = fbDb.ref(`liveRooms/${roomId}`);
+    await roomRef.set(roomData).catch(e => console.warn(e));
+    // Yayıncı interneti koparsa veya sekmeyi kapatırsa odayı otomatik sil
+    roomRef.onDisconnect().remove();
   }
 
   closeModal('modal-create-live-room');
@@ -65,12 +72,11 @@ async function handleCreateLiveRoomSubmit() {
   if (pinInput) pinInput.value = "";
   showToast(`🎉 '${title}' canlı yayın odası açıldı!`, "success");
 
-  // Odayı kurduğun an seni yayın odası ekranına geçirir
   enterRoomView(roomData, true);
 }
 window.handleCreateLiveRoomSubmit = handleCreateLiveRoomSubmit;
 
-// YAYIN ODASI İÇİ EKRANINI AÇAN MOTOR
+// YAYIN ODASI İÇİ EKRANI
 async function enterRoomView(room, isHost) {
   activeLiveRoom = room;
 
@@ -102,6 +108,9 @@ async function enterRoomView(room, isHost) {
       console.warn("Kamera erişimi alınamadı:", err);
       if (placeholderEl) placeholderEl.classList.remove('hidden');
     }
+
+    // Yayıncı için el kaldıranları dinle
+    listenToRaisedHands(room.id);
   } else {
     if (placeholderEl) placeholderEl.classList.remove('hidden');
   }
@@ -126,14 +135,21 @@ function leaveCurrentRoom() {
   if (activeLiveRoom && fbDb) {
     const isHost = (activeLiveRoom.host || '').toLowerCase() === (CurrentUser?.username || '').toLowerCase();
     if (isHost) {
+      fbDb.ref(`liveRooms/${activeLiveRoom.id}`).onDisconnect().cancel();
       fbDb.ref(`liveRooms/${activeLiveRoom.id}`).remove();
+    } else if (hasHandRaised) {
+      // İzleyici ayrılırken kalkan elini indir
+      fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${CurrentUser?.username}`).remove();
+      hasHandRaised = false;
     }
+    // Chat dinleyicisini kapat
+    fbDb.ref(`liveRooms/${activeLiveRoom.id}/chat`).off();
+    fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands`).off();
   }
 
   activeLiveRoom = null;
   document.getElementById('live-room-active-view')?.classList.add('hidden');
   document.getElementById('live-lobby-view')?.classList.remove('hidden');
-  renderLiveRoomsList();
   showToast("Yayından ayrıldınız.", "info");
 }
 window.leaveCurrentRoom = leaveCurrentRoom;
@@ -190,15 +206,37 @@ function stopScreenShare() {
   if (btn) btn.innerHTML = `<i class="fa-solid fa-desktop text-cyan-400"></i> Ekran Paylaş`;
 }
 
+// EL KALDIRMA (FIREBASE ENTEGRELİ)
 function toggleRaiseHand() {
+  if (!activeLiveRoom || !CurrentUser || typeof fbDb === 'undefined' || !fbDb) return;
+  
   hasHandRaised = !hasHandRaised;
   const txt = document.getElementById('raise-hand-text');
   if (txt) txt.innerText = hasHandRaised ? "İsteği Geri Çek" : "Söz İste (El Kaldır)";
-  showToast(hasHandRaised ? "✋ El kaldırıldı, yayıncıya iletildi." : "El indirildi.", "info");
+  
+  const handRef = fbDb.ref(`liveRooms/${activeLiveRoom.id}/hands/${CurrentUser.username}`);
+  if (hasHandRaised) {
+    handRef.set({ username: CurrentUser.username, time: Date.now() });
+    showToast("✋ El kaldırıldı, yayıncıya iletildi.", "info");
+  } else {
+    handRef.remove();
+    showToast("El indirildi.", "info");
+  }
 }
 window.toggleRaiseHand = toggleRaiseHand;
 
-// SOHBET MOTORU
+// YAYINCI EKRANINDA EL KALDIRANLARI DİNLEME
+function listenToRaisedHands(roomId) {
+  if (typeof fbDb === 'undefined' || !fbDb) return;
+  fbDb.ref(`liveRooms/${roomId}/hands`).on('child_added', snap => {
+    const data = snap.val();
+    if (data && data.username) {
+      showToast(`✋ <strong>${data.username}</strong> söz hakkı istiyor!`, "warning");
+    }
+  });
+}
+
+// GÜVENLİ SOHBET MOTORU (XSS KORUMALI)
 function initRoomChat(roomId) {
   const container = document.getElementById('live-chat-messages');
   if (!container) return;
@@ -210,7 +248,17 @@ function initRoomChat(roomId) {
       if (!m) return;
       const d = document.createElement('div');
       d.className = "p-2 rounded-xl bg-mineora-bg border border-mineora-border text-xs";
-      d.innerHTML = `<strong class="text-mineora-gold">${m.sender}:</strong> <span class="text-slate-200">${m.text}</span>`;
+      
+      const senderBold = document.createElement('strong');
+      senderBold.className = "text-mineora-gold";
+      senderBold.textContent = (m.sender || 'Madenci') + ": ";
+      
+      const msgSpan = document.createElement('span');
+      msgSpan.className = "text-slate-200";
+      msgSpan.textContent = m.text || ''; // XSS koruması (HTML çalıştırmaz)
+      
+      d.appendChild(senderBold);
+      d.appendChild(msgSpan);
       container.appendChild(d);
       container.scrollTop = container.scrollHeight;
     });
@@ -251,6 +299,8 @@ function attemptJoinRoom(roomId) {
       const isHost = (room.host || '').toLowerCase() === CurrentUser.username.toLowerCase();
       if (room.hasPin && !isHost) {
         pendingPinRoomId = roomId;
+        const pinInput = document.getElementById('input-room-pin');
+        if (pinInput) pinInput.value = "";
         openModal('modal-room-pin-prompt');
         return;
       }
@@ -261,13 +311,15 @@ function attemptJoinRoom(roomId) {
 window.attemptJoinRoom = attemptJoinRoom;
 
 function submitRoomPinCheck() {
-  const pinEntered = document.getElementById('input-room-pin')?.value.trim();
+  const pinInput = document.getElementById('input-room-pin');
+  const pinEntered = pinInput?.value.trim();
   if (!pendingPinRoomId || !fbDb) return;
 
   fbDb.ref(`liveRooms/${pendingPinRoomId}`).once('value').then(snap => {
     const room = snap.val();
     if (room && room.pin === pinEntered) {
       closeModal('modal-room-pin-prompt');
+      if (pinInput) pinInput.value = "";
       enterRoomView(room, false);
     } else {
       showToast("❌ Hatalı oda şifresi!", "warning");
@@ -276,20 +328,23 @@ function submitRoomPinCheck() {
 }
 window.submitRoomPinCheck = submitRoomPinCheck;
 
+// LOBİ LİSTESİ (SADECE GERÇEK ODALARI GÖSTERİR)
 function renderLiveRoomsList(roomsData = null) {
   const grid = document.getElementById('live-rooms-grid');
   if (!grid) return;
 
-  const mockRooms = {
-    "mock_room_1": { id: "mock_room_1", title: "VIP Maden Sahipleri Koordinasyon Odası", host: "Alp_Holding", hasPin: false },
-    "mock_room_2": { id: "mock_room_2", title: "2. Vardiya Kilitli Strateji Meclisi", host: "Saha_Sorumlusu", hasPin: true }
-  };
-
-  const allRooms = Object.assign({}, mockRooms, roomsData || {});
   grid.innerHTML = "";
+  const rooms = roomsData || {};
+  const roomKeys = Object.keys(rooms);
 
-  Object.keys(allRooms).forEach(roomId => {
-    const room = allRooms[roomId];
+  if (roomKeys.length === 0) {
+    grid.innerHTML = '<div class="col-span-full p-8 text-center text-slate-500 text-xs">Şu anda açık canlı oda bulunmuyor. Yeni bir oda kurarak ilk yayını başlatabilirsiniz!</div>';
+    return;
+  }
+
+  roomKeys.forEach(roomId => {
+    const room = rooms[roomId];
+    if (!room || !room.id) return;
     const isLocked = !!room.hasPin;
     const card = document.createElement('div');
     card.className = "p-5 rounded-3xl bg-mineora-card border border-mineora-border flex flex-col justify-between space-y-4 shadow-xl";
@@ -302,7 +357,7 @@ function renderLiveRoomsList(roomsData = null) {
         <h4 class="font-black text-white text-sm mt-2">${room.title}</h4>
         <span class="text-xs text-slate-400 block mt-1">Yayıncı: <strong class="text-mineora-gold">${room.host}</strong></span>
       </div>
-      <button type="button" onclick="attemptJoinRoom('${roomId}')" class="w-full py-2.5 rounded-xl bg-mineora-input hover:bg-rose-600 hover:text-white text-slate-200 font-bold text-xs transition cursor-pointer shadow flex items-center justify-center gap-1.5">
+      <button type="button" onclick="attemptJoinRoom('${room.id}')" class="w-full py-2.5 rounded-xl bg-mineora-input hover:bg-rose-600 hover:text-white text-slate-200 font-bold text-xs transition cursor-pointer shadow flex items-center justify-center gap-1.5">
         ${isLocked ? '<i class="fa-solid fa-lock text-amber-400"></i> Şifreli Odaya Katıl' : 'Odaya Katıl'}
       </button>
     `;
@@ -310,7 +365,3 @@ function renderLiveRoomsList(roomsData = null) {
   });
 }
 window.renderLiveRoomsList = renderLiveRoomsList;
-
-setTimeout(() => {
-  renderLiveRoomsList();
-}, 500);
