@@ -338,16 +338,23 @@ function openAdminModifyUserModal(username) {
   const targetNameEl = document.getElementById('admin-target-user-name');
   const modTlEl = document.getElementById('admin-mod-tl');
   const roleSelect = document.getElementById('admin-mod-role');
+  const wEl = document.getElementById('admin-mod-worker');
+  const mEl = document.getElementById('admin-mod-mine');
+  const hEl = document.getElementById('admin-mod-holding');
+
+  const l = u.licenses || {};
 
   if (targetNameEl) targetNameEl.innerText = u.username;
   if (modTlEl) modTlEl.value = Number(u.tl || 0);
   if (roleSelect) roleSelect.value = u.role || 'Aday';
+  if (wEl) wEl.value = l.worker || 0;
+  if (mEl) mEl.value = l.mine || 0;
+  if (hEl) hEl.value = l.holding || 0;
 
   if (typeof openModal === 'function') openModal('modal-admin-modify-user');
 }
 window.openAdminModifyUserModal = openAdminModifyUserModal;
 
-// ROL VE BAKİYE ATAMA (ROL ATANDIĞI ANDA %1.5 HAK TANINIR & BULUTA YAZILIR)
 function saveAdminUserModifications() {
   if (!activeModTargetUser) return;
 
@@ -370,17 +377,21 @@ function saveAdminUserModifications() {
   activeModTargetUser.tl = Number(newTl.toFixed(2));
   activeModTargetUser.role = newRole;
 
-  if (!activeModTargetUser.licenses) activeModTargetUser.licenses = { worker: 0, mine: 0, holding: 0 };
-  
-  if (newRole === 'Worker Miner') {
-    activeModTargetUser.licenses.worker = Math.max(1, activeModTargetUser.licenses.worker || 0);
-  } else if (newRole === 'Mine Owner') {
-    activeModTargetUser.licenses.mine = Math.max(1, activeModTargetUser.licenses.mine || 0);
-  } else if (newRole === 'Holding Owner') {
-    activeModTargetUser.licenses.holding = Math.max(1, activeModTargetUser.licenses.holding || 0);
-  } else if (newRole === 'Aday') {
-    activeModTargetUser.licenses = { worker: 0, mine: 0, holding: 0 };
-  }
+  // LİSANS ADETLERİNİ OKU VE KAYDET (İSTEDİĞİNİZ KADAR)
+  const wCount = parseInt(document.getElementById('admin-mod-worker')?.value) || 0;
+  const mCount = parseInt(document.getElementById('admin-mod-mine')?.value) || 0;
+  const hCount = parseInt(document.getElementById('admin-mod-holding')?.value) || 0;
+
+  activeModTargetUser.licenses = {
+    worker: Math.max(0, wCount),
+    mine: Math.max(0, mCount),
+    holding: Math.max(0, hCount)
+  };
+
+  // Lisans adetlerine göre en yüksek unvanı otomatik belirle
+  if (hCount > 0) activeModTargetUser.role = 'Holding Owner';
+  else if (mCount > 0 && activeModTargetUser.role !== 'Holding Owner') activeModTargetUser.role = 'Mine Owner';
+  else if (wCount > 0 && activeModTargetUser.role === 'Aday') activeModTargetUser.role = 'Worker Miner';
 
   if (typeof saveStoredUser === 'function') saveStoredUser(activeModTargetUser);
   if (typeof fbDb !== 'undefined' && fbDb) {
@@ -390,7 +401,7 @@ function saveAdminUserModifications() {
   if (typeof closeModal === 'function') closeModal('modal-admin-modify-user');
   renderAdminUserTable();
   updateAdminFinancialVaultMetrics();
-  if (typeof showToast === 'function') showToast(activeModTargetUser.username + " rolü ve %1.5 kazanç hakkı başarıyla tanımlandı!", "success");
+  if (typeof showToast === 'function') showToast(activeModTargetUser.username + " lisans adetleri ve bakiyesi güncellendi!", "success");
 }
 window.saveAdminUserModifications = saveAdminUserModifications;
 
