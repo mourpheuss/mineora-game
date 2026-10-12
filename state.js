@@ -16,7 +16,7 @@ try {
     fbDb = firebase.database();
   }
 } catch(e) {
-  console.warn("Firebase baglanti uyarisi:", e);
+  console.warn("Firebase bağlantı uyarısı:", e);
 }
 
 const COOLDOWN_24H_MS = 24 * 60 * 60 * 1000;
@@ -53,11 +53,11 @@ function playPickaxeSound(isCritical = false) {
 
 function getDefaultMines() {
   return [
-    { id: 0, name: "Silverstream Alpine Mine", mineral: "Bakir & Kristal Damari", hp: 100, depleted: false, sealedAt: null },
-    { id: 1, name: "Firepath Magmatic Trench", mineral: "Yakut & Akik Yatagi", hp: 100, depleted: false, sealedAt: null },
-    { id: 2, name: "Dark Valley Obsidian Shaft", mineral: "Saf Obsidyen Damari", hp: 100, depleted: false, sealedAt: null },
-    { id: 3, name: "Densepine Emerald Basin", mineral: "Zumrut ve Granit Havzasi", hp: 100, depleted: false, sealedAt: null },
-    { id: 4, name: "Goldpeak Apex Vein", mineral: "Dogal Dag Altini", hp: 100, depleted: false, sealedAt: null }
+    { id: 0, name: "Silverstream Alpine Mine", mineral: "Bakır & Kristal Damarı", hp: 100, depleted: false, sealedAt: null },
+    { id: 1, name: "Firepath Magmatic Trench", mineral: "Yakut & Akik Yatağı", hp: 100, depleted: false, sealedAt: null },
+    { id: 2, name: "Dark Valley Obsidian Shaft", mineral: "Saf Obsidyen Damarı", hp: 100, depleted: false, sealedAt: null },
+    { id: 3, name: "Densepine Emerald Basin", mineral: "Zümrüt ve Granit Havzası", hp: 100, depleted: false, sealedAt: null },
+    { id: 4, name: "Goldpeak Apex Vein", mineral: "Doğal Dağ Altını", hp: 100, depleted: false, sealedAt: null }
   ];
 }
 
@@ -78,7 +78,7 @@ function saveStoredUser(userObj) {
   
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref('users/' + uKey).set(userObj).catch(err => {
-      console.warn("Firebase yazma uyarisi (" + uKey + "):", err.message);
+      console.warn("Firebase yazma uyarısı (" + uKey + "):", err.message);
     });
   }
 }
@@ -197,35 +197,54 @@ function findUserByRefCode(refCode, externalUsersMap = null) {
 }
 window.findUserByRefCode = findUserByRefCode;
 
-// 4 KADEMELİ CANLI REFERANS DAĞITIM MOTORU (%10, %7, %5, %3)
+// 4 KADEMELİ REFERANS DAĞITIM MOTORU (%10, %5, %3, %2) - ON AYDA KESİN ÇALIŞIR
 function distributeFourDepthCommission(buyerUser, costTl) {
-  if (!buyerUser) return;
-  const chain = Array.isArray(buyerUser.referral_chain) ? buyerUser.referral_chain : [];
+  if (!buyerUser || !costTl || costTl <= 0) return;
+
+  let chain = Array.isArray(buyerUser.referral_chain) ? [...buyerUser.referral_chain] : [];
+
+  // Zincir boşsa bile referredBy üzerinden 4 kademeyi canlı kurtar
+  if (chain.length === 0 && buyerUser.referredBy) {
+    let currRef = buyerUser.referredBy;
+    let depth = 0;
+    while (currRef && depth < 4) {
+      const parent = findUserByRefCode(currRef);
+      if (!parent || !parent.username) break;
+      chain.unshift(parent.username);
+      currRef = parent.referredBy;
+      depth++;
+    }
+  }
+
   if (chain.length === 0) {
-    console.log("Referans zinciri boş, komisyon dağıtılmadı.");
+    console.log("Referans sponsoru bulunamadı, komisyon dağıtılmadı.");
     return;
   }
   
-  const rates = [0.10, 0.07, 0.05, 0.03]; // 1. Kademe: %10, 2: %7, 3: %5, 4: %3
+  const rates = [0.10, 0.05, 0.03, 0.02]; // 1: %10, 2: %5, 3: %3, 4: %2
 
   for (let i = 0; i < rates.length; i++) {
     const sponsorIndex = chain.length - 1 - i;
     if (sponsorIndex < 0) break;
 
     const sponsorUsername = chain[sponsorIndex];
-    if (!sponsorUsername) continue;
+    if (!sponsorUsername || sponsorUsername.toLowerCase() === (buyerUser.username || '').toLowerCase()) continue;
     const sponsorKey = sponsorUsername.toLowerCase();
 
     const rate = rates[i];
     const commissionTl = Number((costTl * rate).toFixed(2));
-    const tierName = (i + 1) + ". Kademe Referans Primi (%" + Math.round(rate * 100) + ")";
+    if (commissionTl <= 0) continue;
+
+    const tierNum = i + 1;
+    const tierName = tierNum + ". Kademe Referans Primi (%" + Math.round(rate * 100) + ")";
+    const logDesc = buyerUser.username + " adlı madencinin yatırdığı " + costTl.toLocaleString('tr-TR') + " TL üzerinden " + tierNum + ". Kademe priminiz.";
 
     if (typeof fbDb !== 'undefined' && fbDb) {
       fbDb.ref('users/' + sponsorKey).once('value').then(snap => {
         let spData = snap.val() || getStoredUser(sponsorUsername);
         if (spData) {
           spData.tl = Number(((spData.tl || 0) + commissionTl).toFixed(2));
-          addUserNotificationLog(spData, tierName, buyerUser.username + " lisans aldı.", "+" + commissionTl.toFixed(2) + " TL", "commission");
+          addUserNotificationLog(spData, tierName, logDesc, "+" + commissionTl.toFixed(2) + " TL", "commission");
           saveStoredUser(spData);
           if (CurrentUser && CurrentUser.username.toLowerCase() === sponsorKey) {
             CurrentUser.tl = spData.tl;
@@ -238,23 +257,32 @@ function distributeFourDepthCommission(buyerUser, costTl) {
       const sponsorObj = getStoredUser(sponsorUsername);
       if (sponsorObj) {
         sponsorObj.tl = Number(((sponsorObj.tl || 0) + commissionTl).toFixed(2));
-        addUserNotificationLog(sponsorObj, tierName, buyerUser.username + " lisans aldı.", "+" + commissionTl.toFixed(2) + " TL", "commission");
+        addUserNotificationLog(sponsorObj, tierName, logDesc, "+" + commissionTl.toFixed(2) + " TL", "commission");
         saveStoredUser(sponsorObj);
       }
     }
   }
 }
+window.distributeFourDepthCommission = distributeFourDepthCommission;
 
-// LİSANS GETİRİSİ (İşçi %2 = 60₺, Maden %2.25 = 112.50₺, Holding %3 = 300₺)
+// TÜM ROLLER GÜNLÜK %1.5 KAZANIR (İşçi: 45₺, Maden: 75₺, Holding: 150₺)
 function calculateTotalDailyReturnTl(userObj) {
-  if (!userObj || !userObj.licenses) return 0;
-  const wCount = userObj.licenses.worker || 0;
-  const mCount = userObj.licenses.mine || 0;
-  const hCount = userObj.licenses.holding || 0;
+  if (!userObj) return 0;
+  const l = userObj.licenses || { worker: 0, mine: 0, holding: 0 };
+  let wCount = l.worker || 0;
+  let mCount = l.mine || 0;
+  let hCount = l.holding || 0;
 
-  const dailyWorker = wCount * (3000 * 0.02);     // 60 TL/gün
-  const dailyMine = mCount * (5000 * 0.0225);     // 112.50 TL/gün
-  const dailyHolding = hCount * (10000 * 0.03);   // 300 TL/gün
+  // Admin tarafından manuel atanmış rol desteği (lisans 0 olsa dahi rolden %1.5 hak tanınır)
+  if (wCount === 0 && mCount === 0 && hCount === 0 && userObj.role) {
+    if (userObj.role === 'Worker Miner') wCount = 1;
+    else if (userObj.role === 'Mine Owner') mCount = 1;
+    else if (userObj.role === 'Holding Owner') hCount = 1;
+  }
+
+  const dailyWorker = wCount * (3000 * 0.015);     // 45.00 TL/gün (%1.5)
+  const dailyMine = mCount * (5000 * 0.015);       // 75.00 TL/gün (%1.5)
+  const dailyHolding = hCount * (10000 * 0.015);   // 150.00 TL/gün (%1.5)
 
   return Number((dailyWorker + dailyMine + dailyHolding).toFixed(2));
 }
@@ -276,20 +304,25 @@ function purchaseLicense(type, costTl) {
 
   CurrentUser.licenses[type] = (CurrentUser.licenses[type] || 0) + 1;
 
-  let typeName = "Isci Madenci";
-  if (type === 'mine') typeName = "Maden Sahibi";
-  if (type === 'holding') typeName = "Holding Sahibi";
+  let typeName = "İşçi Madenci";
+  if (type === 'mine') {
+    typeName = "Maden Sahibi";
+    if (CurrentUser.role !== 'Holding Owner') CurrentUser.role = "Mine Owner";
+  } else if (type === 'holding') {
+    typeName = "Holding Sahibi";
+    CurrentUser.role = "Holding Owner";
+  } else if (type === 'worker') {
+    if (!CurrentUser.role || CurrentUser.role === 'Aday') CurrentUser.role = "Worker Miner";
+  }
 
-  addUserNotificationLog(CurrentUser, "Lisans Satın Alindi", "1 Adet " + typeName + " lisansi portfoye eklendi.", "-" + costTl.toLocaleString() + " TL", "upgrade");
+  addUserNotificationLog(CurrentUser, "Lisans Portföye Eklendi", "1 Adet " + typeName + " lisansı aktif edildi.", "-" + costTl.toLocaleString() + " TL", "upgrade");
 
-  distributeFourDepthCommission(CurrentUser, costTl);
   saveUserWorld();
   updateHUD();
-  showToast("Tebrikler! 1 adet " + typeName + " lisansi basariyla alindi!", "success");
+  showToast("Tebrikler! 1 adet " + typeName + " lisansı başarıyla alındı!", "success");
 }
 window.purchaseLicense = purchaseLicense;
 
-// CİHAZLAR ARASI VE FİREBASE UYUMLU REFERANS BAĞLANTISI
 function linkHierarchyByRefCode(newUsername, refCode, externalUsersMap = null) {
   if (!refCode || !refCode.trim()) return;
   const leader = findUserByRefCode(refCode, externalUsersMap);
@@ -322,7 +355,6 @@ function linkHierarchyByRefCode(newUsername, refCode, externalUsersMap = null) {
   }
 }
 
-// 4 DERİNLİKTEKİ EKİBİ ÇIKARAN MOTOR
 function getFourDepthTeam(targetUsername) {
   if (!targetUsername) return [];
   const target = targetUsername.toLowerCase();
@@ -424,7 +456,7 @@ function renderHierarchyUI() {
             '<h2 class="text-lg font-black text-white flex items-center gap-2">' +
               '<span>' + CurrentUser.username + '</span> - 4 Kademeli Referans Ağı' +
             '</h2>' +
-            '<p class="text-xs text-slate-400">Alt ekibiniz lisans aldıkça 4 kademeye kadar doğrudan TL primi kazanırsınız.</p>' +
+            '<p class="text-xs text-slate-400">Ekibiniz bakiye yükledikçe 4 kademeye kadar doğrudan TL primi kazanırsınız.</p>' +
           '</div>' +
         '</div>' +
         '<div class="flex items-center gap-2 bg-mineora-bg p-2 rounded-2xl border border-mineora-border max-w-full">' +
@@ -444,15 +476,15 @@ function renderHierarchyUI() {
           '<strong class="text-emerald-400 font-mono text-base block mt-1">' + d1 + ' Üye</strong>' +
         '</div>' +
         '<div class="p-4 bg-mineora-bg rounded-2xl border border-cyan-500/30">' +
-          '<span class="text-slate-400 text-[10px] block font-bold uppercase">2. Kademe (%7 Prim)</span>' +
+          '<span class="text-slate-400 text-[10px] block font-bold uppercase">2. Kademe (%5 Prim)</span>' +
           '<strong class="text-cyan-400 font-mono text-base block mt-1">' + d2 + ' Üye</strong>' +
         '</div>' +
         '<div class="p-4 bg-mineora-bg rounded-2xl border border-amber-500/30">' +
-          '<span class="text-slate-400 text-[10px] block font-bold uppercase">3. Kademe (%5 Prim)</span>' +
+          '<span class="text-slate-400 text-[10px] block font-bold uppercase">3. Kademe (%3 Prim)</span>' +
           '<strong class="text-amber-400 font-mono text-base block mt-1">' + d3 + ' Üye</strong>' +
         '</div>' +
         '<div class="p-4 bg-mineora-bg rounded-2xl border border-purple-500/30">' +
-          '<span class="text-slate-400 text-[10px] block font-bold uppercase">4. Kademe (%3 Prim)</span>' +
+          '<span class="text-slate-400 text-[10px] block font-bold uppercase">4. Kademe (%2 Prim)</span>' +
           '<strong class="text-purple-400 font-mono text-base block mt-1">' + d4 + ' Üye</strong>' +
         '</div>' +
       '</div>' +
@@ -462,7 +494,7 @@ function renderHierarchyUI() {
           '<h3 class="text-xs font-black uppercase text-slate-300 flex items-center gap-2">' +
             '<i class="fa-solid fa-users text-cyan-400"></i> Alt Ekip Listesi (Toplam ' + team.length + ' Madenci)' +
           '</h3>' +
-          '<span class="text-[10px] text-slate-500 font-mono">4. kademeden sonrası gizlenir</span>' +
+          '<span class="text-[10px] text-slate-500 font-mono">4. kademeden sonrası gösterilmez</span>' +
         '</div>' +
         '<div class="overflow-x-auto rounded-xl border border-mineora-border">' +
           '<table class="w-full text-left text-xs">' +
@@ -595,12 +627,20 @@ function updateHUD() {
 
   const totalDaily = calculateTotalDailyReturnTl(CurrentUser);
   if (dailyStatusEl) {
-    dailyStatusEl.innerText = "Günlük Kazanç Hakkı: " + totalDaily.toFixed(2) + " TL";
+    dailyStatusEl.innerText = "Günlük Kazanç Kotası: " + totalDaily.toFixed(2) + " TL";
   }
 
-  if (activeLicEl && CurrentUser.licenses) {
-    const l = CurrentUser.licenses;
-    activeLicEl.innerText = (l.worker || 0) + " Madenci | " + (l.mine || 0) + " Sahip | " + (l.holding || 0) + " Holding (Toplam: " + totalDaily.toFixed(2) + " TL/gün)";
+  if (activeLicEl) {
+    const l = CurrentUser.licenses || {};
+    let wCount = l.worker || 0;
+    let mCount = l.mine || 0;
+    let hCount = l.holding || 0;
+    if (wCount === 0 && mCount === 0 && hCount === 0 && CurrentUser.role) {
+      if (CurrentUser.role === 'Worker Miner') wCount = 1;
+      else if (CurrentUser.role === 'Mine Owner') mCount = 1;
+      else if (CurrentUser.role === 'Holding Owner') hCount = 1;
+    }
+    activeLicEl.innerText = wCount + " Madenci | " + mCount + " Sahip | " + hCount + " Holding (Toplam: " + totalDaily.toFixed(2) + " TL/gün - %1.5)";
   }
 
   updateNotificationBadge();
