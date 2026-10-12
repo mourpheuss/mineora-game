@@ -79,7 +79,13 @@ function updateAdminFinancialVaultMetrics() {
         if (u) {
           totalVaultTl += Number(u.tl || 0);
           const l = u.licenses || {};
-          totalLicVolume += (l.worker || 0) * 3000 + (l.mine || 0) * 5000 + (l.holding || 0) * 10000;
+          let w = l.worker || 0, m = l.mine || 0, h = l.holding || 0;
+          if (w === 0 && m === 0 && h === 0 && u.role) {
+            if (u.role === 'Worker Miner') w = 1;
+            else if (u.role === 'Mine Owner') m = 1;
+            else if (u.role === 'Holding Owner') h = 1;
+          }
+          totalLicVolume += (w * 3000) + (m * 5000) + (h * 10000);
         }
       } catch (e) {}
     }
@@ -341,6 +347,7 @@ function openAdminModifyUserModal(username) {
 }
 window.openAdminModifyUserModal = openAdminModifyUserModal;
 
+// ROL VE BAKİYE ATAMA (ROL ATANDIĞI ANDA %1.5 HAK TANINIR & BULUTA YAZILIR)
 function saveAdminUserModifications() {
   if (!activeModTargetUser) return;
 
@@ -364,19 +371,26 @@ function saveAdminUserModifications() {
   activeModTargetUser.role = newRole;
 
   if (!activeModTargetUser.licenses) activeModTargetUser.licenses = { worker: 0, mine: 0, holding: 0 };
-  if (newRole === 'Worker Miner' && activeModTargetUser.licenses.worker === 0) {
-    activeModTargetUser.licenses.worker = 1;
-  } else if (newRole === 'Mine Owner' && activeModTargetUser.licenses.mine === 0) {
-    activeModTargetUser.licenses.mine = 1;
-  } else if (newRole === 'Holding Owner' && activeModTargetUser.licenses.holding === 0) {
-    activeModTargetUser.licenses.holding = 1;
+  
+  if (newRole === 'Worker Miner') {
+    activeModTargetUser.licenses.worker = Math.max(1, activeModTargetUser.licenses.worker || 0);
+  } else if (newRole === 'Mine Owner') {
+    activeModTargetUser.licenses.mine = Math.max(1, activeModTargetUser.licenses.mine || 0);
+  } else if (newRole === 'Holding Owner') {
+    activeModTargetUser.licenses.holding = Math.max(1, activeModTargetUser.licenses.holding || 0);
+  } else if (newRole === 'Aday') {
+    activeModTargetUser.licenses = { worker: 0, mine: 0, holding: 0 };
   }
 
   if (typeof saveStoredUser === 'function') saveStoredUser(activeModTargetUser);
+  if (typeof fbDb !== 'undefined' && fbDb) {
+    fbDb.ref('users/' + activeModTargetUser.username.toLowerCase()).set(activeModTargetUser);
+  }
+
   if (typeof closeModal === 'function') closeModal('modal-admin-modify-user');
   renderAdminUserTable();
   updateAdminFinancialVaultMetrics();
-  if (typeof showToast === 'function') showToast(activeModTargetUser.username + " rol ve bakiyesi başarıyla güncellendi!", "success");
+  if (typeof showToast === 'function') showToast(activeModTargetUser.username + " rolü ve %1.5 kazanç hakkı başarıyla tanımlandı!", "success");
 }
 window.saveAdminUserModifications = saveAdminUserModifications;
 
@@ -433,6 +447,7 @@ function renderAdminDepositQueue() {
 }
 window.renderAdminDepositQueue = renderAdminDepositQueue;
 
+// HAVALE ONAYLANDIĞI AN 10 - 5 - 3 - 2 REFERANS PRİMLERİ BURADA OTOMATİK YANSIR
 function approveDepositOrder(depId, username, amount) {
   if (typeof fbDb === 'undefined' || !fbDb) return;
   const uKey = username.toLowerCase();
@@ -445,9 +460,15 @@ function approveDepositOrder(depId, username, amount) {
       }
       fbDb.ref(`users/${uKey}`).set(uData);
       fbDb.ref(`depositQueue/${depId}`).remove();
+
+      // 4 KADEMELİ REFERANS PRİMİ DAĞITIMI TETİKLENİR
+      if (typeof distributeFourDepthCommission === 'function') {
+        distributeFourDepthCommission(uData, amount);
+      }
+
       renderAdminUserTable();
       updateAdminFinancialVaultMetrics();
-      if (typeof showToast === 'function') showToast(username + " hesabına " + amount + " TL yüklendi!", "success");
+      if (typeof showToast === 'function') showToast(username + " hesabına " + amount + " TL yüklendi ve referans primleri yansıtıldı!", "success");
     }
   });
 }
@@ -534,7 +555,6 @@ function rejectWithdrawalOrder(withId, username, amount) {
 }
 window.rejectWithdrawalOrder = rejectWithdrawalOrder;
 
-// ================= DESTEK MESAJLARI (GERÇEK DEĞİŞKENLER & OKUNDU/SİL BUTONU) =================
 function renderAdminContactMessages() {
   const container = document.getElementById('admin-contact-messages-list');
   if (!container || typeof fbDb === 'undefined' || !fbDb) return;
@@ -574,7 +594,6 @@ function renderAdminContactMessages() {
 }
 window.renderAdminContactMessages = renderAdminContactMessages;
 
-// MESAJI SİLİP KAYBEDEN FONKSİYON
 function deleteContactMessage(msgKey) {
   if (typeof fbDb !== 'undefined' && fbDb) {
     fbDb.ref('contactMessages/' + msgKey).remove().then(() => {
