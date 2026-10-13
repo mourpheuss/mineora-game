@@ -465,12 +465,12 @@
           </div>
         </section>
 
-        <!-- 4) KARİYER LİSANSLARI (STANDART 120 GÜN: 500 ₺ %3, DİĞERLERİ %1.5) -->
+        <!-- 4) KARİYER LİSANSLARI (120 GÜN STANDART - ÇIRAK 1 ADET SINIRLI, DİĞERLERİ SINIRSIZ) -->
         <section id="sec-career" class="hidden space-y-6 max-w-6xl mx-auto">
           <div class="p-5 rounded-3xl bg-mineora-card border border-mineora-border flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 class="text-base font-black text-white">Sahip Olduğunuz Aktif Lisanslar</h3>
-              <p class="text-xs text-slate-400">Tüm lisans paketleri standart <strong>120 gün</strong> çalışma sürelidir. Dilediğiniz paketten istediğiniz kadar adet alabilirsiniz.</p>
+              <p class="text-xs text-slate-400">Tüm lisans paketleri standart <strong>120 gün</strong> çalışma sürelidir. Çırak paketi hesap başı 1 adetle sınırlıdır; diğer paketler sınırsızdır.</p>
             </div>
             <div id="my-active-licenses-badge" class="flex items-center gap-2 font-mono text-xs font-bold text-mineora-gold">
               0 Adet Aktif Lisans
@@ -478,21 +478,21 @@
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- 1. ÇIRAK MADENCİ (500 ₺ - %3.00 - 120 GÜN) -->
+            <!-- 1. ÇIRAK MADENCİ (500 ₺ - %3.00 - 120 GÜN - 1 ADET SINIRLI) -->
             <div class="p-5 rounded-3xl bg-mineora-card border border-emerald-500/40 space-y-4 flex flex-col justify-between shadow-xl">
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
                   <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black uppercase">Günlük %3.00</span>
-                  <span class="text-[10px] text-slate-400 font-mono font-bold">120 Gün</span>
+                  <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-mono text-[9px] font-bold">Maks 1 Adet</span>
                 </div>
                 <h4 class="text-base font-black text-white">Çırak Madenci</h4>
-                <p class="text-xs text-slate-400">Adet başı günde <strong>15.00 ₺</strong> net kazanç (120 günde <strong>1.800 ₺</strong>).</p>
+                <p class="text-xs text-slate-400">Günde <strong>15.00 ₺</strong> net kazanç (120 günde <strong>1.800 ₺</strong>).<br><span class="text-[10px] text-amber-400 font-bold">⚠️ Hesap başına en fazla 1 adet.</span></p>
                 <div class="p-3 rounded-xl bg-mineora-bg font-mono text-emerald-400 font-black text-base">500 ₺</div>
               </div>
-              <button type="button" onclick="purchaseLicense('starter', 500)" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">+1 Çırak Lisansı Al (500 ₺)</button>
+              <button type="button" onclick="purchaseLicense('starter', 500)" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-lg">Çırak Lisansı Al (500 ₺)</button>
             </div>
 
-            <!-- 2. İŞÇİ MADENCİ (3.000 ₺ - %1.50 - 120 GÜN) -->
+            <!-- 2. İŞÇİ MADENCİ (3.000 ₺ - %1.50 - 120 GÜN - SINIRSIZ) -->
             <div class="p-5 rounded-3xl bg-mineora-card border border-cyan-500/40 space-y-4 flex flex-col justify-between shadow-xl">
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
@@ -506,7 +506,7 @@
               <button type="button" onclick="purchaseLicense('worker', 3000)" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer shadow-lg">+1 İşçi Lisansı Al (3.000 ₺)</button>
             </div>
 
-            <!-- 3. MADEN SAHİBİ (5.000 ₺ - %1.50 - 120 GÜN) -->
+            <!-- 3. MADEN SAHİBİ (5.000 ₺ - %1.50 - 120 GÜN - SINIRSIZ) -->
             <div class="p-5 rounded-3xl bg-mineora-card border border-mineora-gold/40 space-y-4 flex flex-col justify-between shadow-xl">
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
@@ -520,7 +520,7 @@
               <button type="button" onclick="purchaseLicense('mine', 5000)" class="w-full py-3 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow-lg">+1 Maden Lisansı Al (5.000 ₺)</button>
             </div>
 
-            <!-- 4. HOLDİNG SAHİBİ (10.000 ₺ - %1.50 - 120 GÜN) -->
+            <!-- 4. HOLDİNG SAHİBİ (10.000 ₺ - %1.50 - 120 GÜN - SINIRSIZ) -->
             <div class="p-5 rounded-3xl bg-mineora-card border border-purple-500/50 space-y-4 flex flex-col justify-between shadow-2xl">
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
