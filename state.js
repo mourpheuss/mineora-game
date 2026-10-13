@@ -197,13 +197,12 @@ function findUserByRefCode(refCode, externalUsersMap = null) {
 }
 window.findUserByRefCode = findUserByRefCode;
 
-// 4 KADEMELİ REFERANS DAĞITIM MOTORU (%10, %5, %3, %2) - ON AYDA KESİN ÇALIŞIR
+// 4 KADEMELİ REFERANS DAĞITIM MOTORU (%10, %5, %3, %2)
 function distributeFourDepthCommission(buyerUser, costTl) {
   if (!buyerUser || !costTl || costTl <= 0) return;
 
   let chain = Array.isArray(buyerUser.referral_chain) ? [...buyerUser.referral_chain] : [];
 
-  // Zincir boşsa bile referredBy üzerinden 4 kademeyi canlı kurtar
   if (chain.length === 0 && buyerUser.referredBy) {
     let currRef = buyerUser.referredBy;
     let depth = 0;
@@ -216,12 +215,9 @@ function distributeFourDepthCommission(buyerUser, costTl) {
     }
   }
 
-  if (chain.length === 0) {
-    console.log("Referans sponsoru bulunamadı, komisyon dağıtılmadı.");
-    return;
-  }
+  if (chain.length === 0) return;
   
-  const rates = [0.10, 0.05, 0.03, 0.02]; // 1: %10, 2: %5, 3: %3, 4: %2
+  const rates = [0.10, 0.05, 0.03, 0.02];
 
   for (let i = 0; i < rates.length; i++) {
     const sponsorIndex = chain.length - 1 - i;
@@ -265,26 +261,28 @@ function distributeFourDepthCommission(buyerUser, costTl) {
 }
 window.distributeFourDepthCommission = distributeFourDepthCommission;
 
-// TÜM ROLLER GÜNLÜK %1.5 KAZANIR (İşçi: 45₺, Maden: 75₺, Holding: 150₺)
+// LİSANS GETİRİLERİ (HEPSİ 120 GÜN: Çırak %3 = 15₺, İşçi %1.5 = 45₺, Maden %1.5 = 75₺, Holding %1.5 = 150₺)
 function calculateTotalDailyReturnTl(userObj) {
   if (!userObj) return 0;
-  const l = userObj.licenses || { worker: 0, mine: 0, holding: 0 };
+  const l = userObj.licenses || { starter: 0, worker: 0, mine: 0, holding: 0 };
+  let sCount = l.starter || 0;
   let wCount = l.worker || 0;
   let mCount = l.mine || 0;
   let hCount = l.holding || 0;
 
-  // Admin tarafından manuel atanmış rol desteği (lisans 0 olsa dahi rolden %1.5 hak tanınır)
-  if (wCount === 0 && mCount === 0 && hCount === 0 && userObj.role) {
-    if (userObj.role === 'Worker Miner') wCount = 1;
+  if (sCount === 0 && wCount === 0 && mCount === 0 && hCount === 0 && userObj.role) {
+    if (userObj.role === 'Apprentice Miner') sCount = 1;
+    else if (userObj.role === 'Worker Miner') wCount = 1;
     else if (userObj.role === 'Mine Owner') mCount = 1;
     else if (userObj.role === 'Holding Owner') hCount = 1;
   }
 
-  const dailyWorker = wCount * (3000 * 0.015);     // 45.00 TL/gün (%1.5)
-  const dailyMine = mCount * (5000 * 0.015);       // 75.00 TL/gün (%1.5)
-  const dailyHolding = hCount * (10000 * 0.015);   // 150.00 TL/gün (%1.5)
+  const dailyStarter = sCount * (500 * 0.03);      // 15.00 TL/gün (%3.00)
+  const dailyWorker = wCount * (3000 * 0.015);     // 45.00 TL/gün (%1.50)
+  const dailyMine = mCount * (5000 * 0.015);       // 75.00 TL/gün (%1.50)
+  const dailyHolding = hCount * (10000 * 0.015);   // 150.00 TL/gün (%1.50)
 
-  return Number((dailyWorker + dailyMine + dailyHolding).toFixed(2));
+  return Number((dailyStarter + dailyWorker + dailyMine + dailyHolding).toFixed(2));
 }
 window.calculateTotalDailyReturnTl = calculateTotalDailyReturnTl;
 
@@ -299,27 +297,30 @@ function purchaseLicense(type, costTl) {
 
   CurrentUser.tl = Number((currentTl - costTl).toFixed(2));
   if (!CurrentUser.licenses) {
-    CurrentUser.licenses = { worker: 0, mine: 0, holding: 0 };
+    CurrentUser.licenses = { starter: 0, worker: 0, mine: 0, holding: 0 };
   }
 
   CurrentUser.licenses[type] = (CurrentUser.licenses[type] || 0) + 1;
 
   let typeName = "İşçi Madenci";
-  if (type === 'mine') {
+  if (type === 'starter') {
+    typeName = "Çırak Madenci";
+    if (!CurrentUser.role || CurrentUser.role === 'Aday') CurrentUser.role = "Apprentice Miner";
+  } else if (type === 'mine') {
     typeName = "Maden Sahibi";
     if (CurrentUser.role !== 'Holding Owner') CurrentUser.role = "Mine Owner";
   } else if (type === 'holding') {
     typeName = "Holding Sahibi";
     CurrentUser.role = "Holding Owner";
   } else if (type === 'worker') {
-    if (!CurrentUser.role || CurrentUser.role === 'Aday') CurrentUser.role = "Worker Miner";
+    if (!CurrentUser.role || CurrentUser.role === 'Aday' || CurrentUser.role === 'Apprentice Miner') CurrentUser.role = "Worker Miner";
   }
 
-  addUserNotificationLog(CurrentUser, "Lisans Portföye Eklendi", "1 Adet " + typeName + " lisansı aktif edildi.", "-" + costTl.toLocaleString() + " TL", "upgrade");
+  addUserNotificationLog(CurrentUser, "Lisans Portföye Eklendi", "1 Adet " + typeName + " (120 Gün) lisansı aktif edildi.", "-" + costTl.toLocaleString() + " TL", "upgrade");
 
   saveUserWorld();
   updateHUD();
-  showToast("Tebrikler! 1 adet " + typeName + " lisansı başarıyla alındı!", "success");
+  showToast("Tebrikler! 1 adet " + typeName + " lisansı başarıyla alındı! (120 Gün Aktif)", "success");
 }
 window.purchaseLicense = purchaseLicense;
 
@@ -399,7 +400,7 @@ function getFourDepthTeam(targetUsername) {
         username: member.username,
         depth: depth,
         sponsor: directSponsor,
-        licenses: member.licenses || { worker: 0, mine: 0, holding: 0 },
+        licenses: member.licenses || { starter: 0, worker: 0, mine: 0, holding: 0 },
         tl: member.tl || 0
       });
     }
@@ -428,7 +429,7 @@ function renderHierarchyUI() {
   } else {
     team.forEach(m => {
       const l = m.licenses || {};
-      const licStr = (l.worker || 0) + ' Madenci / ' + (l.mine || 0) + ' Sahip / ' + (l.holding || 0) + ' Holding';
+      const licStr = (l.starter || 0) + ' Çırak / ' + (l.worker || 0) + ' Madenci / ' + (l.mine || 0) + ' Sahip / ' + (l.holding || 0) + ' Holding';
       let badgeStyle = 'bg-slate-700 text-slate-300';
       if (m.depth === 1) badgeStyle = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
       else if (m.depth === 2) badgeStyle = 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30';
@@ -539,7 +540,7 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
   const now = Date.now();
   if (CurrentUserWorld && CurrentUserWorld.username && CurrentUserWorld.username.toLowerCase() === uKey) {
     CurrentUserWorld.tl = Number(parseFloat(CurrentUserWorld.tl || 0).toFixed(2));
-    if (!CurrentUserWorld.licenses) CurrentUserWorld.licenses = { worker: 0, mine: 0, holding: 0 };
+    if (!CurrentUserWorld.licenses) CurrentUserWorld.licenses = { starter: 0, worker: 0, mine: 0, holding: 0 };
     if (!CurrentUserWorld.logs) CurrentUserWorld.logs = [];
     if (!CurrentUserWorld.referral_chain) CurrentUserWorld.referral_chain = [];
     CurrentUserWorld.alpCrystals = CurrentUserWorld.alpCrystals || 0;
@@ -555,7 +556,7 @@ function loadUserWorld(username, defaultPass = "123456", refCodeUsed = "", extra
       tl: 0.00,
       alpCrystals: 0,
       role: (uKey === 'mourpheus') ? "Root Admin" : "Aday",
-      licenses: (uKey === 'mourpheus') ? { worker: 1, mine: 1, holding: 1 } : { worker: 0, mine: 0, holding: 0 },
+      licenses: (uKey === 'mourpheus') ? { starter: 1, worker: 1, mine: 1, holding: 1 } : { starter: 0, worker: 0, mine: 0, holding: 0 },
       isRootAdmin: (uKey === 'mourpheus'),
       isVaultLocked: false,
       createdAt: now,
@@ -632,15 +633,17 @@ function updateHUD() {
 
   if (activeLicEl) {
     const l = CurrentUser.licenses || {};
+    let sCount = l.starter || 0;
     let wCount = l.worker || 0;
     let mCount = l.mine || 0;
     let hCount = l.holding || 0;
-    if (wCount === 0 && mCount === 0 && hCount === 0 && CurrentUser.role) {
-      if (CurrentUser.role === 'Worker Miner') wCount = 1;
+    if (sCount === 0 && wCount === 0 && mCount === 0 && hCount === 0 && CurrentUser.role) {
+      if (CurrentUser.role === 'Apprentice Miner') sCount = 1;
+      else if (CurrentUser.role === 'Worker Miner') wCount = 1;
       else if (CurrentUser.role === 'Mine Owner') mCount = 1;
       else if (CurrentUser.role === 'Holding Owner') hCount = 1;
     }
-    activeLicEl.innerText = wCount + " Madenci | " + mCount + " Sahip | " + hCount + " Holding (Toplam: " + totalDaily.toFixed(2) + " TL/gün - %1.5)";
+    activeLicEl.innerText = sCount + " Çırak | " + wCount + " Madenci | " + mCount + " Sahip | " + hCount + " Holding (Toplam: " + totalDaily.toFixed(2) + " TL/gün - 120 Gün Standart)";
   }
 
   updateNotificationBadge();
