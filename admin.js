@@ -79,13 +79,14 @@ function updateAdminFinancialVaultMetrics() {
         if (u) {
           totalVaultTl += Number(u.tl || 0);
           const l = u.licenses || {};
-          let w = l.worker || 0, m = l.mine || 0, h = l.holding || 0;
-          if (w === 0 && m === 0 && h === 0 && u.role) {
-            if (u.role === 'Worker Miner') w = 1;
+          let s = l.starter || 0, w = l.worker || 0, m = l.mine || 0, h = l.holding || 0;
+          if (s === 0 && w === 0 && m === 0 && h === 0 && u.role) {
+            if (u.role === 'Apprentice Miner') s = 1;
+            else if (u.role === 'Worker Miner') w = 1;
             else if (u.role === 'Mine Owner') m = 1;
             else if (u.role === 'Holding Owner') h = 1;
           }
-          totalLicVolume += (w * 3000) + (m * 5000) + (h * 10000);
+          totalLicVolume += (s * 500) + (w * 3000) + (m * 5000) + (h * 10000);
         }
       } catch (e) {}
     }
@@ -119,7 +120,7 @@ function renderAdminUserTable() {
     const tr = document.createElement('tr');
     tr.className = "hover:bg-mineora-bg/60 transition";
     const l = u.licenses || {};
-    const licText = (l.worker || 0) + " Madenci / " + (l.mine || 0) + " Sahip / " + (l.holding || 0) + " Holding";
+    const licText = (l.starter || 0) + " Çırak / " + (l.worker || 0) + " Madenci / " + (l.mine || 0) + " Sahip / " + (l.holding || 0) + " Holding";
     const phoneText = u.phone || u.tel || '<span class="text-slate-500 font-normal">Belirtilmedi</span>';
 
     tr.innerHTML = 
@@ -128,7 +129,7 @@ function renderAdminUserTable() {
           u.username + (u.isRootAdmin ? ' <span class="text-rose-400 text-[10px] ml-1">[ADMIN]</span>' : '') + 
         '</div>' +
         '<div class="text-[11px] text-cyan-400 font-mono mt-0.5 flex items-center gap-1">' +
-          '<i class="fa-solid fa-phone text-[9px] text-cyan-500"></i> ' + phoneText +
+          '<i class="fa-solid fa-phone text-[9px] text-cyan-500"></i> ' + phoneText + 
         '</div>' +
       '</td>' +
       '<td class="py-3 px-4 font-mono text-slate-400">' + (u.pass || '••••••') + '</td>' +
@@ -338,6 +339,7 @@ function openAdminModifyUserModal(username) {
   const targetNameEl = document.getElementById('admin-target-user-name');
   const modTlEl = document.getElementById('admin-mod-tl');
   const roleSelect = document.getElementById('admin-mod-role');
+  const sEl = document.getElementById('admin-mod-starter');
   const wEl = document.getElementById('admin-mod-worker');
   const mEl = document.getElementById('admin-mod-mine');
   const hEl = document.getElementById('admin-mod-holding');
@@ -347,6 +349,7 @@ function openAdminModifyUserModal(username) {
   if (targetNameEl) targetNameEl.innerText = u.username;
   if (modTlEl) modTlEl.value = Number(u.tl || 0);
   if (roleSelect) roleSelect.value = u.role || 'Aday';
+  if (sEl) sEl.value = l.starter || 0;
   if (wEl) wEl.value = l.worker || 0;
   if (mEl) mEl.value = l.mine || 0;
   if (hEl) hEl.value = l.holding || 0;
@@ -377,21 +380,24 @@ function saveAdminUserModifications() {
   activeModTargetUser.tl = Number(newTl.toFixed(2));
   activeModTargetUser.role = newRole;
 
-  // LİSANS ADETLERİNİ OKU VE KAYDET (İSTEDİĞİNİZ KADAR)
+  // 4 LİSANS ADETİNİ OKU VE KAYDET (Çırak, İşçi, Maden, Holding)
+  const sCount = parseInt(document.getElementById('admin-mod-starter')?.value) || 0;
   const wCount = parseInt(document.getElementById('admin-mod-worker')?.value) || 0;
   const mCount = parseInt(document.getElementById('admin-mod-mine')?.value) || 0;
   const hCount = parseInt(document.getElementById('admin-mod-holding')?.value) || 0;
 
   activeModTargetUser.licenses = {
+    starter: Math.max(0, sCount),
     worker: Math.max(0, wCount),
     mine: Math.max(0, mCount),
     holding: Math.max(0, hCount)
   };
 
-  // Lisans adetlerine göre en yüksek unvanı otomatik belirle
+  // Lisanslara göre unvanı otomatik güncelle
   if (hCount > 0) activeModTargetUser.role = 'Holding Owner';
   else if (mCount > 0 && activeModTargetUser.role !== 'Holding Owner') activeModTargetUser.role = 'Mine Owner';
-  else if (wCount > 0 && activeModTargetUser.role === 'Aday') activeModTargetUser.role = 'Worker Miner';
+  else if (wCount > 0 && !['Holding Owner', 'Mine Owner'].includes(activeModTargetUser.role)) activeModTargetUser.role = 'Worker Miner';
+  else if (sCount > 0 && activeModTargetUser.role === 'Aday') activeModTargetUser.role = 'Apprentice Miner';
 
   if (typeof saveStoredUser === 'function') saveStoredUser(activeModTargetUser);
   if (typeof fbDb !== 'undefined' && fbDb) {
@@ -458,7 +464,6 @@ function renderAdminDepositQueue() {
 }
 window.renderAdminDepositQueue = renderAdminDepositQueue;
 
-// HAVALE ONAYLANDIĞI AN 10 - 5 - 3 - 2 REFERANS PRİMLERİ BURADA OTOMATİK YANSIR
 function approveDepositOrder(depId, username, amount) {
   if (typeof fbDb === 'undefined' || !fbDb) return;
   const uKey = username.toLowerCase();
@@ -472,7 +477,6 @@ function approveDepositOrder(depId, username, amount) {
       fbDb.ref(`users/${uKey}`).set(uData);
       fbDb.ref(`depositQueue/${depId}`).remove();
 
-      // 4 KADEMELİ REFERANS PRİMİ DAĞITIMI TETİKLENİR
       if (typeof distributeFourDepthCommission === 'function') {
         distributeFourDepthCommission(uData, amount);
       }
