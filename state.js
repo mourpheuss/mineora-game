@@ -289,7 +289,7 @@ window.calculateTotalDailyReturnTl = calculateTotalDailyReturnTl;
 function purchaseLicense(type, costTl) {
   if (!CurrentUser) return;
 
-  // 500 TL ÇIRAK PAKETİ İÇİN MAKSİMUM 1 ADET SINIRI
+  // 500 TL ÇIRAK PAKETİ İÇİN HESAP BAŞINA EN FAZLA 1 ADET SINIRI
   if (type === 'starter') {
     const ownedStarter = (CurrentUser.licenses && CurrentUser.licenses.starter) || 0;
     if (ownedStarter >= 1) {
@@ -863,6 +863,85 @@ function handleRegister() {
   }
 }
 window.handleRegister = handleRegister;
+
+// ŞİFREMİ UNUTTUM & TELEFON İLE DOĞRULAMA MOTORU
+function handleForgotPassword() {
+  const uInput = document.getElementById('forgot-username');
+  const pInput = document.getElementById('forgot-phone');
+  const newPassInput = document.getElementById('forgot-new-pwd');
+  const repPassInput = document.getElementById('forgot-rep-pwd');
+
+  const u = uInput?.value.trim();
+  const phone = pInput?.value.trim().replace(/\s+/g, '');
+  const newPass = newPassInput?.value.trim();
+  const repPass = repPassInput?.value.trim();
+
+  if (!u || !phone || !newPass || !repPass) {
+    showToast("Lütfen tüm alanları eksiksiz doldurun!", "warning");
+    return;
+  }
+
+  if (newPass !== repPass) {
+    showToast("Yeni şifreler birbiriyle eşleşmiyor!", "warning");
+    return;
+  }
+
+  if (newPass.length < 4) {
+    showToast("Yeni şifre en az 4 karakter olmalıdır!", "warning");
+    return;
+  }
+
+  const uKey = u.toLowerCase();
+
+  if (uKey === 'mourpheus') {
+    showToast("Root Admin şifresi güvenlik gereği buradan sıfırlanamaz!", "warning");
+    return;
+  }
+
+  const verifyAndReset = (userData) => {
+    if (!userData) {
+      showToast("Kullanıcı bulunamadı!", "warning");
+      return;
+    }
+
+    const userPhone = (userData.phone || userData.tel || "").toString().trim().replace(/\s+/g, '');
+    if (!userPhone || userPhone !== phone) {
+      showToast("Kullanıcı adı ve kayıtlı telefon numarası eşleşmiyor!", "warning");
+      return;
+    }
+
+    userData.pass = newPass;
+    saveStoredUser(userData);
+
+    if (uInput) uInput.value = "";
+    if (pInput) pInput.value = "";
+    if (newPassInput) newPassInput.value = "";
+    if (repPassInput) repPassInput.value = "";
+
+    closeModal('modal-auth-forgot');
+    openModal('modal-auth-login');
+    showToast("✅ Şifreniz başarıyla sıfırlandı! Yeni şifrenizle giriş yapabilirsiniz.", "success");
+  };
+
+  if (fbDb) {
+    fbDb.ref('users/' + uKey).once('value').then(snap => {
+      const cloudData = snap.val();
+      if (cloudData) {
+        verifyAndReset(cloudData);
+      } else {
+        const localData = getStoredUser(uKey);
+        verifyAndReset(localData);
+      }
+    }).catch(() => {
+      const localData = getStoredUser(uKey);
+      verifyAndReset(localData);
+    });
+  } else {
+    const localData = getStoredUser(uKey);
+    verifyAndReset(localData);
+  }
+}
+window.handleForgotPassword = handleForgotPassword;
 
 function enterGame() {
   document.getElementById('screen-landing')?.classList.add('hidden');
