@@ -288,6 +288,16 @@ window.calculateTotalDailyReturnTl = calculateTotalDailyReturnTl;
 
 function purchaseLicense(type, costTl) {
   if (!CurrentUser) return;
+
+  // 500 TL ÇIRAK PAKETİ İÇİN MAKSİMUM 1 ADET SINIRI
+  if (type === 'starter') {
+    const ownedStarter = (CurrentUser.licenses && CurrentUser.licenses.starter) || 0;
+    if (ownedStarter >= 1) {
+      showToast("⚠️ Çırak Madenci paketi başlangıç fırsatıdır ve hesap başına en fazla 1 adet alınabilir!", "warning");
+      return;
+    }
+  }
+
   const currentTl = Number(parseFloat(CurrentUser.tl || 0).toFixed(2));
 
   if (currentTl < costTl) {
