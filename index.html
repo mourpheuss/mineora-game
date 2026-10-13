@@ -804,4 +804,217 @@
         </button>
       </div>
 
-      <div id="wallet-view-withdraw" class="
+      <div id="wallet-view-withdraw" class="hidden space-y-4">
+        <div class="space-y-3">
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Hesap Sahibi Adı Soyadı</label>
+            <input type="text" id="withdraw-holder-name" placeholder="Adınız Soyadınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white text-xs outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Alıcı IBAN Numarası</label>
+            <input type="text" id="withdraw-target-iban" placeholder="TR..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none">
+          </div>
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-[10px] text-slate-400 font-bold">Çekilecek Tutar (₺)</label>
+              <button type="button" onclick="fillMaxWithdraw()" class="text-mineora-gold text-[10px] font-bold hover:underline cursor-pointer">TÜMÜ</button>
+            </div>
+            <input type="number" id="withdraw-amount-tl" placeholder="Min: 100 ₺" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white font-mono text-xs outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block font-bold mb-1">Hesap Şifresi</label>
+            <input type="password" id="withdraw-auth-password" placeholder="Şifrenizi onaylayın" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white text-xs outline-none">
+          </div>
+        </div>
+
+        <button type="button" onclick="executeWithdrawal()" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-xl cursor-pointer">
+          <i class="fa-solid fa-paper-plane mr-1"></i> Çekim Talebi Oluştur
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-auth-login" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Sisteme Giriş Yap</h3>
+        <button type="button" onclick="closeModal('modal-auth-login')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <div class="space-y-3">
+        <input type="text" id="login-user" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+        <input type="password" id="login-pwd" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+        <button type="button" onclick="handleLogin()" class="w-full py-3 rounded-xl bg-mineora-gold text-black font-black text-xs cursor-pointer shadow-lg">Giriş Yap</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-auth-register" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-3.5 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-mineora-gold/20 text-mineora-gold flex items-center justify-center text-xs font-bold">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <h3 class="text-base font-black text-white">Madenci Hesabı Aç</h3>
+        </div>
+        <button type="button" onclick="closeModal('modal-auth-register')" class="w-8 h-8 rounded-xl bg-mineora-bg hover:bg-mineora-input border border-mineora-border text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <input type="text" id="reg-fullname" placeholder="Ad Soyad" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="tel" id="reg-phone" placeholder="Telefon Numarası" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none">
+      <input type="email" id="reg-email" placeholder="E-Posta Adresi" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="text" id="reg-username" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <input type="password" id="reg-pwd" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none">
+      <div>
+        <label class="text-[10px] text-slate-400 font-bold block mb-1">Referans Kodu</label>
+        <input type="text" id="reg-ref-code" placeholder="Referans Kodu (Varsa)" class="w-full bg-mineora-bg border border-cyan-500/40 rounded-xl px-3 py-2 text-cyan-300 font-mono uppercase">
+      </div>
+      <button type="button" onclick="handleRegister()" class="w-full py-3.5 rounded-xl bg-mineora-gold hover:bg-yellow-400 text-black font-black text-xs cursor-pointer shadow-lg transition">Kayıt Ol & Başla</button>
+    </div>
+  </div>
+
+  <!-- YÖNETİCİ KULLANICI & 4'LÜ ÇOKLU LİSANS DÜZENLEME MODALI -->
+  <div id="modal-admin-modify-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Madenci Verilerini Düzenle</h3>
+        <button type="button" onclick="closeModal('modal-admin-modify-user')"><i class="fa-solid fa-xmark text-lg text-slate-400 hover:text-white"></i></button>
+      </div>
+      <div>Kullanıcı: <strong id="admin-target-user-name" class="text-cyan-400">User</strong></div>
+      
+      <div>
+        <label class="text-[10px] text-slate-400 block font-bold mb-1">Üye Rolü / Unvanı</label>
+        <select id="admin-mod-role" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white outline-none focus:border-cyan-400">
+          <option value="Aday">Aday (Candidate)</option>
+          <option value="Apprentice Miner">Çırak Madenci (500 ₺)</option>
+          <option value="Worker Miner">İşçi Madenci (3.000 ₺)</option>
+          <option value="Mine Owner">Maden Sahibi (5.000 ₺)</option>
+          <option value="Holding Owner">Holding Sahibi (10.000 ₺)</option>
+        </select>
+      </div>
+
+      <!-- 4'LÜ LİSANS ADET TANIMLAMA ALANI (ÇIRAK, İŞÇİ, MADEN, HOLDİNG) -->
+      <div class="p-3 bg-mineora-bg rounded-2xl border border-mineora-border space-y-2.5">
+        <span class="text-[11px] text-mineora-gold block font-bold">
+          <i class="fa-solid fa-layer-group mr-1"></i> Aktif Rol Lisans Adetleri (Sınırsız Çoklu Lisans):
+        </span>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div>
+            <label class="text-[9px] text-emerald-400 block font-bold mb-1">Çırak (500 ₺)</label>
+            <input type="number" id="admin-mod-starter" min="0" placeholder="0" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2 py-1.5 text-white font-mono text-xs outline-none focus:border-emerald-400 text-center">
+            <span class="text-[8px] text-slate-500 block text-center mt-0.5">15 ₺/gün</span>
+          </div>
+          <div>
+            <label class="text-[9px] text-cyan-300 block font-bold mb-1">İşçi (3.000 ₺)</label>
+            <input type="number" id="admin-mod-worker" min="0" placeholder="0" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2 py-1.5 text-white font-mono text-xs outline-none focus:border-cyan-400 text-center">
+            <span class="text-[8px] text-slate-500 block text-center mt-0.5">45 ₺/gün</span>
+          </div>
+          <div>
+            <label class="text-[9px] text-mineora-gold block font-bold mb-1">Maden (5.000 ₺)</label>
+            <input type="number" id="admin-mod-mine" min="0" placeholder="0" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2 py-1.5 text-white font-mono text-xs outline-none focus:border-mineora-gold text-center">
+            <span class="text-[8px] text-slate-500 block text-center mt-0.5">75 ₺/gün</span>
+          </div>
+          <div>
+            <label class="text-[9px] text-purple-300 block font-bold mb-1">Holding (10.000 ₺)</label>
+            <input type="number" id="admin-mod-holding" min="0" placeholder="0" class="w-full bg-mineora-input border border-mineora-border rounded-xl px-2 py-1.5 text-white font-mono text-xs outline-none focus:border-purple-400 text-center">
+            <span class="text-[8px] text-slate-500 block text-center mt-0.5">150 ₺/gün</span>
+          </div>
+        </div>
+        <p class="text-[9px] text-slate-400 leading-tight">
+          Tüm lisans paketleri <strong>120 gün</strong> standart sürelidir. Çırak paketi günlük <strong>%3</strong>, diğer paketler günlük <strong>%1.5</strong> kazandırır.
+        </p>
+      </div>
+
+      <div>
+        <label class="text-[10px] text-slate-400 block font-bold mb-1">TL Cüzdan Bakiyesi (₺)</label>
+        <input type="number" id="admin-mod-tl" step="any" placeholder="TL Bakiyesi (₺)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-cyan-400">
+      </div>
+
+      <button type="button" onclick="saveAdminUserModifications()" class="w-full py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow-lg">Değişiklikleri Kaydet</button>
+    </div>
+  </div>
+
+  <div id="modal-admin-user-logs" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-4xl bg-mineora-card border border-cyan-500/50 rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg font-black border border-cyan-500/30">
+            <i class="fa-solid fa-book-journal-whills"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <span id="audit-target-username">Kullanıcı</span> • Finansal Log Röntgeni
+            </h3>
+            <span class="text-[10px] text-slate-400">Tüm kazı, transfer ve bakiye hareketlerinin denetim defteri</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-admin-user-logs')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="audit-summary-cards" class="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono"></div>
+      <div id="audit-alert-bar" class="p-3 rounded-2xl hidden flex items-center justify-between gap-3 text-xs"></div>
+      <div class="overflow-x-auto rounded-xl border border-mineora-border flex-1 max-h-[360px] overflow-y-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-black/60 text-slate-400 uppercase text-[10px] sticky top-0 border-b border-mineora-border z-10">
+            <tr>
+              <th class="py-2.5 px-3">Tarih / Saat</th>
+              <th class="py-2.5 px-3">İşlem Türü</th>
+              <th class="py-2.5 px-3">Açıklama</th>
+              <th class="py-2.5 px-3 text-right">Tutar</th>
+            </tr>
+          </thead>
+          <tbody id="audit-logs-table-body" class="divide-y divide-mineora-border/60 text-slate-200"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-admin-create-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/50 rounded-3xl p-6 shadow-2xl space-y-3 text-xs">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-2">
+        <h3 class="text-base font-black text-white">Yeni Madenci Oluştur (Admin)</h3>
+        <button type="button" onclick="closeModal('modal-admin-create-user')"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <input type="text" id="admin-new-username" placeholder="Kullanıcı Adı" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
+      <input type="text" id="admin-new-pass" placeholder="Şifre" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
+      <input type="email" id="admin-new-email" placeholder="E-Posta" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2 text-white">
+      <button onclick="handleAdminCreateUserSubmit()" class="w-full py-3 rounded-xl bg-cyan-600 text-white font-black text-xs cursor-pointer">Hesabı Aç</button>
+    </div>
+  </div>
+
+  <div id="modal-contact" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="relative w-full max-w-md bg-mineora-card border border-cyan-500/40 rounded-3xl p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-mineora-border pb-3">
+        <h3 class="text-sm font-black text-white">Mineora Destek Masası</h3>
+        <button type="button" onclick="closeModal('modal-contact')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <input type="text" id="contact-name" placeholder="Adınız / Kullanıcı Adınız" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <input type="text" id="contact-reach" placeholder="İletişim Adresiniz (Telefon / Telegram / E-Posta)" class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none">
+      <textarea id="contact-message" rows="3" placeholder="Mesajınız..." class="w-full bg-mineora-bg border border-mineora-border rounded-xl px-3 py-2.5 text-white outline-none"></textarea>
+      <button type="button" onclick="submitContactMessage()" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs cursor-pointer">Mesajı İlet</button>
+    </div>
+  </div>
+
+  <div id="modal-notifications" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="w-full max-w-md bg-mineora-card border border-mineora-border rounded-3xl p-6 shadow-2xl space-y-4 text-xs max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-mineora-border pb-3">
+        <h3 class="text-base font-black text-white">Hesap Bildirimleri</h3>
+        <button type="button" onclick="closeModal('modal-notifications')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="user-notifications-list" class="space-y-2 overflow-y-auto flex-1 pr-1"></div>
+    </div>
+  </div>
+
+  <script src="lang.js"></script>
+  <script src="state.js"></script>
+  <script src="wallet.js"></script>
+  <script src="mining.js"></script>
+  <script src="crash.js"></script>
+  <script src="live.js"></script>
+  <script src="admin.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
