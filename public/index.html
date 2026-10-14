@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>OANDA:XAUUSD VIP Otomatik Sinyal Terminali</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+  <!-- ========================================================= -->
+  <!-- 1. ÖZEL KULLANICI GİRİŞ EKRANI (KAYIT OL SEÇENEĞİ YOKTUR) -->
+  <!-- ========================================================= -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
+    <div class="w-full max-w-md bg-slate-900 border-2 border-amber-500/40 rounded-2xl p-8 shadow-2xl">
+      <div class="flex items-center justify-center gap-2.5 mb-2">
+        <div class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></div>
+        <h1 class="text-2xl font-black text-amber-400 tracking-wide">OANDA: XAU/USD PRO</h1>
+      </div>
+      <p class="text-xs text-center text-slate-400 mb-6">VIP Algoritmik Altın Sinyal & Otomatik MetaTrader Terminali</p>
+
+      <div id="loginError" class="hidden bg-rose-950 border border-rose-600 text-rose-300 text-xs p-3 rounded-lg mb-4 text-center font-semibold"></div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1 font-semibold">Kullanıcı Adı</label>
+          <input id="loginUsername" type="text" required placeholder="Kullanıcı adınızı girin"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1 font-semibold">Şifre</label>
+          <input id="loginPassword" type="password" required placeholder="••••••••"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400" />
+        </div>
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-sm transition shadow-lg shadow-amber-500/20">
+          🔐 TERMİNALE GİRİŞ YAP
+        </button>
+      </form>
+
+      <div class="mt-6 pt-4 border-t border-slate-800 text-center">
+        <span class="text-[11px] text-slate-500 block">🔒 Bu platform dışarıdan üyeliğe kapalıdır.</span>
+        <span class="text-[11px] text-slate-500 block">Her üye giriş yaptıktan sonra kendi MetaTrader hesabını ve lotunu tanımlayabilir.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 2. ANA TERMİNAL EKRANI (SADECE GİRİŞ YAPANLAR GÖREBİLİR)  -->
+  <!-- ========================================================= -->
+  <div id="appScreen" class="hidden p-4">
+
+    <!-- ÜST BAR -->
+    <header class="flex flex-wrap justify-between items-center bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4 gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
+        <h1 class="text-xl font-bold text-amber-400 tracking-wide">OANDA: XAU/USD PRO</h1>
+        <span class="text-xs bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded-md border border-emerald-700 font-semibold">
+          🤖 %100 Tam Otomatik
+        </span>
+        <span id="userRoleBadge" class="text-xs bg-slate-800 text-amber-300 px-2.5 py-1 rounded-md border border-slate-700 font-bold"></span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="bg-slate-950 px-3.5 py-1.5 rounded-lg border border-slate-800">
+          <span class="text-[10px] text-slate-400 block uppercase tracking-wider">CANLI OANDA SPOT (2sn)</span>
+          <span id="spotPrice" class="text-2xl font-extrabold text-white transition-colors duration-300">Yükleniyor...</span>
+        </div>
+        <div class="text-right mr-1">
+          <span class="text-xs text-slate-400 block">SON TİCK</span>
+          <span id="lastUpdate" class="text-sm font-mono text-emerald-400">--:--:--</span>
+        </div>
+
+        <!-- GEÇMİŞİ TEST ET BUTONU -->
+        <button onclick="runBacktest('today', 24)" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
+          ⏪ Geçmişi Test Et
+        </button>
+
+        <!-- TÜM ÜYELER KENDİ METATRADER'INI BAĞLAYABİLİR -->
+        <button id="mtBtn" onclick="toggleMobileMTModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
+          📱 Mobil MT Bağla
+        </button>
+
+        <!-- SADECE ADMİNİN GÖRECEĞİ YÖNETİM BUTONLARI -->
+        <button id="adminUsersBtn" onclick="toggleAdminUsersModal()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-2 rounded-lg text-xs transition">
+          👑 Üye Yönetimi
+        </button>
+
+        <button id="tgBtn" onclick="toggleTelegramModal()" class="hidden bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
+          ✈️ Telegram
+        </button>
+
+        <button id="soundToggleBtn" onclick="toggleSound()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
+          🔊 Alarm: AÇIK
+        </button>
+
+        <button onclick="logout()" class="bg-rose-950 hover:bg-rose-800 text-rose-300 border border-rose-800 font-bold px-3 py-2 rounded-lg text-xs transition">
+          Çıkış
+        </button>
+      </div>
+    </header>
+
+    <!-- SADECE ADMİN: ÜYE OLUŞTURMA VE SİLME PANELİ -->
+    <div id="adminUsersModal" class="hidden bg-slate-900 border-2 border-amber-500 rounded-xl p-5 mb-4 shadow-2xl">
+      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
+        <div>
+          <h3 class="text-base font-bold text-amber-400">👑 Özel Üye Yönetimi (Firebase Kalıcı Veritabanı)</h3>
+          <p class="text-xs text-slate-400">Açtığın her üye kendi hesabıyla giriş yapıp kendi MetaTrader'ını ve lotunu bağlayabilir. Kendi şifreni değiştirmek için kullanıcı adına <strong>admin</strong> yazıp yeni şifreni girebilirsin.</p>
+        </div>
+        <button onclick="toggleAdminUsersModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300 hover:text-white">Kapat ✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <input id="newUsername" type="text" placeholder="Kullanıcı Adı (Örn: ahmet)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        <input id="newPassword" type="text" placeholder="Şifre (En az 4 karakter)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        <select id="newUserRole" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+          <option value="user">Standart Üye (Kendi MT'sini Bağlar)</option>
+          <option value="admin">Yönetici (Admin)</option>
+        </select>
+        <button onclick="createOrUpdateUser()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg px-4 py-2 text-xs">
+          + Üye Ekle / Şifre Güncelle
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400">
+              <th class="py-2 px-3">Kullanıcı Adı</th>
+              <th class="py-2 px-3">Yetki Rolü</th>
+              <th class="py-2 px-3">MetaTrader Durumu & Lotu</th>
+              <th class="py-2 px-3">Oluşturulma</th>
+              <th class="py-2 px-3 text-right">İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody" class="divide-y divide-slate-800/60"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HER ÜYEYE ÖZEL: MOBİL METATRADER BAĞLANTI VE TEST PANELİ -->
+    <div id="mobileMTModal" class="hidden bg-slate-900 border-2 border-indigo-500 rounded-xl p-5 mb-4 shadow-2xl">
+      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
+        <div>
+          <h3 class="text-base font-bold text-indigo-400">📱 Kişisel Mobil MetaTrader (MT4 / MT5) Bağlantı & Test Merkezi</h3>
+          <p class="text-xs text-slate-400">
+            <a href="https://app.metaapi.cloud" target="_blank" class="text-amber-400 underline font-semibold">app.metaapi.cloud</a> üzerinden aldığın Token ve Account ID'yi gir. Sinyal geldiğinde senin hesabında, senin belirlediğin lot ile otomatik işlem açılır ve yönetilir.
+          </p>
+        </div>
+        <button onclick="toggleMobileMTModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300 hover:text-white">Kapat ✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+        <div class="md:col-span-2">
+          <label class="text-[11px] text-slate-400 block mb-1">MetaApi Token</label>
+          <input id="mtToken" type="password" placeholder="MetaApi Token kodunuzu yapıştırın" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400 block mb-1">MetaApi Account ID</label>
+          <input id="mtAccountId" type="text" placeholder="Örn: 8f4b2c10-..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400 block mb-1">Broker Altın Sembolü</label>
+          <input id="mtSymbol" type="text" value="XAUUSD" placeholder="XAUUSD veya GOLD" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-amber-300 font-bold" />
+        </div>
+      </div>
+
+      <!-- KAYDET VE TEST BUTONLARI -->
+      <div class="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-slate-800">
+        <button onclick="saveMobileMT()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg px-4 py-2.5 text-xs transition">
+          💾 Bilgileri Kaydet & Otomatik Emri Aktif Et
+        </button>
+
+        <button onclick="testMobileMTConnection()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg px-4 py-2.5 text-xs transition">
+          🔌 1. Bağlantıyı & Bakiyeyi Test Et
+        </button>
+
+        <button onclick="sendMobileMTTestTrade()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg px-4 py-2.5 text-xs transition">
+          ⚡ 2. Telefona 0.01 Lot Test Emri Gönder (Aç & 3sn Sonra Kapat)
+        </button>
+      </div>
+
+      <!-- TEST SONUÇ KUTUSU -->
+      <div id="mtTestResultBox" class="hidden mt-3 p-3 rounded-lg border text-xs font-medium"></div>
+    </div>
+
+    <!-- GERİYE DÖNÜK TEST (BACKTEST) AÇILIR PANELİ -->
+    <div id="backtestModal" class="hidden bg-slate-900 border-2 border-purple-500 rounded-xl p-5 mb-4 shadow-2xl">
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-4 pb-3 border-b border-slate-800">
+        <div>
+          <h2 class="text-base font-bold text-purple-300">⏪ Geriye Dönük Sinyal Simülasyonu (Tam Zırhlı Tekil Motor)</h2>
+          <p class="text-xs text-slate-400">±45 erken giriş + H1 ters trend kalkanı + geç kalmış mum (spike) filtresi + %60'ta erken zırh koruması.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnBtToday" onclick="runBacktest('today', 24)" class="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">Bugün (00:00'dan Beri)</button>
+          <button id="btnBt24" onclick="runBacktest('hours', 24)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition">Son 24 Saat</button>
+          <button id="btnBt72" onclick="runBacktest('hours', 72)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition">Son 3 Gün</button>
+          <button id="btnBt120" onclick="runBacktest('hours', 120)" class="bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-lg border border-amber-500/40 transition">🔥 Son 5 Gün</button>
+          <button onclick="document.getElementById('backtestModal').classList.add('hidden')" class="bg-rose-950 hover:bg-rose-800 text-rose-300 text-xs font-bold px-3 py-1.5 rounded-lg ml-1">Kapat ✕</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4 text-center">
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-slate-400 block">ÜRETİLEN SİNYAL</span>
+          <strong id="btTotal" class="text-xl font-black text-white">--</strong>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-emerald-300 block">BAŞARILI (TP / ZIRH)</span>
+          <strong id="btWins" class="text-xl font-black text-emerald-400">--</strong>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-rose-300 block">STOP OLAN</span>
+          <strong id="btLosses" class="text-xl font-black text-rose-400">--</strong>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-purple-300 block">BAŞARI ORANI</span>
+          <strong id="btWinRate" class="text-xl font-black text-purple-400">--</strong>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-amber-500/50">
+          <span class="text-[11px] text-amber-300 block">SENİN LOTUNLA NET SONUÇ</span>
+          <strong id="btLotProfit" class="text-xl font-black text-amber-400">--</strong>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto max-h-80 overflow-y-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400">
+              <th class="py-2 px-3">Açılış → Kapanış</th>
+              <th class="py-2 px-3">Sinyal</th>
+              <th class="py-2 px-3">Giriş Fiyatı</th>
+              <th class="py-2 px-3">TP1 / TP2</th>
+              <th class="py-2 px-3">Kapanış Fiyatı</th>
+              <th class="py-2 px-3">Sonuç Durumu</th>
+              <th class="py-2 px-3 text-right">1 Ons Farkı</th>
+              <th class="py-2 px-3 text-right text-amber-300">Senin Lotunla Kâr/Zarar</th>
+            </tr>
+          </thead>
+          <tbody id="btTableBody" class="divide-y divide-slate-800/60"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TELEGRAM MODAL -->
+    <div id="telegramModal" class="hidden bg-slate-900 border-2 border-sky-500 rounded-xl p-4 mb-4">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-sm font-bold text-sky-400">✈️ Telegram Bildirim Botu Ayarları</h3>
+        <button onclick="toggleTelegramModal()" class="text-xs text-slate-400 hover:text-white">Kapat ✕</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input id="tgToken" type="text" placeholder="BotFather Token (Örn: 712345:AAH...)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        <input id="tgChatId" type="text" placeholder="Chat ID (Örn: 123456789)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        <button onclick="saveTelegram()" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg px-4 py-2 text-xs">Kaydet ve Test Mesajı Gönder</button>
+      </div>
+    </div>
+
+    <!-- KILL-SWITCH UYARI BARI -->
+    <div id="killSwitchBanner" class="hidden bg-rose-950 border-2 border-rose-500 text-rose-200 p-4 rounded-xl mb-4 flex items-center justify-between animate-pulse">
+      <div>
+        <span class="font-black text-lg block text-rose-400">⚠️ KRİTİK ABD VERİ SAATİ KİLİDİ AKTİF!</span>
+        <span id="killSwitchText" class="text-sm">Yüksek etkili ABD verisi nedeniyle spread açılması ve ters iğne riski yüksek.</span>
+      </div>
+      <span class="bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">OTOMATİK KİLİTLİ</span>
+    </div>
+
+    <!-- ANA EKRAN GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <!-- SOL TARAF: CANLI TRADINGVIEW OANDA GRAFİĞİ + OTOMATİK İŞLEM TAKİPÇİSİ (7 Sütun) -->
+      <div class="lg:col-span-7 flex flex-col gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden" style="height: 520px;">
+          <div id="tv_chart_container" class="w-full h-full"></div>
+        </div>
+
+        <!-- %100 OTOMATİK İŞLEM TAKİPÇİSİ -->
+        <div class="bg-slate-900 border-2 border-amber-500/60 rounded-xl p-4">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-400">🤖 Tam Otomatik MetaTrader İşlem & Zırh Motoru</span>
+            </div>
+            <span id="mtStatusBadge" class="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-semibold">
+              📱 Mobil MT Bağlı Değil (Üstteki Butondan Bağlayın)
+            </span>
+          </div>
+
+          <div id="activeTradeBox" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-400">
+            Şu anda açık işlem yok. Algoritma ±45 güven skoruna ulaştığında işlemi senin MetaTrader hesabında otomatik açar, %60'ta stopu girişe çeker, TP1'de %80 kâr alır.
+          </div>
+        </div>
+      </div>
+
+      <!-- SAĞ TARAF: SİNYAL KARTI + KİŞİSEL LOT HESAPLAYICI + İNDİKATÖR DETAYLARI (5 Sütun) -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+
+        <!-- AKTİF SİNYAL KUTUSU -->
+        <div id="signalCard" class="bg-slate-900 border-2 border-slate-700 rounded-xl p-5 transition-all">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Hibrit Motor Kararı (Teknik + Haber + DXY)</span>
+            <span id="scoreBadge" class="text-sm font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-200">Skor: 0 / 100</span>
+          </div>
+          <div id="signalText" class="text-3xl font-black tracking-tight my-2 text-slate-200">ANALİZ EDİLİYOR...</div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-slate-800">
+            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+              <span class="text-xs text-slate-400 block">GİRİŞ (SPOT)</span>
+              <span id="entryPrice" class="text-lg font-bold text-white">--</span>
+            </div>
+            <div class="bg-rose-950/40 p-3 rounded-lg border border-rose-800/60">
+              <span class="text-xs text-rose-300 block">STOP LOSS</span>
+              <span id="slPrice" class="text-lg font-bold text-rose-400">--</span>
+              <span id="slDist" class="text-[11px] text-rose-300/80 block">--</span>
+            </div>
+            <div class="bg-emerald-950/40 p-3 rounded-lg border border-emerald-800/60">
+              <span class="text-xs text-emerald-300 block">TP 1 (HIZLI)</span>
+              <span id="tp1Price" class="text-lg font-bold text-emerald-400">--</span>
+              <span id="tp1Dist" class="text-[11px] text-emerald-300/80 block">--</span>
+            </div>
+            <div class="bg-emerald-950/60 p-3 rounded-lg border border-emerald-700/80">
+              <span class="text-xs text-emerald-200 block">TP 2 (ANA HEDEF)</span>
+              <span id="tp2Price" class="text-lg font-bold text-emerald-300">--</span>
+              <span id="tp2Dist" class="text-[11px] text-emerald-200/80 block">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- HER ÜYEYE ÖZEL: OTOMATİK LOT VE KASA RİSK AYARI -->
+        <div class="bg-slate-900 border-2 border-amber-500/40 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">🧮 Kişisel Kasa & Otomatik Lot Ayarın</span>
+            <span class="text-[11px] text-emerald-400 font-semibold">Hesabına Özel Kaydedilir</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <label class="text-[11px] text-slate-400 block mb-1">Kasa Bakiyen ($ USD)</label>
+              <input id="accountBalanceInput" type="number" step="50" min="50" value="1000" onchange="saveAndCalcLot(true)" oninput="saveAndCalcLot(false)"
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400" />
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-[11px] text-slate-400">İşlem Başı Risk (%)</label>
+                <div class="flex gap-1">
+                  <button onclick="setRiskPreset(1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">%1</button>
+                  <button onclick="setRiskPreset(2)" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded text-amber-300">%2</button>
+                  <button onclick="setRiskPreset(3)" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">%3</button>
+                </div>
+              </div>
+              <input id="riskPercentInput" type="number" step="0.5" min="0.5" max="20" value="2" onchange="saveAndCalcLot(true)" oninput="saveAndCalcLot(false)"
+                class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-400" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2 bg-slate-950 p-3 rounded-lg border border-slate-800 text-center">
+            <div class="border-r border-slate-800 pr-2">
+              <span class="text-[10px] text-slate-400 block uppercase">MT AÇILACAK LOT</span>
+              <strong id="calcLotSize" class="text-xl font-black text-amber-400">0.05</strong>
+              <span id="calcOzInfo" class="text-[10px] text-slate-500 block">5 Ons</span>
+            </div>
+            <div class="border-r border-slate-800 pr-2">
+              <span class="text-[10px] text-rose-300 block uppercase">SL ZARARI</span>
+              <strong id="calcRiskDollar" class="text-sm font-bold text-rose-400">-$20.00</strong>
+              <span class="text-[10px] text-slate-500 block">Maks. Kayıp</span>
+            </div>
+            <div class="border-r border-slate-800 pr-2">
+              <span class="text-[10px] text-emerald-300 block uppercase">TP1 KÂRI</span>
+              <strong id="calcTp1Dollar" class="text-sm font-bold text-emerald-400">+$27.00</strong>
+              <span class="text-[10px] text-slate-500 block">Hızlı Kâr</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-emerald-200 block uppercase">TP2 KÂRI</span>
+              <strong id="calcTp2Dollar" class="text-sm font-bold text-emerald-300">+$46.00</strong>
+              <span class="text-[10px] text-slate-500 block">Ana Hedef</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ÇOKLU ZAMAN DİLİMİ & MAKRO KORELASYON -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+            <span class="text-xs text-slate-400 font-semibold block mb-2">ZAMAN DİLİMİ TRENDLERİ</span>
+            <div class="space-y-1.5 text-sm">
+              <div class="flex justify-between"><span>M5 (Tetik):</span> <strong id="trendM5">--</strong></div>
+              <div class="flex justify-between"><span>M15 (Kurulum):</span> <strong id="trendM15">--</strong></div>
+              <div class="flex justify-between"><span>H1 (Ana Yön):</span> <strong id="trendH1">--</strong></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+            <span class="text-xs text-slate-400 font-semibold block mb-2">MAKRO KORELASYON (CANLI)</span>
+            <div class="space-y-1.5 text-sm">
+              <div class="flex justify-between"><span>DXY (Dolar):</span> <strong id="dxyInfo">--</strong></div>
+              <div class="flex justify-between"><span>US10Y (Faiz):</span> <strong id="us10yInfo">--</strong></div>
+              <div class="flex justify-between"><span>M5 ATR (Oynaklık):</span> <strong id="atrInfo" class="text-amber-400">--</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- M5 ANLIK İNDİKATÖR DEĞERLERİ -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">M5 İndikatör Özeti (OANDA Kalibreli)</span>
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+              <span class="text-slate-400 block">VWAP (Kurumsal)</span>
+              <strong id="indVwap" class="text-sm text-amber-300">--</strong>
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+              <span class="text-slate-400 block">EMA 9 / 21</span>
+              <strong id="indEma" class="text-sm text-white">--</strong>
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+              <span class="text-slate-400 block">RSI (14) / Stoch</span>
+              <strong id="indRsi" class="text-sm text-white">--</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- SİNYAL GEREKÇELERİ -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex-1">
+          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-2">Sinyal Karar Gerekçeleri</span>
+          <ul id="reasonsList" class="space-y-1.5 text-xs text-slate-300">
+            <li>Veriler hesaplanıyor...</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ORTA PANEL: CANLI HABER OKUMA & EKONOMİK TAKVİM -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-4">
+      <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">📰 Canlı Altın & FED Haber Okuma Motoru (NLP Sentiment)</span>
+          <span id="newsSummaryBadge" class="text-xs font-bold px-2.5 py-1 rounded bg-slate-800 text-amber-300">--</span>
+        </div>
+        <div id="newsList" class="space-y-2 text-sm"></div>
+      </div>
+
+      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">📅 Kritik ABD Ekonomik Takvimi (Kill-Switch)</span>
+          <span class="text-[11px] text-slate-400">Veriye ±20 dk kala kilitlenir</span>
+        </div>
+        <div id="calendarList" class="space-y-2 text-xs"></div>
+      </div>
+    </div>
+
+    <!-- ALT PANEL: GEÇMİŞ SİNYAL PERFORMANSI VE WIN-RATE TABLOSU -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">📊 Canlı Kaydedilen Otomatik Sinyal Performansı</h2>
+          <p class="text-xs text-slate-400">Sistemin otomatik açıp kapattığı tüm gerçek zamanlı işlemler burada listelenir.</p>
+        </div>
+        <div class="flex gap-3 text-xs">
+          <div class="bg-slate-950 px-3.5 py-2 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block">Toplam İşlem</span>
+            <strong id="statTotal" class="text-base text-white">0</strong>
+          </div>
+          <div class="bg-slate-950 px-3.5 py-2 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block">Başarı (Win Rate)</span>
+            <strong id="statWinRate" class="text-base text-emerald-400">%0</strong>
+          </div>
+          <div class="bg-slate-950 px-3.5 py-2 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block">Kümülatif (1 Ons)</span>
+            <strong id="statProfit" class="text-base text-amber-400">$0.00</strong>
+          </div>
+          <div class="bg-slate-950 px-3.5 py-2 rounded-lg border border-amber-500/40">
+            <span class="text-amber-300 block">Senin Lotunla Net Kâr</span>
+            <strong id="statLotProfit" class="text-base text-emerald-400">$0.00</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400">
+              <th class="py-2 px-3">Saat</th>
+              <th class="py-2 px-3">Yön</th>
+              <th class="py-2 px-3">Giriş</th>
+              <th class="py-2 px-3">Kapanış</th>
+              <th class="py-2 px-3">Durum</th>
+              <th class="py-2 px-3 text-right">1 Ons Sonucu</th>
+              <th class="py-2 px-3 text-right text-amber-300">Senin Lotunla Sonuç ($)</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody" class="divide-y divide-slate-800/60">
+            <tr><td colspan="7" class="py-4 text-center text-slate-500">Henüz kapanmış işlem bulunmuyor.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TRADINGVIEW WIDGET & SİSTEM KODLARI -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+  <script>
+    let authToken = localStorage.getItem('xau_auth_token') || '';
+    let currentUser = null;
+    let soundEnabled = true;
+    let lastAnalyzeData = null;
+    let prevSpotPrice = 0;
+    let currentRecommendedLot = 0.05;
+    let tvWidgetLoaded = false;
+    let tickInterval = null;
+    let analyzeInterval = null;
+
+    async function apiFetch(url, options = {}) {
+      const headers = { ...(options.headers || {}), 'x-auth-token': authToken };
+      if (options.body && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401) {
+        logout();
+        throw new Error('Unauthorized');
+      }
+      return res;
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('loginError');
+      errBox.classList.add('hidden');
+
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          errBox.textContent = data.error || 'Giriş başarısız!';
+          errBox.classList.remove('hidden');
+          return;
+        }
+        authToken = data.token;
+        localStorage.setItem('xau_auth_token', authToken);
+        currentUser = data.user;
+        enterTerminal();
+      } catch (err) {
+        errBox.textContent = 'Sunucuyla bağlantı kurulamadı.';
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      authToken = '';
+      currentUser = null;
+      localStorage.removeItem('xau_auth_token');
+      if (tickInterval) clearInterval(tickInterval);
+      if (analyzeInterval) clearInterval(analyzeInterval);
+      document.getElementById('appScreen').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+    }
+
+    async function checkSessionOnLoad() {
+      if (!authToken) return;
+      try {
+        const res = await fetch('/api/me', { headers: { 'x-auth-token': authToken } });
+        if (!res.ok) return logout();
+        const data = await res.json();
+        if (data.ok) {
+          currentUser = data.user;
+          enterTerminal();
+        }
+      } catch (e) {}
+    }
+
+    function enterTerminal() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appScreen').classList.remove('hidden');
+
+      const isAdmin = currentUser && currentUser.role === 'admin';
+      document.getElementById('userRoleBadge').textContent = isAdmin
+        ? `👑 Yönetici: ${currentUser.username}`
+        : `👤 Üye: ${currentUser.username}`;
+
+      // Sadece Admin ise Üye Yönetimi ve Telegram butonlarını göster (Mobil MT herkes için açıktır!)
+      document.getElementById('adminUsersBtn').classList.toggle('hidden', !isAdmin);
+      document.getElementById('tgBtn').classList.toggle('hidden', !isAdmin);
+
+      // Üyenin kendi kayıtlı kasa, risk ve MT ayarlarını yükle
+      if (currentUser && currentUser.metaApi) {
+        if (currentUser.metaApi.balance) document.getElementById('accountBalanceInput').value = currentUser.metaApi.balance;
+        if (currentUser.metaApi.riskPct) document.getElementById('riskPercentInput').value = currentUser.metaApi.riskPct;
+        if (currentUser.metaApi.symbol) document.getElementById('mtSymbol').value = currentUser.metaApi.symbol;
+        if (currentUser.metaApi.accountId) document.getElementById('mtAccountId').value = currentUser.metaApi.accountId;
+      }
+
+      if (!tvWidgetLoaded) {
+        tvWidgetLoaded = true;
+        new TradingView.widget({
+          "autosize": true,
+          "symbol": "OANDA:XAUUSD",
+          "interval": "5",
+          "timezone": "Europe/Istanbul",
+          "theme": "dark",
+          "style": "1",
+          "locale": "tr",
+          "toolbar_bg": "#0f172a",
+          "enable_publishing": false,
+          "hide_side_toolbar": false,
+          "studies": ["VWAP@tv-basicstudies", "RSI@tv-basicstudies"],
+          "container_id": "tv_chart_container"
+        });
+      }
+
+      saveAndCalcLot(false);
+      fetchAnalysis();
+      if (tickInterval) clearInterval(tickInterval);
+      if (analyzeInterval) clearInterval(analyzeInterval);
+      tickInterval = setInterval(fetchTick, 2000);
+      analyzeInterval = setInterval(fetchAnalysis, 15000);
+    }
+
+    // --- ADMİN ÜYE YÖNETİMİ FONKSİYONLARI ---
+    function toggleAdminUsersModal() {
+      const modal = document.getElementById('adminUsersModal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        loadUsersList();
+      }
+    }
+
+    async function loadUsersList() {
+      try {
+        const res = await apiFetch('/api/users');
+        const data = await res.json();
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+        (data.users || []).forEach(u => {
+          const tr = document.createElement('tr');
+          const mtBadge = u.mtEnabled
+            ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-700 px-2 py-0.5 rounded font-bold">🟢 Bağlı (${Number(u.mtLot).toFixed(2)} Lot • ${u.mtSymbol})</span>`
+            : `<span class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded">⚪ Bağlı Değil (${Number(u.mtLot).toFixed(2)} Lot)</span>`;
+
+          tr.innerHTML = `
+            <td class="py-2 px-3 font-bold text-white">${u.username}</td>
+            <td class="py-2 px-3">${u.role === 'admin' ? '<span class="text-amber-400 font-bold">👑 Admin</span>' : '<span class="text-slate-300">👤 Üye</span>'}</td>
+            <td class="py-2 px-3">${mtBadge}</td>
+            <td class="py-2 px-3 text-slate-400">${u.createdAt}</td>
+            <td class="py-2 px-3 text-right">
+              ${u.username.toLowerCase() === 'admin'
+                ? '<span class="text-slate-500 text-[11px]">Kurucu Hesap</span>'
+                : `<button onclick="deleteUser('${u.username}')" class="bg-rose-950 hover:bg-rose-700 text-rose-300 px-2.5 py-1 rounded text-[11px] font-bold">Sil ✕</button>`}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {}
+    }
+
+    async function createOrUpdateUser() {
+      const username = document.getElementById('newUsername').value;
+      const password = document.getElementById('newPassword').value;
+      const role = document.getElementById('newUserRole').value;
+
+      const res = await apiFetch('/api/users', {
+        method: 'POST',
+        body: JSON.stringify({ username, password, role })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Hata oluştu');
+        return;
+      }
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      loadUsersList();
+      alert('Üye Firebase veritabanına kaydedildi!');
+    }
+
+    async function deleteUser(username) {
+      if (!confirm(`${username} adlı üyeyi silmek istediğine emin misin?`)) return;
+      await apiFetch(`/api/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+      loadUsersList();
+    }
+
+    // --- MOBİL METATRADER KAYDETME VE TEST FONKSİYONLARI ---
+    function toggleMobileMTModal() {
+      document.getElementById('mobileMTModal').classList.toggle('hidden');
+    }
+
+    function showMTTestResult(isSuccess, htmlText) {
+      const box = document.getElementById('mtTestResultBox');
+      box.classList.remove('hidden');
+      box.className = 'mt-3 p-3 rounded-lg border text-xs font-medium ' +
+        (isSuccess ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200' : 'bg-rose-950/70 border-rose-500 text-rose-200');
+      box.innerHTML = htmlText;
+    }
+
+    async function saveMobileMT() {
+      const token = document.getElementById('mtToken').value;
+      const accountId = document.getElementById('mtAccountId').value;
+      const symbol = document.getElementById('mtSymbol').value || 'XAUUSD';
+      const res = await apiFetch('/api/metaapi-config', {
+        method: 'POST',
+        body: JSON.stringify({ token, accountId, symbol, lot: currentRecommendedLot })
+      });
+      const json = await res.json();
+      if (json.enabled) {
+        showMTTestResult(true, `💾 <b>Ayarların Kaydedildi!</b> Sembol: <b>${json.symbol}</b> | Lotun: <b>${Number(json.lot).toFixed(2)} Lot</b>. Şimdi yanındaki <b>"1. Bağlantıyı & Bakiyeyi Test Et"</b> butonuna basarak bağlantıyı doğrulayabilirsin.`);
+        fetchAnalysis();
+      } else {
+        showMTTestResult(false, '⚠️ Lütfen geçerli bir MetaApi Token ve Account ID girin.');
+      }
+    }
+
+    async function testMobileMTConnection() {
+      showMTTestResult(true, '⏳ MetaTrader sunucusuna bağlanılıyor ve hesap bakiyesi sorgulanıyor...');
+      const token = document.getElementById('mtToken').value;
+      const accountId = document.getElementById('mtAccountId').value;
+
+      try {
+        const res = await apiFetch('/api/metaapi-test', {
+          method: 'POST',
+          body: JSON.stringify({ token, accountId })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          showMTTestResult(false, `❌ <b>Bağlantı Hatası:</b> ${data.error || 'Bilinmeyen hata'}`);
+          return;
+        }
+        if (data.partial) {
+          showMTTestResult(true, `⚠️ ${data.message}`);
+          return;
+        }
+
+        // Canlı MT bakiyesini otomatik olarak Kasa Bakiyesi kutusuna yaz ve lotu güncelle!
+        if (data.balance && Number(data.balance) > 0) {
+          document.getElementById('accountBalanceInput').value = Math.round(Number(data.balance));
+          saveAndCalcLot(true);
+        }
+
+        showMTTestResult(
+          true,
+          `✅ <b>METATRADER BAĞLANTISI AKTİF!</b><br/>` +
+          `🏦 <b>Sunucu:</b> ${data.broker} | 👤 <b>Hesap:</b> #${data.login} (${data.name})<br/>` +
+          `💰 <b>Canlı Bakiye:</b> $${Number(data.balance).toFixed(2)} | 📊 <b>Varlık (Equity):</b> $${Number(data.equity).toFixed(2)} | 🔌 <b>Durum:</b> ${data.connectionStatus}`
+        );
+      } catch (e) {
+        showMTTestResult(false, '❌ Sunucuyla iletişim kurulamadı.');
+      }
+    }
+
+    async function sendMobileMTTestTrade() {
+      showMTTestResult(true, '⚡ Telefonundaki MetaTrader hesabına 0.01 Lot canlı test emri gönderiliyor...');
+      const token = document.getElementById('mtToken').value;
+      const accountId = document.getElementById('mtAccountId').value;
+      const symbol = document.getElementById('mtSymbol').value || 'XAUUSD';
+
+      try {
+        const res = await apiFetch('/api/metaapi-test-trade', {
+          method: 'POST',
+          body: JSON.stringify({ token, accountId, symbol })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          showMTTestResult(false, `❌ <b>Test Emri Hatası:</b> ${data.error}`);
+          return;
+        }
+        playAlertSound('NEW_SIGNAL');
+        showMTTestResult(true, data.message);
+      } catch (e) {
+        showMTTestResult(false, '❌ Test emri gönderilirken hata oluştu.');
+      }
+    }
+
+    // --- KİŞİSEL KASA VE LOT HESAPLAYICI ---
+    function setRiskPreset(val) {
+      document.getElementById('riskPercentInput').value = val;
+      saveAndCalcLot(true);
+    }
+
+    function saveAndCalcLot(syncToServer = false) {
+      const balance = Math.max(10, Number(document.getElementById('accountBalanceInput').value) || 1000);
+      const riskPct = Math.max(0.1, Number(document.getElementById('riskPercentInput').value) || 2);
+
+      const slDist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.slDollar) : 3.5;
+      const tp1Dist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.tp1Dollar) : 4.8;
+      const tp2Dist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.tp2Dollar) : 8.2;
+
+      const riskDollar = balance * (riskPct / 100);
+      const rawLot = riskDollar / (slDist * 100);
+      const finalLot = Math.max(0.01, Math.round(rawLot * 100) / 100);
+      currentRecommendedLot = finalLot;
+
+      const ounces = Math.round(finalLot * 100);
+      const actualRiskDollar = finalLot * 100 * slDist;
+      const expectedTp1Dollar = finalLot * 100 * tp1Dist;
+      const expectedTp2Dollar = finalLot * 100 * tp2Dist;
+
+      document.getElementById('calcLotSize').textContent = finalLot.toFixed(2);
+      document.getElementById('calcOzInfo').textContent = `${ounces} Ons Altın`;
+      document.getElementById('calcRiskDollar').textContent = `-$${actualRiskDollar.toFixed(2)}`;
+      document.getElementById('calcTp1Dollar').textContent = `+$${expectedTp1Dollar.toFixed(2)}`;
+      document.getElementById('calcTp2Dollar').textContent = `+$${expectedTp2Dollar.toFixed(2)}`;
+
+      // Üyenin kişisel lotunu ve bakiyesini Firebase üzerindeki kendi profiline kaydet
+      if (syncToServer && authToken) {
+        apiFetch('/api/update-lot', {
+          method: 'POST',
+          body: JSON.stringify({ lot: finalLot, balance, riskPct })
+        }).catch(() => {});
+      }
+    }
+
+    async function runBacktest(mode, hours) {
+      const btnMap = {
+        today: document.getElementById('btnBtToday'),
+        h24: document.getElementById('btnBt24'),
+        h72: document.getElementById('btnBt72'),
+        h120: document.getElementById('btnBt120')
+      };
+      Object.values(btnMap).forEach(b => {
+        b.className = 'bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition';
+      });
+      if (mode === 'today') btnMap.today.className = 'bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition';
+      else if (hours === 24) btnMap.h24.className = 'bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition';
+      else if (hours === 72) btnMap.h72.className = 'bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition';
+      else if (hours === 120) btnMap.h120.className = 'bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition';
+
+      const modal = document.getElementById('backtestModal');
+      modal.classList.remove('hidden');
+      const tbody = document.getElementById('btTableBody');
+      tbody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-purple-300 animate-pulse">⏳ Geçmiş M5, M15, H1 ve DXY mumları taranıyor, lütfen bekleyin...</td></tr>';
+
+      try {
+        const res = await apiFetch(`/api/backtest?mode=${mode}&hours=${hours}`);
+        const data = await res.json();
+        const ozMultiplier = Math.round(currentRecommendedLot * 100);
+
+        document.getElementById('btTotal').textContent = data.totalSignals;
+        document.getElementById('btWins').textContent = data.wins;
+        document.getElementById('btLosses').textContent = data.losses;
+        document.getElementById('btWinRate').textContent = '%' + data.winRate;
+
+        const lotNet = Number(data.totalProfit) * ozMultiplier;
+        const lotEl = document.getElementById('btLotProfit');
+        lotEl.textContent = `${lotNet >= 0 ? '+$' : '-$'}${Math.abs(lotNet).toFixed(2)} (${currentRecommendedLot.toFixed(2)} Lot)`;
+        lotEl.className = 'text-xl font-black ' + (lotNet >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+        tbody.innerHTML = '';
+        if (!data.trades || data.trades.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-slate-400">Bu zaman aralığında kriterleri geçen sinyal oluşmadı.</td></tr>';
+          return;
+        }
+
+        data.trades.forEach(t => {
+          const tr = document.createElement('tr');
+          const isWin = t.profitDollar >= 0;
+          const lotP = (Number(t.profitDollar) || 0) * ozMultiplier;
+          tr.innerHTML = `
+            <td class="py-2 px-3 font-mono text-slate-300">${t.openTime} → ${t.closeTime}</td>
+            <td class="py-2 px-3 font-black ${t.direction === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}">${t.direction} (${t.score})</td>
+            <td class="py-2 px-3 font-bold text-white">$${t.entry.toFixed(2)}</td>
+            <td class="py-2 px-3 text-slate-400">$${t.tp1.toFixed(2)} / $${t.tp2.toFixed(2)}</td>
+            <td class="py-2 px-3 font-bold text-white">$${t.closePrice}</td>
+            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${isWin ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${t.status}</span></td>
+            <td class="py-2 px-3 text-right font-bold ${isWin ? 'text-emerald-400' : 'text-rose-400'}">${isWin ? '+$' + t.profitDollar : '-$' + Math.abs(t.profitDollar)}</td>
+            <td class="py-2 px-3 text-right font-black ${lotP >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${lotP >= 0 ? '+$' + lotP.toFixed(2) : '-$' + Math.abs(lotP).toFixed(2)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-rose-400">Test sırasında hata oluştu.</td></tr>';
+      }
+    }
+
+    function playAlertSound(type) {
+      if (!soundEnabled) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const notes = type === 'NEW_SIGNAL' ? [523.25, 659.25, 783.99, 1046.5] :
+                      (type === 'TP_HIT' ? [587.33, 880, 1174.66] : [300, 220]);
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type === 'SL_HIT' ? 'sawtooth' : 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.14);
+          gain.gain.setValueAtTime(0.18, ctx.currentTime + idx * 0.14);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.14 + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.14);
+          osc.stop(ctx.currentTime + idx * 0.14 + 0.26);
+        });
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('soundToggleBtn');
+      btn.textContent = soundEnabled ? '🔊 Alarm: AÇIK' : '🔇 Alarm: KAPALI';
+      btn.className = soundEnabled
+        ? 'bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition'
+        : 'bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold px-3 py-2 rounded-lg text-xs transition';
+    }
+
+    function toggleTelegramModal() {
+      document.getElementById('telegramModal').classList.toggle('hidden');
+    }
+
+    async function saveTelegram() {
+      const botToken = document.getElementById('tgToken').value;
+      const chatId = document.getElementById('tgChatId').value;
+      const res = await apiFetch('/api/telegram-config', {
+        method: 'POST',
+        body: JSON.stringify({ botToken, chatId })
+      });
+      const json = await res.json();
+      if (json.enabled) {
+        alert('Telegram başarıyla bağlandı!');
+        toggleTelegramModal();
+      }
+    }
+
+    function updateLivePriceAndTrackerUI(spotStr, timestamp, macro, tracker) {
+      if (spotStr) {
+        const currentSpot = Number(spotStr);
+        const priceEl = document.getElementById('spotPrice');
+        priceEl.textContent = '$' + spotStr;
+
+        if (prevSpotPrice > 0 && currentSpot !== prevSpotPrice) {
+          priceEl.className = currentSpot > prevSpotPrice
+            ? 'text-2xl font-extrabold text-emerald-400 transition-colors duration-300'
+            : 'text-2xl font-extrabold text-rose-400 transition-colors duration-300';
+          setTimeout(() => {
+            priceEl.className = 'text-2xl font-extrabold text-white transition-colors duration-300';
+          }, 700);
+        }
+        prevSpotPrice = currentSpot;
+      }
+
+      if (timestamp) document.getElementById('lastUpdate').textContent = timestamp;
+
+      if (macro && macro.dxy && macro.dxy.price) {
+        const dxyChg = macro.dxy.change15m || 0;
+        document.getElementById('dxyInfo').textContent = `${macro.dxy.price.toFixed(2)} (${dxyChg >= 0 ? '+' : ''}${dxyChg.toFixed(2)}%)`;
+        document.getElementById('dxyInfo').className = dxyChg < 0 ? 'text-emerald-400' : 'text-rose-400';
+      }
+
+      if (macro && macro.us10y && macro.us10y.price) {
+        const us10yChg = macro.us10y.change15m || 0;
+        document.getElementById('us10yInfo').textContent = `${macro.us10y.price.toFixed(2)}% (${us10yChg >= 0 ? '+' : ''}${us10yChg.toFixed(2)}%)`;
+      }
+
+      if (!tracker) return;
+      if (tracker.soundEvent) playAlertSound(tracker.soundEvent);
+
+      const mtBtn = document.getElementById('mtBtn');
+      const mtBadge = document.getElementById('mtStatusBadge');
+      if (tracker.metaApiEnabled) {
+        mtBtn.textContent = `📱 Mobil MT: BAĞLI (${Number(currentRecommendedLot).toFixed(2)} Lot) ✅`;
+        mtBtn.className = 'bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition';
+        mtBadge.textContent = `🟢 Mobil MetaTrader (${tracker.metaSymbol} • ${Number(currentRecommendedLot).toFixed(2)} Lot) Otomatik Emir Aktif`;
+        mtBadge.className = 'text-[11px] bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700 font-bold';
+      } else {
+        mtBtn.textContent = '📱 Mobil MT Bağla';
+        mtBtn.className = 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition';
+        mtBadge.textContent = '⚪ Mobil MT Bağlı Değil (Üstteki "📱 Mobil MT Bağla" Butonundan Bağlayın)';
+        mtBadge.className = 'text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-semibold';
+      }
+
+      const ozMultiplier = Math.round(currentRecommendedLot * 100);
+      const activeBox = document.getElementById('activeTradeBox');
+
+      if (tracker.activeTrade) {
+        const t = tracker.activeTrade;
+        const pnlColor = t.unrealizedPnL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        const dirBadge = t.direction === 'LONG' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white';
+        const lotRealPnL = t.unrealizedPnL * ozMultiplier;
+
+        activeBox.innerHTML = `
+          <div class="flex flex-wrap justify-between items-center gap-4">
+            <div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded ${dirBadge}">🤖 OTOMATİK ${t.direction} AÇIK (${currentRecommendedLot.toFixed(2)} Lot)</span>
+              <span class="text-xs text-slate-400 ml-2">Açılış: ${t.openTime} | Giriş: <strong class="text-white">$${t.entry}</strong></span>
+              ${t.tp1Hit ? '<span class="ml-2 text-xs bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ TP1 (%80) ALINDI - STOP GİRİŞTE!</span>' :
+                (t.earlyShieldHit ? '<span class="ml-2 text-xs bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ ERKEN ZIRH AKTİF - STOP GİRİŞTE!</span>' : '')}
+            </div>
+            <div class="flex items-center gap-5">
+              <div class="text-right">
+                <span class="text-[10px] text-slate-400 block">1 ONS FARKI</span>
+                <strong class="text-sm font-bold ${pnlColor}">${t.unrealizedPnL >= 0 ? '+$' + t.unrealizedPnL.toFixed(2) : '-$' + Math.abs(t.unrealizedPnL).toFixed(2)}</strong>
+              </div>
+              <div class="text-right bg-slate-900 px-3.5 py-1.5 rounded-lg border border-slate-700">
+                <span class="text-[10px] text-amber-300 block">${currentRecommendedLot.toFixed(2)} LOT CANLI KÂR/ZARAR</span>
+                <strong class="text-xl font-black ${pnlColor}">${lotRealPnL >= 0 ? '+$' + lotRealPnL.toFixed(2) : '-$' + Math.abs(lotRealPnL).toFixed(2)}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800 text-xs">
+            <div>Otomatik Stop-Loss: <strong class="text-rose-400">$${t.sl}</strong></div>
+            <div>Otomatik TP1 (%80 Kâr): <strong class="text-emerald-400">$${t.tp1} ${t.tp1Hit ? '✅' : ''}</strong></div>
+            <div>Otomatik TP2 (Tam Kapanış): <strong class="text-emerald-300">$${t.tp2}</strong></div>
+          </div>
+        `;
+      } else {
+        activeBox.innerHTML = `Şu anda açık işlem yok. Algoritma ±45 güven skoruna ulaştığında işlemi otomatik açar, %60'ta stopu girişe çeker, TP1'de %80 kâr alır.`;
+      }
+
+      if (tracker.stats) {
+        document.getElementById('statTotal').textContent = tracker.stats.total;
+        document.getElementById('statWinRate').textContent = '%' + tracker.stats.winRate;
+        const totP = Number(tracker.stats.totalProfit);
+        const totLotP = totP * ozMultiplier;
+
+        const profEl = document.getElementById('statProfit');
+        profEl.textContent = (totP >= 0 ? '+$' : '-$') + Math.abs(totP).toFixed(2);
+        profEl.className = 'text-base font-bold ' + (totP >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+        const lotProfEl = document.getElementById('statLotProfit');
+        lotProfEl.textContent = (totLotP >= 0 ? '+$' : '-$') + Math.abs(totLotP).toFixed(2);
+        lotProfEl.className = 'text-base font-bold ' + (totLotP >= 0 ? 'text-emerald-400' : 'text-rose-400');
+
+        const tbody = document.getElementById('historyTableBody');
+        if (tracker.history && tracker.history.length > 0) {
+          tbody.innerHTML = '';
+          tracker.history.forEach(h => {
+            const tr = document.createElement('tr');
+            const isWin = h.result === 'WIN';
+            const lotResult = (Number(h.profitDollar) || 0) * ozMultiplier;
+            tr.innerHTML = `
+              <td class="py-2 px-3 font-mono text-slate-400">${h.openTime} → ${h.closeTime}</td>
+              <td class="py-2 px-3 font-bold ${h.direction === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}">${h.direction}</td>
+              <td class="py-2 px-3">$${h.entry}</td>
+              <td class="py-2 px-3">$${Number(h.closePrice).toFixed(2)}</td>
+              <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${isWin ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${h.status}</span></td>
+              <td class="py-2 px-3 text-right font-bold ${h.profitDollar >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${h.profitDollar >= 0 ? '+$' + h.profitDollar : '-$' + Math.abs(h.profitDollar)}</td>
+              <td class="py-2 px-3 text-right font-black ${lotResult >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${lotResult >= 0 ? '+$' + lotResult.toFixed(2) : '-$' + Math.abs(lotResult).toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+    }
+
+    async function fetchTick() {
+      try {
+        const res = await apiFetch('/api/tick');
+        const data = await res.json();
+        if (data.error) return;
+        if (lastAnalyzeData && data.spotPrice) lastAnalyzeData.spotPrice = data.spotPrice;
+        updateLivePriceAndTrackerUI(data.spotPrice, data.timestamp, data.macro, data.tracker);
+      } catch (e) {}
+    }
+
+    async function fetchAnalysis() {
+      try {
+        const res = await apiFetch('/api/analyze');
+        const data = await res.json();
+        if (data.error) return;
+        lastAnalyzeData = data;
+
+        saveAndCalcLot(true);
+        updateLivePriceAndTrackerUI(data.spotPrice, data.timestamp, data.macro, data.tracker);
+
+        document.getElementById('scoreBadge').textContent = `Güven Skoru: ${data.score > 0 ? '+' + data.score : data.score} / 100`;
+        document.getElementById('signalText').textContent = data.signal;
+
+        const killBanner = document.getElementById('killSwitchBanner');
+        if (data.calendar && data.calendar.killSwitch) {
+          killBanner.classList.remove('hidden');
+          document.getElementById('killSwitchText').textContent = `${data.calendar.dangerEvent.title} (${data.calendar.dangerEvent.timeStr}) verisi nedeniyle piyasa yüksek riskli!`;
+        } else {
+          killBanner.classList.add('hidden');
+        }
+
+        const card = document.getElementById('signalCard');
+        const sigText = document.getElementById('signalText');
+        card.className = 'bg-slate-900 border-2 rounded-xl p-5 transition-all ';
+        if (data.direction === 'LONG') {
+          card.classList.add('border-emerald-500');
+          sigText.className = 'text-3xl font-black tracking-tight my-2 text-emerald-400';
+        } else if (data.direction === 'SHORT') {
+          card.classList.add('border-rose-500');
+          sigText.className = 'text-3xl font-black tracking-tight my-2 text-rose-400';
+        } else {
+          card.classList.add('border-amber-500/70');
+          sigText.className = 'text-2xl font-black tracking-tight my-2 text-amber-300';
+        }
+
+        document.getElementById('entryPrice').textContent = '$' + data.tradePlan.entry;
+        document.getElementById('slPrice').textContent = '$' + data.tradePlan.sl;
+        document.getElementById('slDist').textContent = `Risk: $${data.tradePlan.slDollar}`;
+        document.getElementById('tp1Price').textContent = '$' + data.tradePlan.tp1;
+        document.getElementById('tp1Dist').textContent = `Hedef: +$${data.tradePlan.tp1Dollar}`;
+        document.getElementById('tp2Price').textContent = '$' + data.tradePlan.tp2;
+        document.getElementById('tp2Dist').textContent = `Hedef: +$${data.tradePlan.tp2Dollar}`;
+
+        const colorTrend = (t) => t.includes('BULLISH') ? 'text-emerald-400' : (t.includes('BEARISH') ? 'text-rose-400' : 'text-slate-300');
+        document.getElementById('trendM5').className = colorTrend(data.timeframes.m5.trend);
+        document.getElementById('trendM5').textContent = data.timeframes.m5.trend;
+        document.getElementById('trendM15').className = colorTrend(data.timeframes.m15.trend);
+        document.getElementById('trendM15').textContent = data.timeframes.m15.trend;
+        document.getElementById('trendH1').className = colorTrend(data.timeframes.h1.trend);
+        document.getElementById('trendH1').textContent = data.timeframes.h1.trend;
+
+        document.getElementById('atrInfo').textContent = '$' + data.timeframes.m5.atr.toFixed(2);
+        document.getElementById('indVwap').textContent = '$' + data.timeframes.m5.vwap.toFixed(2);
+        document.getElementById('indEma').textContent = `${data.timeframes.m5.ema9.toFixed(1)} / ${data.timeframes.m5.ema21.toFixed(1)}`;
+        document.getElementById('indRsi').textContent = `${data.timeframes.m5.rsi.toFixed(1)} / ${data.timeframes.m5.stochRsi.toFixed(0)}`;
+
+        const ul = document.getElementById('reasonsList');
+        ul.innerHTML = '';
+        data.reasons.forEach(r => {
+          const li = document.createElement('li');
+          const icon = r.type === 'pos' ? '🟢' : (r.type === 'neg' ? '🔴' : '⚠️');
+          li.className = 'bg-slate-950/70 px-3 py-1.5 rounded border border-slate-800/80';
+          li.textContent = `${icon} ${r.text}`;
+          ul.appendChild(li);
+        });
+
+        if (data.news) {
+          const badge = document.getElementById('newsSummaryBadge');
+          const sScore = data.news.sentimentScore;
+          badge.textContent = `${data.news.summary} (${sScore >= 0 ? '+' : ''}${sScore} Puan)`;
+          const newsContainer = document.getElementById('newsList');
+          newsContainer.innerHTML = '';
+          data.news.headlines.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between items-start gap-3';
+            const badgeColor = n.score > 0 ? 'bg-emerald-950 text-emerald-400 border-emerald-800' :
+                               (n.score < 0 ? 'bg-rose-950 text-rose-400 border-rose-800' : 'bg-slate-900 text-slate-400 border-slate-700');
+            div.innerHTML = `
+              <div>
+                <div class="text-xs font-medium text-slate-200">${n.title}</div>
+                <div class="text-[11px] text-amber-400/90 mt-0.5">${n.tag} • <span class="text-slate-500">${n.pubDate}</span></div>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded border whitespace-nowrap ${badgeColor}">
+                ${n.score > 0 ? 'ALTIN +' : (n.score < 0 ? 'ALTIN -' : 'NÖTR')}
+              </span>
+            `;
+            newsContainer.appendChild(div);
+          });
+        }
+
+        if (data.calendar) {
+          const calContainer = document.getElementById('calendarList');
+          calContainer.innerHTML = '';
+          if (data.calendar.upcomingEvents.length === 0) {
+            calContainer.innerHTML = '<div class="text-emerald-400 bg-slate-950 p-3 rounded border border-slate-800">🟢 Yakın saatlerde yüksek riskli ABD verisi bulunmuyor.</div>';
+          } else {
+            data.calendar.upcomingEvents.forEach(ev => {
+              const div = document.createElement('div');
+              const isHigh = ev.impact === 'High';
+              const timeStatus = ev.diffMinutes > 0 ? `${ev.diffMinutes} dk sonra` : `${Math.abs(ev.diffMinutes)} dk önce`;
+              div.className = 'bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center';
+              div.innerHTML = `
+                <div>
+                  <span class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 ${isHigh ? 'bg-rose-600 text-white' : 'bg-amber-600 text-slate-950'}">
+                    ${isHigh ? 'YÜKSEK' : 'ORTA'}
+                  </span>
+                  <strong class="text-slate-200">${ev.title}</strong>
+                  <div class="text-[11px] text-slate-400 mt-0.5">Saat: ${ev.dateStr} ${ev.timeStr} | Beklenti: ${ev.forecast}</div>
+                </div>
+                <span class="text-xs font-mono font-bold text-amber-300">${timeStatus}</span>
+              `;
+              calContainer.appendChild(div);
+            });
+          }
+        }
+      } catch (err) {}
+    }
+
+    checkSessionOnLoad();
+  </script>
+</body>
+</html>
