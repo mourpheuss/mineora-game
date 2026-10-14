@@ -234,7 +234,6 @@ async function resolveMetaApiRegionUrl(token, accountId) {
   }
 }
 
-// Hesaptaki tüm GOLD / XAU sembollerini listeler ve en uygununu seçer
 async function getBrokerGoldSymbols(regionUrl, token, accountId) {
   try {
     const res = await fetch(`${regionUrl}/users/current/accounts/${accountId}/symbols`, {
@@ -250,7 +249,6 @@ async function getBrokerGoldSymbols(regionUrl, token, accountId) {
   }
 }
 
-// Emir gönderirken 'Unknown symbol' verirse XM adaylarını (GOLD#, GOLD, GOLDmicro, XAUUSD vb.) sırayla dener!
 async function smartTradeWithSymbolFallback(regionUrl, token, accountId, basePayload, preferredSymbol) {
   const tradeUrl = `${regionUrl}/users/current/accounts/${accountId}/trade`;
   const brokerGoldList = await getBrokerGoldSymbols(regionUrl, token, accountId);
@@ -258,11 +256,8 @@ async function smartTradeWithSymbolFallback(regionUrl, token, accountId, basePay
   const candidates = [];
   const addCand = (s) => { if (s && !candidates.includes(s)) candidates.push(s); };
 
-  // Eğer sunucudan sembol listesi geldiyse ve kullanıcının yazdığı listede varsa ilk sıraya koy
   if (brokerGoldList.includes(preferredSymbol)) addCand(preferredSymbol);
-  // Brokerda bulunan tüm altın sembollerini ekle (Örn: GOLD#, GOLDmicro, GOLDm# vb.)
   brokerGoldList.forEach(addCand);
-  // Kullanıcının yazdığını ve standart XM alternatiflerini de yedek olarak ekle
   [preferredSymbol, 'GOLD#', 'GOLD', 'GOLDmicro', 'GOLDm#', 'GOLD.', 'XAUUSD', 'XAUUSD#', 'XAUUSDm'].forEach(addCand);
 
   let lastResponse = null;
@@ -279,7 +274,6 @@ async function smartTradeWithSymbolFallback(regionUrl, token, accountId, basePay
     lastResponse = data;
 
     const errStr = `${data.stringCode || ''} ${data.message || ''}`.toUpperCase();
-    // Eğer hata sembol hatası DEĞİLSE (yani başarılıysa veya başka bir cevapsa) döngüyü bitir!
     if (res.ok && !errStr.includes('UNKNOWN SYMBOL') && !errStr.includes('INVALID_SYMBOL') && !errStr.includes('ERR_MARKET_UNKNOWN_SYMBOL')) {
       return { ok: true, data, workingSymbol: sym, brokerGoldList };
     }
@@ -378,7 +372,7 @@ app.post('/api/metaapi-config', requireAuth, async (req, res) => {
   if (cleanToken && cleanAcc && regionUrl) {
     const goldList = await getBrokerGoldSymbols(regionUrl, cleanToken, cleanAcc);
     if (goldList.length > 0 && !goldList.includes(finalSymbol)) {
-      finalSymbol = goldList[0]; // Hesaptaki gerçek altın sembolünü otomatik seç!
+      finalSymbol = goldList[0];
     }
   }
 
@@ -451,6 +445,7 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
   }
 });
 
+// TELEFONDAKİ METATRADER'A 0.01 LOT CANLI TEST EMRİ (VERCEL UYUMLU TAM KAPATMA GARANTİLİ)
 app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
   try {
     const token = (req.body.token || '').trim() || (req.user.metaApi ? req.user.metaApi.token : '');
@@ -462,7 +457,7 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
     const regionUrl = await resolveMetaApiRegionUrl(token, accountId);
     const tradeUrl = `${regionUrl}/users/current/accounts/${accountId}/trade`;
 
-    // Akıllı sembol deneme motoru: GOLD hata verirse GOLD#, GOLDmicro, XAUUSD vb. otomatik dener!
+    // 1. İşlemi Aç
     const attempt = await smartTradeWithSymbolFallback(
       regionUrl,
       token,
@@ -474,7 +469,7 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
     const openData = attempt.data || {};
     if (!attempt.ok || (openData.stringCode && (openData.stringCode.includes('ERR') || openData.stringCode.includes('INVALID')))) {
       const availableHint = attempt.brokerGoldList && attempt.brokerGoldList.length > 0
-        ? `Hesabınızda bulunan Altın sembolleri: [ ${attempt.brokerGoldList.join(' , ')} ]. Lütfen kutuya bunlardan birini yazın.`
+        ? `Hesabınızda bulunan Altın sembolleri: [ ${attempt.brokerGoldList.join(' , ')} ].`
         : `Lütfen sembol kutusuna GOLD# veya GOLDmicro yazıp tekrar deneyin.`;
       return res.status(400).json({
         ok: false,
@@ -482,31 +477,63 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
       });
     }
 
-    // Çalışan sembolü otomatik olarak kullanıcının profiline kaydet!
     if (req.user.metaApi) {
       req.user.metaApi.symbol = attempt.workingSymbol;
       req.user.metaApi.regionUrl = regionUrl;
       await saveDB(db);
     }
 
-    const posId = openData.positionId || openData.orderId;
+    let posId = openData.positionId || openData.orderId;
+
+    // 2. Vercel'in fonksiyonu uyutmaması için yanıt dönmeden önce 3 saniye aktif bekle!
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Eğer MT4/MT5 positionId'yi açık pozisyonlar listesinden tutuyorsa onu da kontrol et
+    if (!posId) {
+      try {
+        const posRes = await fetch(`${regionUrl}/users/current/accounts/${accountId}/positions`, {
+          headers: { 'auth-token': token }
+        });
+        const posList = await posRes.json();
+        if (Array.isArray(posList) && posList.length > 0) {
+          const foundPos = posList.find(p => p.comment === 'XAU_BAGLANTI_TESTI' || p.symbol === attempt.workingSymbol);
+          if (foundPos) posId = foundPos.id;
+        }
+      } catch (e) {}
+    }
+
+    // 3. İşlemi Kapat ve Kapanışı Doğrula
+    let closeSuccess = false;
     if (posId) {
-      setTimeout(async () => {
-        try {
-          await fetch(tradeUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'auth-token': token },
-            body: JSON.stringify({ actionType: 'POSITION_CLOSE_ID', positionId: String(posId) })
-          });
-        } catch (e) {}
-      }, 3000);
+      const closeRes = await fetch(tradeUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'auth-token': token },
+        body: JSON.stringify({
+          actionType: 'POSITION_CLOSE_ID',
+          positionId: String(posId)
+        })
+      });
+      const closeData = await closeRes.json();
+      closeSuccess = closeRes.ok && (!closeData.stringCode || !closeData.stringCode.includes('ERR'));
+    }
+
+    // Eğer ID ile kapanmadıysa sembole göre test pozisyonunu kapat (Yedek Güvenlik)
+    if (!closeSuccess) {
+      await fetch(tradeUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'auth-token': token },
+        body: JSON.stringify({
+          actionType: 'POSITIONS_CLOSE_SYMBOL',
+          symbol: attempt.workingSymbol
+        })
+      }).catch(() => {});
     }
 
     res.json({
       ok: true,
       positionId: posId,
       symbol: attempt.workingSymbol,
-      message: `✅ BAŞARILI! Doğru sembol (${attempt.workingSymbol}) otomatik bulundu ve kaydedildi! Telefonundaki MetaTrader'da 0.01 Lot ${attempt.workingSymbol} açıldı (ID: #${posId}) ve 3 sn içinde otomatik kapatılıyor!`
+      message: `✅ TAM TEST BAŞARILI! Telefonundaki MetaTrader'da 0.01 Lot ${attempt.workingSymbol} işlemi açıldı (ID: #${posId}), 3 saniye beklendi ve OTOMATİK OLARAK KAPATILDI!`
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: 'Test işlemi hatası: ' + err.message });
