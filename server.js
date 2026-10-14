@@ -83,7 +83,7 @@ let lastFirebaseSync = 0;
 
 async function syncFromFirebase(force = false) {
   const now = Date.now();
-  if (!force && now - lastFirebaseSync < 4000) return;
+  if (!force && now - lastFirebaseSync < 3500) return;
   try {
     const res = await fetch(`${FIREBASE_DB_URL}/xauusd_pro_state.json`, { cache: 'no-store' });
     if (res.ok) {
@@ -219,7 +219,7 @@ async function sendTelegramAlert(text) {
   } catch (e) {}
 }
 
-// --- XM VE TÜM BROKERLAR İÇİN AKILLI SEMBOL TARAYICI & METAAPI KÖPRÜSÜ ---
+// --- XM VE TÜM BROKERLAR İÇİN BİREBİR FİYAT KALİBRASYONLU METAAPI KÖPRÜSÜ ---
 
 async function resolveMetaApiRegionUrl(token, accountId) {
   try {
@@ -246,6 +246,24 @@ async function getBrokerGoldSymbols(regionUrl, token, accountId) {
     return names.filter(s => /GOLD|XAU/i.test(s));
   } catch (e) {
     return [];
+  }
+}
+
+// YENİ: Kullanıcının kendi brokerındaki (Örn: XM GOLD#) anlık Bid/Ask fiyatını çeker (# karakteri URL-encode edilir)
+async function getBrokerLiveTickPrice(regionUrl, token, accountId, symbol) {
+  try {
+    const encodedSym = encodeURIComponent(symbol);
+    const res = await fetch(`${regionUrl}/users/current/accounts/${accountId}/symbols/${encodedSym}/current-price`, {
+      headers: { 'auth-token': token }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.bid && data.ask) {
+      return { bid: Number(data.bid), ask: Number(data.ask) };
+    }
+    return null;
+  } catch (e) {
+    return null;
   }
 }
 
@@ -306,37 +324,74 @@ async function userMetaApiRequest(userObj, payload) {
   }
 }
 
+// YENİ: Her üyenin kendi broker (XM) fiyatına göre SL ve TP2 mesafesini birebir kalibre ederek açar!
 async function openMobileMTTradeForAllUsers(tradeObj) {
   const isLong = tradeObj.direction === 'LONG';
   if (!tradeObj.userPositions) tradeObj.userPositions = {};
   const connected = (db.users || []).filter(u => u.metaApi && u.metaApi.enabled && u.metaApi.token && u.metaApi.accountId);
 
+  const slDist = Math.abs(Number(tradeObj.entry) - Number(tradeObj.sl));
+  const tp2Dist = Math.abs(Number(tradeObj.tp2) - Number(tradeObj.entry));
+
   await Promise.allSettled(connected.map(async (u) => {
-    const lotSize = Math.max(0.01, Number(u.metaApi.lot) || 0.05);
+    const mt = u.metaApi;
+    if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);
+
+    const lotSize = Math.max(0.01, Number(mt.lot) || 0.05);
+    const symbol = (mt.symbol || 'GOLD#').trim();
+
+    // Kullanıcının XM hesabındaki canlı GOLD# fiyatını al ve SL/TP2'yi XM fiyatına kalibre et
+    let calibratedEntry = Number(tradeObj.entry);
+    let calibratedSL = Number(tradeObj.sl);
+    let calibratedTP2 = Number(tradeObj.tp2);
+
+    const liveTick = await getBrokerLiveTickPrice(mt.regionUrl, mt.token, mt.accountId, symbol);
+    if (liveTick) {
+      calibratedEntry = isLong ? liveTick.ask : liveTick.bid;
+      calibratedSL = Number((isLong ? calibratedEntry - slDist : calibratedEntry + slDist).toFixed(2));
+      calibratedTP2 = Number((isLong ? calibratedEntry + tp2Dist : calibratedEntry - tp2Dist).toFixed(2));
+    }
+
     const res = await userMetaApiRequest(u, {
       actionType: isLong ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
-      symbol: (u.metaApi.symbol || 'GOLD#').trim(),
+      symbol,
       volume: Number(lotSize.toFixed(2)),
-      stopLoss: Number(tradeObj.sl),
-      takeProfit: Number(tradeObj.tp2),
+      stopLoss: calibratedSL,
+      takeProfit: calibratedTP2,
       comment: `XAU_PRO_${u.username}`
     });
+
     if (res && (res.orderId || res.positionId)) {
-      tradeObj.userPositions[u.username] = { positionId: res.positionId || res.orderId, volume: lotSize, symbol: u.metaApi.symbol };
+      tradeObj.userPositions[u.username] = {
+        positionId: res.positionId || res.orderId,
+        volume: lotSize,
+        symbol: mt.symbol,
+        xmEntry: calibratedEntry,
+        xmTp2: calibratedTP2
+      };
     }
   }));
   await saveDB(db);
 }
 
+// Erken Zırh (%60) devreye girdiğinde Stop-Loss'u kullanıcının kendi XM giriş fiyatına (xmEntry) çeker!
 async function moveAllUsersMTToBreakeven(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
   await Promise.allSettled(connected.map(async (u) => {
     const pos = tradeObj.userPositions[u.username];
-    await userMetaApiRequest(u, { actionType: 'POSITION_MODIFY', positionId: String(pos.positionId), stopLoss: Number(tradeObj.entry), takeProfit: Number(tradeObj.tp2) });
+    const bePrice = Number(pos.xmEntry || tradeObj.entry);
+    const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
+    await userMetaApiRequest(u, {
+      actionType: 'POSITION_MODIFY',
+      positionId: String(pos.positionId),
+      stopLoss: bePrice,
+      takeProfit: tp2Price
+    });
   }));
 }
 
+// TP1 vurduğunda %80 lotu kapatır ve kalan %20'nin stopunu XM gerçek giriş fiyatına çeker!
 async function partialCloseAllUsersMTAtTP1(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -344,10 +399,22 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
     const pos = tradeObj.userPositions[u.username];
     const totalVol = Number(pos.volume || u.metaApi.lot || 0.05);
     const closeVol = Math.floor(totalVol * 0.80 * 100) / 100;
+    const bePrice = Number(pos.xmEntry || tradeObj.entry);
+    const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
+
     if (closeVol >= 0.01 && (totalVol - closeVol) >= 0.01) {
-      await userMetaApiRequest(u, { actionType: 'POSITION_PARTIAL', positionId: String(pos.positionId), volume: Number(closeVol.toFixed(2)) });
+      await userMetaApiRequest(u, {
+        actionType: 'POSITION_PARTIAL',
+        positionId: String(pos.positionId),
+        volume: Number(closeVol.toFixed(2))
+      });
     }
-    await userMetaApiRequest(u, { actionType: 'POSITION_MODIFY', positionId: String(pos.positionId), stopLoss: Number(tradeObj.entry), takeProfit: Number(tradeObj.tp2) });
+    await userMetaApiRequest(u, {
+      actionType: 'POSITION_MODIFY',
+      positionId: String(pos.positionId),
+      stopLoss: bePrice,
+      takeProfit: tp2Price
+    });
   }));
 }
 
@@ -445,7 +512,6 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
   }
 });
 
-// TELEFONDAKİ METATRADER'A 0.01 LOT CANLI TEST EMRİ (VERCEL UYUMLU TAM KAPATMA GARANTİLİ)
 app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
   try {
     const token = (req.body.token || '').trim() || (req.user.metaApi ? req.user.metaApi.token : '');
@@ -457,7 +523,6 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
     const regionUrl = await resolveMetaApiRegionUrl(token, accountId);
     const tradeUrl = `${regionUrl}/users/current/accounts/${accountId}/trade`;
 
-    // 1. İşlemi Aç
     const attempt = await smartTradeWithSymbolFallback(
       regionUrl,
       token,
@@ -485,10 +550,9 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
 
     let posId = openData.positionId || openData.orderId;
 
-    // 2. Vercel'in fonksiyonu uyutmaması için yanıt dönmeden önce 3 saniye aktif bekle!
+    // Vercel'in fonksiyonu uyutmaması için yanıt dönmeden önce 3 saniye aktif bekle
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Eğer MT4/MT5 positionId'yi açık pozisyonlar listesinden tutuyorsa onu da kontrol et
     if (!posId) {
       try {
         const posRes = await fetch(`${regionUrl}/users/current/accounts/${accountId}/positions`, {
@@ -502,7 +566,6 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
       } catch (e) {}
     }
 
-    // 3. İşlemi Kapat ve Kapanışı Doğrula
     let closeSuccess = false;
     if (posId) {
       const closeRes = await fetch(tradeUrl, {
@@ -517,7 +580,6 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
       closeSuccess = closeRes.ok && (!closeData.stringCode || !closeData.stringCode.includes('ERR'));
     }
 
-    // Eğer ID ile kapanmadıysa sembole göre test pozisyonunu kapat (Yedek Güvenlik)
     if (!closeSuccess) {
       await fetch(tradeUrl, {
         method: 'POST',
@@ -907,11 +969,36 @@ async function executeFullAnalysisEngine(currentUser = null) {
   };
 }
 
+// YENİ: 7/24 Bulut Cron Tetikleyicisi (Seri Çoklu Tick Taraması Yapar, Vercel Zaman Aşımına Takılmaz!)
 app.get('/api/cron', async (req, res) => {
   try {
+    // 1. Tam Analiz ve Sinyal Taraması
     const r = await executeFullAnalysisEngine(null);
-    res.json({ ok: true, time: r.timestamp, spotPrice: r.spotPrice, score: r.score, signal: r.signal });
-  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+
+    // 2. Eğer açık işlem varsa, Vercel kapanmadan önce 2.5 saniye arayla 3 kez daha seri fiyat kontrolü yap
+    if (db.activeTrade) {
+      for (let step = 0; step < 3; step++) {
+        await new Promise(resolve => setTimeout(resolve, 2300));
+        const tvMap = await getOandaSpotAndMacro();
+        const oandaData = tvMap['OANDA:XAUUSD'];
+        if (oandaData && oandaData.price) {
+          await checkActiveTradeOnTick(oandaData.price);
+        }
+        if (!db.activeTrade) break;
+      }
+    }
+
+    res.json({
+      ok: true,
+      time: getTRTime(),
+      spotPrice: r.spotPrice,
+      score: r.score,
+      signal: r.signal,
+      activeTrade: Boolean(db.activeTrade)
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 app.get('/api/backtest', requireAuth, async (req, res) => {
