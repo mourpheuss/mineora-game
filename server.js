@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// SENİN FIREBASE REALTIME DATABASE ADRESİN DOĞRUDAN ENTEGRE EDİLDİ
+// SENİN FIREBASE REALTIME DATABASE ADRESİN
 const FIREBASE_DB_URL = 'https://mineora-web-default-rtdb.firebaseio.com';
 
 const IS_CLOUD = Boolean(process.env.VERCEL || process.env.RENDER);
@@ -49,15 +49,46 @@ function getDefaultDB() {
 
 function normalizeDB(parsed) {
   if (!parsed || typeof parsed !== 'object') return getDefaultDB();
-  if (!Array.isArray(parsed.users) || parsed.users.length === 0) {
-    parsed.users = getDefaultDB().users;
+
+  // Firebase bazen dizileri (array) obje olarak döndürür, güvenli diziye çevir:
+  let rawUsers = [];
+  if (Array.isArray(parsed.users)) {
+    rawUsers = parsed.users.filter(Boolean);
+  } else if (parsed.users && typeof parsed.users === 'object') {
+    rawUsers = Object.values(parsed.users).filter(Boolean);
   }
-  parsed.users = parsed.users.map(u => ({
-    ...u,
-    metaApi: { ...createDefaultMetaApi(), ...(u.metaApi || {}) }
-  }));
-  if (!parsed.sessions) parsed.sessions = {};
-  if (!Array.isArray(parsed.history)) parsed.history = [];
+
+  if (rawUsers.length === 0) {
+    rawUsers = getDefaultDB().users;
+  }
+
+  // 'admin' hesabının her zaman var olduğundan ve 'admin' rolünde olduğundan emin ol
+  let hasAdmin = false;
+  parsed.users = rawUsers.map(u => {
+    const isMainAdmin = String(u.username || '').toLowerCase() === 'admin';
+    if (isMainAdmin) hasAdmin = true;
+    return {
+      username: u.username,
+      password: u.password || 'admin123',
+      role: isMainAdmin ? 'admin' : 'user',
+      createdAt: u.createdAt || '-',
+      metaApi: { ...createDefaultMetaApi(), ...(u.metaApi || {}) }
+    };
+  });
+
+  if (!hasAdmin) {
+    parsed.users.unshift(getDefaultDB().users[0]);
+  }
+
+  if (!parsed.sessions || typeof parsed.sessions !== 'object') parsed.sessions = {};
+  if (Array.isArray(parsed.history)) {
+    parsed.history = parsed.history.filter(Boolean);
+  } else if (parsed.history && typeof parsed.history === 'object') {
+    parsed.history = Object.values(parsed.history).filter(Boolean);
+  } else {
+    parsed.history = [];
+  }
+
   if (!parsed.telegram) parsed.telegram = { botToken: '', chatId: '', enabled: false };
   return parsed;
 }
@@ -80,18 +111,17 @@ let lastFirebaseSync = 0;
 // Firebase'den veriyi senkronize et
 async function syncFromFirebase(force = false) {
   const now = Date.now();
-  if (!force && now - lastFirebaseSync < 10000) return;
+  if (!force && now - lastFirebaseSync < 4000) return;
   try {
     const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, '');
-    const res = await fetch(`${cleanUrl}/xauusd_pro_state.json`);
+    const res = await fetch(`${cleanUrl}/xauusd_pro_state.json`, { cache: 'no-store' });
     if (res.ok) {
       const cloudData = await res.json();
       if (cloudData && cloudData.users) {
         db = normalizeDB(cloudData);
         lastFirebaseSync = now;
       } else if (!cloudData) {
-        // İlk kez çalışıyorsa varsayılan DB'yi Firebase'e yaz
-        saveDB(db);
+        await saveDB(db);
         lastFirebaseSync = now;
       }
     }
@@ -100,17 +130,23 @@ async function syncFromFirebase(force = false) {
   }
 }
 
-function saveDB(data) {
+// Vercel Serverless fonksiyonlarında kaydın kesilmemesi için await ile bekleyen kayıt fonksiyonu
+async function saveDB(data) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) {}
   if (FIREBASE_DB_URL) {
-    const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, '');
-    fetch(`${cleanUrl}/xauusd_pro_state.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }).catch(() => {});
+    try {
+      const cleanUrl = FIREBASE_DB_URL.replace(/\/$/, '');
+      await fetch(`${cleanUrl}/xauusd_pro_state.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      lastFirebaseSync = Date.now();
+    } catch (e) {
+      console.error('Firebase yazma hatası:', e.message);
+    }
   }
 }
 
@@ -137,10 +173,10 @@ async function requireAuth(req, res, next) {
 }
 
 async function requireAdmin(req, res, next) {
-  await syncFromFirebase();
+  await syncFromFirebase(true);
   const user = getAuthUser(req);
-  if (!user || user.role !== 'admin') {
-    return res.status(403).json({ error: 'Bu işlem sadece Yönetici (Admin) yetkisine açıktır.' });
+  if (!user || user.username.toLowerCase() !== 'admin') {
+    return res.status(403).json({ error: 'Bu işlem sadece Kurucu Yönetici (admin) yetkisine açıktır.' });
   }
   req.user = user;
   next();
@@ -154,17 +190,20 @@ app.post('/api/login', async (req, res) => {
   const cleanPass = (password || '').trim();
 
   const found = (db.users || []).find(
-    u => u.username.toLowerCase() === cleanUser.toLowerCase() && u.password === cleanPass
+    u => u.username.toLowerCase() === cleanUser.toLowerCase() && String(u.password) === cleanPass
   );
 
   if (!found) {
     return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı!' });
   }
 
+  const isMainAdmin = found.username.toLowerCase() === 'admin';
+  found.role = isMainAdmin ? 'admin' : 'user';
+
   const token = crypto.randomBytes(24).toString('hex');
   if (!db.sessions) db.sessions = {};
   db.sessions[token] = { username: found.username, role: found.role, loginTime: Date.now() };
-  saveDB(db);
+  await saveDB(db);
 
   res.json({
     ok: true,
@@ -186,14 +225,15 @@ app.post('/api/login', async (req, res) => {
 
 // Oturum Doğrulama API
 app.get('/api/me', async (req, res) => {
-  await syncFromFirebase();
+  await syncFromFirebase(true);
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false });
+  const isMainAdmin = user.username.toLowerCase() === 'admin';
   res.json({
     ok: true,
     user: {
       username: user.username,
-      role: user.role,
+      role: isMainAdmin ? 'admin' : 'user',
       metaApi: {
         enabled: Boolean(user.metaApi && user.metaApi.enabled),
         symbol: user.metaApi ? user.metaApi.symbol : 'XAUUSD',
@@ -206,11 +246,27 @@ app.get('/api/me', async (req, res) => {
   });
 });
 
-// Admin: Üye Listesini Getir (Her üyenin MT durumu ve lotu görünür)
-app.get('/api/users', requireAdmin, (req, res) => {
+// Admin: Kendi Şifresini Değiştirme API
+app.post('/api/admin-password', requireAdmin, async (req, res) => {
+  const { newPassword } = req.body;
+  const cleanPass = (newPassword || '').trim();
+  if (cleanPass.length < 4) {
+    return res.status(400).json({ error: 'Yeni şifre en az 4 karakter olmalıdır.' });
+  }
+  const adminUser = db.users.find(u => u.username.toLowerCase() === 'admin');
+  if (adminUser) {
+    adminUser.password = cleanPass;
+    await saveDB(db);
+  }
+  res.json({ ok: true, message: 'Admin şifreniz başarıyla güncellendi!' });
+});
+
+// Admin: Tüm Üye Listesini Getir (Şifreleri, MT Durumu ve Lotlarıyla Birlikte)
+app.get('/api/users', requireAdmin, async (req, res) => {
   const safeUsers = (db.users || []).map(u => ({
     username: u.username,
-    role: u.role,
+    password: u.password,
+    role: u.username.toLowerCase() === 'admin' ? 'admin' : 'user',
     createdAt: u.createdAt || '-',
     mtEnabled: Boolean(u.metaApi && u.metaApi.enabled),
     mtSymbol: u.metaApi ? u.metaApi.symbol : 'XAUUSD',
@@ -219,9 +275,9 @@ app.get('/api/users', requireAdmin, (req, res) => {
   res.json({ users: safeUsers });
 });
 
-// Admin: Yeni Üye Oluştur veya Şifre Güncelle
-app.post('/api/users', requireAdmin, (req, res) => {
-  const { username, password, role } = req.body;
+// Admin: Yeni Üye Oluştur veya Mevcut Üyenin Şifresini Güncelle (Eklenen herkes standart 'user' olur)
+app.post('/api/users', requireAdmin, async (req, res) => {
+  const { username, password } = req.body;
   const cleanUser = (username || '').trim();
   const cleanPass = (password || '').trim();
 
@@ -229,28 +285,30 @@ app.post('/api/users', requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'Kullanıcı adı boş olamaz ve şifre en az 4 karakter olmalıdır.' });
   }
 
+  const isMainAdmin = cleanUser.toLowerCase() === 'admin';
   const existingIdx = db.users.findIndex(u => u.username.toLowerCase() === cleanUser.toLowerCase());
+
   if (existingIdx >= 0) {
     db.users[existingIdx].password = cleanPass;
-    db.users[existingIdx].role = role === 'admin' ? 'admin' : 'user';
+    db.users[existingIdx].role = isMainAdmin ? 'admin' : 'user';
   } else {
     db.users.push({
       username: cleanUser,
       password: cleanPass,
-      role: role === 'admin' ? 'admin' : 'user',
+      role: 'user', // Her yeni üye standart üyedir, üye ekleme ekranını göremez!
       createdAt: new Date().toLocaleDateString('tr-TR'),
       metaApi: createDefaultMetaApi()
     });
   }
-  saveDB(db);
+  await saveDB(db);
   res.json({ ok: true });
 });
 
 // Admin: Üye Sil
-app.delete('/api/users/:username', requireAdmin, (req, res) => {
+app.delete('/api/users/:username', requireAdmin, async (req, res) => {
   const target = req.params.username;
   if (target.toLowerCase() === 'admin') {
-    return res.status(400).json({ error: 'Ana admin hesabı silinemez (şifresini değiştirebilirsin).' });
+    return res.status(400).json({ error: 'Kurucu admin hesabı silinemez.' });
   }
   db.users = db.users.filter(u => u.username.toLowerCase() !== target.toLowerCase());
   Object.keys(db.sessions || {}).forEach(tk => {
@@ -258,7 +316,7 @@ app.delete('/api/users/:username', requireAdmin, (req, res) => {
       delete db.sessions[tk];
     }
   });
-  saveDB(db);
+  await saveDB(db);
   res.json({ ok: true });
 });
 
@@ -303,7 +361,7 @@ async function userMetaApiRequest(userObj, payload) {
   try {
     if (!mt.regionUrl) {
       mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);
-      saveDB(db);
+      await saveDB(db);
     }
     const url = `${mt.regionUrl}/users/current/accounts/${mt.accountId}/trade`;
     const res = await fetch(url, {
@@ -321,7 +379,6 @@ async function userMetaApiRequest(userObj, payload) {
   }
 }
 
-// Tüm bağlı üyelerin MetaTrader hesaplarında aynı anda kendi lotlarıyla işlem açar
 async function openMobileMTTradeForAllUsers(tradeObj) {
   const isLong = tradeObj.direction === 'LONG';
   if (!tradeObj.userPositions) tradeObj.userPositions = {};
@@ -350,14 +407,12 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
           volume: lotSize,
           symbol
         };
-        console.log(`📱 [${u.username}] Mobil MT'de ${tradeObj.direction} (${lotSize} Lot) açıldı!`);
       }
     })
   );
-  saveDB(db);
+  await saveDB(db);
 }
 
-// Tüm bağlı üyelerde Stop-Loss'u girişe (Başabaş / Erken Zırh) çeker
 async function moveAllUsersMTToBreakeven(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connectedUsers = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -375,7 +430,6 @@ async function moveAllUsersMTToBreakeven(tradeObj) {
   );
 }
 
-// Tüm bağlı üyelerde TP1 vurduğunda %80 kısmi kapanış yapar ve stopu girişe çeker
 async function partialCloseAllUsersMTAtTP1(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connectedUsers = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -403,7 +457,6 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
   );
 }
 
-// Tüm bağlı üyelerde açık pozisyonu tamamen kapatır
 async function closeAllUsersMTTrade(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connectedUsers = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -421,7 +474,6 @@ async function closeAllUsersMTTrade(tradeObj) {
 
 // --- KULLANICI METATRADER AYAR KAYDETME & BAĞLANTI TEST API'LERİ ---
 
-// 1. Üyenin Kendi MetaTrader Ayarlarını Kaydetmesi (Tüm Üyeler Kullanabilir)
 app.post('/api/metaapi-config', requireAuth, async (req, res) => {
   const { token, accountId, symbol, lot } = req.body;
   const cleanToken = (token || '').trim() || (req.user.metaApi ? req.user.metaApi.token : '');
@@ -438,7 +490,7 @@ app.post('/api/metaapi-config', requireAuth, async (req, res) => {
     regionUrl,
     enabled: Boolean(cleanToken && cleanAcc)
   };
-  saveDB(db);
+  await saveDB(db);
 
   res.json({
     ok: true,
@@ -449,18 +501,16 @@ app.post('/api/metaapi-config', requireAuth, async (req, res) => {
   });
 });
 
-// 2. Üyenin Kendi Lot ve Kasa Ayarını Güncellemesi (Tüm Üyeler Kullanabilir)
-app.post('/api/update-lot', requireAuth, (req, res) => {
+app.post('/api/update-lot', requireAuth, async (req, res) => {
   const { lot, balance, riskPct } = req.body;
   if (!req.user.metaApi) req.user.metaApi = createDefaultMetaApi();
   if (lot) req.user.metaApi.lot = Math.max(0.01, Number(lot));
   if (balance) req.user.metaApi.balance = Number(balance);
   if (riskPct) req.user.metaApi.riskPct = Number(riskPct);
-  saveDB(db);
+  await saveDB(db);
   res.json({ ok: true, lot: req.user.metaApi.lot });
 });
 
-// 3. YENİ: METATRADER BAĞLANTI VE BAKİYE TEST BUTONU API'Sİ
 app.post('/api/metaapi-test', requireAuth, async (req, res) => {
   try {
     const token = (req.body.token || '').trim() || (req.user.metaApi ? req.user.metaApi.token : '');
@@ -470,7 +520,6 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Lütfen önce MetaApi Token ve Account ID girin.' });
     }
 
-    // Adım 1: Hesap durumunu ve bölgesini kontrol et
     const provRes = await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`, {
       headers: { 'auth-token': token }
     });
@@ -486,7 +535,6 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
     const region = provData.region || 'london';
     const regionUrl = `https://mt-client-api-v1.${region}.agiliumtrade.ai`;
 
-    // Adım 2: Canlı MetaTrader Bakiye, Varlık ve Sunucu bilgisini çek
     const infoRes = await fetch(`${regionUrl}/users/current/accounts/${accountId}/account-information`, {
       headers: { 'auth-token': token }
     });
@@ -515,7 +563,6 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
   }
 });
 
-// 4. YENİ: TELEFONDAKİ METATRADER'A 0.01 LOT CANLI TEST EMRİ GÖNDER (AÇ & 3SN SONRA KAPAT)
 app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
   try {
     const token = (req.body.token || '').trim() || (req.user.metaApi ? req.user.metaApi.token : '');
@@ -529,7 +576,6 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
     const regionUrl = await resolveMetaApiRegionUrl(token, accountId);
     const tradeUrl = `${regionUrl}/users/current/accounts/${accountId}/trade`;
 
-    // 0.01 Lot Test Alım Emri Gönder
     const openRes = await fetch(tradeUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'auth-token': token },
@@ -551,7 +597,6 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
 
     const posId = openData.positionId || openData.orderId;
 
-    // 3 Saniye Sonra Test İşlemini Otomatik Kapat
     if (posId) {
       setTimeout(async () => {
         try {
@@ -1065,9 +1110,9 @@ function analyzeTimeframe(candles) {
   return { price, ema9, ema21, ema50, rsi, stochRsi, atr, adx, vwap, trend };
 }
 
-// --- 5. AKTİF İŞLEM TAKİP MOTORU (TÜM ÜYELERİN MT HESAPLARINI SENKRON YÖNETİR) ---
+// --- 5. AKTİF İŞLEM TAKİP MOTORU ---
 
-function checkActiveTradeOnTick(spotPrice) {
+async function checkActiveTradeOnTick(spotPrice) {
   if (!db.activeTrade || !spotPrice) return null;
 
   let soundEvent = null;
@@ -1076,7 +1121,6 @@ function checkActiveTradeOnTick(spotPrice) {
   t.currentPrice = spotPrice;
   t.unrealizedPnL = Number((isLong ? spotPrice - t.entry : t.entry - spotPrice).toFixed(2));
 
-  // 1. TP2 (Ana Hedef) Vurdu mu?
   if ((isLong && spotPrice >= t.tp2) || (!isLong && spotPrice <= t.tp2)) {
     const profit = Number(Math.abs(t.tp2 - t.entry).toFixed(2));
     const closed = {
@@ -1087,40 +1131,37 @@ function checkActiveTradeOnTick(spotPrice) {
       result: 'WIN',
       profitDollar: profit
     };
-    closeAllUsersMTTrade(t);
+    await closeAllUsersMTTrade(t);
     db.history.unshift(closed);
     db.activeTrade = null;
-    saveDB(db);
+    await saveDB(db);
     soundEvent = 'TP_HIT';
     sendTelegramAlert(`🎯 <b>XAU/USD TP2 ANA HEDEF VURDU!</b>\nYön: ${closed.direction}\nNet Kâr: <b>+$${profit} / ons</b>`);
     return soundEvent;
   }
 
-  // 2. TP1 Vurdu mu? -> %80 Kâr Al + Stopu Girişe Çek
   if (!t.tp1Hit && ((isLong && spotPrice >= t.tp1) || (!isLong && spotPrice <= t.tp1))) {
     t.tp1Hit = true;
     t.earlyShieldHit = true;
     t.sl = t.entry;
-    saveDB(db);
+    await saveDB(db);
     soundEvent = 'TP_HIT';
-    partialCloseAllUsersMTAtTP1(t);
+    await partialCloseAllUsersMTAtTP1(t);
     sendTelegramAlert(`✅ <b>XAU/USD TP1 VURDU! (%80 Kâr Alındı)</b>\nYön: ${t.direction}\n🔒 Tüm bağlı MT hesaplarında Stop-Loss girişe ($${t.entry}) çekildi!`);
   }
 
-  // 3. ERKEN ZIRH: Fiyat TP1 yolunun %60'ını gittiyse Stopu Girişe Çek
   if (!t.tp1Hit && !t.earlyShieldHit) {
     const tp1Dist = Math.abs(t.tp1 - t.entry);
     const shieldTriggerPrice = isLong ? t.entry + tp1Dist * 0.60 : t.entry - tp1Dist * 0.60;
     if ((isLong && spotPrice >= shieldTriggerPrice) || (!isLong && spotPrice <= shieldTriggerPrice)) {
       t.earlyShieldHit = true;
       t.sl = t.entry;
-      saveDB(db);
-      moveAllUsersMTToBreakeven(t);
+      await saveDB(db);
+      await moveAllUsersMTToBreakeven(t);
       sendTelegramAlert(`🛡️ <b>ERKEN ZIRH AKTİF!</b>\nFiyat TP1 yolunun %60'ına ulaştı, tüm bağlı MT hesaplarında Stop-Loss girişe ($${t.entry}) çekildi!`);
     }
   }
 
-  // 4. Stop-Loss Vurdu mu?
   if ((isLong && spotPrice <= t.sl) || (!isLong && spotPrice >= t.sl)) {
     let profit = 0;
     let statusText = 'STOP OLDU ❌';
@@ -1148,10 +1189,10 @@ function checkActiveTradeOnTick(spotPrice) {
       result: resultType,
       profitDollar: profit
     };
-    closeAllUsersMTTrade(t);
+    await closeAllUsersMTTrade(t);
     db.history.unshift(closed);
     db.activeTrade = null;
-    saveDB(db);
+    await saveDB(db);
     return soundEvent;
   }
 
@@ -1174,7 +1215,6 @@ function getStats() {
   };
 }
 
-// Masaüstü MT4/MT5 Köprüsü
 app.get('/api/mt-bridge', async (req, res) => {
   await syncFromFirebase();
   if (!db.activeTrade) {
@@ -1274,9 +1314,8 @@ async function executeFullAnalysisEngine(currentUser = null) {
       : `SL/TP Koruması: Son M5 Tepe İğnesi ($${tradePlan.swingHigh}) baz alındı + %60'ta Erken Zırh aktif.`
   });
 
-  let soundEvent = checkActiveTradeOnTick(spotPrice);
+  let soundEvent = await checkActiveTradeOnTick(spotPrice);
 
-  // %100 OTOMATİK İŞLEM AÇMA (Tüm bağlı üyelerin MT hesaplarında kendi lotlarıyla açar)
   if (!db.activeTrade && !calendarData.killSwitch && Math.abs(score) >= 45) {
     const dir = score > 0 ? 'LONG' : 'SHORT';
     db.activeTrade = {
@@ -1295,7 +1334,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
       unrealizedPnL: 0,
       userPositions: {}
     };
-    saveDB(db);
+    await saveDB(db);
     soundEvent = 'NEW_SIGNAL';
     await openMobileMTTradeForAllUsers(db.activeTrade);
     sendTelegramAlert(`🤖 <b>OTOMATİK XAU/USD ${dir} İŞLEMİ AÇILDI! (Skor: ${score})</b>\n📍 Giriş: <b>$${tradePlan.entry}</b>\n🛑 İğne Korumalı SL: $${tradePlan.sl}\n🎯 TP1 (%80): $${tradePlan.tp1}\n🎯 TP2: $${tradePlan.tp2}`);
@@ -1328,7 +1367,6 @@ async function executeFullAnalysisEngine(currentUser = null) {
   };
 }
 
-// 7/24 Bulut Cron Tetikleyicisi
 app.get('/api/cron', async (req, res) => {
   try {
     const result = await executeFullAnalysisEngine(null);
@@ -1551,7 +1589,7 @@ app.get('/api/tick', requireAuth, async (req, res) => {
     const spotPrice = oandaData && oandaData.price ? oandaData.price : lastKnownSpot;
     if (spotPrice) lastKnownSpot = spotPrice;
 
-    const soundEvent = checkActiveTradeOnTick(spotPrice);
+    const soundEvent = await checkActiveTradeOnTick(spotPrice);
     const userMt = req.user.metaApi || createDefaultMetaApi();
 
     res.json({
@@ -1582,7 +1620,6 @@ app.get('/api/analyze', requireAuth, async (req, res) => {
   }
 });
 
-// Admin: Telegram Ayarları
 app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   const { botToken, chatId } = req.body;
   db.telegram = {
@@ -1590,7 +1627,7 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
     chatId: (chatId || '').trim(),
     enabled: Boolean(botToken && chatId)
   };
-  saveDB(db);
+  await saveDB(db);
 
   if (db.telegram.enabled) {
     await sendTelegramAlert(`🔔 <b>OANDA:XAUUSD Sinyal Terminali Bağlandı!</b>`);
