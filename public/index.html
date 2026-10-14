@@ -82,8 +82,8 @@
         </button>
 
         <!-- SADECE ADMİNİN GÖRECEĞİ YÖNETİM BUTONLARI -->
-        <button id="adminUsersBtn" onclick="toggleAdminUsersModal()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-2 rounded-lg text-xs transition">
-          👑 Üye Yönetimi
+        <button id="adminUsersBtn" onclick="toggleAdminUsersModal()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3.5 py-2 rounded-lg text-xs transition shadow-lg shadow-amber-500/20">
+          👑 Üye Listesi & Şifrem
         </button>
 
         <button id="tgBtn" onclick="toggleTelegramModal()" class="hidden bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
@@ -100,41 +100,78 @@
       </div>
     </header>
 
-    <!-- SADECE ADMİN: ÜYE OLUŞTURMA VE SİLME PANELİ -->
+    <!-- ========================================================================= -->
+    <!-- SADECE ADMİN (`admin`) GÖREBİLİR: ŞİFRE DEĞİŞTİRME + ÜYE EKLEME + LİSTE   -->
+    <!-- ========================================================================= -->
     <div id="adminUsersModal" class="hidden bg-slate-900 border-2 border-amber-500 rounded-xl p-5 mb-4 shadow-2xl">
-      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
         <div>
-          <h3 class="text-base font-bold text-amber-400">👑 Özel Üye Yönetimi (Firebase Kalıcı Veritabanı)</h3>
-          <p class="text-xs text-slate-400">Açtığın her üye kendi hesabıyla giriş yapıp kendi MetaTrader'ını ve lotunu bağlayabilir. Kendi şifreni değiştirmek için kullanıcı adına <strong>admin</strong> yazıp yeni şifreni girebilirsin.</p>
+          <h3 class="text-base font-bold text-amber-400">👑 Kurucu Admin Yönetim Merkezi (Üye Listesi & Şifre Ayarları)</h3>
+          <p class="text-xs text-slate-400">Bu ekranı sadece <strong>admin</strong> görebilir. Eklediğin üyelerde bu buton ve pencere kesinlikle çıkmaz.</p>
         </div>
         <button onclick="toggleAdminUsersModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300 hover:text-white">Kapat ✕</button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-        <input id="newUsername" type="text" placeholder="Kullanıcı Adı (Örn: ahmet)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-        <input id="newPassword" type="text" placeholder="Şifre (En az 4 karakter)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-        <select id="newUserRole" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
-          <option value="user">Standart Üye (Kendi MT'sini Bağlar)</option>
-          <option value="admin">Yönetici (Admin)</option>
-        </select>
-        <button onclick="createOrUpdateUser()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg px-4 py-2 text-xs">
-          + Üye Ekle / Şifre Güncelle
-        </button>
+      <!-- ÜST İKİLİ KUTU: 1) KENDİ ADMİN ŞİFRENİ DEĞİŞTİR  |  2) YENİ ÜYE TANIMLA -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+
+        <!-- KUTU 1: KENDİ ADMİN ŞİFRENİ DEĞİŞTİR -->
+        <div class="bg-slate-950 border border-amber-500/40 rounded-xl p-4">
+          <span class="text-xs font-bold text-amber-400 uppercase tracking-wider block mb-1">🔑 1. Kendi Admin Şifreni Değiştir</span>
+          <p class="text-[11px] text-slate-400 mb-3">Yönetici (<strong>admin</strong>) giriş şifreni buradan tek tıkla güncelleyebilirsin.</p>
+          <div class="flex gap-2">
+            <input id="adminNewPassInput" type="text" placeholder="Yeni Admin Şifren (En az 4 karakter)"
+              class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400" />
+            <button onclick="updateMyAdminPassword()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg px-4 py-2 text-xs whitespace-nowrap transition">
+              Şifremi Güncelle
+            </button>
+          </div>
+        </div>
+
+        <!-- KUTU 2: YENİ ÜYE EKLE VEYA ÜYE ŞİFRESİ GÜNCELLE -->
+        <div class="bg-slate-950 border border-emerald-500/40 rounded-xl p-4">
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">👤 2. Yeni Üye Tanımla (Standart Üye)</span>
+          <p class="text-[11px] text-slate-400 mb-3">Tanımladığın üye sadece sinyalleri görür ve kendi MetaTrader'ını bağlar; üye ekleyemez.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="newUsername" type="text" placeholder="Üye Kullanıcı Adı"
+              class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400" />
+            <input id="newPassword" type="text" placeholder="Üye Şifresi"
+              class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400" />
+            <button onclick="createOrUpdateUser()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-lg px-4 py-2 text-xs transition">
+              + Üyeyi Kaydet
+            </button>
+          </div>
+        </div>
+
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-slate-800 text-slate-400">
-              <th class="py-2 px-3">Kullanıcı Adı</th>
-              <th class="py-2 px-3">Yetki Rolü</th>
-              <th class="py-2 px-3">MetaTrader Durumu & Lotu</th>
-              <th class="py-2 px-3">Oluşturulma</th>
-              <th class="py-2 px-3 text-right">İşlem</th>
-            </tr>
-          </thead>
-          <tbody id="usersTableBody" class="divide-y divide-slate-800/60"></tbody>
-        </table>
+      <!-- ALT TABLO: KAYITLI TÜM ÜYELERİN LİSTESİ -->
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">📋 Kayıtlı Üye Listesi (<span id="totalUsersCount">0</span> Kişi)</span>
+          <button onclick="loadUsersList()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 px-3 py-1 rounded border border-slate-700">
+            🔄 Listeyi Yenile
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400">
+                <th class="py-2 px-3">#</th>
+                <th class="py-2 px-3">Kullanıcı Adı</th>
+                <th class="py-2 px-3">Giriş Şifresi</th>
+                <th class="py-2 px-3">Yetki Rolü</th>
+                <th class="py-2 px-3">MetaTrader Bağlantısı & Lotu</th>
+                <th class="py-2 px-3">Kayıt Tarihi</th>
+                <th class="py-2 px-3 text-right">İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody" class="divide-y divide-slate-800/60">
+              <tr><td colspan="7" class="py-4 text-center text-slate-400">Üye listesi yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -550,12 +587,22 @@
       }
     }
 
+    function closeAllModals() {
+      document.getElementById('adminUsersModal').classList.add('hidden');
+      document.getElementById('mobileMTModal').classList.add('hidden');
+      document.getElementById('backtestModal').classList.add('hidden');
+      document.getElementById('telegramModal').classList.add('hidden');
+    }
+
     function logout() {
       authToken = '';
       currentUser = null;
       localStorage.removeItem('xau_auth_token');
       if (tickInterval) clearInterval(tickInterval);
       if (analyzeInterval) clearInterval(analyzeInterval);
+      closeAllModals(); // Çıkış yapıldığında açık kalan tüm admin pencerelerini zorla kapat!
+      document.getElementById('adminUsersBtn').classList.add('hidden');
+      document.getElementById('tgBtn').classList.add('hidden');
       document.getElementById('appScreen').classList.add('hidden');
       document.getElementById('loginScreen').classList.remove('hidden');
     }
@@ -574,19 +621,32 @@
     }
 
     function enterTerminal() {
+      closeAllModals();
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('appScreen').classList.remove('hidden');
 
-      const isAdmin = currentUser && currentUser.role === 'admin';
+      // Sadece kullanıcı adı 'admin' olan kurucu yönetici Admin ekranlarını görebilir!
+      const isAdmin = Boolean(
+        currentUser &&
+        currentUser.username &&
+        currentUser.username.toLowerCase() === 'admin'
+      );
+
       document.getElementById('userRoleBadge').textContent = isAdmin
-        ? `👑 Yönetici: ${currentUser.username}`
+        ? `👑 Kurucu Admin: ${currentUser.username}`
         : `👤 Üye: ${currentUser.username}`;
 
-      // Sadece Admin ise Üye Yönetimi ve Telegram butonlarını göster (Mobil MT herkes için açıktır!)
       document.getElementById('adminUsersBtn').classList.toggle('hidden', !isAdmin);
       document.getElementById('tgBtn').classList.toggle('hidden', !isAdmin);
+      if (!isAdmin) {
+        document.getElementById('adminUsersModal').classList.add('hidden');
+      }
 
       // Üyenin kendi kayıtlı kasa, risk ve MT ayarlarını yükle
+      document.getElementById('mtToken').value = '';
+      document.getElementById('mtAccountId').value = '';
+      document.getElementById('mtTestResultBox').classList.add('hidden');
+
       if (currentUser && currentUser.metaApi) {
         if (currentUser.metaApi.balance) document.getElementById('accountBalanceInput').value = currentUser.metaApi.balance;
         if (currentUser.metaApi.riskPct) document.getElementById('riskPercentInput').value = currentUser.metaApi.riskPct;
@@ -620,8 +680,9 @@
       analyzeInterval = setInterval(fetchAnalysis, 15000);
     }
 
-    // --- ADMİN ÜYE YÖNETİMİ FONKSİYONLARI ---
+    // --- ADMİN ÜYE YÖNETİMİ VE ŞİFRE DEĞİŞTİRME FONKSİYONLARI ---
     function toggleAdminUsersModal() {
+      if (!currentUser || currentUser.username.toLowerCase() !== 'admin') return;
       const modal = document.getElementById('adminUsersModal');
       modal.classList.toggle('hidden');
       if (!modal.classList.contains('hidden')) {
@@ -629,27 +690,56 @@
       }
     }
 
+    async function updateMyAdminPassword() {
+      const newPassword = document.getElementById('adminNewPassInput').value.trim();
+      if (newPassword.length < 4) {
+        alert('Yeni şifreniz en az 4 karakter olmalıdır!');
+        return;
+      }
+      const res = await apiFetch('/api/admin-password', {
+        method: 'POST',
+        body: JSON.stringify({ newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Şifre güncellenemedi.');
+        return;
+      }
+      document.getElementById('adminNewPassInput').value = '';
+      loadUsersList();
+      alert('✅ Admin şifreniz başarıyla değiştirildi!');
+    }
+
     async function loadUsersList() {
+      if (!currentUser || currentUser.username.toLowerCase() !== 'admin') return;
       try {
         const res = await apiFetch('/api/users');
         const data = await res.json();
+        const users = data.users || [];
+        document.getElementById('totalUsersCount').textContent = users.length;
+
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = '';
-        (data.users || []).forEach(u => {
+
+        users.forEach((u, index) => {
           const tr = document.createElement('tr');
+          const isMainAdmin = u.username.toLowerCase() === 'admin';
           const mtBadge = u.mtEnabled
             ? `<span class="bg-emerald-950 text-emerald-400 border border-emerald-700 px-2 py-0.5 rounded font-bold">🟢 Bağlı (${Number(u.mtLot).toFixed(2)} Lot • ${u.mtSymbol})</span>`
             : `<span class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded">⚪ Bağlı Değil (${Number(u.mtLot).toFixed(2)} Lot)</span>`;
 
           tr.innerHTML = `
-            <td class="py-2 px-3 font-bold text-white">${u.username}</td>
-            <td class="py-2 px-3">${u.role === 'admin' ? '<span class="text-amber-400 font-bold">👑 Admin</span>' : '<span class="text-slate-300">👤 Üye</span>'}</td>
-            <td class="py-2 px-3">${mtBadge}</td>
-            <td class="py-2 px-3 text-slate-400">${u.createdAt}</td>
-            <td class="py-2 px-3 text-right">
-              ${u.username.toLowerCase() === 'admin'
-                ? '<span class="text-slate-500 text-[11px]">Kurucu Hesap</span>'
-                : `<button onclick="deleteUser('${u.username}')" class="bg-rose-950 hover:bg-rose-700 text-rose-300 px-2.5 py-1 rounded text-[11px] font-bold">Sil ✕</button>`}
+            <td class="py-2.5 px-3 text-slate-500 font-mono">${index + 1}</td>
+            <td class="py-2.5 px-3 font-bold text-white">${u.username}</td>
+            <td class="py-2.5 px-3 font-mono text-amber-300">${u.password || '****'}</td>
+            <td class="py-2.5 px-3">${isMainAdmin ? '<span class="text-amber-400 font-bold">👑 Kurucu Admin</span>' : '<span class="text-slate-300">👤 Standart Üye</span>'}</td>
+            <td class="py-2.5 px-3">${mtBadge}</td>
+            <td class="py-2.5 px-3 text-slate-400">${u.createdAt}</td>
+            <td class="py-2.5 px-3 text-right">
+              ${isMainAdmin
+                ? '<span class="text-slate-500 text-[11px]">Ana Hesap</span>'
+                : `<button onclick="fillMemberToEdit('${u.username}', '${u.password}')" class="bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-1 rounded text-[11px] font-bold mr-1">Şifre Değiştir</button>
+                   <button onclick="deleteUser('${u.username}')" class="bg-rose-950 hover:bg-rose-700 text-rose-300 px-2.5 py-1 rounded text-[11px] font-bold">Sil ✕</button>`}
             </td>
           `;
           tbody.appendChild(tr);
@@ -657,14 +747,24 @@
       } catch (e) {}
     }
 
+    function fillMemberToEdit(username, currentPass) {
+      document.getElementById('newUsername').value = username;
+      document.getElementById('newPassword').value = currentPass;
+      document.getElementById('newPassword').focus();
+    }
+
     async function createOrUpdateUser() {
-      const username = document.getElementById('newUsername').value;
-      const password = document.getElementById('newPassword').value;
-      const role = document.getElementById('newUserRole').value;
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value.trim();
+
+      if (!username || password.length < 4) {
+        alert('Lütfen geçerli bir kullanıcı adı ve en az 4 karakterli bir şifre girin.');
+        return;
+      }
 
       const res = await apiFetch('/api/users', {
         method: 'POST',
-        body: JSON.stringify({ username, password, role })
+        body: JSON.stringify({ username, password })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -673,14 +773,14 @@
       }
       document.getElementById('newUsername').value = '';
       document.getElementById('newPassword').value = '';
-      loadUsersList();
-      alert('Üye Firebase veritabanına kaydedildi!');
+      await loadUsersList();
+      alert(`✅ "${username}" adlı üye kaydedildi ve aşağıdaki Üye Listesine eklendi!`);
     }
 
     async function deleteUser(username) {
-      if (!confirm(`${username} adlı üyeyi silmek istediğine emin misin?`)) return;
+      if (!confirm(`"${username}" adlı üyeyi silmek istediğine emin misin?`)) return;
       await apiFetch(`/api/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
-      loadUsersList();
+      await loadUsersList();
     }
 
     // --- MOBİL METATRADER KAYDETME VE TEST FONKSİYONLARI ---
@@ -733,7 +833,6 @@
           return;
         }
 
-        // Canlı MT bakiyesini otomatik olarak Kasa Bakiyesi kutusuna yaz ve lotu güncelle!
         if (data.balance && Number(data.balance) > 0) {
           document.getElementById('accountBalanceInput').value = Math.round(Number(data.balance));
           saveAndCalcLot(true);
@@ -803,7 +902,6 @@
       document.getElementById('calcTp1Dollar').textContent = `+$${expectedTp1Dollar.toFixed(2)}`;
       document.getElementById('calcTp2Dollar').textContent = `+$${expectedTp2Dollar.toFixed(2)}`;
 
-      // Üyenin kişisel lotunu ve bakiyesini Firebase üzerindeki kendi profiline kaydet
       if (syncToServer && authToken) {
         apiFetch('/api/update-lot', {
           method: 'POST',
