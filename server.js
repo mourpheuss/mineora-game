@@ -428,27 +428,45 @@ async function moveAllUsersMTToBreakeven(tradeObj) {
 async function partialCloseAllUsersMTAtScalp(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
+
   await Promise.allSettled(connected.map(async (u) => {
     const pos = tradeObj.userPositions[u.username];
-    const totalVol = Number(pos.volume || u.metaApi.lot || 0.03);
-    const closeVol = Math.floor(totalVol * 0.50 * 100) / 100;
+    const totalVol = Number(pos.volume || u.metaApi.lot || 0.02);
+    
+    // 0.02 ve üzeri lotlarda 2 basamaklı güvenli bölme
+    const closeVol = Math.floor((totalVol / 2) * 100) / 100;
     const bePrice = Number(pos.xmEntry || tradeObj.entry);
     const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
 
+    // 1) KISMİ KAPATMA: Hacim en az 0.01 ve kalan da en az 0.01 ise kapat
     if (closeVol >= 0.01 && (totalVol - closeVol) >= 0.01) {
-      await userMetaApiRequest(u, {
-        actionType: 'POSITION_PARTIAL',
-        positionId: String(pos.positionId),
-        volume: Number(closeVol.toFixed(2))
-      });
+      try {
+        await userMetaApiRequest(u, {
+          actionType: 'POSITION_PARTIAL',
+          positionId: String(pos.positionId),
+          volume: Number(closeVol.toFixed(2))
+        });
+        // Kalan hacmi güncelle
+        pos.volume = Number((totalVol - closeVol).toFixed(2));
+      } catch (err) {
+        console.error(`Kısmi kapatma hatası (${u.username}):`, err);
+      }
     }
-    await userMetaApiRequest(u, {
-      actionType: 'POSITION_MODIFY',
-      positionId: String(pos.positionId),
-      stopLoss: bePrice,
-      takeProfit: tp2Price
-    });
+
+    // 2) STOPU GİRİŞE ÇEK (POSITION_MODIFY)
+    // Fiyat ile başabaş arasında güvenli tampon bırakılarak iletilir
+    try {
+      await userMetaApiRequest(u, {
+        actionType: 'POSITION_MODIFY',
+        positionId: String(pos.positionId),
+        stopLoss: bePrice,
+        takeProfit: tp2Price
+      });
+    } catch (err) {
+      console.error(`Stop güncelleme hatası (${u.username}):`, err);
+    }
   }));
+  await saveDB(db);
 }
 
 async function partialCloseAllUsersMTAtTP1(tradeObj) {
