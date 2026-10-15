@@ -945,8 +945,8 @@ async function checkActiveTradeOnTick(spotPrice) {
     soundEvent = 'TP_HIT';
   }
 
-  // 3) ERKEN SCALP KISMI KAPANMA (3 Dolar Ons Hareketinde %50 Kâr Al + Başabaşa Kilitle)
-  if (!t.scalpHit && t.unrealizedPnL >= 3.00) {
+  // 3) ERKEN SCALP KISMI KAPANMA (2.50 Dolar Ons Hareketinde %50 Kâr Al + Başabaşa Kilitle)
+  if (!t.scalpHit && t.unrealizedPnL >= 2.50) {
     t.scalpHit = true;
     t.earlyShieldHit = true; 
     t.sl = t.entry;
