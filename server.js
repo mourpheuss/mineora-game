@@ -596,7 +596,7 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
   }
 });
 
-// --- TEKNİK ANALİZ VE SEÇENEK A (DENGELİ / AKTİF) SİNYAL MOTORU ---
+// --- TEKNİK ANALİZ VE SEÇENEK B (TAM DEFANSİF / DÜŞÜK STOPLU) SİNYAL MOTORU ---
 
 function calcEMA(closes, period) {
   if (closes.length < period) return closes[closes.length - 1] || 0;
@@ -715,30 +715,19 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
-// SEÇENEK A: M5 + M15 Ortak Trend Özgürlüğü + Aşırı Şişmiş RSI (74+) Koruması
+// SEÇENEK B: TAM DEFANSİF MOD (H1 Ana Trend Kalkanı Tam Aktif - Ters Trend Tuzaklarını Engeller)
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
-
-  const m5m15BullishAligned = (m15.price > m15.vwap && m15.ema9 > m15.ema21) && (m5.price > m5.vwap && m5.ema9 > m5.ema21);
-  const m5m15BearishAligned = (m15.price < m15.vwap && m15.ema9 < m15.ema21) && (m5.price < m5.vwap && m5.ema9 < m5.ema21);
 
   if (h1.price > h1.ema21 && h1.ema21 > h1.ema50) {
     score += 20;
     h1MainDir = 1;
     reasons.push({ type: 'pos', text: 'H1 Ana Trend yükselişte (EMA 21 ve 50 üzerinde)' });
   } else if (h1.price < h1.ema21 && h1.ema21 < h1.ema50) {
-    if (m5m15BullishAligned && h1.price >= h1.ema9) {
-      h1MainDir = 0;
-      reasons.push({ type: 'pos', text: 'H1 Dip Dönüşü Onayı: M5 ve M15 güçlü yükselişte, H1 EMA9 kırıldı (Ceza uygulanmadı)' });
-    } else {
-      score -= 20;
-      h1MainDir = -1;
-      reasons.push({ type: 'neg', text: 'H1 Ana Trend düşüşte (EMA 21 ve 50 altında)' });
-    }
-  } else if (m5m15BearishAligned && h1.price <= h1.ema9) {
-    h1MainDir = 0;
-    reasons.push({ type: 'neg', text: 'H1 Tepe Dönüşü Onayı: M5 ve M15 güçlü düşüşte, H1 EMA9 kırıldı' });
+    score -= 20;
+    h1MainDir = -1;
+    reasons.push({ type: 'neg', text: 'H1 Ana Trend düşüşte (EMA 21 ve 50 altında)' });
   }
 
   if (m15.price > m15.vwap && m15.ema9 > m15.ema21) {
@@ -759,10 +748,10 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
 
   if (m5.ema9 > m5.ema21 && m5.ema21 > m5.ema50) {
     score += 15;
-    reasons.push({ type: 'pos', text: 'M5 EMA (9-21-50) yukarı yönlü momentumda' });
+    reasons.push({ type: 'pos', text: 'M5 EMA (9-21-50) yukarı yönlü' });
   } else if (m5.ema9 < m5.ema21 && m5.ema21 < m5.ema50) {
     score -= 15;
-    reasons.push({ type: 'neg', text: 'M5 EMA (9-21-50) aşağı yönlü momentumda' });
+    reasons.push({ type: 'neg', text: 'M5 EMA (9-21-50) aşağı yönlü' });
   }
 
   if (m15.trend.includes('BULLISH') && m5.stochRsi < 35) {
@@ -771,18 +760,10 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
   } else if (m15.trend.includes('BEARISH') && m5.stochRsi > 65) {
     score -= 15;
     reasons.push({ type: 'neg', text: 'M5 StochRSI tepki satış fırsatı' });
-  } else if (m5.rsi > 52 && m5.rsi <= 74) {
-    score += 10;
-    reasons.push({ type: 'pos', text: `M5 RSI (${m5.rsi.toFixed(1)}) güçlü alım momentumunda` });
-  } else if (m5.rsi < 48 && m5.rsi >= 26) {
-    score -= 10;
-    reasons.push({ type: 'neg', text: `M5 RSI (${m5.rsi.toFixed(1)}) güçlü satış momentumunda` });
-  } else if (m5.rsi > 74 && score > 0) {
-    score -= 12;
-    reasons.push({ type: 'warn', text: `M5 RSI (${m5.rsi.toFixed(1)}) aşırı alım tepesinde: Ufak geri çekilme bekleniyor.` });
-  } else if (m5.rsi < 26 && score < 0) {
-    score += 12;
-    reasons.push({ type: 'warn', text: `M5 RSI (${m5.rsi.toFixed(1)}) aşırı satım dibinde: Ufak tepki bekleniyor.` });
+  } else if (m5.rsi > 54 && m5.rsi < 72) {
+    score += 8;
+  } else if (m5.rsi < 46 && m5.rsi > 28) {
+    score -= 8;
   }
 
   if (dxyChange15m < -0.02) {
@@ -802,12 +783,13 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: `M5 ADX (${m5.adx.toFixed(1)}) düşük, yatay piyasa.` });
   }
 
-  if (score > 0 && h1MainDir === -1 && !m5m15BullishAligned && score < 70) {
+  // Ana Trend Kalkanı (Defansif Kilit)
+  if (score > 0 && h1MainDir === -1 && score < 75) {
     score = 30;
-    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 düşüşteyken zayıf LONG engellendi.' });
-  } else if (score < 0 && h1MainDir === 1 && !m5m15BearishAligned && score > -70) {
+    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 ana trendi düşüşte olduğu için riskli LONG sinyali engellendi.' });
+  } else if (score < 0 && h1MainDir === 1 && score > -75) {
     score = -30;
-    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 yükselişteyken zayıf SHORT engellendi.' });
+    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 ana trendi yükselişte olduğu için riskli SHORT sinyali engellendi.' });
   }
 
   if (m5Candles && m5Candles.length >= 3) {
