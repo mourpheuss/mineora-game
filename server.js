@@ -945,7 +945,7 @@ async function checkActiveTradeOnTick(spotPrice) {
   }
 
   // 3) İSTEDİĞİN ERKEN SCALP KISMI KAPANMA + KÂR KORUMA KİLİDİ (+$1.50 kârda %50 kapatıp kalanı başabaşa kilitler)
-  if (!t.scalpHit && t.unrealizedPnL >= 1.50) {
+  if (!t.scalpHit && t.unrealizedPnL >= 2.50) {
     t.scalpHit = true;
     t.earlyShieldHit = true; 
     t.sl = t.entry;
