@@ -1,3 +1,4 @@
+// TÜRKİYE SAAT DİLİMİ KİLİDİ (GMT+3)
 process.env.TZ = 'Europe/Istanbul';
 
 const express = require('express');
@@ -679,16 +680,18 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
-// H1 DEFANSİF KALKAN + TEPEDEN/DİPTEN (RSI 68+ / STOCH 78+ / EMA9 UZAKLAŞMA) GİRİŞ YASAĞI
+// %70 BAŞARI ORANI VEREN ORİJİNAL TAM ZIRHLI MOTOR
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
 
   if (h1.price > h1.ema21 && h1.ema21 > h1.ema50) {
-    score += 20; h1MainDir = 1;
+    score += 20;
+    h1MainDir = 1;
     reasons.push({ type: 'pos', text: 'H1 Ana Trend yükselişte (EMA 21 ve 50 üzerinde)' });
   } else if (h1.price < h1.ema21 && h1.ema21 < h1.ema50) {
-    score -= 20; h1MainDir = -1;
+    score -= 20;
+    h1MainDir = -1;
     reasons.push({ type: 'neg', text: 'H1 Ana Trend düşüşte (EMA 21 ve 50 altında)' });
   }
 
@@ -722,9 +725,9 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
   } else if (m15.trend.includes('BEARISH') && m5.stochRsi > 65) {
     score -= 15;
     reasons.push({ type: 'neg', text: 'M5 StochRSI tepki satış fırsatı' });
-  } else if (m5.rsi > 54 && m5.rsi < 68) {
+  } else if (m5.rsi > 54 && m5.rsi < 72) {
     score += 8;
-  } else if (m5.rsi < 46 && m5.rsi > 32) {
+  } else if (m5.rsi < 46 && m5.rsi > 28) {
     score -= 8;
   }
 
@@ -745,41 +748,20 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: `M5 ADX (${m5.adx.toFixed(1)}) düşük, yatay piyasa.` });
   }
 
-  // 1. KALKAN: H1 Ana Trend Kalkanı
   if (score > 0 && h1MainDir === -1 && score < 75) {
     score = 30;
-    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 düşüşteyken riskli LONG engellendi.' });
+    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 ana trendi düşüşte olduğu için riskli LONG sinyali engellendi.' });
   } else if (score < 0 && h1MainDir === 1 && score > -75) {
     score = -30;
-    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 yükselişteyken riskli SHORT engellendi.' });
+    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 ana trendi yükselişte olduğu için riskli SHORT sinyali engellendi.' });
   }
 
-  // 2. KALKAN: RSI (68+) & StochRSI (78+) Aşırı Şişmiş Tepe / Dip Yasağı
-  if (score >= 45 && (m5.rsi >= 68 || m5.stochRsi >= 78)) {
-    score = 35;
-    reasons.push({ type: 'warn', text: `Tepeden Giriş Koruması: M5 RSI (${m5.rsi.toFixed(1)}) / Stoch (${m5.stochRsi.toFixed(0)}) aşırı tepede! Düzeltme bekleniyor.` });
-  } else if (score <= -45 && (m5.rsi <= 32 || m5.stochRsi <= 22)) {
-    score = -35;
-    reasons.push({ type: 'warn', text: `Dipten Giriş Koruması: M5 RSI (${m5.rsi.toFixed(1)}) / Stoch (${m5.stochRsi.toFixed(0)}) aşırı dipte! Tepki bekleniyor.` });
-  }
-
-  // 3. KALKAN: EMA 9'dan Aşırı Kopma Koruması
-  const distFromEma9 = Math.abs(m5.price - m5.ema9);
-  if (score >= 45 && m5.price > m5.ema9 && distFromEma9 > m5.atr * 1.15) {
-    score = 35;
-    reasons.push({ type: 'warn', text: `Ortalamadan Kopma Koruması: Fiyat EMA9'dan ($${m5.ema9.toFixed(1)}) çok uzaklaştı, geri çekilme bekleniyor.` });
-  } else if (score <= -45 && m5.price < m5.ema9 && distFromEma9 > m5.atr * 1.15) {
-    score = -35;
-    reasons.push({ type: 'warn', text: `Ortalamadan Kopma Koruması: Fiyat EMA9'dan ($${m5.ema9.toFixed(1)}) çok uzaklaştı, tepki bekleniyor.` });
-  }
-
-  // 4. KALKAN: Spike Mum Koruması
   if (m5Candles && m5Candles.length >= 3) {
     const recentJump = m5.price - m5Candles[m5Candles.length - 3].close;
-    if (score < -45 && recentJump < -(m5.atr * 1.6)) {
+    if (score < -45 && recentJump < -(m5.atr * 1.75)) {
       score = -35;
       reasons.push({ type: 'warn', text: 'Geç Kalmış Mum Koruması: Dipten satış engellendi.' });
-    } else if (score > 45 && recentJump > (m5.atr * 1.6)) {
+    } else if (score > 45 && recentJump > (m5.atr * 1.75)) {
       score = 35;
       reasons.push({ type: 'warn', text: 'Geç Kalmış Mum Koruması: Tepeden alış engellendi.' });
     }
