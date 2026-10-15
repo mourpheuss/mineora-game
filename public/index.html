@@ -578,12 +578,17 @@
       const riskDollar = balance * (riskPct / 100);
       const finalLot = Math.max(0.01, Math.round((riskDollar / (slDist * 100)) * 100) / 100);
       
-      document.getElementById('calcLotSize').textContent = currentRecommendedLot.toFixed(2);
-      document.getElementById('calcRiskDollar').textContent = `-$${(currentRecommendedLot * 100 * slDist).toFixed(2)}`;
-      document.getElementById('calcTp1Dollar').textContent = `+$${(currentRecommendedLot * 100 * tp1Dist).toFixed(2)}`;
-      document.getElementById('calcTp2Dollar').textContent = `+$${(currentRecommendedLot * 100 * tp2Dist).toFixed(2)}`;
+      currentRecommendedLot = finalLot;
+      document.getElementById('calcLotSize').textContent = finalLot.toFixed(2);
+      document.getElementById('calcRiskDollar').textContent = `-$${(finalLot * 100 * slDist).toFixed(2)}`;
+      document.getElementById('calcTp1Dollar').textContent = `+$${(finalLot * 100 * tp1Dist).toFixed(2)}`;
+      document.getElementById('calcTp2Dollar').textContent = `+$${(finalLot * 100 * tp2Dist).toFixed(2)}`;
+      
       if (syncToServer && authToken) {
-        apiFetch('/api/update-lot', { method: 'POST', body: JSON.stringify({ lot: currentRecommendedLot, balance, riskPct }) }).catch(() => {});
+        apiFetch('/api/update-lot', { 
+          method: 'POST', 
+          body: JSON.stringify({ lot: finalLot, balance, riskPct }) 
+        }).catch(() => {});
       }
     }
 
