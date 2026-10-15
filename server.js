@@ -1,4 +1,3 @@
-// TÜRKİYE SAAT DİLİMİ KİLİDİ (GMT+3)
 process.env.TZ = 'Europe/Istanbul';
 
 const express = require('express');
@@ -16,7 +15,6 @@ const DB_FILE = IS_CLOUD ? path.join('/tmp', 'signals_db.json') : path.join(__di
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- TÜRKİYE SAATİ YARDIMCILARI ---
 function getTRTime(d = new Date(), sec = true) {
   return d.toLocaleTimeString('tr-TR', {
     timeZone: 'Europe/Istanbul',
@@ -32,9 +30,8 @@ function getTRFullDate(d = new Date()) {
   return d.toLocaleDateString('tr-TR', { timeZone: 'Europe/Istanbul', day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// --- VERİTABANI VE FIREBASE YÖNETİMİ ---
 function createDefaultMetaApi() {
-  return { token: '', accountId: '', symbol: 'GOLD#', lot: 0.05, balance: 1000, riskPct: 2, regionUrl: '', enabled: false };
+  return { token: '', accountId: '', symbol: 'GOLD#', lot: 0.01, balance: 84, riskPct: 10, regionUrl: '', enabled: false };
 }
 
 function getDefaultDB() {
@@ -114,7 +111,6 @@ let newsCache = { timestamp: 0, data: null };
 let calendarCache = { timestamp: 0, data: null };
 let lastKnownSpot = 0;
 
-// --- KULLANICI GİRİŞ & ADMİN YETKİLERİ ---
 function getAuthUser(req) {
   const token = req.headers['x-auth-token'];
   if (!token || !db.sessions || !db.sessions[token]) return null;
@@ -175,7 +171,7 @@ app.get('/api/users', requireAdmin, async (req, res) => {
     createdAt: u.createdAt || '-',
     mtEnabled: Boolean(u.metaApi && u.metaApi.enabled),
     mtSymbol: u.metaApi ? u.metaApi.symbol : 'GOLD#',
-    mtLot: u.metaApi ? u.metaApi.lot : 0.05
+    mtLot: u.metaApi ? u.metaApi.lot : 0.01
   }));
   res.json({ users: safeUsers });
 });
@@ -207,19 +203,6 @@ app.delete('/api/users/:username', requireAdmin, async (req, res) => {
   await saveDB(db);
   res.json({ ok: true });
 });
-
-async function sendTelegramAlert(text) {
-  if (!db.telegram || !db.telegram.enabled || !db.telegram.botToken || !db.telegram.chatId) return;
-  try {
-    await fetch(`https://api.telegram.org/bot${db.telegram.botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: db.telegram.chatId, text, parse_mode: 'HTML' })
-    });
-  } catch (e) {}
-}
-
-// --- XM VE TÜM BROKERLAR İÇİN BİREBİR FİYAT KALİBRASYONLU METAAPI KÖPRÜSÜ ---
 
 async function resolveMetaApiRegionUrl(token, accountId) {
   try {
@@ -257,9 +240,7 @@ async function getBrokerLiveTickPrice(regionUrl, token, accountId, symbol) {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    if (data && data.bid && data.ask) {
-      return { bid: Number(data.bid), ask: Number(data.ask) };
-    }
+    if (data && data.bid && data.ask) return { bid: Number(data.bid), ask: Number(data.ask) };
     return null;
   } catch (e) {
     return null;
@@ -335,7 +316,7 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
     const mt = u.metaApi;
     if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);
 
-    const lotSize = Math.max(0.01, Number(mt.lot) || 0.05);
+    const lotSize = Math.max(0.01, Number(mt.lot) || 0.01);
     const symbol = (mt.symbol || 'GOLD#').trim();
 
     let calibratedEntry = Number(tradeObj.entry);
@@ -392,7 +373,7 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
   await Promise.allSettled(connected.map(async (u) => {
     const pos = tradeObj.userPositions[u.username];
-    const totalVol = Number(pos.volume || u.metaApi.lot || 0.05);
+    const totalVol = Number(pos.volume || u.metaApi.lot || 0.01);
     const closeVol = Math.floor(totalVol * 0.80 * 100) / 100;
     const bePrice = Number(pos.xmEntry || tradeObj.entry);
     const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
@@ -422,8 +403,6 @@ async function closeAllUsersMTTrade(tradeObj) {
   }));
 }
 
-// --- METATRADER AYAR KAYDETME VE TEST ENDPOINTLERİ ---
-
 app.post('/api/metaapi-config', requireAuth, async (req, res) => {
   const { token, accountId, symbol, lot } = req.body;
   const cleanToken = (token || '').trim() || (req.user.metaApi ? req.user.metaApi.token : '');
@@ -433,9 +412,7 @@ app.post('/api/metaapi-config', requireAuth, async (req, res) => {
   let finalSymbol = (symbol || 'GOLD#').trim();
   if (cleanToken && cleanAcc && regionUrl) {
     const goldList = await getBrokerGoldSymbols(regionUrl, cleanToken, cleanAcc);
-    if (goldList.length > 0 && !goldList.includes(finalSymbol)) {
-      finalSymbol = goldList[0];
-    }
+    if (goldList.length > 0 && !goldList.includes(finalSymbol)) finalSymbol = goldList[0];
   }
 
   req.user.metaApi = {
@@ -444,7 +421,7 @@ app.post('/api/metaapi-config', requireAuth, async (req, res) => {
     token: cleanToken,
     accountId: cleanAcc,
     symbol: finalSymbol,
-    lot: Math.max(0.01, Number(lot) || 0.05),
+    lot: Math.max(0.01, Number(lot) || 0.01),
     regionUrl,
     enabled: Boolean(cleanToken && cleanAcc)
   };
@@ -487,9 +464,7 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
       await saveDB(db);
     }
 
-    if (!infoRes.ok) {
-      return res.json({ ok: true, partial: true, message: `Hesap bulundu (${provData.server}), bağlantı hazırlanıyor...` });
-    }
+    if (!infoRes.ok) return res.json({ ok: true, partial: true, message: `Hesap bulundu (${provData.server}), bağlantı hazırlanıyor...` });
 
     const info = await infoRes.json();
     const symbolsText = goldList.length > 0 ? ` | Bulunan Altın Sembolleri: ${goldList.join(', ')}` : '';
@@ -544,14 +519,11 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
     }
 
     let posId = openData.positionId || openData.orderId;
-
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     if (!posId) {
       try {
-        const posRes = await fetch(`${regionUrl}/users/current/accounts/${accountId}/positions`, {
-          headers: { 'auth-token': token }
-        });
+        const posRes = await fetch(`${regionUrl}/users/current/accounts/${accountId}/positions`, { headers: { 'auth-token': token } });
         const posList = await posRes.json();
         if (Array.isArray(posList) && posList.length > 0) {
           const foundPos = posList.find(p => p.comment === 'XAU_BAGLANTI_TESTI' || p.symbol === attempt.workingSymbol);
@@ -565,10 +537,7 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
       const closeRes = await fetch(tradeUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'auth-token': token },
-        body: JSON.stringify({
-          actionType: 'POSITION_CLOSE_ID',
-          positionId: String(posId)
-        })
+        body: JSON.stringify({ actionType: 'POSITION_CLOSE_ID', positionId: String(posId) })
       });
       const closeData = await closeRes.json();
       closeSuccess = closeRes.ok && (!closeData.stringCode || !closeData.stringCode.includes('ERR'));
@@ -578,10 +547,7 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
       await fetch(tradeUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'auth-token': token },
-        body: JSON.stringify({
-          actionType: 'POSITIONS_CLOSE_SYMBOL',
-          symbol: attempt.workingSymbol
-        })
+        body: JSON.stringify({ actionType: 'POSITIONS_CLOSE_SYMBOL', symbol: attempt.workingSymbol })
       }).catch(() => {});
     }
 
@@ -589,14 +555,12 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
       ok: true,
       positionId: posId,
       symbol: attempt.workingSymbol,
-      message: `✅ TAM TEST BAŞARILI! Telefonundaki MetaTrader'da 0.01 Lot ${attempt.workingSymbol} işlemi açıldı (ID: #${posId}), 3 saniye beklendi ve OTOMATİK OLARAK KAPATILDI!`
+      message: `✅ TAM TEST BAŞARILI! Telefonundaki MetaTrader'da 0.01 Lot ${attempt.workingSymbol} işlemi açıldı (ID: #${posId}), 3 saniye beklendi ve OTOMATİK KAPATILDI!`
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: 'Test işlemi hatası: ' + err.message });
   }
 });
-
-// --- TEKNİK ANALİZ VE SEÇENEK B (TAM DEFANSİF / DÜŞÜK STOPLU) SİNYAL MOTORU ---
 
 function calcEMA(closes, period) {
   if (closes.length < period) return closes[closes.length - 1] || 0;
@@ -715,18 +679,16 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
-// SEÇENEK B: TAM DEFANSİF MOD (H1 Ana Trend Kalkanı Tam Aktif - Ters Trend Tuzaklarını Engeller)
+// H1 DEFANSİF KALKAN + TEPEDEN/DİPTEN (RSI 68+ / STOCH 78+ / EMA9 UZAKLAŞMA) GİRİŞ YASAĞI
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
 
   if (h1.price > h1.ema21 && h1.ema21 > h1.ema50) {
-    score += 20;
-    h1MainDir = 1;
+    score += 20; h1MainDir = 1;
     reasons.push({ type: 'pos', text: 'H1 Ana Trend yükselişte (EMA 21 ve 50 üzerinde)' });
   } else if (h1.price < h1.ema21 && h1.ema21 < h1.ema50) {
-    score -= 20;
-    h1MainDir = -1;
+    score -= 20; h1MainDir = -1;
     reasons.push({ type: 'neg', text: 'H1 Ana Trend düşüşte (EMA 21 ve 50 altında)' });
   }
 
@@ -760,9 +722,9 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
   } else if (m15.trend.includes('BEARISH') && m5.stochRsi > 65) {
     score -= 15;
     reasons.push({ type: 'neg', text: 'M5 StochRSI tepki satış fırsatı' });
-  } else if (m5.rsi > 54 && m5.rsi < 72) {
+  } else if (m5.rsi > 54 && m5.rsi < 68) {
     score += 8;
-  } else if (m5.rsi < 46 && m5.rsi > 28) {
+  } else if (m5.rsi < 46 && m5.rsi > 32) {
     score -= 8;
   }
 
@@ -783,21 +745,41 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: `M5 ADX (${m5.adx.toFixed(1)}) düşük, yatay piyasa.` });
   }
 
-  // Ana Trend Kalkanı (Defansif Kilit)
+  // 1. KALKAN: H1 Ana Trend Kalkanı
   if (score > 0 && h1MainDir === -1 && score < 75) {
     score = 30;
-    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 ana trendi düşüşte olduğu için riskli LONG sinyali engellendi.' });
+    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 düşüşteyken riskli LONG engellendi.' });
   } else if (score < 0 && h1MainDir === 1 && score > -75) {
     score = -30;
-    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 ana trendi yükselişte olduğu için riskli SHORT sinyali engellendi.' });
+    reasons.push({ type: 'warn', text: 'Ana Trend Kalkanı: H1 yükselişteyken riskli SHORT engellendi.' });
   }
 
+  // 2. KALKAN: RSI (68+) & StochRSI (78+) Aşırı Şişmiş Tepe / Dip Yasağı
+  if (score >= 45 && (m5.rsi >= 68 || m5.stochRsi >= 78)) {
+    score = 35;
+    reasons.push({ type: 'warn', text: `Tepeden Giriş Koruması: M5 RSI (${m5.rsi.toFixed(1)}) / Stoch (${m5.stochRsi.toFixed(0)}) aşırı tepede! Düzeltme bekleniyor.` });
+  } else if (score <= -45 && (m5.rsi <= 32 || m5.stochRsi <= 22)) {
+    score = -35;
+    reasons.push({ type: 'warn', text: `Dipten Giriş Koruması: M5 RSI (${m5.rsi.toFixed(1)}) / Stoch (${m5.stochRsi.toFixed(0)}) aşırı dipte! Tepki bekleniyor.` });
+  }
+
+  // 3. KALKAN: EMA 9'dan Aşırı Kopma Koruması
+  const distFromEma9 = Math.abs(m5.price - m5.ema9);
+  if (score >= 45 && m5.price > m5.ema9 && distFromEma9 > m5.atr * 1.15) {
+    score = 35;
+    reasons.push({ type: 'warn', text: `Ortalamadan Kopma Koruması: Fiyat EMA9'dan ($${m5.ema9.toFixed(1)}) çok uzaklaştı, geri çekilme bekleniyor.` });
+  } else if (score <= -45 && m5.price < m5.ema9 && distFromEma9 > m5.atr * 1.15) {
+    score = -35;
+    reasons.push({ type: 'warn', text: `Ortalamadan Kopma Koruması: Fiyat EMA9'dan ($${m5.ema9.toFixed(1)}) çok uzaklaştı, tepki bekleniyor.` });
+  }
+
+  // 4. KALKAN: Spike Mum Koruması
   if (m5Candles && m5Candles.length >= 3) {
     const recentJump = m5.price - m5Candles[m5Candles.length - 3].close;
-    if (score < -45 && recentJump < -(m5.atr * 1.75)) {
+    if (score < -45 && recentJump < -(m5.atr * 1.6)) {
       score = -35;
       reasons.push({ type: 'warn', text: 'Geç Kalmış Mum Koruması: Dipten satış engellendi.' });
-    } else if (score > 45 && recentJump > (m5.atr * 1.75)) {
+    } else if (score > 45 && recentJump > (m5.atr * 1.6)) {
       score = 35;
       reasons.push({ type: 'warn', text: 'Geç Kalmış Mum Koruması: Tepeden alış engellendi.' });
     }
@@ -805,8 +787,6 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
 
   return { score: Math.max(-100, Math.min(100, score)), reasons };
 }
-
-// --- HABER, TAKVİM VE FİYAT VERİSİ ---
 
 const BULLISH_RULES = [
   { words: ['rate cut', 'dovish', 'cuts rates', 'fed cut', 'lower rates'], weight: 4, tag: 'Güvercin FED' },
@@ -912,8 +892,6 @@ function analyzeTimeframe(candles) {
   return { price, ema9, ema21, ema50, rsi, stochRsi, atr, adx, vwap, trend };
 }
 
-// --- AKTİF İŞLEM TAKİBİ & BACKTEST ---
-
 async function checkActiveTradeOnTick(spotPrice) {
   if (!db.activeTrade || !spotPrice) return null;
   let soundEvent = null;
@@ -1010,34 +988,23 @@ async function executeFullAnalysisEngine(currentUser = null) {
   return {
     timestamp: getTRTime(), spotPrice: spotPrice.toFixed(2), score, signal, direction, tradePlan, reasons,
     timeframes: { m5, m15, h1 }, macro: { dxy: dxyData, us10y: us10yData }, news: newsData, calendar: calendarData,
-    tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: userMt.symbol || 'GOLD#', userLot: userMt.lot || 0.05 }
+    tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: userMt.symbol || 'GOLD#', userLot: userMt.lot || 0.01 }
   };
 }
 
 app.get('/api/cron', async (req, res) => {
   try {
     const r = await executeFullAnalysisEngine(null);
-
     if (db.activeTrade) {
       for (let step = 0; step < 3; step++) {
         await new Promise(resolve => setTimeout(resolve, 2300));
         const tvMap = await getOandaSpotAndMacro();
         const oandaData = tvMap['OANDA:XAUUSD'];
-        if (oandaData && oandaData.price) {
-          await checkActiveTradeOnTick(oandaData.price);
-        }
+        if (oandaData && oandaData.price) await checkActiveTradeOnTick(oandaData.price);
         if (!db.activeTrade) break;
       }
     }
-
-    res.json({
-      ok: true,
-      time: getTRTime(),
-      spotPrice: r.spotPrice,
-      score: r.score,
-      signal: r.signal,
-      activeTrade: Boolean(db.activeTrade)
-    });
+    res.json({ ok: true, time: getTRTime(), spotPrice: r.spotPrice, score: r.score, signal: r.signal, activeTrade: Boolean(db.activeTrade) });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -1046,8 +1013,8 @@ app.get('/api/cron', async (req, res) => {
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const hours = Number(req.query.hours) || 24, mode = req.query.mode || 'today';
-    const [tvMap, rawM5, rawM15, rawH1, rawDxyM5, calendarData] = await Promise.all([
-      getOandaSpotAndMacro(), getCandles('GC=F', '5m', '5d'), getCandles('GC=F', '15m', '1mo'), getCandles('GC=F', '1h', '1mo'), getCandles('DX-Y.NYB', '5m', '5d').catch(() => []), getEconomicCalendar()
+    const [tvMap, rawM5, rawM15, rawH1, rawDxyM5] = await Promise.all([
+      getOandaSpotAndMacro(), getCandles('GC=F', '5m', '5d'), getCandles('GC=F', '15m', '1mo'), getCandles('GC=F', '1h', '1mo'), getCandles('DX-Y.NYB', '5m', '5d').catch(() => [])
     ]);
     const oandaData = tvMap['OANDA:XAUUSD'], lastRawClose = rawM5[rawM5.length - 1].close;
     const spotPrice = oandaData && oandaData.price ? oandaData.price : lastRawClose, offset = spotPrice - lastRawClose;
@@ -1129,7 +1096,7 @@ app.get('/api/tick', requireAuth, async (req, res) => {
     if (spotPrice) lastKnownSpot = spotPrice;
     const soundEvent = await checkActiveTradeOnTick(spotPrice);
     const userMt = req.user.metaApi || createDefaultMetaApi();
-    res.json({ timestamp: getTRTime(), spotPrice: spotPrice ? spotPrice.toFixed(2) : null, macro: { dxy: tvMap['TVC:DXY'] || null, us10y: tvMap['TVC:US10Y'] || null }, tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: userMt.symbol || 'GOLD#', userLot: userMt.lot || 0.05 } });
+    res.json({ timestamp: getTRTime(), spotPrice: spotPrice ? spotPrice.toFixed(2) : null, macro: { dxy: tvMap['TVC:DXY'] || null, us10y: tvMap['TVC:US10Y'] || null }, tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: userMt.symbol || 'GOLD#', userLot: userMt.lot || 0.01 } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
