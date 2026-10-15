@@ -32,7 +32,7 @@ function getTRFullDate(d = new Date()) {
 }
 
 function createDefaultMetaApi() {
-  return { token: '', accountId: '', symbol: 'GOLD', lot: 0.03, balance: 1000, riskPct: 2, regionUrl: '', enabled: false };
+  return { token: '', accountId: '', symbol: 'GOLD', lot: 0.04, balance: 1000, riskPct: 2, regionUrl: '', enabled: false };
 }
 
 function getDefaultDB() {
@@ -115,13 +115,13 @@ let newsCache = { timestamp: 0, data: null };
 let calendarCache = { timestamp: 0, data: null };
 let lastKnownSpot = 0;
 
-// === HAFTA SONU & HAFTA İÇİ PİYASA YÖNETİCİSİ ===
+// === PİYASA YÖNETİCİSİ (HAFTA İÇİ ALTIN, HAFTA SONU SADECE BTC) ===
 function getMarketSession() {
   const now = new Date();
   const day = now.getDay(); // 0: Pazar, 5: Cuma, 6: Cumartesi
   const hour = now.getHours();
 
-  // Cuma 23:55'ten Pazar 23:55'e kadar Kripto Modu
+  // Cuma 23:55'ten Pazar 23:55'e kadar Hafta Sonu Modu (Sadece BTC)
   const isWeekend = (day === 6) || (day === 0) || (day === 5 && hour >= 23);
 
   if (isWeekend) {
@@ -214,7 +214,7 @@ app.get('/api/users', requireAdmin, async (req, res) => {
     createdAt: u.createdAt || '-',
     mtEnabled: Boolean(u.metaApi && u.metaApi.enabled),
     mtSymbol: u.metaApi ? u.metaApi.symbol : 'GOLD',
-    mtLot: u.metaApi ? u.metaApi.lot : 0.03
+    mtLot: u.metaApi ? u.metaApi.lot : 0.04
   }));
   res.json({ users: safeUsers });
 });
@@ -368,13 +368,13 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
       });
       if (posRes.ok) {
         const livePositions = await posRes.json();
-        const hasOpenPosition = Array.isArray(livePositions) && livePositions.some(p => p.symbol === symbol || /GOLD|XAU/i.test(p.symbol));
+        const hasOpenPosition = Array.isArray(livePositions) && livePositions.some(p => p.symbol === symbol || /GOLD|XAU|BTC/i.test(p.symbol));
         if (hasOpenPosition) return;
       }
     } catch (e) {}
 
-    // KULLANICININ PANELDE BELİRLEDİĞİ LOT DOĞRUDAN KULLANILIR
-    const lotSize = Math.max(0.01, Number(mt.lot) || 0.03);
+    // PANELDEKİ LOT NEYSE ALTIN VE BTC İÇİN BİREBİR AYNISI GEÇERLİDİR
+    const lotSize = Math.max(0.01, Number(mt.lot) || 0.04);
 
     let calibratedEntry = Number(tradeObj.entry);
     let calibratedSL = Number(tradeObj.sl);
@@ -431,34 +431,28 @@ async function partialCloseAllUsersMTAtScalp(tradeObj) {
 
   await Promise.allSettled(connected.map(async (u) => {
     const pos = tradeObj.userPositions[u.username];
-    const totalVol = Number(pos.volume || u.metaApi.lot || 0.02);
+    const totalVol = Number(pos.volume || u.metaApi.lot || 0.04);
     
-    // Kapanacak hacim: 0.02 ve üstünde tam yarısı (0.01), 0.01 ise kısmi kapatılamaz
-    let closeVol = 0;
-    if (totalVol >= 0.02) {
-      closeVol = Number((totalVol / 2).toFixed(2));
-    }
-
+    // 0.04 lot ise tam yarısı olan 0.02'yi kapatır
+    const closeVol = Math.floor((totalVol / 2) * 100) / 100;
     const bePrice = Number(pos.xmEntry || tradeObj.entry);
     const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
 
-    // 1) KISMİ KAPATMA (En az 0.01 kapanacak ve geriye en az 0.01 kalacaksa)
+    // 1) KISMİ KAPATMA
     if (closeVol >= 0.01 && (totalVol - closeVol) >= 0.01) {
       try {
-        const res = await userMetaApiRequest(u, {
+        await userMetaApiRequest(u, {
           actionType: 'POSITION_PARTIAL',
           positionId: String(pos.positionId),
-          volume: closeVol
+          volume: Number(closeVol.toFixed(2))
         });
-        if (res && !res.stringCode) {
-          pos.volume = Number((totalVol - closeVol).toFixed(2));
-        }
+        pos.volume = Number((totalVol - closeVol).toFixed(2));
       } catch (err) {
         console.error(`Kısmi kapatma hatası (${u.username}):`, err);
       }
     }
 
-    // 2) STOPU GİRİŞE ÇEKME (Hacim bölünemese bile stop kesinlikle başabaşa çekilmeli)
+    // 2) STOPU GİRİŞE ÇEK (BAŞABAŞ ZIRHI)
     try {
       await userMetaApiRequest(u, {
         actionType: 'POSITION_MODIFY',
@@ -478,7 +472,7 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
   await Promise.allSettled(connected.map(async (u) => {
     const pos = tradeObj.userPositions[u.username];
-    const totalVol = Number(pos.volume || u.metaApi.lot || 0.03);
+    const totalVol = Number(pos.volume || u.metaApi.lot || 0.04);
     const closeVol = Math.floor(totalVol * 0.80 * 100) / 100;
     const bePrice = Number(pos.xmEntry || tradeObj.entry);
     const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
@@ -508,7 +502,7 @@ async function closeAllUsersMTTrade(tradeObj) {
   }));
 }
 
-// KULLANICIYA ÖZEL MANUEL KAPATMA VE GERÇEK KÂR HESAPLAMA
+// MANUEL KAPATMA VE GERÇEK KÂR HESAPLAMA
 app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   try {
     const username = req.user.username;
@@ -575,7 +569,7 @@ app.post('/api/metaapi-config', requireAuth, async (req, res) => {
     token: cleanToken,
     accountId: cleanAcc,
     symbol: finalSymbol,
-    lot: Math.max(0.01, Number(lot) || 0.03),
+    lot: Math.max(0.01, Number(lot) || 0.04),
     regionUrl,
     enabled: Boolean(cleanToken && cleanAcc)
   };
@@ -1170,7 +1164,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
     timestamp: getTRTime(), spotPrice: spotPrice.toFixed(2), score, signal, direction, tradePlan, reasons,
     currentMarket: currentInstrument.name, isWeekendMode: session.isWeekend,
     timeframes: { m5, m15, h1 }, macro: { dxy: dxyData, us10y: us10yData }, news: newsData, calendar: calendarData,
-    tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: currentInstrument.brokerSym, userLot: userMt.lot || 0.03 }
+    tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: currentInstrument.brokerSym, userLot: userMt.lot || 0.04 }
   };
 }
 
@@ -1285,7 +1279,7 @@ app.get('/api/tick', requireAuth, async (req, res) => {
     if (spotPrice) lastKnownSpot = spotPrice;
     const soundEvent = await checkActiveTradeOnTick(spotPrice);
     const userMt = req.user.metaApi || createDefaultMetaApi();
-    res.json({ timestamp: getTRTime(), spotPrice: spotPrice ? spotPrice.toFixed(2) : null, currentMarket: currentInstrument.name, macro: { dxy: tvMap['TVC:DXY'] || null, us10y: tvMap['TVC:US10Y'] || null }, tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: currentInstrument.brokerSym, userLot: userMt.lot || 0.03 } });
+    res.json({ timestamp: getTRTime(), spotPrice: spotPrice ? spotPrice.toFixed(2) : null, currentMarket: currentInstrument.name, macro: { dxy: tvMap['TVC:DXY'] || null, us10y: tvMap['TVC:US10Y'] || null }, tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: currentInstrument.brokerSym, userLot: userMt.lot || 0.04 } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1301,5 +1295,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 XAU/USD & WEEKEND CRYPTO Sunucu Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 XAU/USD & WEEKEND BTC Sunucu Aktif: Port ${PORT}`));
 module.exports = app;
