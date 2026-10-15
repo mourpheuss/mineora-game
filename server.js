@@ -449,29 +449,43 @@ async function closeAllUsersMTTrade(tradeObj) {
 }
 
 // KULLANICIYA ÖZEL MANUEL KAPATMA
+// KULLANICIYA ÖZEL MANUEL KAPATMA VE GERÇEK KÂR HESAPLAMA
 app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   try {
     const username = req.user.username;
-    if (db.activeTrade && db.activeTrade.userPositions && db.activeTrade.userPositions[username]) {
-      const pos = db.activeTrade.userPositions[username];
-      await userMetaApiRequest(req.user, { actionType: 'POSITION_CLOSE_ID', positionId: String(pos.positionId) });
-      delete db.activeTrade.userPositions[username];
+    if (db.activeTrade) {
+      const t = db.activeTrade;
+      const isLong = t.direction === 'LONG';
+      const curPrice = lastKnownSpot || t.currentPrice || t.entry;
 
-      if (Object.keys(db.activeTrade.userPositions).length === 0) {
-        db.history.unshift({
-          ...db.activeTrade,
-          closePrice: lastKnownSpot || db.activeTrade.currentPrice || db.activeTrade.entry,
-          closeTime: getTRTime(),
-          status: 'MANUEL KAPATILDI 🛑',
-          result: 'CLOSED',
-          profitDollar: 0
-        });
-        db.activeTrade = null;
+      // MetaTrader pozisyonunu kapat
+      if (t.userPositions && t.userPositions[username]) {
+        const pos = t.userPositions[username];
+        await userMetaApiRequest(req.user, { actionType: 'POSITION_CLOSE_ID', positionId: String(pos.positionId) });
+        delete t.userPositions[username];
       }
+
+      // Gerçek Kâr/Zarar Hesabı (Ons Bazında)
+      const diff = Number((isLong ? curPrice - t.entry : t.entry - curPrice).toFixed(2));
+      const resultType = diff >= 0 ? 'WIN' : 'LOSS';
+
+      // Geçmişe gerçek tutarla kaydet
+      db.history.unshift({
+        ...t,
+        closePrice: curPrice,
+        closeTime: getTRTime(),
+        status: 'MANUEL KAPATILDI 🛑',
+        result: resultType,
+        profitDollar: diff
+      });
+
+      // Ekranın takılı kalmaması için aktif işlemi sıfırla
+      db.activeTrade = null;
       await saveDB(db);
-      return res.json({ ok: true, message: 'İşleminiz başarıyla kapatıldı.' });
+
+      return res.json({ ok: true, message: 'İşlem başarıyla kapatıldı.' });
     }
-    res.json({ ok: true, message: 'Açık bir işleminiz bulunamadı.' });
+    res.json({ ok: true, message: 'Açık bir işlem bulunamadı.' });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
