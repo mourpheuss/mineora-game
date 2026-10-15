@@ -680,18 +680,16 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
-// %70 BAŞARI ORANI VEREN ORİJİNAL TAM ZIRHLI MOTOR
+// %70 BAŞARI + STOP SONRASI 45 DAKİKA (9 MUM) DİNLENME KORUMALI MOTOR
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
 
   if (h1.price > h1.ema21 && h1.ema21 > h1.ema50) {
-    score += 20;
-    h1MainDir = 1;
+    score += 20; h1MainDir = 1;
     reasons.push({ type: 'pos', text: 'H1 Ana Trend yükselişte (EMA 21 ve 50 üzerinde)' });
   } else if (h1.price < h1.ema21 && h1.ema21 < h1.ema50) {
-    score -= 20;
-    h1MainDir = -1;
+    score -= 20; h1MainDir = -1;
     reasons.push({ type: 'neg', text: 'H1 Ana Trend düşüşte (EMA 21 ve 50 altında)' });
   }
 
@@ -808,7 +806,7 @@ async function getGoldNewsSentiment() {
       return { ...item, score: itemScore, tag: tags.length ? tags.join(' • ') : 'Piyasa Akışı' };
     });
     const norm = Math.max(-15, Math.min(15, rawScore));
-    const result = { sentimentScore: norm, summary: norm >= 4 ? 'POZİTİF HABER AKIŞI' : (norm <= -4 ? 'NEGATİF HABER AKIŞI' : 'DENGELİ AKIŞ'), headlines: analyzed.slice(0, 6) };
+    const result = { sentimentScore: norm, summary: norm >= 4 ? 'POZİTİf HABER AKIŞI' : (norm <= -4 ? 'NEGATİF HABER AKIŞI' : 'DENGELİ AKIŞ'), headlines: analyzed.slice(0, 6) };
     newsCache = { timestamp: now, data: result };
     return result;
   } catch (e) {
@@ -1027,7 +1025,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           let profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(2)), status = 'STOP OLDU ❌', result = 'LOSS';
           if (simActive.tp1Hit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.8).toFixed(2)); status = 'TP1 ALINDI + BAŞABAŞ 🛡️'; result = 'WIN'; }
           else if (simActive.earlyShieldHit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.15).toFixed(2)); status = 'ERKEN ZIRH KORUMASI 🛡️'; result = 'WIN'; }
-          else lastStopCandleIndex = i;
+          else lastStopCandleIndex = i; // STOP OLDUĞU MUMU KAYDET
           simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.sl.toFixed(2), status, result, profitDollar: profit });
           simActive = null; continue;
         }
@@ -1045,7 +1043,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      if (i - lastStopCandleIndex < 2) continue;
+      // STOP SONRASI 45 DAKİKA (9 MUM) BEKLEME KURALI (Anlamsız ardışık stopları engeller)
+      if (i - lastStopCandleIndex < 9) continue;
+
       const m5Slice = calM5.slice(Math.max(0, i - 60), i + 1);
       const m15Slice = calM15.filter(x => x.time <= c.time).slice(-60);
       const h1Slice = calH1.filter(x => x.time <= c.time).slice(-60);
