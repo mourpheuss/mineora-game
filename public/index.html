@@ -690,7 +690,6 @@
               </button>
             </div>
           </div>
-          <!-- STOP VE TP SEVİYELERİ TEKRAR EKLENDİ -->
           <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800 text-xs">
             <div>Otomatik Stop-Loss: <strong class="text-rose-400">$${t.sl}</strong></div>
             <div>Otomatik TP1 (%80 Kâr): <strong class="text-emerald-400">$${t.tp1} ${t.tp1Hit ? '✅' : ''}</strong></div>
@@ -707,6 +706,29 @@
         document.getElementById('statProfit').textContent = (tracker.stats.totalProfit >= 0 ? '+$' : '-$') + Math.abs(tracker.stats.totalProfit);
         const lotTot = Number(tracker.stats.totalProfit) * ozMultiplier;
         document.getElementById('statLotProfit').textContent = (lotTot >= 0 ? '+$' : '-$') + Math.abs(lotTot).toFixed(2);
+
+        // GEÇMİŞ İŞLEMLER TABLOSUNU DOLDURAN DÖNGÜ
+        const tbody = document.getElementById('historyTableBody');
+        if (tracker.history && tracker.history.length > 0) {
+          tbody.innerHTML = '';
+          tracker.history.forEach(h => {
+            const tr = document.createElement('tr');
+            const isWin = h.result === 'WIN';
+            const lotResult = (Number(h.profitDollar) || 0) * ozMultiplier;
+            tr.innerHTML = `
+              <td class="py-2 px-3 font-mono text-slate-400">${h.openTime} → ${h.closeTime}</td>
+              <td class="py-2 px-3 font-bold ${h.direction === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}">${h.direction}</td>
+              <td class="py-2 px-3">$${h.entry}</td>
+              <td class="py-2 px-3">$${Number(h.closePrice || h.entry).toFixed(2)}</td>
+              <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${isWin ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${h.status}</span></td>
+              <td class="py-2 px-3 text-right font-bold ${h.profitDollar >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${h.profitDollar >= 0 ? '+$' + h.profitDollar : '-$' + Math.abs(h.profitDollar)}</td>
+              <td class="py-2 px-3 text-right font-black ${lotResult >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${lotResult >= 0 ? '+$' + lotResult.toFixed(2) : '-$' + Math.abs(lotResult).toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-slate-500">Henüz kapanmış işlem bulunmuyor.</td></tr>`;
+        }
       }
     }
 
