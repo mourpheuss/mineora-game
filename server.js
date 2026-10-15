@@ -433,28 +433,32 @@ async function partialCloseAllUsersMTAtScalp(tradeObj) {
     const pos = tradeObj.userPositions[u.username];
     const totalVol = Number(pos.volume || u.metaApi.lot || 0.02);
     
-    // 0.02 ve üzeri lotlarda 2 basamaklı güvenli bölme
-    const closeVol = Math.floor((totalVol / 2) * 100) / 100;
+    // Kapanacak hacim: 0.02 ve üstünde tam yarısı (0.01), 0.01 ise kısmi kapatılamaz
+    let closeVol = 0;
+    if (totalVol >= 0.02) {
+      closeVol = Number((totalVol / 2).toFixed(2));
+    }
+
     const bePrice = Number(pos.xmEntry || tradeObj.entry);
     const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
 
-    // 1) KISMİ KAPATMA: Hacim en az 0.01 ve kalan da en az 0.01 ise kapat
+    // 1) KISMİ KAPATMA (En az 0.01 kapanacak ve geriye en az 0.01 kalacaksa)
     if (closeVol >= 0.01 && (totalVol - closeVol) >= 0.01) {
       try {
-        await userMetaApiRequest(u, {
+        const res = await userMetaApiRequest(u, {
           actionType: 'POSITION_PARTIAL',
           positionId: String(pos.positionId),
-          volume: Number(closeVol.toFixed(2))
+          volume: closeVol
         });
-        // Kalan hacmi güncelle
-        pos.volume = Number((totalVol - closeVol).toFixed(2));
+        if (res && !res.stringCode) {
+          pos.volume = Number((totalVol - closeVol).toFixed(2));
+        }
       } catch (err) {
         console.error(`Kısmi kapatma hatası (${u.username}):`, err);
       }
     }
 
-    // 2) STOPU GİRİŞE ÇEK (POSITION_MODIFY)
-    // Fiyat ile başabaş arasında güvenli tampon bırakılarak iletilir
+    // 2) STOPU GİRİŞE ÇEKME (Hacim bölünemese bile stop kesinlikle başabaşa çekilmeli)
     try {
       await userMetaApiRequest(u, {
         actionType: 'POSITION_MODIFY',
