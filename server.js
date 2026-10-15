@@ -1085,7 +1085,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) { simActive.tp1Hit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
         if (!simActive.scalpHit) {
           const liveDiff = Number((isLong ? c.high - simActive.entry : simActive.entry - c.low).toFixed(2));
-          if (liveDiff >= 1.50) { simActive.scalpHit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
+          if (liveDiff >= 2.50) { simActive.scalpHit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
         }
         continue;
       }
