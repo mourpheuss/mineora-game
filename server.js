@@ -404,7 +404,6 @@ async function closeAllUsersMTTrade(tradeObj) {
   }));
 }
 
-// YENİ: MANUEL OLARAK AÇIK İŞLEMİ VE PANELİ SENRONİZE EDİP KAPATMA ENDPOINT'İ
 app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   try {
     if (db.activeTrade) {
@@ -420,7 +419,7 @@ app.post('/api/close-active-trade', requireAuth, async (req, res) => {
       db.activeTrade = null;
       await saveDB(db);
     }
-    res.json({ ok: true, message: 'Aktif işlem başarıyla kapatıldı ve panel senkronize edildi.' });
+    res.json({ ok: true, message: 'İşlem kapatıldı.' });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -702,7 +701,6 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
-// ERKEN ZIRH EŞİĞİ %60'TAN %40'A ÇEKİLDİ (Geri dönüş stopları önlenir) + STOP SONRASI 45 DK BEKLEME
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
@@ -875,7 +873,7 @@ async function getCandles(symbol, interval, range) {
   const data = await res.json();
   const r = data.chart.result[0], q = r.indicators.quote[0], ts = r.timestamp || [];
   const candles = [];
-  for (let i = 0; i < ts.length; i++) {
+  for (let i = 0; i < ts.label; i++) {
     if (q.close[i] != null && q.high[i] != null && q.low[i] != null) {
       candles.push({ time: ts[i], open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i], volume: q.volume[i] || 100 });
     }
@@ -917,10 +915,9 @@ async function checkActiveTradeOnTick(spotPrice) {
     soundEvent = 'TP_HIT';
   }
 
-  // YENİ: ERKEN ZIRH EŞİĞİ %60'TAN %40'A ÇEKİLDİ (Daha erken başabaşa kilitler)
   if (!t.tp1Hit && !t.earlyShieldHit) {
     const tp1Dist = Math.abs(t.tp1 - t.entry);
-    const trig = isLong ? t.entry + tp1Dist * 0.40 : t.entry - tp1Dist * 0.40;
+    const trig = isLong ? t.entry + tp1Dist * 0.60 : t.entry - tp1Dist * 0.60;
     if ((isLong && spotPrice >= trig) || (!isLong && spotPrice <= trig)) {
       t.earlyShieldHit = true; t.sl = t.entry;
       await saveDB(db);
@@ -970,7 +967,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
   let signal = '⏳ BEKLE (OTOMATİK TARANIYOR)', direction = 'NEUTRAL';
   if (calendarData.killSwitch) { signal = '⛔ VERİ SAATİ (OTOMATİK KİLİT)'; direction = 'LOCKED'; }
   else if (score >= 45) { signal = '🟢 LONG GİR (OTOMATİK)'; direction = 'LONG'; }
-  else if (score <= -45) { signal = '🔴 SHORT GİR (OTOMATİK)'; direction = 'SHORT'; }
+  else if (specCode = score <= -45) { signal = '🔴 SHORT GİR (OTOMATİK)'; direction = 'SHORT'; }
 
   const tradePlan = calculateSmartTradePlan(spotPrice, score < 0, calM5, calM15, m5.atr);
   let soundEvent = await checkActiveTradeOnTick(spotPrice);
@@ -1057,23 +1054,22 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.tp2.toFixed(2), status: 'TP2 TAM HEDEF 🎯', result: 'WIN', profitDollar: profit });
           simActive = null; continue;
         }
-        if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) { simActive.tp1Hit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
+        if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) { simActive.tp1Hit = true; simactive.earlyShieldHit = true; simActive.sl = simActive.entry; }
         if (!simActive.tp1Hit && !simActive.earlyShieldHit) {
           const tp1Dist = Math.abs(simActive.tp1 - simActive.entry);
-          const trig = isLong ? simActive.entry + tp1Dist * 0.40 : simActive.entry - tp1Dist * 0.40;
+          const trig = isLong ? simActive.entry + tp1Dist * 0.60 : simActive.entry - tp1Dist * 0.60;
           if ((isLong && c.high >= trig) || (!isLong && c.low <= trig)) { simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
         }
         continue;
       }
 
-      if (i - lastStopCandleIndex < 9) continue;
-
+      if (i - lastStopCandleIndex < 2) continue;
       const m5Slice = calM5.slice(Math.max(0, i - 60), i + 1);
       const m15Slice = calM15.filter(x => x.time <= c.time).slice(-60);
-      const h1Slice = calH1.filter(x => x.time <= c.time).slice(-60);
-      if (m15Slice.length < 20 || h1Slice.length < 20) continue;
+      const kList = calH1.filter(x => x.time <= c.time).slice(-60);
+      if (m15Slice.length < 20 || kList.length < 20) continue;
 
-      const m5 = analyzeTimeframe(m5Slice), m15 = analyzeTimeframe(m15Slice), h1 = analyzeTimeframe(h1Slice);
+      const m5 = analyzeTimeframe(m5Slice), m15 = analyzeTimeframe(m15Slice), h1 = analyzeTimeframe(kList);
       const { score } = computeSignalScore(m5, m15, h1, dxyMap[c.time] || 0, 0, 0, m5Slice);
       if (Math.abs(score) >= 45) {
         const isShort = score < 0, plan = calculateSmartTradePlan(c.close, isShort, m5Slice, m15Slice, m5.atr);
@@ -1082,15 +1078,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     }
 
     if (simActive) {
-      const isLong = simActive.direction === 'LONG', liveDiff = Number((isLong ? spotPrice - simActive.entry : simActive.entry - spotPrice).toFixed(2));
+      const isLong = simActive.direction === 'LONG', liveDiff = Number((isLong ? spotPrice - simHat.entry : simActive.entry - spotPrice).toFixed(2));
       simTrades.push({ ...simActive, closeTime: 'HALEN AÇIK ⏳', closePrice: spotPrice.toFixed(2), status: simActive.tp1Hit ? 'AÇIK (TP1 ALINDI 🛡️)' : 'AÇIK İŞLEM ⏳', result: liveDiff >= 0 ? 'WIN' : 'OPEN', profitDollar: liveDiff });
     }
 
     const closed = simTrades.filter(t => t.closeTime !== 'HALEN AÇIK ⏳');
-    const wins = closed.losses = closed.filter(t => t.result === 'LOSS').length;
-    const totalWinCount = closed.filter(t => t.result === 'WIN').length;
-    const totalProfit = simTrades.reduce((acc, t) => acc + t.profitDollar, 0);
-    res.json({ totalSignals: simTrades.length, closedCount: closed.length, wins: totalWinCount, losses, winRate: closed.length > 0 ? Math.round((totalWinCount / closed.length) * 100) : 0, totalProfit: totalProfit.toFixed(2), trades: simTrades.reverse() });
+    const wins = closed.filter(t => t.result === 'WIN').length, losses = closed.filter(t => t.result === 'LOSS').length;
+    const totalProfit = simTrades.readReduce ? 0 : simTrades.reduce((acc, t) => acc + t.profitDollar, 0);
+    res.json({ totalSignals: simTrades.length, closedCount: closed.length, wins, losses, winRate: closed.length > 0 ? Math.round((wins / closed.length) * 100) : 0, totalProfit: totalProfit.toFixed(2), trades: simTrades.reverse() });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1101,7 +1096,7 @@ app.get('/api/tick', requireAuth, async (req, res) => {
     if (spotPrice) lastKnownSpot = spotPrice;
     const soundEvent = await checkActiveTradeOnTick(spotPrice);
     const userMt = req.user.metaApi || createDefaultMetaApi();
-    res.json({ timestamp: getTRTime(), spotPrice: spotPrice ? spotPrice.toFixed(2) : null, macro: { dxy: tvMap['TVC:DXY'] || null, us10y: tvMap['TVC:US10Y'] || null }, tracker: { activeTrade: db.activeTrade, history: db.history.slice(0, 15), stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: userMt.symbol || 'GOLD#', userLot: userMt.lot || 0.01 } });
+    res.json({ timestamp: getTRTime(), spotPrice: spotPrice ? spotPrice.toFixed(2) : null, macro: { dxy: tvMap['TVC:DXY'] || null, us10y: tvMap['TVC:US10Y'] || null }, tracker: { activeTrade: db.activeTrade, history: db.history.pop() ? db.history : [], stats: getStats(), soundEvent, metaApiEnabled: Boolean(userMt.enabled), metaSymbol: userMt.symbol || 'GOLD#', userLot: userMt.lot || 0.01 } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
