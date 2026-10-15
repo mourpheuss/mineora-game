@@ -9,9 +9,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
 
-  <!-- ========================================================= -->
-  <!-- 1. ÖZEL KULLANICI GİRİŞ EKRANI (KAYIT OL SEÇENEĞİ YOKTUR) -->
-  <!-- ========================================================= -->
+  <!-- GİRİŞ EKRANI -->
   <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
     <div class="w-full max-w-md bg-slate-900 border-2 border-amber-500/40 rounded-2xl p-8 shadow-2xl">
       <div class="flex items-center justify-center gap-2.5 mb-2">
@@ -37,17 +35,10 @@
           🔐 TERMİNALE GİRİŞ YAP
         </button>
       </form>
-
-      <div class="mt-6 pt-4 border-t border-slate-800 text-center">
-        <span class="text-[11px] text-slate-500 block">🔒 Bu platform dışarıdan üyeliğe kapalıdır.</span>
-        <span class="text-[11px] text-slate-500 block">Her üye giriş yaptıktan sonra kendi MetaTrader hesabını ve lotunu tanımlayabilir.</span>
-      </div>
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- 2. ANA TERMİNAL EKRANI (SADECE GİRİŞ YAPANLAR GÖREBİLİR)  -->
-  <!-- ========================================================= -->
+  <!-- ANA TERMİNAL EKRANI -->
   <div id="appScreen" class="hidden p-4">
 
     <!-- ÜST BAR -->
@@ -71,17 +62,14 @@
           <span id="lastUpdate" class="text-sm font-mono text-emerald-400">--:--:--</span>
         </div>
 
-        <!-- GEÇMİŞİ TEST ET BUTONU -->
         <button onclick="runBacktest('today', 24)" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
           ⏪ Geçmişi Test Et
         </button>
 
-        <!-- TÜM ÜYELER KENDİ METATRADER'INI BAĞLAYABİLİR -->
         <button id="mtBtn" onclick="toggleMobileMTModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
           📱 Mobil MT Bağla
         </button>
 
-        <!-- SADECE ADMİNİN GÖRECEĞİ YÖNETİM BUTONLARI -->
         <button id="adminUsersBtn" onclick="toggleAdminUsersModal()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3.5 py-2 rounded-lg text-xs transition shadow-lg shadow-amber-500/20">
           👑 Üye Listesi & Şifrem
         </button>
@@ -100,49 +88,39 @@
       </div>
     </header>
 
-    <!-- SADECE ADMİN GÖREBİLİR: YÖNETİM PANELİ -->
+    <!-- ADMİN YÖNETİM MODALI -->
     <div id="adminUsersModal" class="hidden bg-slate-900 border-2 border-amber-500 rounded-xl p-5 mb-4 shadow-2xl">
       <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
-        <div>
-          <h3 class="text-base font-bold text-amber-400">👑 Kurucu Admin Yönetim Merkezi (Üye Listesi & Şifre Ayarları)</h3>
-        </div>
-        <button onclick="toggleAdminUsersModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300 hover:text-white">Kapat ✕</button>
+        <h3 class="text-base font-bold text-amber-400">👑 Kurucu Admin Yönetim Merkezi</h3>
+        <button onclick="toggleAdminUsersModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300">Kapat ✕</button>
       </div>
-
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         <div class="bg-slate-950 border border-amber-500/40 rounded-xl p-4">
-          <span class="text-xs font-bold text-amber-400 uppercase tracking-wider block mb-1">🔑 1. Kendi Admin Şifreni Değiştir</span>
+          <span class="text-xs font-bold text-amber-400 block mb-1">🔑 Admin Şifresini Değiştir</span>
           <div class="flex gap-2">
-            <input id="adminNewPassInput" type="text" placeholder="Yeni Admin Şifren" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-            <button onclick="updateMyAdminPassword()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg px-4 py-2 text-xs whitespace-nowrap">Güncelle</button>
+            <input id="adminNewPassInput" type="text" placeholder="Yeni Şifre" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+            <button onclick="updateMyAdminPassword()" class="bg-amber-500 text-slate-950 font-black rounded-lg px-4 py-2 text-xs">Güncelle</button>
           </div>
         </div>
-
         <div class="bg-slate-950 border border-emerald-500/40 rounded-xl p-4">
-          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">👤 2. Yeni Üye Tanımla</span>
+          <span class="text-xs font-bold text-emerald-400 block mb-1">👤 Yeni Üye Tanımla</span>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <input id="newUsername" type="text" placeholder="Kullanıcı Adı" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
             <input id="newPassword" type="text" placeholder="Şifre" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-            <button onclick="createOrUpdateUser()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-lg px-4 py-2 text-xs">+ Kaydet</button>
+            <button onclick="createOrUpdateUser()" class="bg-emerald-600 text-white font-black rounded-lg px-4 py-2 text-xs">+ Kaydet</button>
           </div>
         </div>
       </div>
-
       <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
         <div class="flex justify-between items-center mb-3">
-          <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">📋 Kayıtlı Üye Listesi (<span id="totalUsersCount">0</span> Kişi)</span>
+          <span class="text-xs font-bold text-slate-200">Kayıtlı Üyeler (<span id="totalUsersCount">0</span>)</span>
           <button onclick="loadUsersList()" class="text-xs bg-slate-800 text-amber-300 px-3 py-1 rounded">Yenile</button>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="border-b border-slate-800 text-slate-400">
-                <th class="py-2 px-3">#</th>
-                <th class="py-2 px-3">Kullanıcı Adı</th>
-                <th class="py-2 px-3">Şifre</th>
-                <th class="py-2 px-3">Rol</th>
-                <th class="py-2 px-3">MetaTrader</th>
-                <th class="py-2 px-3 text-right">İşlem</th>
+                <th class="py-2 px-3">#</th><th class="py-2 px-3">Kullanıcı Adı</th><th class="py-2 px-3">Şifre</th><th class="py-2 px-3">Rol</th><th class="py-2 px-3">MetaTrader</th><th class="py-2 px-3 text-right">İşlem</th>
               </tr>
             </thead>
             <tbody id="usersTableBody" class="divide-y divide-slate-800/60"></tbody>
@@ -151,15 +129,12 @@
       </div>
     </div>
 
-    <!-- MOBİL METATRADER MODAL -->
+    <!-- MOBİL MT MODAL -->
     <div id="mobileMTModal" class="hidden bg-slate-900 border-2 border-indigo-500 rounded-xl p-5 mb-4 shadow-2xl">
       <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-        <div>
-          <h3 class="text-base font-bold text-indigo-400">📱 Kişisel Mobil MetaTrader (MT4 / MT5) Bağlantı Merkezi</h3>
-        </div>
+        <h3 class="text-base font-bold text-indigo-400">📱 Mobil MetaTrader Bağlantı Merkezi</h3>
         <button onclick="toggleMobileMTModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300">Kapat ✕</button>
       </div>
-
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
         <div class="md:col-span-2">
           <label class="text-[11px] text-slate-400 block mb-1">MetaApi Token</label>
@@ -174,21 +149,18 @@
           <input id="mtSymbol" type="text" value="XAUUSD" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-amber-300 font-bold" />
         </div>
       </div>
-
       <div class="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-slate-800">
-        <button onclick="saveMobileMT()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg px-4 py-2.5 text-xs">💾 Kaydet & Aktif Et</button>
-        <button onclick="testMobileMTConnection()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg px-4 py-2.5 text-xs">🔌 Bağlantıyı Test Et</button>
-        <button onclick="sendMobileMTTestTrade()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg px-4 py-2.5 text-xs">⚡ Test Emri Gönder</button>
+        <button onclick="saveMobileMT()" class="bg-indigo-600 text-white font-bold rounded-lg px-4 py-2.5 text-xs">💾 Kaydet & Aktif Et</button>
+        <button onclick="testMobileMTConnection()" class="bg-emerald-700 text-white font-bold rounded-lg px-4 py-2.5 text-xs">🔌 Bağlantıyı Test Et</button>
+        <button onclick="sendMobileMTTestTrade()" class="bg-amber-500 text-slate-950 font-black rounded-lg px-4 py-2.5 text-xs">⚡ Test Emri Gönder</button>
       </div>
       <div id="mtTestResultBox" class="hidden mt-3 p-3 rounded-lg border text-xs font-medium"></div>
     </div>
 
-    <!-- GERİYE DÖNÜK TEST MODAL -->
+    <!-- BACKTEST MODAL -->
     <div id="backtestModal" class="hidden bg-slate-900 border-2 border-purple-500 rounded-xl p-5 mb-4 shadow-2xl">
       <div class="flex flex-wrap justify-between items-center gap-3 mb-4 pb-3 border-b border-slate-800">
-        <div>
-          <h2 class="text-base font-bold text-purple-300">⏪ Geriye Dönük Sinyal Simülasyonu</h2>
-        </div>
+        <h2 class="text-base font-bold text-purple-300">⏪ Geriye Dönük Sinyal Simülasyonu</h2>
         <div class="flex flex-wrap items-center gap-2">
           <button id="btnBtToday" onclick="runBacktest('today', 24)" class="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Bugün</button>
           <button id="btnBt24" onclick="runBacktest('hours', 24)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 24 Saat</button>
@@ -197,7 +169,6 @@
           <button onclick="document.getElementById('backtestModal').classList.add('hidden')" class="bg-rose-950 text-rose-300 text-xs font-bold px-3 py-1.5 rounded-lg">Kapat ✕</button>
         </div>
       </div>
-
       <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4 text-center">
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-slate-400 block">SİNYAL</span><strong id="btTotal" class="text-xl font-black text-white">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-emerald-300 block">BAŞARILI</span><strong id="btWins" class="text-xl font-black text-emerald-400">--</strong></div>
@@ -205,19 +176,11 @@
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-purple-300 block">BAŞARI ORANI</span><strong id="btWinRate" class="text-xl font-black text-purple-400">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-amber-500/50"><span class="text-[11px] text-amber-300 block">NET KÂR</span><strong id="btLotProfit" class="text-xl font-black text-amber-400">--</strong></div>
       </div>
-
       <div class="overflow-x-auto max-h-80 overflow-y-auto">
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="border-b border-slate-800 text-slate-400">
-              <th class="py-2 px-3">Zaman</th>
-              <th class="py-2 px-3">Sinyal</th>
-              <th class="py-2 px-3">Giriş</th>
-              <th class="py-2 px-3">TP1 / TP2</th>
-              <th class="py-2 px-3">Kapanış</th>
-              <th class="py-2 px-3">Durum</th>
-              <th class="py-2 px-3 text-right">Ons Fark</th>
-              <th class="py-2 px-3 text-right text-amber-300">Kâr/Zarar</th>
+              <th class="py-2 px-3">Zaman</th><th class="py-2 px-3">Sinyal</th><th class="py-2 px-3">Giriş</th><th class="py-2 px-3">TP1 / TP2</th><th class="py-2 px-3">Kapanış</th><th class="py-2 px-3">Durum</th><th class="py-2 px-3 text-right">Ons Fark</th><th class="py-2 px-3 text-right text-amber-300">Kâr/Zarar</th>
             </tr>
           </thead>
           <tbody id="btTableBody" class="divide-y divide-slate-800/60"></tbody>
@@ -238,7 +201,7 @@
       </div>
     </div>
 
-    <!-- KILL-SWITCH UYARI BARI -->
+    <!-- KILL-SWITCH BARI -->
     <div id="killSwitchBanner" class="hidden bg-rose-950 border-2 border-rose-500 text-rose-200 p-4 rounded-xl mb-4 flex items-center justify-between animate-pulse">
       <div>
         <span class="font-black text-lg block text-rose-400">⚠️ KRİTİK ABD VERİ SAATİ KİLİDİ AKTİF!</span>
@@ -256,17 +219,14 @@
           <div id="tv_chart_container" class="w-full h-full"></div>
         </div>
 
-        <!-- %100 OTOMATİK İŞLEM TAKİPÇİSİ -->
+        <!-- OTOMATİK İŞLEM TAKİPÇİSİ -->
         <div class="bg-slate-900 border-2 border-amber-500/60 rounded-xl p-4">
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-400">🤖 Tam Otomatik MetaTrader İşlem & Zırh Motoru</span>
-            </div>
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">🤖 Tam Otomatik MetaTrader İşlem & Zırh Motoru</span>
             <span id="mtStatusBadge" class="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-semibold">
               📱 Mobil MT Bağlı Değil
             </span>
           </div>
-
           <div id="activeTradeBox" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-400">
             Şu anda açık işlem yok. Algoritma ±45 güven skoruna ulaştığında işlemi otomatik açar.
           </div>
@@ -367,9 +327,7 @@
     <!-- GEÇMİŞ TABLOSU -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mt-4 text-xs">
       <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-        <div>
-          <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">📊 Canlı Sinyal Performansı</h2>
-        </div>
+        <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">📊 Canlı Sinyal Performansı</h2>
         <div class="flex gap-3">
           <div class="bg-slate-950 px-3 py-2 rounded-lg border border-slate-800"><span class="text-slate-400 block">Toplam</span><strong id="statTotal" class="text-sm text-white">0</strong></div>
           <div class="bg-slate-950 px-3 py-2 rounded-lg border border-slate-800"><span class="text-slate-400 block">Win Rate</span><strong id="statWinRate" class="text-sm text-emerald-400">%0</strong></div>
@@ -377,7 +335,6 @@
           <div class="bg-slate-950 px-3 py-2 rounded-lg border border-amber-500/40"><span class="text-amber-300 block">Lot Net Kâr</span><strong id="statLotProfit" class="text-sm text-emerald-400">$0</strong></div>
         </div>
       </div>
-
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -422,8 +379,7 @@
       const password = document.getElementById('loginPassword').value;
       try {
         const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
@@ -450,8 +406,7 @@
     }
 
     function logout() {
-      authToken = '';
-      currentUser = null;
+      authToken = ''; currentUser = null;
       localStorage.removeItem('xau_auth_token');
       if (tickInterval) clearInterval(tickInterval);
       if (analyzeInterval) clearInterval(analyzeInterval);
@@ -506,21 +461,18 @@
       analyzeInterval = setInterval(fetchAnalysis, 15000);
     }
 
-    // YENİ: MANUEL İŞLEMİ KAPATMA VE SENKRONİZE ETME FONKSİYONU
     async function forceCloseActiveTrade() {
-      if (!confirm("Bu aktif işlemi hem XM MetaTrader'da hem de panelde zorla kapatmak istediğinize emin misiniz?")) return;
+      if (!confirm("Bu aktif işlemi hem XM MetaTrader'da hem de panelde kapatmak istediğinize emin misiniz?")) return;
       try {
         const res = await apiFetch('/api/close-active-trade', { method: 'POST' });
         const data = await res.json();
         if (data.ok) {
-          alert("✅ İşlem başarıyla kapatıldı ve panel senkronize edildi!");
+          alert("✅ İşlem başarıyla kapatıldı!");
           fetchAnalysis();
         } else {
-          alert("❌ Hata: " + (data.error || "İşlem kapatılamadı"));
+          alert("❌ Hata: " + (data.error || "Kapatılamadı"));
         }
-      } catch (e) {
-        alert("Sunucu iletişim hatası.");
-      }
+      } catch (e) { alert("Bağlantı hatası."); }
     }
 
     function toggleAdminUsersModal() {
@@ -639,7 +591,7 @@
       const modal = document.getElementById('backtestModal');
       modal.classList.remove('hidden');
       const tbody = document.getElementById('btTableBody');
-      tbody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-purple-300">⏳ Taraniyor...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-purple-300">⏳ Taranıyor...</td></tr>';
       try {
         const res = await apiFetch(`/api/backtest?mode=${mode}&hours=${hours}`);
         const data = await res.json();
@@ -731,7 +683,6 @@
                 <span class="text-[10px] text-amber-300 block">KÂR/ZARAR</span>
                 <strong class="text-base font-black ${pnlColor}">${lotRealPnL >= 0 ? '+$' + lotRealPnL.toFixed(2) : '-$' + Math.abs(lotRealPnL).toFixed(2)}</strong>
               </div>
-              <!-- İŞLEMİ KAPAT VE SENKRONİZE ET BUTONU -->
               <button onclick="forceCloseActiveTrade()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition shadow-lg shadow-rose-600/30">
                 🔴 İşlemi Kapat & Senkronize Et
               </button>
@@ -739,7 +690,7 @@
           </div>
         `;
       } else {
-        activeBox.innerHTML = `Şu anda açık işlem yok.`;
+        activeBox.innerHTML = `Şu anda açık işlem yok. Algoritma ±45 güven skoruna ulaştığında işlemi otomatik açar.`;
       }
 
       if (tracker.stats) {
@@ -768,12 +719,64 @@
         lastAnalyzeData = data;
         saveAndCalcLot(true);
         updateLivePriceAndTrackerUI(data.spotPrice, data.timestamp, data.macro, data.tracker);
+
         document.getElementById('scoreBadge').textContent = `Güven Skoru: ${data.score} / 100`;
         document.getElementById('signalText').textContent = data.signal;
         document.getElementById('entryPrice').textContent = '$' + data.tradePlan.entry;
         document.getElementById('slPrice').textContent = '$' + data.tradePlan.sl;
         document.getElementById('tp1Price').textContent = '$' + data.tradePlan.tp1;
         document.getElementById('tp2Price').textContent = '$' + data.tradePlan.tp2;
+
+        // Eksik kalan veri alanları (zaman dilimleri, indikatörler ve gerekçeler) dolduruluyor:
+        if (data.timeframes) {
+          const colorTrend = (t) => t.includes('BULLISH') ? 'text-emerald-400' : (t.includes('BEARISH') ? 'text-rose-400' : 'text-slate-300');
+          document.getElementById('trendM5').className = colorTrend(data.timeframes.m5.trend);
+          document.getElementById('trendM5').textContent = data.timeframes.m5.trend;
+          document.getElementById('trendM15').className = colorTrend(data.timeframes.m15.trend);
+          document.getElementById('trendM15').textContent = data.timeframes.m15.trend;
+          document.getElementById('trendH1').className = colorTrend(data.timeframes.h1.trend);
+          document.getElementById('trendH1').textContent = data.timeframes.h1.trend;
+          document.getElementById('atrInfo').textContent = '$' + data.timeframes.m5.atr.toFixed(2);
+          document.getElementById('indVwap').textContent = '$' + data.timeframes.m5.vwap.toFixed(2);
+          document.getElementById('indEma').textContent = `${data.timeframes.m5.ema9.toFixed(1)} / ${data.timeframes.m5.ema21.toFixed(1)}`;
+          document.getElementById('indRsi').textContent = `${data.timeframes.m5.rsi.toFixed(1)} / ${data.timeframes.m5.stochRsi.toFixed(0)}`;
+        }
+
+        if (data.reasons) {
+          const ul = document.getElementById('reasonsList');
+          ul.innerHTML = '';
+          data.reasons.forEach(r => {
+            const li = document.createElement('li');
+            const icon = r.type === 'pos' ? '🟢' : (r.type === 'neg' ? '🔴' : '⚠️');
+            li.className = 'bg-slate-950/70 px-3 py-1.5 rounded border border-slate-800/80 mb-1';
+            li.textContent = `${icon} ${r.text}`;
+            ul.appendChild(li);
+          });
+        }
+
+        if (data.news && data.news.headlines) {
+          const badge = document.getElementById('newsSummaryBadge');
+          badge.textContent = `${data.news.summary} (${data.news.sentimentScore >= 0 ? '+' : ''}${data.news.sentimentScore} Puan)`;
+          const newsContainer = document.getElementById('newsList');
+          newsContainer.innerHTML = '';
+          data.news.headlines.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs';
+            div.innerHTML = `<div class="font-medium text-slate-200">${n.title}</div><div class="text-amber-400 mt-0.5">${n.tag}</div>`;
+            newsContainer.appendChild(div);
+          });
+        }
+
+        if (data.calendar && data.calendar.upcomingEvents) {
+          const calContainer = document.getElementById('calendarList');
+          calContainer.innerHTML = '';
+          data.calendar.upcomingEvents.forEach(ev => {
+            const div = document.createElement('div');
+            div.className = 'bg-slate-950 p-2 rounded border border-slate-800 flex justify-between items-center';
+            div.innerHTML = `<span>${ev.title}</span><span class="text-amber-300 font-mono">${ev.timeStr}</span>`;
+            calContainer.appendChild(div);
+          });
+        }
       } catch (err) {}
     }
 
