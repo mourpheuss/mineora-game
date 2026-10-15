@@ -677,6 +677,8 @@
             <div>
               <span class="text-xs font-bold px-2 py-1 rounded bg-emerald-600 text-white">🤖 OTOMATİK ${t.direction} AÇIK</span>
               <span class="text-xs text-slate-400 ml-2">Giriş: <strong>$${t.entry}</strong></span>
+              ${t.tp1Hit ? '<span class="ml-2 text-xs bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ TP1 ALINDI - STOP GİRİŞTE!</span>' :
+                (t.earlyShieldHit ? '<span class="ml-2 text-xs bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ ERKEN ZIRH AKTİF - STOP GİRİŞTE!</span>' : '')}
             </div>
             <div class="flex items-center gap-4">
               <div class="text-right bg-slate-900 px-3 py-1 rounded border border-slate-700">
@@ -687,6 +689,12 @@
                 🔴 İşlemi Kapat & Senkronize Et
               </button>
             </div>
+          </div>
+          <!-- STOP VE TP SEVİYELERİ TEKRAR EKLENDİ -->
+          <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800 text-xs">
+            <div>Otomatik Stop-Loss: <strong class="text-rose-400">$${t.sl}</strong></div>
+            <div>Otomatik TP1 (%80 Kâr): <strong class="text-emerald-400">$${t.tp1} ${t.tp1Hit ? '✅' : ''}</strong></div>
+            <div>Otomatik TP2 (Tam Hedef): <strong class="text-emerald-300">$${t.tp2}</strong></div>
           </div>
         `;
       } else {
@@ -727,7 +735,6 @@
         document.getElementById('tp1Price').textContent = '$' + data.tradePlan.tp1;
         document.getElementById('tp2Price').textContent = '$' + data.tradePlan.tp2;
 
-        // Eksik kalan veri alanları (zaman dilimleri, indikatörler ve gerekçeler) dolduruluyor:
         if (data.timeframes) {
           const colorTrend = (t) => t.includes('BULLISH') ? 'text-emerald-400' : (t.includes('BEARISH') ? 'text-rose-400' : 'text-slate-300');
           document.getElementById('trendM5').className = colorTrend(data.timeframes.m5.trend);
