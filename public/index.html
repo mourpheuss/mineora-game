@@ -250,7 +250,7 @@
           </div>
         </div>
 
-       <div class="bg-slate-900 border-2 border-amber-500/40 rounded-xl p-4">
+        <div class="bg-slate-900 border-2 border-amber-500/40 rounded-xl p-4">
           <div class="flex justify-between items-center mb-3">
             <span class="text-xs font-bold uppercase tracking-wider text-amber-400">🧮 Sabit İşlem Lotu Ayarı</span>
             <span class="text-[11px] text-emerald-400 font-bold" id="lotSaveStatus"></span>
@@ -358,7 +358,7 @@
     let soundEnabled = true;
     let lastAnalyzeData = null;
     let prevSpotPrice = 0;
-    let currentRecommendedLot = 0.03; // SUNUCU İLE SENKRONİZE EDİLDİ (0.03)
+    let currentRecommendedLot = 0.03;
     let tvWidgetLoaded = false;
     let tickInterval = null;
     let analyzeInterval = null;
@@ -427,6 +427,47 @@
       } catch (e) {}
     }
 
+    function updateCustomLot(val) {
+      const parsed = parseFloat(val);
+      if (isNaN(parsed) || parsed < 0.01) return;
+      currentRecommendedLot = Number(parsed.toFixed(2));
+
+      const ounceLabel = document.getElementById('lotOunceText');
+      if (ounceLabel) {
+        ounceLabel.textContent = `${currentRecommendedLot} Lot = ${Math.round(currentRecommendedLot * 100)} Ons`;
+      }
+
+      const slDist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.slDollar) : 3.5;
+      const tp1Dist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.tp1Dollar) : 4.8;
+      const tp2Dist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.tp2Dollar) : 8.2;
+      const oz = currentRecommendedLot * 100;
+
+      const riskEl = document.getElementById('calcRiskDollar');
+      const tp1El = document.getElementById('calcTp1Dollar');
+      const tp2El = document.getElementById('calcTp2Dollar');
+      if (riskEl) riskEl.textContent = `-$${(oz * slDist).toFixed(2)}`;
+      if (tp1El) tp1El.textContent = `+$${(oz * tp1Dist).toFixed(2)}`;
+      if (tp2El) tp2El.textContent = `+$${(oz * tp2Dist).toFixed(2)}`;
+
+      if (authToken) {
+        apiFetch('/api/update-lot', {
+          method: 'POST',
+          body: JSON.stringify({ lot: currentRecommendedLot })
+        }).then(() => {
+          const status = document.getElementById('lotSaveStatus');
+          if (status) {
+            status.textContent = '✅ Kaydedildi';
+            setTimeout(() => { status.textContent = ''; }, 2000);
+          }
+        }).catch(() => {});
+      }
+    }
+
+    function saveAndCalcLot() {
+      const input = document.getElementById('customLotInput');
+      if (input) updateCustomLot(input.value);
+    }
+
     function enterTerminal() {
       closeAllModals();
       document.getElementById('loginScreen').classList.add('hidden');
@@ -438,13 +479,18 @@
       document.getElementById('tgBtn').classList.toggle('hidden', !isAdmin);
 
       if (currentUser && currentUser.metaApi) {
-        if (currentUser.metaApi.balance) document.getElementById('accountBalanceInput').value = currentUser.metaApi.balance;
-        if (currentUser.metaApi.riskPct) document.getElementById('riskPercentInput').value = currentUser.metaApi.riskPct;
+        if (currentUser.metaApi.lot) {
+          currentRecommendedLot = Number(currentUser.metaApi.lot);
+          const customLotEl = document.getElementById('customLotInput');
+          if (customLotEl) customLotEl.value = currentRecommendedLot;
+          const ounceLabel = document.getElementById('lotOunceText');
+          if (ounceLabel) ounceLabel.textContent = `${currentRecommendedLot} Lot = ${Math.round(currentRecommendedLot * 100)} Ons`;
+        }
         if (currentUser.metaApi.symbol) document.getElementById('mtSymbol').value = currentUser.metaApi.symbol;
         if (currentUser.metaApi.accountId) document.getElementById('mtAccountId').value = currentUser.metaApi.accountId;
       }
 
-      if (!tvWidgetLoaded) {
+      if (!tvWidgetLoaded && typeof TradingView !== 'undefined') {
         tvWidgetLoaded = true;
         new TradingView.widget({
           "autosize": true, "symbol": "OANDA:XAUUSD", "interval": "5", "timezone": "Europe/Istanbul",
@@ -453,7 +499,6 @@
         });
       }
 
-      saveAndCalcLot(false);
       fetchAnalysis();
       if (tickInterval) clearInterval(tickInterval);
       if (analyzeInterval) clearInterval(analyzeInterval);
@@ -554,8 +599,7 @@
       try {
         const res = await apiFetch('/api/metaapi-test', { method: 'POST', body: JSON.stringify({ token: document.getElementById('mtToken').value, accountId: document.getElementById('mtAccountId').value }) });
         const data = await res.json();
-        if (data.balance) { document.getElementById('accountBalanceInput').value = Math.round(Number(data.balance)); saveAndCalcLot(true); }
-        showMTTestResult(true, `✅ Bağlantı Başarılı! Bakiye: $${data.balance}`);
+        showMTTestResult(true, `✅ Bağlantı Başarılı! Bakiye: $${data.balance || '-'}`);
       } catch (e) { showMTTestResult(false, '❌ Bağlantı hatası.'); }
     }
 
@@ -566,30 +610,6 @@
         const data = await res.json();
         showMTTestResult(true, data.message);
       } catch (e) { showMTTestResult(false, '❌ Test emri hatası.'); }
-    }
-
-    function setRiskPreset(val) { document.getElementById('riskPercentInput').value = val; saveAndCalcLot(true); }
-    function saveAndCalcLot(syncToServer = false) {
-      const balance = Math.max(10, Number(document.getElementById('accountBalanceInput').value) || 1000);
-      const riskPct = Math.max(0.1, Number(document.getElementById('riskPercentInput').value) || 2);
-      const slDist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.slDollar) : 3.5;
-      const tp1Dist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.tp1Dollar) : 4.8;
-      const tp2Dist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.tp2Dollar) : 8.2;
-      const riskDollar = balance * (riskPct / 100);
-      const finalLot = Math.max(0.01, Math.round((riskDollar / (slDist * 100)) * 100) / 100);
-      
-      currentRecommendedLot = finalLot;
-      document.getElementById('calcLotSize').textContent = finalLot.toFixed(2);
-      document.getElementById('calcRiskDollar').textContent = `-$${(finalLot * 100 * slDist).toFixed(2)}`;
-      document.getElementById('calcTp1Dollar').textContent = `+$${(finalLot * 100 * tp1Dist).toFixed(2)}`;
-      document.getElementById('calcTp2Dollar').textContent = `+$${(finalLot * 100 * tp2Dist).toFixed(2)}`;
-      
-      if (syncToServer && authToken) {
-        apiFetch('/api/update-lot', { 
-          method: 'POST', 
-          body: JSON.stringify({ lot: finalLot, balance, riskPct }) 
-        }).catch(() => {});
-      }
     }
 
     async function runBacktest(mode, hours) {
@@ -660,7 +680,13 @@
       if (macro && macro.us10y) document.getElementById('us10yInfo').textContent = macro.us10y.price.toFixed(2) + '%';
       if (!tracker) return;
 
-      if (tracker.userLot) currentRecommendedLot = Number(tracker.userLot);
+      if (tracker.userLot) {
+        currentRecommendedLot = Number(tracker.userLot);
+        const lotInput = document.getElementById('customLotInput');
+        if (lotInput && document.activeElement !== lotInput) {
+          lotInput.value = currentRecommendedLot;
+        }
+      }
 
       const mtBtn = document.getElementById('mtBtn');
       const mtBadge = document.getElementById('mtStatusBadge');
@@ -715,7 +741,6 @@
         const lotTot = Number(tracker.stats.totalProfit) * ozMultiplier;
         document.getElementById('statLotProfit').textContent = (lotTot >= 0 ? '+$' : '-$') + Math.abs(lotTot).toFixed(2);
 
-        // GEÇMİŞ İŞLEMLER TABLOSUNU DOLDURAN DÖNGÜ
         const tbody = document.getElementById('historyTableBody');
         if (tracker.history && tracker.history.length > 0) {
           tbody.innerHTML = '';
@@ -755,7 +780,19 @@
         const data = await res.json();
         if (data.error) return;
         lastAnalyzeData = data;
-        saveAndCalcLot(false);
+        
+        // Kutudaki lota göre Stop ve TP tutarlarını güncelle
+        const slDist = data.tradePlan ? Number(data.tradePlan.slDollar) : 3.5;
+        const tp1Dist = data.tradePlan ? Number(data.tradePlan.tp1Dollar) : 4.8;
+        const tp2Dist = data.tradePlan ? Number(data.tradePlan.tp2Dollar) : 8.2;
+        const oz = currentRecommendedLot * 100;
+        const riskEl = document.getElementById('calcRiskDollar');
+        const tp1El = document.getElementById('calcTp1Dollar');
+        const tp2El = document.getElementById('calcTp2Dollar');
+        if (riskEl) riskEl.textContent = `-$${(oz * slDist).toFixed(2)}`;
+        if (tp1El) tp1El.textContent = `+$${(oz * tp1Dist).toFixed(2)}`;
+        if (tp2El) tp2El.textContent = `+$${(oz * tp2Dist).toFixed(2)}`;
+
         updateLivePriceAndTrackerUI(data.spotPrice, data.timestamp, data.macro, data.tracker);
 
         document.getElementById('scoreBadge').textContent = `Güven Skoru: ${data.score} / 100`;
