@@ -369,6 +369,33 @@ async function moveAllUsersMTToBreakeven(tradeObj) {
   }));
 }
 
+// HIZLI KISMI KAPANIŞ (%50 Kâr Al + Kalanı Başabaşa Kilitle)
+async function partialCloseAllUsersMTAtScalp(tradeObj) {
+  if (!tradeObj || !tradeObj.userPositions) return;
+  const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
+  await Promise.allSettled(connected.map(async (u) => {
+    const pos = tradeObj.userPositions[u.username];
+    const totalVol = Number(pos.volume || u.metaApi.lot || 0.03);
+    const closeVol = Math.floor(totalVol * 0.50 * 100) / 100; // %50 Kısmi Kapanış
+    const bePrice = Number(pos.xmEntry || tradeObj.entry);
+    const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
+
+    if (closeVol >= 0.01 && (totalVol - closeVol) >= 0.01) {
+      await userMetaApiRequest(u, {
+        actionType: 'POSITION_PARTIAL',
+        positionId: String(pos.positionId),
+        volume: Number(closeVol.toFixed(2))
+      });
+    }
+    await userMetaApiRequest(u, {
+      actionType: 'POSITION_MODIFY',
+      positionId: String(pos.positionId),
+      stopLoss: bePrice,
+      takeProfit: tp2Price
+    });
+  }));
+}
+
 async function partialCloseAllUsersMTAtTP1(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -899,6 +926,7 @@ async function checkActiveTradeOnTick(spotPrice) {
   t.currentPrice = spotPrice;
   t.unrealizedPnL = Number((isLong ? spotPrice - t.entry : t.entry - spotPrice).toFixed(2));
 
+  // 1) TP2 HEDEFİ VURULDU MU?
   if ((isLong && spotPrice >= t.tp2) || (!isLong && spotPrice <= t.tp2)) {
     const profit = Number(Math.abs(t.tp2 - t.entry).toFixed(2));
     await closeAllUsersMTTrade(t);
@@ -908,6 +936,7 @@ async function checkActiveTradeOnTick(spotPrice) {
     return 'TP_HIT';
   }
 
+  // 2) TP1 HEDEFİ VURULDU MU?
   if (!t.tp1Hit && ((isLong && spotPrice >= t.tp1) || (!isLong && spotPrice <= t.tp1))) {
     t.tp1Hit = true; t.earlyShieldHit = true; t.sl = t.entry;
     await saveDB(db);
@@ -915,16 +944,20 @@ async function checkActiveTradeOnTick(spotPrice) {
     soundEvent = 'TP_HIT';
   }
 
-  if (!t.tp1Hit && !t.earlyShieldHit && t.unrealizedPnL >= 1.50) {
-    t.earlyShieldHit = true; t.sl = t.entry;
+  // 3) İSTEDİĞİN ERKEN SCALP KISMI KAPANMA + KÂR KORUMA KİLİDİ (+$1.50 kârda %50 kapatıp kalanı başabaşa kilitler)
+  if (!t.scalpHit && t.unrealizedPnL >= 1.50) {
+    t.scalpHit = true;
+    t.earlyShieldHit = true; 
+    t.sl = t.entry;
     await saveDB(db);
-    await moveAllUsersMTToBreakeven(t);
+    await partialCloseAllUsersMTAtScalp(t);
+    soundEvent = 'TP_HIT';
   }
 
+  // 4) STOP OLMUŞ MU?
   if ((isLong && spotPrice <= t.sl) || (!isLong && spotPrice >= t.sl)) {
     let profit = -Number(Math.abs(t.entry - t.sl).toFixed(2)), statusText = 'STOP OLDU ❌', resultType = 'LOSS';
-    if (t.tp1Hit) { profit = Number((Math.abs(t.tp1 - t.entry) * 0.8).toFixed(2)); statusText = 'TP1 ALINDI + BAŞABAŞ 🛡️'; resultType = 'WIN'; soundEvent = 'TP_HIT'; }
-    else if (t.earlyShieldHit) { profit = Number((Math.abs(t.tp1 - t.entry) * 0.15).toFixed(2)); statusText = 'KÂR KORUMA (BAŞABAŞ) 🛡️'; resultType = 'WIN'; }
+    if (t.tp1Hit || t.scalpHit) { profit = Number((Math.abs(t.tp1 - t.entry) * 0.4).toFixed(2)); statusText = 'SCALP KISMI KÂR + BAŞABAŞ 🛡️'; resultType = 'WIN'; soundEvent = 'TP_HIT'; }
     else { statusText = 'STOP OLDU ❌'; soundEvent = 'SL_HIT'; }
 
     await closeAllUsersMTTrade(t);
@@ -973,7 +1006,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
     db.activeTrade = {
       id: Date.now(), openTime: getTRTime(), direction: dir, score,
       entry: Number(tradePlan.entry), currentPrice: spotPrice, sl: Number(tradePlan.sl), initialSl: Number(tradePlan.sl),
-      tp1: Number(tradePlan.tp1), tp2: Number(tradePlan.tp2), tp1Hit: false, earlyShieldHit: false, unrealizedPnL: 0, userPositions: {}
+      tp1: Number(tradePlan.tp1), tp2: Number(tradePlan.tp2), tp1Hit: false, earlyShieldHit: false, scalpHit: false, unrealizedPnL: 0, userPositions: {}
     };
     await saveDB(db);
     soundEvent = 'NEW_SIGNAL';
@@ -1039,8 +1072,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         const isLong = simActive.direction === 'LONG';
         if ((isLong && c.low <= simActive.sl) || (!isLong && c.high >= simActive.sl)) {
           let profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(2)), status = 'STOP OLDU ❌', result = 'LOSS';
-          if (simActive.tp1Hit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.8).toFixed(2)); status = 'TP1 ALINDI + BAŞABAŞ 🛡️'; result = 'WIN'; }
-          else if (simActive.earlyShieldHit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.15).toFixed(2)); status = 'KÂR KORUMA (BAŞABAŞ) 🛡️'; result = 'WIN'; }
+          if (simActive.tp1Hit || simActive.scalpHit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.4).toFixed(2)); status = 'SCALP KISMI KÂR + BAŞABAŞ 🛡️'; result = 'WIN'; }
           else lastStopCandleIndex = i;
           simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.sl.toFixed(2), status, result, profitDollar: profit });
           simActive = null; continue;
@@ -1051,10 +1083,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           simActive = null; continue;
         }
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) { simActive.tp1Hit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
-        if (!simActive.tp1Hit && !simActive.earlyShieldHit) {
-          const tp1Dist = Math.abs(simActive.tp1 - simActive.entry);
-          const trig = isLong ? simActive.entry + tp1Dist * 0.40 : simActive.entry - tp1Dist * 0.40;
-          if ((isLong && c.high >= trig) || (!isLong && c.low <= trig)) { simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
+        if (!simActive.scalpHit) {
+          const liveDiff = Number((isLong ? c.high - simActive.entry : simActive.entry - c.low).toFixed(2));
+          if (liveDiff >= 1.50) { simActive.scalpHit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
         }
         continue;
       }
@@ -1070,7 +1101,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       const { score } = computeSignalScore(m5, m15, h1, dxyMap[c.time] || 0, 0, 0, m5Slice);
       if (Math.abs(score) >= 45) {
         const isShort = score < 0, plan = calculateSmartTradePlan(c.close, isShort, m5Slice, m15Slice, m5.atr);
-        simActive = { openTime: `${dateStr} ${timeStr}`, direction: isShort ? 'SHORT' : 'LONG', score, entry: Number(plan.entry), sl: Number(plan.sl), tp1: Number(plan.tp1), tp2: Number(plan.tp2), tp1Hit: false, earlyShieldHit: false };
+        simActive = { openTime: `${dateStr} ${timeStr}`, direction: isShort ? 'SHORT' : 'LONG', score, entry: Number(plan.entry), sl: Number(plan.sl), tp1: Number(plan.tp1), tp2: Number(plan.tp2), tp1Hit: false, earlyShieldHit: false, scalpHit: false };
       }
     }
 
