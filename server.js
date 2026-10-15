@@ -823,25 +823,26 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
   }
 
   // BARİYER 2: ORTALAMADAN AŞIRI UZAKLAŞMA (LASTİK ETKİSİ / MEAN REVERSION)
-  const distFromVwap = Math.abs(m5.price - m5.vwap);
+ // BARİYER 2: ORTALAMADAN AŞIRI KOPMA (GERÇEK TEPEDEN ALIŞ FİLTRESİ)
+  // Fiyatın hareketli ortalamadan 2 kat ATR (~$5.00+) kopup aşırı şiştiği yerleri engeller
   const distFromEma21 = Math.abs(m5.price - m5.ema21);
-  const maxAllowedDist = m5.atr * 1.15; // Ortalama ~2.5 - 3.0 dolar
+  const extremeDist = m5.atr * 2.0;
 
-  if (score > 0 && (distFromVwap > maxAllowedDist || distFromEma21 > maxAllowedDist)) {
+  if (score > 0 && distFromEma21 > extremeDist) {
     score = 0;
-    reasons.push({ type: 'warn', text: '🛑 TEPEDEN ALIŞ ENGELİ: Fiyat VWAP/EMA ortalamasından çok uzaklaştı, düzeltme bekleniyor!' });
-  } else if (score < 0 && (distFromVwap > maxAllowedDist || distFromEma21 > maxAllowedDist)) {
+    reasons.push({ type: 'warn', text: '🛑 AŞIRI ŞİŞME: Fiyat EMA21 ortalamasından $5+ koptu, düzeltme bekleniyor!' });
+  } else if (score < 0 && distFromEma21 > extremeDist) {
     score = 0;
-    reasons.push({ type: 'warn', text: '🛑 DİPTEN SATIŞ ENGELİ: Fiyat ortalamasından çok aşağıda, tepki yükselişi bekleniyor!' });
+    reasons.push({ type: 'warn', text: '🛑 AŞIRI DÜŞÜŞ: Fiyat ortalamasından çok aşağıda, tepki bekleniyor!' });
   }
 
-  // BARİYER 3: GİRİŞ İÇİN GERİ ÇEKİLME (PULLBACK) ŞARTI
-  if (score > 0 && m5.stochRsi > 45) {
+  // BARİYER 3: SADECE AŞIRI DOYGUNLUKTA GİRİŞİ KES (RSI > 75 İKEN ALMA, RSI < 25 İKEN SATMA)
+  if (score > 0 && (m5.rsi > 72 || m5.stochRsi > 85)) {
     score = 0;
-    reasons.push({ type: 'warn', text: '⏳ PULLBACK BEKLENİYOR: M5 StochRSI tepede, geri çekilme olmadan alım yapılamaz.' });
-  } else if (score < 0 && m5.stochRsi < 55) {
+    reasons.push({ type: 'warn', text: '⏳ TEPEDE GİRİŞ ENGELİ: M5 RSI/StochRSI aşırı alım bölgesinde, tepe alımı engellendi.' });
+  } else if (score < 0 && (m5.rsi < 28 || m5.stochRsi < 15)) {
     score = 0;
-    reasons.push({ type: 'warn', text: '⏳ TEPKİ BEKLENİYOR: M5 StochRSI dipte, tepki yükselişi olmadan satış yapılamaz.' });
+    reasons.push({ type: 'warn', text: '⏳ DİPTE GİRİŞ ENGELİ: M5 RSI/StochRSI aşırı satım bölgesinde, dip satışı engellendi.' });
   }
 
   // BARİYER 4: TERS MUMDA İŞLEM AÇMA YASAĞI (MUM RENK ONAYI)
