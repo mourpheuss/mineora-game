@@ -83,7 +83,23 @@ async function syncFromFirebase(force = false) {
   const now = Date.now();
   if (!force && now - lastFirebaseSync < 3500) return;
   try {
-    const res = await fetch(`${FIREBASE_DB_URL}/xauusd_pro_state.json`, { cache: 'no-store' }); if (res.ok) { const cloudData = await res.json(); if (cloudData && cloudData.users) { db = normalizeDB(cloudData); lastFirebaseSync = now; } else if (!cloudData) { await saveDB(db); } } } catch (e) {} }  async function saveDB(data) { try { fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (e) {} try { await fetch(`${FIREBASE_DB_URL}/xauusd_pro_state.json`, {
+    const res = await fetch(`${FIREBASE_DB_URL}/xauusd_pro_state.json`, { cache: 'no-store' });
+    if (res.ok) {
+      const cloudData = await res.json();
+      if (cloudData && cloudData.users) {
+        db = normalizeDB(cloudData);
+        lastFirebaseSync = now;
+      } else if (!cloudData) {
+        await saveDB(db);
+      }
+    }
+  } catch (e) {}
+}
+
+async function saveDB(data) {
+  try { fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (e) {}
+  try {
+    await fetch(`${FIREBASE_DB_URL}/xauusd_pro_state.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -191,7 +207,12 @@ app.delete('/api/users/:username', requireAdmin, async (req, res) => {
 
 async function resolveMetaApiRegionUrl(token, accountId) {
   try {
-    const res = await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`, { headers: { 'auth-token': token } }); if (!res.ok) return 'https://mt-client-api-v1.london.agiliumtrade.ai'; const data = await res.json(); return `https://mt-client-api-v1.${data.region || 'london'}.agiliumtrade.ai`;
+    const res = await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`, {
+      headers: { 'auth-token': token }
+    });
+    if (!res.ok) return 'https://mt-client-api-v1.london.agiliumtrade.ai';
+    const data = await res.json();
+    return `https://mt-client-api-v1.${data.region || 'london'}.agiliumtrade.ai`;
   } catch (e) {
     return 'https://mt-client-api-v1.london.agiliumtrade.ai';
   }
@@ -215,7 +236,108 @@ async function getBrokerGoldSymbols(regionUrl, token, accountId) {
 async function getBrokerLiveTickPrice(regionUrl, token, accountId, symbol) {
   try {
     const encodedSym = encodeURIComponent(symbol);
-    const res = await fetch(`${regionUrl}/users/current/accounts/${accountId}/symbols/${encodedSym}/current-price`, { headers: { 'auth-token': token } }); if (!res.ok) return null; const data = await res.json(); if (data && data.bid && data.ask) return { bid: Number(data.bid), ask: Number(data.ask) }; return null; } catch (e) { return null; } }  async function smartTradeWithSymbolFallback(regionUrl, token, accountId, basePayload, preferredSymbol) { const tradeUrl = `${regionUrl}/users/current/accounts/${accountId}/trade`; const brokerGoldList = await getBrokerGoldSymbols(regionUrl, token, accountId);  const candidates = []; const addCand = (s) => { if (s && !candidates.includes(s)) candidates.push(s); };  if (brokerGoldList.includes(preferredSymbol)) addCand(preferredSymbol); brokerGoldList.forEach(addCand); [preferredSymbol, 'GOLD#', 'GOLD', 'GOLDmicro', 'GOLDm#', 'GOLD.', 'XAUUSD', 'XAUUSD#', 'XAUUSDm'].forEach(addCand);  let lastResponse = null; let lastSymbolTried = preferredSymbol;  for (const sym of candidates) { lastSymbolTried = sym; const res = await fetch(tradeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'auth-token': token }, body: JSON.stringify({ ...basePayload, symbol: sym }) }); const data = await res.json(); lastResponse = data;  const errStr = `${data.stringCode || ''} ${data.message \vert{}\vert{} ''}`.toUpperCase(); if (res.ok && !errStr.includes('UNKNOWN SYMBOL') && !errStr.includes('INVALID_SYMBOL') && !errStr.includes('ERR_MARKET_UNKNOWN_SYMBOL')) { return { ok: true, data, workingSymbol: sym, brokerGoldList }; } }  return { ok: false, data: lastResponse, workingSymbol: lastSymbolTried, brokerGoldList }; }  async function userMetaApiRequest(userObj, payload) { const mt = userObj.metaApi; if (!mt \vert{}\vert{} !mt.enabled \vert{}\vert{} !mt.token \vert{}\vert{} !mt.accountId) return null; try { if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId); if (payload.symbol) { const result = await smartTradeWithSymbolFallback(mt.regionUrl, mt.token, mt.accountId, payload, payload.symbol); if (result.ok && result.workingSymbol !== mt.symbol) { mt.symbol = result.workingSymbol; await saveDB(db); } return result.data; } const res = await fetch(`${mt.regionUrl}/users/current/accounts/${mt.accountId}/trade`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'auth-token': mt.token }, body: JSON.stringify(payload) }); return await res.json(); } catch (e) { return null; } }  async function openMobileMTTradeForAllUsers(tradeObj) { const isLong = tradeObj.direction === 'LONG'; if (!tradeObj.userPositions) tradeObj.userPositions = {}; const connected = (db.users \vert{}\vert{} []).filter(u => u.metaApi && u.metaApi.enabled && u.metaApi.token && u.metaApi.accountId);  const slDist = Math.abs(Number(tradeObj.entry) - Number(tradeObj.sl)); const tp2Dist = Math.abs(Number(tradeObj.tp2) - Number(tradeObj.entry));  await Promise.allSettled(connected.map(async (u) => { const mt = u.metaApi; if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);  // KULLANICININ BELİRLEDİĞİ SABİT LOT (0.03) KESİNLİKLE KULLANILACAK, DEĞİŞTİRİLMEYECEK const lotSize = Math.max(0.01, Number(mt.lot) \vert{}\vert{} 0.03); const symbol = (mt.symbol \vert{}\vert{} 'GOLD#').trim();  let calibratedEntry = Number(tradeObj.entry); let calibratedSL = Number(tradeObj.sl); let calibratedTP2 = Number(tradeObj.tp2);  const liveTick = await getBrokerLiveTickPrice(mt.regionUrl, mt.token, mt.accountId, symbol); if (liveTick) { calibratedEntry = isLong ? liveTick.ask : liveTick.bid; calibratedSL = Number((isLong ? calibratedEntry - slDist : calibratedEntry + slDist).toFixed(2)); calibratedTP2 = Number((isLong ? calibratedEntry + tp2Dist : calibratedEntry - tp2Dist).toFixed(2)); }  const res = await userMetaApiRequest(u, { actionType: isLong ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL', symbol, volume: Number(lotSize.toFixed(2)), stopLoss: calibratedSL, takeProfit: calibratedTP2, comment: `XAU_PRO_${u.username}`
+    const res = await fetch(`${regionUrl}/users/current/accounts/${accountId}/symbols/${encodedSym}/current-price`, {
+      headers: { 'auth-token': token }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.bid && data.ask) return { bid: Number(data.bid), ask: Number(data.ask) };
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function smartTradeWithSymbolFallback(regionUrl, token, accountId, basePayload, preferredSymbol) {
+  const tradeUrl = `${regionUrl}/users/current/accounts/${accountId}/trade`;
+  const brokerGoldList = await getBrokerGoldSymbols(regionUrl, token, accountId);
+
+  const candidates = [];
+  const addCand = (s) => { if (s && !candidates.includes(s)) candidates.push(s); };
+
+  if (brokerGoldList.includes(preferredSymbol)) addCand(preferredSymbol);
+  brokerGoldList.forEach(addCand);
+  [preferredSymbol, 'GOLD#', 'GOLD', 'GOLDmicro', 'GOLDm#', 'GOLD.', 'XAUUSD', 'XAUUSD#', 'XAUUSDm'].forEach(addCand);
+
+  let lastResponse = null;
+  let lastSymbolTried = preferredSymbol;
+
+  for (const sym of candidates) {
+    lastSymbolTried = sym;
+    const res = await fetch(tradeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'auth-token': token },
+      body: JSON.stringify({ ...basePayload, symbol: sym })
+    });
+    const data = await res.json();
+    lastResponse = data;
+
+    const errStr = `${data.stringCode || ''} ${data.message || ''}`.toUpperCase();
+    if (res.ok && !errStr.includes('UNKNOWN SYMBOL') && !errStr.includes('INVALID_SYMBOL') && !errStr.includes('ERR_MARKET_UNKNOWN_SYMBOL')) {
+      return { ok: true, data, workingSymbol: sym, brokerGoldList };
+    }
+  }
+
+  return { ok: false, data: lastResponse, workingSymbol: lastSymbolTried, brokerGoldList };
+}
+
+async function userMetaApiRequest(userObj, payload) {
+  const mt = userObj.metaApi;
+  if (!mt || !mt.enabled || !mt.token || !mt.accountId) return null;
+  try {
+    if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);
+    if (payload.symbol) {
+      const result = await smartTradeWithSymbolFallback(mt.regionUrl, mt.token, mt.accountId, payload, payload.symbol);
+      if (result.ok && result.workingSymbol !== mt.symbol) {
+        mt.symbol = result.workingSymbol;
+        await saveDB(db);
+      }
+      return result.data;
+    }
+    const res = await fetch(`${mt.regionUrl}/users/current/accounts/${mt.accountId}/trade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'auth-token': mt.token },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function openMobileMTTradeForAllUsers(tradeObj) {
+  const isLong = tradeObj.direction === 'LONG';
+  if (!tradeObj.userPositions) tradeObj.userPositions = {};
+  const connected = (db.users || []).filter(u => u.metaApi && u.metaApi.enabled && u.metaApi.token && u.metaApi.accountId);
+
+  const slDist = Math.abs(Number(tradeObj.entry) - Number(tradeObj.sl));
+  const tp2Dist = Math.abs(Number(tradeObj.tp2) - Number(tradeObj.entry));
+
+  await Promise.allSettled(connected.map(async (u) => {
+    const mt = u.metaApi;
+    if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);
+
+    const lotSize = Math.max(0.01, Number(mt.lot) || 0.03);
+    const symbol = (mt.symbol || 'GOLD#').trim();
+
+    let calibratedEntry = Number(tradeObj.entry);
+    let calibratedSL = Number(tradeObj.sl);
+    let calibratedTP2 = Number(tradeObj.tp2);
+
+    const liveTick = await getBrokerLiveTickPrice(mt.regionUrl, mt.token, mt.accountId, symbol);
+    if (liveTick) {
+      calibratedEntry = isLong ? liveTick.ask : liveTick.bid;
+      calibratedSL = Number((isLong ? calibratedEntry - slDist : calibratedEntry + slDist).toFixed(2));
+      calibratedTP2 = Number((isLong ? calibratedEntry + tp2Dist : calibratedEntry - tp2Dist).toFixed(2));
+    }
+
+    const res = await userMetaApiRequest(u, {
+      actionType: isLong ? 'ORDER_TYPE_BUY' : 'ORDER_TYPE_SELL',
+      symbol,
+      volume: Number(lotSize.toFixed(2)),
+      stopLoss: calibratedSL,
+      takeProfit: calibratedTP2,
+      comment: `XAU_PRO_${u.username}`
     });
 
     if (res && (res.orderId || res.positionId)) {
@@ -345,7 +467,13 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
     const accountId = (req.body.accountId || '').trim() || (req.user.metaApi ? req.user.metaApi.accountId : '');
     if (!token || !accountId) return res.status(400).json({ ok: false, error: 'Lütfen önce MetaApi Token ve Account ID girin.' });
 
-    const provRes = await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`, { headers: { 'auth-token': token } }); if (!provRes.ok) return res.status(400).json({ ok: false, error: 'Token veya Account ID hatalı!' });  const provData = await provRes.json(); const regionUrl = `https://mt-client-api-v1.${provData.region || 'london'}.agiliumtrade.ai`;
+    const provRes = await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`, {
+      headers: { 'auth-token': token }
+    });
+    if (!provRes.ok) return res.status(400).json({ ok: false, error: 'Token veya Account ID hatalı!' });
+
+    const provData = await provRes.json();
+    const regionUrl = `https://mt-client-api-v1.${provData.region || 'london'}.agiliumtrade.ai`;
 
     const [infoRes, goldList] = await Promise.all([
       fetch(`${regionUrl}/users/current/accounts/${accountId}/account-information`, { headers: { 'auth-token': token } }),
@@ -364,7 +492,7 @@ app.post('/api/metaapi-test', requireAuth, async (req, res) => {
     const symbolsText = goldList.length > 0 ? ` | Bulunan Altın Sembolleri: ${goldList.join(', ')}` : '';
     res.json({
       ok: true,
-      broker: `${info.broker \vert{}\vert{} provData.server}${symbolsText}`,
+      broker: `${info.broker || provData.server}${symbolsText}`,
       login: info.login || provData.login || '-',
       name: info.name || provData.name || '-',
       balance: info.balance,
@@ -402,7 +530,7 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
         : `Lütfen sembol kutusuna GOLD# veya GOLDmicro yazıp tekrar deneyin.`;
       return res.status(400).json({
         ok: false,
-        error: `Test emri açılamadı (${openData.message \vert{}\vert{} openData.stringCode \vert{}\vert{} 'Sembol hatası'}). ${availableHint}`
+        error: `Test emri açılamadı (${openData.message || openData.stringCode || 'Sembol hatası'}). ${availableHint}`
       });
     }
 
@@ -686,7 +814,7 @@ async function getGoldNewsSentiment() {
       const block = match[1];
       const tM = block.match(/<title>([\s\S]*?)<\/title>/);
       const pM = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
+      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[\vert{}\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
     }
     let rawScore = 0;
     const analyzed = items.map(item => {
@@ -698,7 +826,7 @@ async function getGoldNewsSentiment() {
       return { ...item, score: itemScore, tag: tags.length ? tags.join(' • ') : 'Piyasa Akışı' };
     });
     const norm = Math.max(-15, Math.min(15, rawScore));
-    const result = { sentimentScore: norm, summary: norm >= 4 ? 'POZİTİf HABER AKIŞI' : (norm <= -4 ? 'NEGATİF HABER AKIŞI' : 'DENGELİ AKIŞ'), headlines: analyzed.slice(0, 6) };
+    const result = { sentimentScore: norm, summary: norm >= 4 ? 'POZİTİF HABER AKIŞI' : (norm <= -4 ? 'NEGATİF HABER AKIŞI' : 'DENGELİ AKIŞ'), headlines: analyzed.slice(0, 6) };
     newsCache = { timestamp: now, data: result };
     return result;
   } catch (e) {
@@ -771,7 +899,6 @@ async function checkActiveTradeOnTick(spotPrice) {
   t.currentPrice = spotPrice;
   t.unrealizedPnL = Number((isLong ? spotPrice - t.entry : t.entry - spotPrice).toFixed(2));
 
-  // 1) TP2 HEDEFİ VURULDU MU?
   if ((isLong && spotPrice >= t.tp2) || (!isLong && spotPrice <= t.tp2)) {
     const profit = Number(Math.abs(t.tp2 - t.entry).toFixed(2));
     await closeAllUsersMTTrade(t);
@@ -781,7 +908,6 @@ async function checkActiveTradeOnTick(spotPrice) {
     return 'TP_HIT';
   }
 
-  // 2) TP1 HEDEFİ VURULDU MU?
   if (!t.tp1Hit && ((isLong && spotPrice >= t.tp1) || (!isLong && spotPrice <= t.tp1))) {
     t.tp1Hit = true; t.earlyShieldHit = true; t.sl = t.entry;
     await saveDB(db);
@@ -789,14 +915,12 @@ async function checkActiveTradeOnTick(spotPrice) {
     soundEvent = 'TP_HIT';
   }
 
-  // 3) DİNAMİK KÂR KORUMA KİLİDİ (Fiyat kâra gitmiş ama TP1'e henüz varmadan geri dönüyorsa zarar etmeyi önle)
   if (!t.tp1Hit && !t.earlyShieldHit && t.unrealizedPnL >= 1.50) {
     t.earlyShieldHit = true; t.sl = t.entry;
     await saveDB(db);
     await moveAllUsersMTToBreakeven(t);
   }
 
-  // 4) STOP OLMUŞ MU?
   if ((isLong && spotPrice <= t.sl) || (!isLong && spotPrice >= t.sl)) {
     let profit = -Number(Math.abs(t.entry - t.sl).toFixed(2)), statusText = 'STOP OLDU ❌', resultType = 'LOSS';
     if (t.tp1Hit) { profit = Number((Math.abs(t.tp1 - t.entry) * 0.8).toFixed(2)); statusText = 'TP1 ALINDI + BAŞABAŞ 🛡️'; resultType = 'WIN'; soundEvent = 'TP_HIT'; }
@@ -918,12 +1042,12 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           if (simActive.tp1Hit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.8).toFixed(2)); status = 'TP1 ALINDI + BAŞABAŞ 🛡️'; result = 'WIN'; }
           else if (simActive.earlyShieldHit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.15).toFixed(2)); status = 'KÂR KORUMA (BAŞABAŞ) 🛡️'; result = 'WIN'; }
           else lastStopCandleIndex = i;
-          simTrades.push({ ...simActive, closeTime: `${dateStr}${timeStr}`, closePrice: simActive.sl.toFixed(2), status, result, profitDollar: profit });
+          simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.sl.toFixed(2), status, result, profitDollar: profit });
           simActive = null; continue;
         }
         if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(2));
-          simTrades.push({ ...simActive, closeTime: `${dateStr}${timeStr}`, closePrice: simActive.tp2.toFixed(2), status: 'TP2 TAM HEDEF 🎯', result: 'WIN', profitDollar: profit });
+          simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.tp2.toFixed(2), status: 'TP2 TAM HEDEF 🎯', result: 'WIN', profitDollar: profit });
           simActive = null; continue;
         }
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) { simActive.tp1Hit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
@@ -946,7 +1070,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       const { score } = computeSignalScore(m5, m15, h1, dxyMap[c.time] || 0, 0, 0, m5Slice);
       if (Math.abs(score) >= 45) {
         const isShort = score < 0, plan = calculateSmartTradePlan(c.close, isShort, m5Slice, m15Slice, m5.atr);
-        simActive = { openTime: `${dateStr}${timeStr}`, direction: isShort ? 'SHORT' : 'LONG', score, entry: Number(plan.entry), sl: Number(plan.sl), tp1: Number(plan.tp1), tp2: Number(plan.tp2), tp1Hit: false, earlyShieldHit: false };
+        simActive = { openTime: `${dateStr} ${timeStr}`, direction: isShort ? 'SHORT' : 'LONG', score, entry: Number(plan.entry), sl: Number(plan.sl), tp1: Number(plan.tp1), tp2: Number(plan.tp2), tp1Hit: false, earlyShieldHit: false };
       }
     }
 
@@ -977,16 +1101,16 @@ app.get('/api/tick', requireAuth, async (req, res) => {
 });
 
 app.get('/api/analyze', requireAuth, async (req, res) => {
-  try { res.json(await executeFullAnalysisEngine(req.user));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await executeFullAnalysisEngine(req.user)); }
+  catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   const { botToken, chatId } = req.body;
   db.telegram = { botToken: (botToken || '').trim(), chatId: (chatId || '').trim(), enabled: Boolean(botToken && chatId) };
   await saveDB(db);
-  res.json({ ok: true, enabled: db.telegram.frontend ? true : db.telegram.enabled });
+  res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 XAU/USD Sunucu Aktif: Port`${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 XAU/USD Sunucu Aktif: Port ${PORT}`));
 module.exports = app;
