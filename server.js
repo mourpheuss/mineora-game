@@ -317,8 +317,29 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
   const tp2Dist = Math.abs(Number(tradeObj.tp2) - Number(tradeObj.entry));
 
   await Promise.allSettled(connected.map(async (u) => {
+    // 🛡️ KORUMA: Bu kullanıcıda zaten açık bir işlem varsa ASLA 2. işlem açma!
+    if (tradeObj.userPositions[u.username]) {
+      console.log(`⚠️ ${u.username} için zaten açık pozisyon var, 2. işlem engellendi.`);
+      return;
+    }
+
     const mt = u.metaApi;
     if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);
+
+    // MetaTrader hesabında gerçekten açık pozisyon var mı API üzerinden de teyit et
+    try {
+      const posRes = await fetch(`${mt.regionUrl}/users/current/accounts/${mt.accountId}/positions`, {
+        headers: { 'auth-token': mt.token }
+      });
+      if (posRes.ok) {
+        const livePositions = await posRes.json();
+        const hasOpenGold = livePositions.some(p => /GOLD|XAU/i.test(p.symbol));
+        if (hasOpenGold) {
+          console.log(`⚠️ ${u.username} hesabında MT üzerinde zaten açık Altın işlemi var, yeni emir iptal edildi.`);
+          return;
+        }
+      }
+    } catch (e) {}
 
     const lotSize = Math.max(0.01, Number(mt.lot) || 0.03);
     const symbol = (mt.symbol || 'GOLD#').trim();
@@ -435,20 +456,31 @@ async function closeAllUsersMTTrade(tradeObj) {
 
 app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   try {
-    if (db.activeTrade) {
-      await closeAllUsersMTTrade(db.activeTrade);
-      db.history.unshift({
-        ...db.activeTrade,
-        closePrice: lastKnownSpot || db.activeTrade.currentPrice || db.activeTrade.entry,
-        closeTime: getTRTime(),
-        status: 'MANUEL KAPATILDI 🛑',
-        result: 'CLOSED',
-        profitDollar: 0
-      });
-      db.activeTrade = null;
+    const username = req.user.username;
+    if (db.activeTrade && db.activeTrade.userPositions && db.activeTrade.userPositions[username]) {
+      const pos = db.activeTrade.userPositions[username];
+      // Yalnızca bu kullanıcının MT pozisyonunu kapat
+      await userMetaApiRequest(req.user, { actionType: 'POSITION_CLOSE_ID', positionId: String(pos.positionId) });
+      
+      // Kullanıcının pozisyon kaydını aktif işlemden kaldır
+      delete db.activeTrade.userPositions[username];
+
+      // Eğer sistemdeki tüm kullanıcılar pozisyonlarını kapattıysa global işlemi de kapat
+      if (Object.keys(db.activeTrade.userPositions).length === 0) {
+        db.history.unshift({
+          ...db.activeTrade,
+          closePrice: lastKnownSpot || db.activeTrade.currentPrice || db.activeTrade.entry,
+          closeTime: getTRTime(),
+          status: 'MANUEL KAPATILDI 🛑',
+          result: 'CLOSED',
+          profitDollar: 0
+        });
+        db.activeTrade = null;
+      }
       await saveDB(db);
+      return res.json({ ok: true, message: 'İşleminiz başarıyla kapatıldı.' });
     }
-    res.json({ ok: true, message: 'İşlem kapatıldı.' });
+    res.json({ ok: true, message: 'Açık bir işleminiz bulunamadı.' });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
