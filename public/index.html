@@ -265,7 +265,7 @@
             </div>
           </div>
           <div class="grid grid-cols-4 gap-2 bg-slate-950 p-3 rounded-lg border border-slate-800 text-center text-xs">
-            <div><span class="text-[10px] text-slate-400 block">LOT</span><strong id="calcLotSize" class="text-lg font-black text-amber-400">0.05</strong></div>
+            <div><span class="text-[10px] text-slate-400 block">LOT</span><strong id="calcLotSize" class="text-lg font-black text-amber-400">0.03</strong></div>
             <div><span class="text-[10px] text-rose-300 block">ZARAR</span><strong id="calcRiskDollar" class="text-xs font-bold text-rose-400">-$20</strong></div>
             <div><span class="text-[10px] text-emerald-300 block">TP1 KÂR</span><strong id="calcTp1Dollar" class="text-xs font-bold text-emerald-400">+$27</strong></div>
             <div><span class="text-[10px] text-emerald-200 block">TP2 KÂR</span><strong id="calcTp2Dollar" class="text-xs font-bold text-emerald-300">+$46</strong></div>
@@ -358,7 +358,7 @@
     let soundEnabled = true;
     let lastAnalyzeData = null;
     let prevSpotPrice = 0;
-    let currentRecommendedLot = 0.05;
+    let currentRecommendedLot = 0.03; // SUNUCU İLE SENKRONİZE EDİLDİ (0.03)
     let tvWidgetLoaded = false;
     let tickInterval = null;
     let analyzeInterval = null;
@@ -577,13 +577,13 @@
       const tp2Dist = lastAnalyzeData && lastAnalyzeData.tradePlan ? Number(lastAnalyzeData.tradePlan.tp2Dollar) : 8.2;
       const riskDollar = balance * (riskPct / 100);
       const finalLot = Math.max(0.01, Math.round((riskDollar / (slDist * 100)) * 100) / 100);
-      currentRecommendedLot = finalLot;
-      document.getElementById('calcLotSize').textContent = finalLot.toFixed(2);
-      document.getElementById('calcRiskDollar').textContent = `-$${(finalLot * 100 * slDist).toFixed(2)}`;
-      document.getElementById('calcTp1Dollar').textContent = `+$${(finalLot * 100 * tp1Dist).toFixed(2)}`;
-      document.getElementById('calcTp2Dollar').textContent = `+$${(finalLot * 100 * tp2Dist).toFixed(2)}`;
+      
+      document.getElementById('calcLotSize').textContent = currentRecommendedLot.toFixed(2);
+      document.getElementById('calcRiskDollar').textContent = `-$${(currentRecommendedLot * 100 * slDist).toFixed(2)}`;
+      document.getElementById('calcTp1Dollar').textContent = `+$${(currentRecommendedLot * 100 * tp1Dist).toFixed(2)}`;
+      document.getElementById('calcTp2Dollar').textContent = `+$${(currentRecommendedLot * 100 * tp2Dist).toFixed(2)}`;
       if (syncToServer && authToken) {
-        apiFetch('/api/update-lot', { method: 'POST', body: JSON.stringify({ lot: finalLot, balance, riskPct }) }).catch(() => {});
+        apiFetch('/api/update-lot', { method: 'POST', body: JSON.stringify({ lot: currentRecommendedLot, balance, riskPct }) }).catch(() => {});
       }
     }
 
@@ -655,6 +655,8 @@
       if (macro && macro.us10y) document.getElementById('us10yInfo').textContent = macro.us10y.price.toFixed(2) + '%';
       if (!tracker) return;
 
+      if (tracker.userLot) currentRecommendedLot = Number(tracker.userLot);
+
       const mtBtn = document.getElementById('mtBtn');
       const mtBadge = document.getElementById('mtStatusBadge');
       if (tracker.metaApiEnabled) {
@@ -677,8 +679,9 @@
             <div>
               <span class="text-xs font-bold px-2 py-1 rounded bg-emerald-600 text-white">🤖 OTOMATİK ${t.direction} AÇIK</span>
               <span class="text-xs text-slate-400 ml-2">Giriş: <strong>$${t.entry}</strong></span>
-              ${t.tp1Hit ? '<span class="ml-2 text-xs bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ TP1 ALINDI - STOP GİRİŞTE!</span>' :
-                (t.earlyShieldHit ? '<span class="ml-2 text-xs bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ ERKEN ZIRH AKTİF - STOP GİRİŞTE!</span>' : '')}
+              ${t.scalpHit ? '<span class="ml-2 text-xs bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded">⚡ SCALP %50 ALINDI - STOP GİRİŞTE!</span>' :
+                (t.tp1Hit ? '<span class="ml-2 text-xs bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ TP1 ALINDI - STOP GİRİŞTE!</span>' :
+                (t.earlyShieldHit ? '<span class="ml-2 text-xs bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded">🛡️ ERKEN ZIRH AKTİF!</span>' : ''))}
             </div>
             <div class="flex items-center gap-4">
               <div class="text-right bg-slate-900 px-3 py-1 rounded border border-slate-700">
@@ -747,7 +750,7 @@
         const data = await res.json();
         if (data.error) return;
         lastAnalyzeData = data;
-        saveAndCalcLot(true);
+        saveAndCalcLot(false);
         updateLivePriceAndTrackerUI(data.spotPrice, data.timestamp, data.macro, data.tracker);
 
         document.getElementById('scoreBadge').textContent = `Güven Skoru: ${data.score} / 100`;
