@@ -318,26 +318,20 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
 
   await Promise.allSettled(connected.map(async (u) => {
     // 🛡️ KORUMA: Bu kullanıcıda zaten açık bir işlem varsa ASLA 2. işlem açma!
-    if (tradeObj.userPositions[u.username]) {
-      console.log(`⚠️ ${u.username} için zaten açık pozisyon var, 2. işlem engellendi.`);
-      return;
-    }
+    if (tradeObj.userPositions[u.username]) return;
 
     const mt = u.metaApi;
     if (!mt.regionUrl) mt.regionUrl = await resolveMetaApiRegionUrl(mt.token, mt.accountId);
 
-    // MetaTrader hesabında gerçekten açık pozisyon var mı API üzerinden de teyit et
+    // MetaTrader hesabında gerçekten açık pozisyon var mı kontrol et
     try {
       const posRes = await fetch(`${mt.regionUrl}/users/current/accounts/${mt.accountId}/positions`, {
         headers: { 'auth-token': mt.token }
       });
       if (posRes.ok) {
         const livePositions = await posRes.json();
-        const hasOpenGold = livePositions.some(p => /GOLD|XAU/i.test(p.symbol));
-        if (hasOpenGold) {
-          console.log(`⚠️ ${u.username} hesabında MT üzerinde zaten açık Altın işlemi var, yeni emir iptal edildi.`);
-          return;
-        }
+        const hasOpenGold = Array.isArray(livePositions) && livePositions.some(p => /GOLD|XAU/i.test(p.symbol));
+        if (hasOpenGold) return;
       }
     } catch (e) {}
 
@@ -454,18 +448,15 @@ async function closeAllUsersMTTrade(tradeObj) {
   }));
 }
 
+// KULLANICIYA ÖZEL MANUEL KAPATMA
 app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   try {
     const username = req.user.username;
     if (db.activeTrade && db.activeTrade.userPositions && db.activeTrade.userPositions[username]) {
       const pos = db.activeTrade.userPositions[username];
-      // Yalnızca bu kullanıcının MT pozisyonunu kapat
       await userMetaApiRequest(req.user, { actionType: 'POSITION_CLOSE_ID', positionId: String(pos.positionId) });
-      
-      // Kullanıcının pozisyon kaydını aktif işlemden kaldır
       delete db.activeTrade.userPositions[username];
 
-      // Eğer sistemdeki tüm kullanıcılar pozisyonlarını kapattıysa global işlemi de kapat
       if (Object.keys(db.activeTrade.userPositions).length === 0) {
         db.history.unshift({
           ...db.activeTrade,
@@ -762,6 +753,7 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
+// === TEPEDEN ALMAYI VE DİPTEN SATMAYI KESİN ENGELLEYEN HİBRİT KARAR MOTORU ===
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
@@ -819,7 +811,7 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: `ADX düşük (${m5.adx.toFixed(1)}): Yatay piyasa, skor kırpıldı.` });
   }
 
-  // === KATI GÜVENLİK BARİYERLERİ ===
+  // === KATI GÜVENLİK BARİYERLERİ (TEPEDEN ALMA VE TUZAKLARI %100 ÖNLEME) ===
 
   // BARİYER 1: H1 Trendine Karşı İşlem Kesinlikle Yasak!
   if (score > 0 && h1MainDir === -1) {
@@ -830,16 +822,37 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: '⛔ TREND KALKANI: H1 ana yönü yükseliş olduğu için tüm SHORT sinyalleri İPTAL edildi.' });
   }
 
-  // BARİYER 2: Ayı Tuzağı & Dipten Satış / Tepeden Alış Bariyeri
-  if (m5Candles && m5Candles.length >= 3) {
-    const recentJump = m5.price - m5Candles[m5Candles.length - 3].close;
-    if (score < 0 && (recentJump < -(m5.atr * 1.4) || m5.rsi < 35)) {
+  // BARİYER 2: ORTALAMADAN AŞIRI UZAKLAŞMA (LASTİK ETKİSİ / MEAN REVERSION)
+  const distFromVwap = Math.abs(m5.price - m5.vwap);
+  const distFromEma21 = Math.abs(m5.price - m5.ema21);
+  const maxAllowedDist = m5.atr * 1.15; // Ortalama ~2.5 - 3.0 dolar
+
+  if (score > 0 && (distFromVwap > maxAllowedDist || distFromEma21 > maxAllowedDist)) {
+    score = 0;
+    reasons.push({ type: 'warn', text: '🛑 TEPEDEN ALIŞ ENGELİ: Fiyat VWAP/EMA ortalamasından çok uzaklaştı, düzeltme bekleniyor!' });
+  } else if (score < 0 && (distFromVwap > maxAllowedDist || distFromEma21 > maxAllowedDist)) {
+    score = 0;
+    reasons.push({ type: 'warn', text: '🛑 DİPTEN SATIŞ ENGELİ: Fiyat ortalamasından çok aşağıda, tepki yükselişi bekleniyor!' });
+  }
+
+  // BARİYER 3: GİRİŞ İÇİN GERİ ÇEKİLME (PULLBACK) ŞARTI
+  if (score > 0 && m5.stochRsi > 45) {
+    score = 0;
+    reasons.push({ type: 'warn', text: '⏳ PULLBACK BEKLENİYOR: M5 StochRSI tepede, geri çekilme olmadan alım yapılamaz.' });
+  } else if (score < 0 && m5.stochRsi < 55) {
+    score = 0;
+    reasons.push({ type: 'warn', text: '⏳ TEPKİ BEKLENİYOR: M5 StochRSI dipte, tepki yükselişi olmadan satış yapılamaz.' });
+  }
+
+  // BARİYER 4: TERS MUMDA İŞLEM AÇMA YASAĞI (MUM RENK ONAYI)
+  if (m5Candles && m5Candles.length > 0) {
+    const lastCandle = m5Candles[m5Candles.length - 1];
+    if (score > 0 && lastCandle.close < lastCandle.open) {
       score = 0;
-      reasons.push({ type: 'warn', text: '🛑 DİPTEN SATIŞ KORUMASI: Fiyat aşırı satımda/dipten tepki riski var, SHORT engellendi!' });
-    }
-    if (score > 0 && (recentJump > (m5.atr * 1.4) || m5.rsi > 68)) {
+      reasons.push({ type: 'warn', text: '🛑 MUM ONAYI YOK: M5 mumu kırmızı (satış baskısı var), LONG ertelendi.' });
+    } else if (score < 0 && lastCandle.close > lastCandle.open) {
       score = 0;
-      reasons.push({ type: 'warn', text: '🛑 TEPEDEN ALIŞ KORUMASI: Fiyat aşırı alımda/düzeltme riski var, LONG engellendi!' });
+      reasons.push({ type: 'warn', text: '🛑 MUM ONAYI YOK: M5 mumu yeşil (alım baskısı var), SHORT ertelendi.' });
     }
   }
 
@@ -872,7 +885,7 @@ async function getGoldNewsSentiment() {
       const block = match[1];
       const tM = block.match(/<title>([\s\S]*?)<\/title>/);
       const pM = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
+      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[\vert{}\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
     }
     let rawScore = 0;
     const analyzed = items.map(item => {
@@ -1137,7 +1150,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) { simActive.tp1Hit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
         if (!simActive.scalpHit) {
           const liveDiff = Number((isLong ? c.high - simActive.entry : simActive.entry - c.low).toFixed(2));
-          if (liveDiff >= 3.00) { simActive.scalpHit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
+          if (liveDiff >= 2.50) { simActive.scalpHit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
         }
         continue;
       }
