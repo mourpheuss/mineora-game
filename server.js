@@ -730,7 +730,6 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
-// TUZAKLARI VE TERS İŞLEMLERİ %100 ENGELLEYEN YENİ KARAR MOTORU
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
@@ -788,26 +787,24 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: `ADX düşük (${m5.adx.toFixed(1)}): Yatay piyasa, skor kırpıldı.` });
   }
 
-  // === KATI GÜVENLİK BARİYERLERİ (HATA VE TUZAK ÖNLEYİCİLER) ===
+  // === KATI GÜVENLİK BARİYERLERİ ===
 
   // BARİYER 1: H1 Trendine Karşı İşlem Kesinlikle Yasak!
   if (score > 0 && h1MainDir === -1) {
-    score = 0; // H1 Düşüşteyken LONG açamaz!
+    score = 0;
     reasons.push({ type: 'warn', text: '⛔ TREND KALKANI: H1 ana yönü düşüş olduğu için tüm LONG sinyalleri İPTAL edildi.' });
   } else if (score < 0 && h1MainDir === 1) {
-    score = 0; // H1 Yükselişteyken SHORT açamaz!
+    score = 0;
     reasons.push({ type: 'warn', text: '⛔ TREND KALKANI: H1 ana yönü yükseliş olduğu için tüm SHORT sinyalleri İPTAL edildi.' });
   }
 
   // BARİYER 2: Ayı Tuzağı & Dipten Satış / Tepeden Alış Bariyeri
   if (m5Candles && m5Candles.length >= 3) {
     const recentJump = m5.price - m5Candles[m5Candles.length - 3].close;
-    // Fiyat son 3 mumda sert düşmüşse ve RSI aşırı satımdaysa (DİPTEN SHORT AÇMA TUZAĞI)
     if (score < 0 && (recentJump < -(m5.atr * 1.4) || m5.rsi < 35)) {
       score = 0;
       reasons.push({ type: 'warn', text: '🛑 DİPTEN SATIŞ KORUMASI: Fiyat aşırı satımda/dipten tepki riski var, SHORT engellendi!' });
     }
-    // Fiyat son 3 mumda sert fırlamışsa ve RSI aşırı alımdaysa (TEPEDEN ALMA TUZAĞI)
     if (score > 0 && (recentJump > (m5.atr * 1.4) || m5.rsi > 68)) {
       score = 0;
       reasons.push({ type: 'warn', text: '🛑 TEPEDEN ALIŞ KORUMASI: Fiyat aşırı alımda/düzeltme riski var, LONG engellendi!' });
@@ -843,7 +840,7 @@ async function getGoldNewsSentiment() {
       const block = match[1];
       const tM = block.match(/<title>([\s\S]*?)<\/title>/);
       const pM = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[\vert{}\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
+      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
     }
     let rawScore = 0;
     const analyzed = items.map(item => {
@@ -876,7 +873,6 @@ async function getEconomicCalendar() {
       return { title: e.title, impact: e.impact, timeStr: getTRTime(d, false), dateStr: getTRDate(d), forecast: e.forecast || '-', diffMinutes: Math.round((d.getTime() - now) / 60000) };
     }).filter(e => e.diffMinutes >= -60 && e.diffMinutes <= 2160).sort((a, b) => a.diffMinutes - b.diffMinutes);
 
-    // Veriden 20 dk önce ve 45 dk sonrasına kadar TAM KİLİT!
     const activeDanger = usdEvents.find(e => e.impact === 'High' && e.diffMinutes >= -20 && e.diffMinutes <= 45);
     const result = { killSwitch: Boolean(activeDanger), dangerEvent: activeDanger || null, upcomingEvents: usdEvents.slice(0, 5), allHighUsdTimestamps };
     calendarCache = { timestamp: now, data: result };
@@ -970,7 +966,7 @@ async function checkActiveTradeOnTick(spotPrice) {
     } else {
       statusText = 'STOP OLDU ❌';
       soundEvent = 'SL_HIT';
-      db.lastStopTimestamp = Date.now(); // STOP SONRASI BEKLEME SÜRESİNİ BAŞLAT
+      db.lastStopTimestamp = Date.now(); // STOP SONRASI 45 DK SOĞUMA BAŞLAT
     }
 
     await closeAllUsersMTTrade(t);
@@ -1017,7 +1013,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
   const tradePlan = calculateSmartTradePlan(spotPrice, score < 0, calM5, calM15, m5.atr);
   let soundEvent = await checkActiveTradeOnTick(spotPrice);
 
-  // ÇİFT EMİR AÇILMASINI %100 ENGELLEYEN KİLİT MEKANİZMASI
+  // ÇİFT EMİR AÇILMASINI %100 ENGELLEYEN MUTEX KİLİT
   if (!db.activeTrade && !isOpeningTradeLock && !calendarData.killSwitch && !stopCooldownActive && Math.abs(score) >= 45) {
     isOpeningTradeLock = true;
     try {
@@ -1080,7 +1076,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     }
 
     const dxyMap = {};
-    rawDxyM5.forEach((c, idx) => { if (idx >= 3 && rawDxyM5[idx - 3].close > 0) dxyMap[c.time] = ((c.close - rawDxyM5[idx - 3].close) / rawDxyM5[idx - 3].close) * 100; });
+    if (Array.isArray(rawDxyM5)) {
+      rawDxyM5.forEach((c, idx) => { if (idx >= 3 && rawDxyM5[idx - 3].close > 0) dxyMap[c.time] = ((c.close - rawDxyM5[idx - 3].close) / rawDxyM5[idx - 3].close) * 100; });
+    }
 
     let simActive = null, lastStopCandleIndex = -99;
     const simTrades = [];
