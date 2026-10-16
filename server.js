@@ -148,7 +148,7 @@ function getMarketSession() {
       yahooSym: 'GC=F',
       tp1Dist: 3.00,
       tp2Dist: 6.50,
-      maxSlDist: 3.50, // KESİN STOP TAVANI: Maksimum 3.50$
+      maxSlDist: 3.50, // Kesin SL Tavanı
       minAtr: 2.2,
       maxSpread: 1.5
     }
@@ -348,7 +348,6 @@ async function userMetaApiRequest(userObj, payload) {
   }
 }
 
-// === TAM EMİR AÇILIŞI (KATI BROKER STOPU İLE) ===
 async function openMobileMTTradeForAllUsers(tradeObj) {
   const isLong = tradeObj.direction === 'LONG';
   if (!tradeObj.userPositions) tradeObj.userPositions = {};
@@ -411,7 +410,6 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
   await saveDB(db);
 }
 
-// === TP1'DE %50 KISMİ KAPATMA VE STOPU GİRİŞE ÇEKME ===
 async function partialCloseAllUsersMTAtTP1(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -431,9 +429,7 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
           volume: Number(closeVol.toFixed(2))
         });
         pos.volume = Number((totalVol - closeVol).toFixed(2));
-      } catch (err) {
-        console.error(`TP1 kısmi kapatma hatası (${u.username}):`, err);
-      }
+      } catch (err) {}
     }
 
     try {
@@ -443,9 +439,7 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
         stopLoss: bePrice,
         takeProfit: tp2Price
       });
-    } catch (err) {
-      console.error(`TP1 stop güncelleme hatası (${u.username}):`, err);
-    }
+    } catch (err) {}
   }));
   await saveDB(db);
 }
@@ -459,7 +453,6 @@ async function closeAllUsersMTTrade(tradeObj) {
   }));
 }
 
-// MANUEL KAPATMA VE GERÇEK KÂR HESAPLAMA
 app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   try {
     const username = req.user.username;
@@ -497,7 +490,6 @@ app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   }
 });
 
-// TABLOYU VE İSTATİSTİKLERİ SIFIRLAMA
 app.post('/api/clear-history', requireAdmin, async (req, res) => {
   try {
     db.history = [];
@@ -608,13 +600,7 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
 
     const openData = attempt.data || {};
     if (!attempt.ok || (openData.stringCode && (openData.stringCode.includes('ERR') || openData.stringCode.includes('INVALID')))) {
-      const availableHint = attempt.brokerGoldList && attempt.brokerGoldList.length > 0
-        ? `Hesabınızda bulunan Altın sembolleri: [ ${attempt.brokerGoldList.join(' , ')} ].`
-        : `Lütfen sembol kutusuna GOLD veya GOLD# yazıp tekrar deneyin.`;
-      return res.status(400).json({
-        ok: false,
-        error: `Test emri açılamadı (${openData.message || openData.stringCode || 'Sembol hatası'}). ${availableHint}`
-      });
+      return res.status(400).json({ ok: false, error: `Test emri açılamadı: ${openData.message || openData.stringCode}` });
     }
 
     if (req.user.metaApi) {
@@ -626,44 +612,17 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
     let posId = openData.positionId || openData.orderId;
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    if (!posId) {
-      try {
-        const posRes = await fetch(`${regionUrl}/users/current/accounts/${accountId}/positions`, { headers: { 'auth-token': token } });
-        const posList = await posRes.json();
-        if (Array.isArray(posList) && posList.length > 0) {
-          const foundPos = posList.find(p => p.comment === 'XAU_BAGLANTI_TESTI' || p.symbol === attempt.workingSymbol);
-          if (foundPos) posId = foundPos.id;
-        }
-      } catch (e) {}
-    }
-
-    let closeSuccess = false;
     if (posId) {
-      const closeRes = await fetch(tradeUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'auth-token': token },
-        body: JSON.stringify({ actionType: 'POSITION_CLOSE_ID', positionId: String(posId) })
-      });
-      const closeData = await closeRes.json();
-      closeSuccess = closeRes.ok && (!closeData.stringCode || !closeData.stringCode.includes('ERR'));
-    }
-
-    if (!closeSuccess) {
       await fetch(tradeUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'auth-token': token },
-        body: JSON.stringify({ actionType: 'POSITIONS_CLOSE_SYMBOL', symbol: attempt.workingSymbol })
+        body: JSON.stringify({ actionType: 'POSITION_CLOSE_ID', positionId: String(posId) })
       }).catch(() => {});
     }
 
-    res.json({
-      ok: true,
-      positionId: posId,
-      symbol: attempt.workingSymbol,
-      message: `✅ TAM TEST BAŞARILI! Telefonundaki MetaTrader'da 0.01 Lot ${attempt.workingSymbol} işlemi açıldı (ID: #${posId}), 3 saniye beklendi ve OTOMATİK KAPATILDI!`
-    });
+    res.json({ ok: true, positionId: posId, symbol: attempt.workingSymbol, message: 'Test işlemi başarıyla açılıp kapatıldı.' });
   } catch (err) {
-    res.status(500).json({ ok: false, error: 'Test işlemi hatası: ' + err.message });
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
@@ -697,7 +656,7 @@ function calcRSISeries(closes, period = 14) {
 // === GELİŞMİŞ STOCHRSI (%K ve %D DÖNÜŞ KESİŞİMLERİ) ===
 function calcStochRSIAdvanced(closes, rsiPeriod = 14, stochPeriod = 14, kPeriod = 3, dPeriod = 3) {
   const rsiSeries = calcRSISeries(closes, rsiPeriod);
-  if (rsiSeries.length < stochPeriod + kPeriod + dPeriod) return { k: 50, d: 50, crossUp: false, crossDown: false };
+  if (rsiSeries.length < stochPeriod + kPeriod + dPeriod) return { k: 50, d: 50, crossUp: false, crossDown: false, rsiSeries };
 
   const rawStoch = [];
   for (let i = stochPeriod - 1; i < rsiSeries.length; i++) {
@@ -728,7 +687,51 @@ function calcStochRSIAdvanced(closes, rsiPeriod = 14, stochPeriod = 14, kPeriod 
   const crossUp = prevK <= prevD && curK > curD;
   const crossDown = prevK >= prevD && curK < curD;
 
-  return { k: curK, d: curD, crossUp, crossDown };
+  return { k: curK, d: curD, crossUp, crossDown, rsiSeries };
+}
+
+// === PROFESYONEL RSI UYUMSUZLUK (DIVERGENCE) DEDEKTÖRÜ ===
+function detectDivergence(candles, rsiSeries) {
+  if (!candles || candles.length < 15 || !rsiSeries || rsiSeries.length < 15) {
+    return { bullDiv: false, bearDiv: false };
+  }
+
+  const len = candles.length;
+  const rsiLen = rsiSeries.length;
+
+  const priceLow1 = candles[len - 1].low;
+  const rsiLow1 = rsiSeries[rsiLen - 1];
+
+  let priceLow2 = Infinity, rsiLow2 = 50, foundLow = false;
+  for (let i = len - 4; i >= len - 14; i--) {
+    const rIdx = rsiLen - 1 - (len - 1 - i);
+    if (rIdx >= 0 && candles[i].low < candles[i - 1]?.low && candles[i].low < candles[i + 1]?.low) {
+      priceLow2 = candles[i].low;
+      rsiLow2 = rsiSeries[rIdx];
+      foundLow = true;
+      break;
+    }
+  }
+
+  const bullDiv = foundLow && priceLow1 <= priceLow2 && rsiLow1 > rsiLow2 && rsiLow1 < 38;
+
+  const priceHigh1 = candles[len - 1].high;
+  const rsiHigh1 = rsiSeries[rsiLen - 1];
+
+  let priceHigh2 = -Infinity, rsiHigh2 = 50, foundHigh = false;
+  for (let i = len - 4; i >= len - 14; i--) {
+    const rIdx = rsiLen - 1 - (len - 1 - i);
+    if (rIdx >= 0 && candles[i].high > candles[i - 1]?.high && candles[i].high > candles[i + 1]?.high) {
+      priceHigh2 = candles[i].high;
+      rsiHigh2 = rsiSeries[rIdx];
+      foundHigh = true;
+      break;
+    }
+  }
+
+  const bearDiv = foundHigh && priceHigh1 >= priceHigh2 && rsiHigh1 < rsiHigh2 && rsiHigh1 > 62;
+
+  return { bullDiv, bearDiv };
 }
 
 function calcATR(candles, period = 14) {
@@ -740,6 +743,29 @@ function calcATR(candles, period = 14) {
   let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
   for (let i = period; i < trs.length; i++) atr = (atr * (period - 1) + trs[i]) / period;
   return atr;
+}
+
+function calcADX(candles, period = 14) {
+  if (candles.length <= period * 2) return 20;
+  let trSmooth = 0, pdmSmooth = 0, mdmSmooth = 0;
+  const dxs = [];
+  for (let i = 1; i < candles.length; i++) {
+    const upMove = candles[i].high - candles[i - 1].high;
+    const downMove = candles[i - 1].low - candles[i].low;
+    const pdm = upMove > downMove && upMove > 0 ? upMove : 0;
+    const mdm = downMove > upMove && downMove > 0 ? downMove : 0;
+    const tr = Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - candles[i - 1].close), Math.abs(candles[i].low - candles[i - 1].close));
+    if (i <= period) { trSmooth += tr; pdmSmooth += pdm; mdmSmooth += mdm; }
+    else {
+      trSmooth = trSmooth - trSmooth / period + tr;
+      pdmSmooth = pdmSmooth - pdmSmooth / period + pdm;
+      mdmSmooth = mdmSmooth - mdmSmooth / period + mdm;
+      const pdi = trSmooth === 0 ? 0 : (pdmSmooth / trSmooth) * 100;
+      const mdi = trSmooth === 0 ? 0 : (mdmSmooth / trSmooth) * 100;
+      dxs.push(pdi + mdi === 0 ? 0 : (Math.abs(pdi - mdi) / (pdi + mdi)) * 100);
+    }
+  }
+  return dxs.length === 0 ? 20 : dxs.slice(-period).reduce((a, b) => a + b, 0) / Math.min(period, dxs.length);
 }
 
 function calcVWAP(candles) {
@@ -773,7 +799,7 @@ function getSwingSupportResistance(candles, lookback = 20) {
   return { support, resistance };
 }
 
-// === SERT STOP KORUMALI HEDEF PLANI (MAKSİMUM $3.50 STOP) ===
+// === SERT STOP KORUMALI HEDEF PLANI (MAKSİMUM 3.50$ STOP) ===
 function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5Atr, bb, sr, instrumentName = 'GOLD') {
   const session = getMarketSession();
   const maxAllowedSL = session.instrument.maxSlDist || 3.50;
@@ -805,50 +831,58 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   };
 }
 
-// === KUSURSUZ DİP/TEPE DÖNÜŞ MOTORU (SMC & REVERSAL) ===
+// === SNIPER DİP/TEPE DÖNÜŞ MOTORU (DIVERGENCE & PRICE ACTION) ===
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles, bb, sr, spotPrice, stochAdv, isWeekend = false) {
   let score = 0;
   const reasons = [];
+
+  const { bullDiv, bearDiv } = detectDivergence(m5Candles, stochAdv.rsiSeries);
 
   if (bb && m5Candles && m5Candles.length >= 2) {
     const currentC = m5Candles[m5Candles.length - 1];
     const prevC = m5Candles[m5Candles.length - 2];
 
-    // DİP TESPİTİ (LONG): Alt banda iğne / Destek testi + StochRSI dipte yukarı kesişim + Yeşil mum
-    const isDipArea = prevC.low <= bb.lower || currentC.low <= bb.lower || Math.abs(spotPrice - sr.support) <= m5.atr * 0.7;
-    const isStochOversold = stochAdv.k <= 30;
+    const isEngulfingBull = currentC.close > currentC.open && currentC.close >= prevC.high;
+    const isPinbarBull = (Math.min(currentC.open, currentC.close) - currentC.low) > (currentC.high - currentC.low) * 0.45;
+    const isDipTouch = prevC.low <= bb.lower || currentC.low <= bb.lower || Math.abs(spotPrice - sr.support) <= m5.atr * 0.6;
+    const isStochDip = stochAdv.k <= 25 || stochAdv.crossUp;
 
-    if (isDipArea && isStochOversold && (stochAdv.crossUp || currentC.close > currentC.open)) {
+    // DİPTEN LONG: Ya Pozitif Uyumsuzluk ya da Alt Bantta Yutan/Pinbar Dönüş Mumu
+    if (bullDiv && (isDipTouch || stochAdv.crossUp)) {
+      score += 55;
+      reasons.push({ type: 'pos', text: `💎 SNIPER POZİTİF UYUMSUZLUK (BULLISH DIVERGENCE): Fiyat dip yaparken gösterge güçlendi!` });
+    } else if (isDipTouch && isStochDip && (isEngulfingBull || isPinbarBull)) {
       score += 45;
-      reasons.push({ type: 'pos', text: `🎯 DİPTEN ALIM: Alt bant/destek likiditesi temizlendi + StochRSI (${stochAdv.k.toFixed(1)}) yukarı kesti.` });
+      reasons.push({ type: 'pos', text: `🎯 DİPTEN DÖNÜŞ ONAYI: Alt banttan kurumsal dönüş mumu yakalandı (Stoch: ${stochAdv.k.toFixed(1)}).` });
     }
 
-    // TEPE TESPİTİ (SHORT): Üst banda iğne / Direnç tavanı + StochRSI tepede aşağı kesişim + Kırmızı mum
-    const isCeilArea = prevC.high >= bb.upper || currentC.high >= bb.upper || Math.abs(sr.resistance - spotPrice) <= m5.atr * 0.7;
-    const isStochOverbought = stochAdv.k >= 70;
+    const isEngulfingBear = currentC.close < currentC.open && currentC.close <= prevC.low;
+    const isPinbarBear = (currentC.high - Math.max(currentC.open, currentC.close)) > (currentC.high - currentC.low) * 0.45;
+    const isCeilTouch = prevC.high >= bb.upper || currentC.high >= bb.upper || Math.abs(sr.resistance - spotPrice) <= m5.atr * 0.6;
+    const isStochCeil = stochAdv.k >= 75 || stochAdv.crossDown;
 
-    if (isCeilArea && isStochOverbought && (stochAdv.crossDown || currentC.close < currentC.open)) {
+    // TEPEDEN SHORT: Ya Negatif Uyumsuzluk ya da Üst Bantta Yutan/Pinbar Tepe Mumu
+    if (bearDiv && (isCeilTouch || stochAdv.crossDown)) {
+      score -= 55;
+      reasons.push({ type: 'neg', text: `💎 SNIPER NEGATİF UYUMSUZLUK (BEARISH DIVERGENCE): Fiyat tepe yaparken güç tükendi!` });
+    } else if (isCeilTouch && isStochCeil && (isEngulfingBear || isPinbarBear)) {
       score -= 45;
-      reasons.push({ type: 'neg', text: `🎯 TEPEDEN SATIŞ: Üst bant/direnç tavanı reddedildi + StochRSI (${stochAdv.k.toFixed(1)}) aşağı kesti.` });
+      reasons.push({ type: 'neg', text: `🎯 TEPEDEN DÖNÜŞ ONAYI: Üst bant tavanında ayı dönüş mumu yakalandı (Stoch: ${stochAdv.k.toFixed(1)}).` });
     }
   }
 
-  // DESTEK & DİRENÇ İLAVE DESTEĞİ
+  // DESTEK / DİRENÇ
   if (sr) {
-    if (spotPrice >= sr.support && spotPrice <= sr.support + m5.atr * 0.4) {
-      score += 15;
-      reasons.push({ type: 'pos', text: `🛡️ M15 Güçlü Destek Alanı ($${sr.support})` });
-    } else if (spotPrice <= sr.resistance && spotPrice >= sr.resistance - m5.atr * 0.4) {
-      score -= 15;
-      reasons.push({ type: 'neg', text: `🛡️ M15 Güçlü Direnç Alanı ($${sr.resistance})` });
+    if (spotPrice >= sr.support && spotPrice <= sr.support + m5.atr * 0.3) {
+      score += 10;
+      reasons.push({ type: 'pos', text: `🛡️ M15 Güçlü Destek Tabanı ($${sr.support})` });
+    } else if (spotPrice <= sr.resistance && spotPrice >= sr.resistance - m5.atr * 0.3) {
+      score -= 10;
+      reasons.push({ type: 'neg', text: `🛡️ M15 Güçlü Direnç Tavanı ($${sr.resistance})` });
     }
   }
 
-  // VWAP DİNAMİĞİ
-  if (spotPrice > m5.vwap && m5.ema9 > m5.ema21) score += 10;
-  else if (spotPrice < m5.vwap && m5.ema9 < m5.ema21) score -= 10;
-
-  // DXY MAKRO FİLTRE
+  // DXY MAKRO
   if (!isWeekend) {
     if (dxyChange15m < -0.02) score += 10;
     else if (dxyChange15m > 0.02) score -= 10;
@@ -857,17 +891,28 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
 
   // === BARİYERLER ===
 
-  // 1) AŞIRI ŞİŞME (FOMO / GEÇ KALINMIŞ İŞLEMİ KES)
-  const distFromEma21 = Math.abs(spotPrice - m5.ema21);
-  if (score > 0 && (distFromEma21 > m5.atr * 1.5 || m5.rsi > 70 || stochAdv.k > 85)) {
-    score = 0;
-    reasons.push({ type: 'warn', text: '🛑 TREN KAÇTI: Fiyat aşırı yükseldi, tepe alımı engellendi (Dipten alım bekleniyor).' });
-  } else if (score < 0 && (distFromEma21 > m5.atr * 1.5 || m5.rsi < 30 || stochAdv.k < 15)) {
-    score = 0;
-    reasons.push({ type: 'warn', text: '🛑 TREN KAÇTI: Fiyat aşırı düştü, dip satışı engellendi (Tepeden satış bekleniyor).' });
+  // 1) BAND WALKING (Bant Sürükleme / Bıçak Tutma Kilidi)
+  if (m5.adx > 32) {
+    if (score < 0 && m5.price > m5.ema9) {
+      score = 0;
+      reasons.push({ type: 'warn', text: '⛔ ŞİDDETLİ TREND PATLAMASI: Fiyat üst banda yapışık akıyor, SHORT kilitlendi.' });
+    } else if (score > 0 && m5.price < m5.ema9) {
+      score = 0;
+      reasons.push({ type: 'warn', text: '⛔ ŞİDDETLİ DÜŞÜŞ PATLAMASI: Fiyat alt banda yapışık çöküyor, LONG kilitlendi.' });
+    }
   }
 
-  // 2) TERS MUMDA GİRME
+  // 2) AŞIRI ŞİŞME (FOMO / Gecikmiş Giriş Yasağı)
+  const distFromEma21 = Math.abs(spotPrice - m5.ema21);
+  if (score > 0 && (distFromEma21 > m5.atr * 1.5 || m5.rsi > 68 || stochAdv.k > 85)) {
+    score = 0;
+    reasons.push({ type: 'warn', text: '🛑 TREN KAÇTI: Fiyat aşırı yükseldi, tepe alımı engellendi.' });
+  } else if (score < 0 && (distFromEma21 > m5.atr * 1.5 || m5.rsi < 32 || stochAdv.k < 15)) {
+    score = 0;
+    reasons.push({ type: 'warn', text: '🛑 TREN KAÇTI: Fiyat aşırı düştü, dip satışı engellendi.' });
+  }
+
+  // 3) TERS MUM ONAYI
   if (m5Candles && m5Candles.length > 0) {
     const lastC = m5Candles[m5Candles.length - 1];
     if (score > 0 && lastC.close < lastC.open) {
@@ -980,11 +1025,11 @@ function analyzeTimeframe(candles) {
   const closes = candles.map(c => c.close), price = closes[closes.length - 1];
   const ema9 = calcEMA(closes, 9), ema21 = calcEMA(closes, 21), ema50 = calcEMA(closes, 50);
   const rsiSeries = calcRSISeries(closes, 14), rsi = rsiSeries[rsiSeries.length - 1];
-  const atr = calcATR(candles, 14), vwap = calcVWAP(candles);
+  const atr = calcATR(candles, 14), adx = calcADX(candles, 14), vwap = calcVWAP(candles);
   let trend = 'NÖTR';
   if (ema9 > ema21 && price > ema21) trend = 'BULLISH (YÜKSELİŞ)';
   else if (ema9 < ema21 && price < ema21) trend = 'BEARISH (DÜŞÜŞ)';
-  return { price, ema9, ema21, ema50, rsi, atr, vwap, trend };
+  return { price, ema9, ema21, ema50, rsi, atr, adx, vwap, trend };
 }
 
 // === PROFESYONEL İKİ KADEMELİ ÇIKIŞ MOTORU ===
@@ -1079,7 +1124,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
 
   const stopCooldownActive = Boolean(db.lastStopTimestamp && (Date.now() - db.lastStopTimestamp < 35 * 60 * 1000));
 
-  let signal = '⏳ BEKLE (DİP/TEPE DÖNÜŞÜ BEKLENİYOR)', direction = 'NEUTRAL';
+  let signal = '⏳ BEKLE (UYUMSUZLUK & DİP/TEPE DÖNÜŞÜ BEKLENİYOR)', direction = 'NEUTRAL';
   if (!session.isWeekend && calendarData.killSwitch) { signal = '⛔ VERİ SAATİ KİLİDİ (45 DK)'; direction = 'LOCKED'; }
   else if (stopCooldownActive) {
     const remainMin = Math.ceil((35 * 60 * 1000 - (Date.now() - db.lastStopTimestamp)) / 60000);
