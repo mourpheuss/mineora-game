@@ -315,7 +315,7 @@ async function smartTradeWithSymbolFallback(regionUrl, token, accountId, basePay
     lastResponse = data;
 
     const errStr = `${data.stringCode || ''} ${data.message || ''}`.toUpperCase();
-    if (res.ok && !errStr.includes('UNKNOWN SYMBOL') && !errStr.includes('INVALID_SYMBOL') && !errStr.includes('ERR_MARKET_UNKNOWN_SYMBOL')) {
+    if (res.ok && !errStr.includes('UNKNOWN SYMBOL') && !errStr.includes('INVALID_SYMBOL') && !errStr.includes('ERR_MARKET_UNKNOWNSYMBOL')) {
       return { ok: true, data, workingSymbol: sym, brokerGoldList };
     }
   }
