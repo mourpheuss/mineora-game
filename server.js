@@ -714,7 +714,6 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5At
   const swingLowM5 = Math.min(...recentM5.map(c => c.low)), swingHighM5 = Math.max(...recentM5.map(c => c.high));
   const wickBuffer = effectiveATR * 0.25;
 
-  // Stop Mesafesi (M5 salınım desteğinin hemen ardı)
   let slDist;
   if (!isShort) {
     const rawWickSLDist = spotPrice - (swingLowM5 - wickBuffer);
