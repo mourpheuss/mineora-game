@@ -118,7 +118,7 @@ let lastKnownSpot = 0;
 // === PİYASA YÖNETİCİSİ (HAFTA İÇİ ALTIN, HAFTA SONU SADECE BTC) ===
 function getMarketSession() {
   const now = new Date();
-  const day = now.getDay(); // 0: Pazar, 5: Cuma, 6: Cumartesi
+  const day = now.getDay();
   const hour = now.getHours();
 
   // Cuma 23:55'ten Pazar 23:55'e kadar Hafta Sonu Modu (Sadece BTC)
@@ -132,14 +132,14 @@ function getMarketSession() {
         brokerSym: 'BTCUSD',
         tvSym: 'BINANCE:BTCUSDT',
         yahooSym: 'BTC-USD',
-        scalpDollar: 300,
+        takeProfitDistance: 300, // BTC için tek TP: $300
         minAtr: 80,
         maxSpread: 75
       }
     };
   }
 
-  // Hafta İçi %100 Saf Altın Modu
+  // Hafta İçi Saf Altın Modu (Sabit 3 Dolar Tek TP)
   return {
     isWeekend: false,
     instrument: {
@@ -147,7 +147,7 @@ function getMarketSession() {
       brokerSym: 'GOLD',
       tvSym: 'OANDA:XAUUSD',
       yahooSym: 'GC=F',
-      scalpDollar: 2.50,
+      takeProfitDistance: 3.00, // Altın için tek TP: Sabit $3.00 Ons Hareketi
       minAtr: 2.2,
       maxSpread: 1.5
     }
@@ -347,13 +347,14 @@ async function userMetaApiRequest(userObj, payload) {
   }
 }
 
+// === TEK HEDEF TP İLE EMİR AÇILIŞI (KISMİ BÖLÜNME YOK) ===
 async function openMobileMTTradeForAllUsers(tradeObj) {
   const isLong = tradeObj.direction === 'LONG';
   if (!tradeObj.userPositions) tradeObj.userPositions = {};
   const connected = (db.users || []).filter(u => u.metaApi && u.metaApi.enabled && u.metaApi.token && u.metaApi.accountId);
 
   const slDist = Math.abs(Number(tradeObj.entry) - Number(tradeObj.sl));
-  const tp2Dist = Math.abs(Number(tradeObj.tp2) - Number(tradeObj.entry));
+  const tpDist = Math.abs(Number(tradeObj.tp) - Number(tradeObj.entry));
   const symbol = tradeObj.symbol || 'GOLD';
 
   await Promise.allSettled(connected.map(async (u) => {
@@ -373,18 +374,17 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
       }
     } catch (e) {}
 
-    // PANELDEKİ LOT NEYSE ALTIN VE BTC İÇİN BİREBİR AYNISI GEÇERLİDİR
     const lotSize = Math.max(0.01, Number(mt.lot) || 0.04);
 
     let calibratedEntry = Number(tradeObj.entry);
     let calibratedSL = Number(tradeObj.sl);
-    let calibratedTP2 = Number(tradeObj.tp2);
+    let calibratedTP = Number(tradeObj.tp);
 
     const liveTick = await getBrokerLiveTickPrice(mt.regionUrl, mt.token, mt.accountId, symbol);
     if (liveTick) {
       calibratedEntry = isLong ? liveTick.ask : liveTick.bid;
       calibratedSL = Number((isLong ? calibratedEntry - slDist : calibratedEntry + slDist).toFixed(2));
-      calibratedTP2 = Number((isLong ? calibratedEntry + tp2Dist : calibratedEntry - tp2Dist).toFixed(2));
+      calibratedTP = Number((isLong ? calibratedEntry + tpDist : calibratedEntry - tpDist).toFixed(2));
     }
 
     const res = await userMetaApiRequest(u, {
@@ -392,7 +392,7 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
       symbol,
       volume: Number(lotSize.toFixed(2)),
       stopLoss: calibratedSL,
-      takeProfit: calibratedTP2,
+      takeProfit: calibratedTP, // Doğrudan $3.00 hedefine kilitli tek TP
       comment: `PRO_${symbol}_${u.username}`
     });
 
@@ -402,97 +402,14 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
         volume: lotSize,
         symbol,
         xmEntry: calibratedEntry,
-        xmTp2: calibratedTP2
+        xmTp: calibratedTP
       };
     }
   }));
   await saveDB(db);
 }
 
-async function moveAllUsersMTToBreakeven(tradeObj) {
-  if (!tradeObj || !tradeObj.userPositions) return;
-  const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
-  await Promise.allSettled(connected.map(async (u) => {
-    const pos = tradeObj.userPositions[u.username];
-    const bePrice = Number(pos.xmEntry || tradeObj.entry);
-    const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
-    await userMetaApiRequest(u, {
-      actionType: 'POSITION_MODIFY',
-      positionId: String(pos.positionId),
-      stopLoss: bePrice,
-      takeProfit: tp2Price
-    });
-  }));
-}
-
-async function partialCloseAllUsersMTAtScalp(tradeObj) {
-  if (!tradeObj || !tradeObj.userPositions) return;
-  const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
-
-  await Promise.allSettled(connected.map(async (u) => {
-    const pos = tradeObj.userPositions[u.username];
-    const totalVol = Number(pos.volume || u.metaApi.lot || 0.04);
-    
-    // 0.04 lot ise tam yarısı olan 0.02'yi kapatır
-    const closeVol = Math.floor((totalVol / 2) * 100) / 100;
-    const bePrice = Number(pos.xmEntry || tradeObj.entry);
-    const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
-
-    // 1) KISMİ KAPATMA
-    if (closeVol >= 0.01 && (totalVol - closeVol) >= 0.01) {
-      try {
-        await userMetaApiRequest(u, {
-          actionType: 'POSITION_PARTIAL',
-          positionId: String(pos.positionId),
-          volume: Number(closeVol.toFixed(2))
-        });
-        pos.volume = Number((totalVol - closeVol).toFixed(2));
-      } catch (err) {
-        console.error(`Kısmi kapatma hatası (${u.username}):`, err);
-      }
-    }
-
-    // 2) STOPU GİRİŞE ÇEK (BAŞABAŞ ZIRHI)
-    try {
-      await userMetaApiRequest(u, {
-        actionType: 'POSITION_MODIFY',
-        positionId: String(pos.positionId),
-        stopLoss: bePrice,
-        takeProfit: tp2Price
-      });
-    } catch (err) {
-      console.error(`Stop güncelleme hatası (${u.username}):`, err);
-    }
-  }));
-  await saveDB(db);
-}
-
-async function partialCloseAllUsersMTAtTP1(tradeObj) {
-  if (!tradeObj || !tradeObj.userPositions) return;
-  const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
-  await Promise.allSettled(connected.map(async (u) => {
-    const pos = tradeObj.userPositions[u.username];
-    const totalVol = Number(pos.volume || u.metaApi.lot || 0.04);
-    const closeVol = Math.floor(totalVol * 0.80 * 100) / 100;
-    const bePrice = Number(pos.xmEntry || tradeObj.entry);
-    const tp2Price = Number(pos.xmTp2 || tradeObj.tp2);
-
-    if (closeVol >= 0.01 && (totalVol - closeVol) >= 0.01) {
-      await userMetaApiRequest(u, {
-        actionType: 'POSITION_PARTIAL',
-        positionId: String(pos.positionId),
-        volume: Number(closeVol.toFixed(2))
-      });
-    }
-    await userMetaApiRequest(u, {
-      actionType: 'POSITION_MODIFY',
-      positionId: String(pos.positionId),
-      stopLoss: bePrice,
-      takeProfit: tp2Price
-    });
-  }));
-}
-
+// BÜTÜN İŞLEMİ TEK SEFERDE TAM KAPATMA
 async function closeAllUsersMTTrade(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -790,44 +707,38 @@ function calcVWAP(candles) {
   return cumVol === 0 ? slice[slice.length - 1].close : cumPV / cumVol;
 }
 
+// === SABİT $3.00 TEK HEDEF TP VE AKILLI STOP PLANI ===
 function calculateSmartTradePlan(spotPrice, isShort, m5Candles, m15Candles, m5Atr, instrumentName = 'GOLD') {
   const effectiveATR = Math.max(m5Atr, instrumentName === 'BTCUSD' ? 80 : 2.2);
-  const recentM5 = m5Candles.slice(-12), recentM15 = m15Candles.slice(-8);
+  const recentM5 = m5Candles.slice(-12);
   const swingLowM5 = Math.min(...recentM5.map(c => c.low)), swingHighM5 = Math.max(...recentM5.map(c => c.high));
-  const structureLowM15 = Math.min(...recentM15.map(c => c.low)), structureHighM15 = Math.max(...recentM15.map(c => c.high));
   const wickBuffer = effectiveATR * 0.25;
-  let slDist, tp1Dist, tp2Dist;
 
+  // Stop Mesafesi (M5 salınım desteğinin hemen ardı)
+  let slDist;
   if (!isShort) {
     const rawWickSLDist = spotPrice - (swingLowM5 - wickBuffer);
     slDist = Math.max(effectiveATR * 1.25, Math.min(effectiveATR * 2.3, Math.max(rawWickSLDist, effectiveATR * 1.45)));
-    const baseTp1Dist = Math.max(effectiveATR * 1.9, slDist * 1.35);
-    const distToM15High = structureHighM15 - spotPrice;
-    tp1Dist = (distToM15High > effectiveATR * 1.3 && distToM15High < baseTp1Dist + 1.2) ? Math.max(effectiveATR * 1.25, distToM15High - 0.35) : baseTp1Dist;
-    tp2Dist = Math.max(effectiveATR * 3.4, slDist * 2.3);
   } else {
     const rawWickSLDist = (swingHighM5 + wickBuffer) - spotPrice;
     slDist = Math.max(effectiveATR * 1.25, Math.min(effectiveATR * 2.3, Math.max(rawWickSLDist, effectiveATR * 1.45)));
-    const baseTp1Dist = Math.max(effectiveATR * 1.9, slDist * 1.35);
-    const distToM15Low = spotPrice - structureLowM15;
-    tp1Dist = (distToM15Low > effectiveATR * 1.3 && distToM15Low < baseTp1Dist + 1.2) ? Math.max(effectiveATR * 1.25, distToM15Low - 0.35) : baseTp1Dist;
-    tp2Dist = Math.max(effectiveATR * 3.4, slDist * 2.3);
   }
+
+  // TEK HEDEF (TP): Altında tam 3.00 Dolar, BTC'de 300 Dolar
+  const tpDist = instrumentName === 'BTCUSD' ? 300 : 3.00;
 
   return {
     entry: spotPrice.toFixed(2),
     sl: (!isShort ? spotPrice - slDist : spotPrice + slDist).toFixed(2),
-    tp1: (!isShort ? spotPrice + tp1Dist : spotPrice - tp1Dist).toFixed(2),
-    tp2: (!isShort ? spotPrice + tp2Dist : spotPrice - tp2Dist).toFixed(2),
+    tp: (!isShort ? spotPrice + tpDist : spotPrice - tpDist).toFixed(2),
     slDollar: slDist.toFixed(2),
-    tp1Dollar: tp1Dist.toFixed(2),
-    tp2Dollar: tp2Dist.toFixed(2),
+    tpDollar: tpDist.toFixed(2),
     swingLow: swingLowM5.toFixed(2),
     swingHigh: swingHighM5.toFixed(2)
   };
 }
 
-// === TEPEDEN ALMAYI VE DİPTEN SATMAYI KESİN ENGELLEYEN HİBRİT MOTOR ===
+// === HİBRİT KARAR MOTORU ===
 function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore, m5Candles, isWeekend = false) {
   let score = 0, h1MainDir = 0;
   const reasons = [];
@@ -868,7 +779,7 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'neg', text: 'M5 StochRSI tepede: Düşüş trendinde tepki satış fırsatı' });
   }
 
-  // 5) DXY VE MAKRO FİLTRE (SADECE HAFTA İÇİ ALTINDA ÇALIŞIR)
+  // 5) DXY VE MAKRO FİLTRE
   if (!isWeekend) {
     if (dxyChange15m < -0.02) {
       score += 10;
@@ -887,8 +798,6 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
   }
 
   // === KATI GÜVENLİK BARİYERLERİ ===
-
-  // BARİYER 1: H1 Trendine Karşı İşlem Kesinlikle Yasak!
   if (score > 0 && h1MainDir === -1) {
     score = 0;
     reasons.push({ type: 'warn', text: '⛔ TREND KALKANI: H1 ana yönü düşüş olduğu için tüm LONG sinyalleri İPTAL edildi.' });
@@ -897,10 +806,8 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: '⛔ TREND KALKANI: H1 ana yönü yükseliş olduğu için tüm SHORT sinyalleri İPTAL edildi.' });
   }
 
-  // BARİYER 2: ORTALAMADAN AŞIRI KOPMA (GERÇEK TEPEDEN ALIŞ FİLTRESİ)
   const distFromEma21 = Math.abs(m5.price - m5.ema21);
   const extremeDist = m5.atr * 2.0;
-
   if (score > 0 && distFromEma21 > extremeDist) {
     score = 0;
     reasons.push({ type: 'warn', text: '🛑 AŞIRI ŞİŞME: Fiyat EMA21 ortalamasından çok koptu, düzeltme bekleniyor!' });
@@ -909,7 +816,6 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: '🛑 AŞIRI DÜŞÜŞ: Fiyat ortalamasından çok aşağıda, tepki bekleniyor!' });
   }
 
-  // BARİYER 3: SADECE AŞIRI DOYGUNLUKTA GİRİŞİ KES (RSI > 72 İKEN ALMA, RSI < 28 İKEN SATMA)
   if (score > 0 && (m5.rsi > 72 || m5.stochRsi > 85)) {
     score = 0;
     reasons.push({ type: 'warn', text: '⏳ TEPEDE GİRİŞ ENGELİ: M5 RSI/StochRSI aşırı alım bölgesinde, tepe alımı engellendi.' });
@@ -918,7 +824,6 @@ function computeSignalScore(m5, m15, h1, dxyChange15m, us10yChange15m, newsScore
     reasons.push({ type: 'warn', text: '⏳ DİPTE GİRİŞ ENGELİ: M5 RSI/StochRSI aşırı satım bölgesinde, dip satışı engellendi.' });
   }
 
-  // BARİYER 4: TERS MUMDA İŞLEM AÇMA YASAĞI (MUM RENK ONAYI)
   if (m5Candles && m5Candles.length > 0) {
     const lastCandle = m5Candles[m5Candles.length - 1];
     if (score > 0 && lastCandle.close < lastCandle.open) {
@@ -1038,6 +943,7 @@ function analyzeTimeframe(candles) {
   return { price, ema9, ema21, ema50, rsi, stochRsi, atr, adx, vwap, trend };
 }
 
+// === TEK HEDEF KÂR AL VEYA STOP KONTROLÜ ===
 async function checkActiveTradeOnTick(spotPrice) {
   if (!db.activeTrade || !spotPrice) return null;
   let soundEvent = null;
@@ -1045,55 +951,27 @@ async function checkActiveTradeOnTick(spotPrice) {
   t.currentPrice = spotPrice;
   t.unrealizedPnL = Number((isLong ? spotPrice - t.entry : t.entry - spotPrice).toFixed(2));
 
-  const scalpDistance = t.scalpThreshold || 2.50;
-
-  // 1) TP2 HEDEFİ VURULDU MU?
-  if ((isLong && spotPrice >= t.tp2) || (!isLong && spotPrice <= t.tp2)) {
-    const profit = Number(Math.abs(t.tp2 - t.entry).toFixed(2));
+  // 1) $3.00 HEDEF VURULDU (TAM KAPANIŞ - TÜM KÂRI AL)
+  if ((isLong && spotPrice >= t.tp) || (!isLong && spotPrice <= t.tp)) {
+    const profit = Number(Math.abs(t.tp - t.entry).toFixed(2));
     await closeAllUsersMTTrade(t);
-    db.history.unshift({ ...t, closePrice: spotPrice, closeTime: getTRTime(), status: 'TP2 TAM HEDEF 🎯', result: 'WIN', profitDollar: profit });
+    db.history.unshift({ ...t, closePrice: spotPrice, closeTime: getTRTime(), status: '3$ TAM HEDEF KÂR ALINDI 🎯', result: 'WIN', profitDollar: profit });
     db.activeTrade = null;
     await saveDB(db);
     return 'TP_HIT';
   }
 
-  // 2) TP1 HEDEFİ VURULDU MU?
-  if (!t.tp1Hit && ((isLong && spotPrice >= t.tp1) || (!isLong && spotPrice <= t.tp1))) {
-    t.tp1Hit = true; t.earlyShieldHit = true; t.sl = t.entry;
-    await saveDB(db);
-    await partialCloseAllUsersMTAtTP1(t);
-    soundEvent = 'TP_HIT';
-  }
-
-  // 3) ERKEN SCALP KISMI KAPANMA
-  if (!t.scalpHit && t.unrealizedPnL >= scalpDistance) {
-    t.scalpHit = true;
-    t.earlyShieldHit = true; 
-    t.sl = t.entry;
-    await saveDB(db);
-    await partialCloseAllUsersMTAtScalp(t);
-    soundEvent = 'TP_HIT';
-  }
-
-  // 4) STOP OLMUŞ MU?
+  // 2) STOP OLMUŞ MU? (STOP SEVİYESİ DEĞİŞMEZ, OLDUĞU YERDE KORUR)
   if ((isLong && spotPrice <= t.sl) || (!isLong && spotPrice >= t.sl)) {
-    let profit = -Number(Math.abs(t.entry - t.sl).toFixed(2)), statusText = 'STOP OLDU ❌', resultType = 'LOSS';
-    if (t.tp1Hit || t.scalpHit) {
-      profit = Number((Math.abs(t.tp1 - t.entry) * 0.4).toFixed(2));
-      statusText = 'SCALP KISMI KÂR + BAŞABAŞ 🛡️';
-      resultType = 'WIN';
-      soundEvent = 'TP_HIT';
-    } else {
-      statusText = 'STOP OLDU ❌';
-      soundEvent = 'SL_HIT';
-      db.lastStopTimestamp = Date.now();
-    }
-
+    const profit = -Number(Math.abs(t.entry - t.sl).toFixed(2));
     await closeAllUsersMTTrade(t);
-    db.history.unshift({ ...t, closePrice: spotPrice, closeTime: getTRTime(), status: statusText, result: resultType, profitDollar: profit });
+    db.history.unshift({ ...t, closePrice: spotPrice, closeTime: getTRTime(), status: 'STOP OLDU ❌', result: 'LOSS', profitDollar: profit });
     db.activeTrade = null;
+    db.lastStopTimestamp = Date.now();
     await saveDB(db);
+    return 'SL_HIT';
   }
+
   return soundEvent;
 }
 
@@ -1148,8 +1026,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
       db.activeTrade = {
         id: Date.now(), openTime: getTRTime(), direction: dir, score, symbol: currentInstrument.brokerSym,
         entry: Number(tradePlan.entry), currentPrice: spotPrice, sl: Number(tradePlan.sl), initialSl: Number(tradePlan.sl),
-        tp1: Number(tradePlan.tp1), tp2: Number(tradePlan.tp2), scalpThreshold: currentInstrument.scalpDollar,
-        tp1Hit: false, earlyShieldHit: false, scalpHit: false, unrealizedPnL: 0, userPositions: {}
+        tp: Number(tradePlan.tp), unrealizedPnL: 0, userPositions: {}
       };
       await saveDB(db);
       soundEvent = 'NEW_SIGNAL';
@@ -1221,21 +1098,17 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       if (simActive) {
         const isLong = simActive.direction === 'LONG';
         if ((isLong && c.low <= simActive.sl) || (!isLong && c.high >= simActive.sl)) {
-          let profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(2)), status = 'STOP OLDU ❌', result = 'LOSS';
-          if (simActive.tp1Hit || simActive.scalpHit) { profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.4).toFixed(2)); status = 'SCALP KISMI KÂR + BAŞABAŞ 🛡️'; result = 'WIN'; }
-          else lastStopCandleIndex = i;
-          simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.sl.toFixed(2), status, result, profitDollar: profit });
-          simActive = null; continue;
+          const profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(2));
+          lastStopCandleIndex = i;
+          simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.sl.toFixed(2), status: 'STOP OLDU ❌', result: 'LOSS', profitDollar: profit });
+          simActive = null; 
+          continue;
         }
-        if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
-          const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(2));
-          simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.tp2.toFixed(2), status: 'TP2 TAM HEDEF 🎯', result: 'WIN', profitDollar: profit });
-          simActive = null; continue;
-        }
-        if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) { simActive.tp1Hit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
-        if (!simActive.scalpHit) {
-          const liveDiff = Number((isLong ? c.high - simActive.entry : simActive.entry - c.low).toFixed(2));
-          if (liveDiff >= 2.50) { simActive.scalpHit = true; simActive.earlyShieldHit = true; simActive.sl = simActive.entry; }
+        if ((isLong && c.high >= simActive.tp) || (!isLong && c.low <= simActive.tp)) {
+          const profit = Number(Math.abs(simActive.tp - simActive.entry).toFixed(2));
+          simTrades.push({ ...simActive, closeTime: `${dateStr} ${timeStr}`, closePrice: simActive.tp.toFixed(2), status: '3$ TAM HEDEF KÂR ALINDI 🎯', result: 'WIN', profitDollar: profit });
+          simActive = null; 
+          continue;
         }
         continue;
       }
@@ -1251,13 +1124,13 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       const { score } = computeSignalScore(m5, m15, h1, dxyMap[c.time] || 0, 0, 0, m5Slice, false);
       if (Math.abs(score) >= 45) {
         const isShort = score < 0, plan = calculateSmartTradePlan(c.close, isShort, m5Slice, m15Slice, m5.atr, 'GOLD');
-        simActive = { openTime: `${dateStr} ${timeStr}`, direction: isShort ? 'SHORT' : 'LONG', score, entry: Number(plan.entry), sl: Number(plan.sl), tp1: Number(plan.tp1), tp2: Number(plan.tp2), tp1Hit: false, earlyShieldHit: false, scalpHit: false };
+        simActive = { openTime: `${dateStr} ${timeStr}`, direction: isShort ? 'SHORT' : 'LONG', score, entry: Number(plan.entry), sl: Number(plan.sl), tp: Number(plan.tp) };
       }
     }
 
     if (simActive) {
       const isLong = simActive.direction === 'LONG', liveDiff = Number((isLong ? spotPrice - simActive.entry : simActive.entry - spotPrice).toFixed(2));
-      simTrades.push({ ...simActive, closeTime: 'HALEN AÇIK ⏳', closePrice: spotPrice.toFixed(2), status: simActive.tp1Hit ? 'AÇIK (TP1 ALINDI 🛡️)' : 'AÇIK İŞLEM ⏳', result: liveDiff >= 0 ? 'WIN' : 'OPEN', profitDollar: liveDiff });
+      simTrades.push({ ...simActive, closeTime: 'HALEN AÇIK ⏳', closePrice: spotPrice.toFixed(2), status: 'AÇIK İŞLEM ⏳', result: liveDiff >= 0 ? 'WIN' : 'OPEN', profitDollar: liveDiff });
     }
 
     const closed = simTrades.filter(t => t.closeTime !== 'HALEN AÇIK ⏳');
