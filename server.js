@@ -125,9 +125,9 @@ function getMarketSession() {
       brokerSym: 'GOLD',
       tvSym: 'OANDA:XAUUSD',
       yahooSym: 'GC=F',
-      tp1Dist: 3.20,
-      tp2Dist: 7.20,
-      maxSlDist: 3.60,
+      tp1Dist: 2.60, // Hızlı %80 kâr (+$2.60)
+      tp2Dist: 6.80, // Trend hedefi (+$6.80)
+      maxSlDist: 3.40, // Güvenli stop ($3.40)
       minAtr: 2.0,
       maxSpread: 1.5
     }
@@ -378,7 +378,7 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
   await saveDB(db);
 }
 
-// === %50 ERKEN ZIRH: STOPU GİRİŞE ÇEKME ===
+// === HIZLI ERKEN ZIRH: STOPU GİRİŞE ÇEKME ===
 async function moveAllUsersMTToBreakeven(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -427,7 +427,7 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
   await saveDB(db);
 }
 
-// === İŞLEMİ TAMAMEN KAPATMA ===
+// === İŞLEMİ KAPATMA ===
 async function closeAllUsersMTTrade(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -602,7 +602,7 @@ function calcATR(candles, period = 14) {
 }
 
 function calcVWAP(candles) {
-  const slice = candles.slice(-72);
+  const slice = candles.slice(-60);
   let cumPV = 0, cumVol = 0;
   for (const c of slice) {
     const vol = c.volume || 100;
@@ -612,24 +612,11 @@ function calcVWAP(candles) {
   return cumVol === 0 ? slice[slice.length - 1].close : cumPV / cumVol;
 }
 
-function calcKeltnerChannels(candles, emaPeriod = 20, atrPeriod = 14, multiplier = 2.0) {
-  if (candles.length < emaPeriod) return null;
-  const closes = candles.map(c => c.close);
-  const middle = calcEMA(closes, emaPeriod);
-  const atr = calcATR(candles, atrPeriod);
-  return {
-    middle: Number(middle.toFixed(2)),
-    upper: Number((middle + multiplier * atr).toFixed(2)),
-    lower: Number((middle - multiplier * atr).toFixed(2)),
-    atr
-  };
-}
-
-// === %90 KAZANÇ ORANI İÇİN ASİMETRİK STOP & TP PLANI ===
-function calculateSmartTradePlan(spotPrice, isShort, m5Candles) {
-  const slDist = 3.60;  // İğne arkası güvenli $3.60 stop
-  const tp1Dist = 3.20; // Hızlı %80 kâr alma (+$3.20)
-  const tp2Dist = 7.20; // Ana hedef (+$7.20)
+// === %90+ BAŞARI İÇİN ASİMETRİK PLAN ($2.60 TP1 / $3.40 SL) ===
+function calculateSmartTradePlan(spotPrice, isShort) {
+  const slDist = 3.40;
+  const tp1Dist = 2.60;
+  const tp2Dist = 6.80;
 
   return {
     entry: spotPrice.toFixed(2),
@@ -642,8 +629,8 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles) {
   };
 }
 
-// === %90 HEDEFİ: PULLBACK & REJECTION WICK TETİK MOTORU ===
-function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles, kc) {
+// === %90 HEDEFİ: EMA 9 / EMA 21 DİNAMİK PULLBACK & REJECTION TETİKLEYİCİSİ ===
+function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   let score = 0;
   const reasons = [];
 
@@ -651,46 +638,50 @@ function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles, kc) 
   const curC = m5Candles[m5Candles.length - 1];
   const prevC = m5Candles[m5Candles.length - 2];
 
-  // 1. KATI TREND KALKANI (H1 EMA 50 & M15 EMA 50)
-  const isUpTrend = h1.price > h1.ema50 && m15.price > m15.ema50;
-  const isDownTrend = h1.price < h1.ema50 && m15.price < m15.ema50;
+  // 1. ANA TREND KONTROLÜ (H1 EMA 50)
+  const isUpTrend = h1.price > h1.ema50;
+  const isDownTrend = h1.price < h1.ema50;
 
-  // 2. MUM İĞNE REJECTION TESPİTİ
+  // 2. M5 DİNAMİK KANAL ORTALAMALARI
+  const m5Ema9 = m5.ema9;
+  const m5Ema21 = m5.ema21;
+
+  // 3. FİTİL TESPİTİ (Rejection Wick)
   const candleRange = Math.max(0.1, curC.high - curC.low);
   const lowerWick = Math.min(curC.open, curC.close) - curC.low;
   const upperWick = curC.high - Math.max(curC.open, curC.close);
-  const isLowerRejection = lowerWick >= candleRange * 0.35;
-  const isUpperRejection = upperWick >= candleRange * 0.35;
+  const isLowerWick = lowerWick >= candleRange * 0.25;
+  const isUpperWick = upperWick >= candleRange * 0.25;
 
-  // === %90 KALİTELİ LONG TETİĞİ (SADECE YÜKSELİŞ TRENDİNDE DÜZELTME ALIMI) ===
-  if (isUpTrend && kc) {
-    const pullbackBuy = prevC.low <= kc.middle && curC.close > curC.open && isLowerRejection;
-    const vwapSupport = curPrice > m5.vwap;
+  // === LONG TETİĞİ (Yükselen Trendde EMA9/EMA21 Düzeltmesinden Alış) ===
+  if (isUpTrend) {
+    const touchesSupport = prevC.low <= m5Ema9 || prevC.low <= m5Ema21 || curC.low <= m5Ema21;
+    const closesStrong = curC.close > curC.open && (isLowerWick || curC.close >= prevC.high);
 
-    if (pullbackBuy && vwapSupport) {
-      score = 75;
-      reasons.push({ type: 'pos', text: '🎯 YÜKSELİŞ TRENDİ DÜZELTME TETİĞİ: Keltner desteğinden alıcı fitiliyle yukarı sıçrama' });
+    if (touchesSupport && closesStrong && curPrice > m5.vwap) {
+      score += 70;
+      reasons.push({ type: 'pos', text: '🎯 TREND PULLBACK ALIMI: H1 Yükselişte + EMA Desteği Test Edildi + Alıcı Mumu Onaylandı' });
     }
   }
 
-  // === %90 KALİTELİ SHORT TETİĞİ (SADECE DÜŞÜŞ TRENDİNDE TEPKİ SATIŞI) ===
-  if (isDownTrend && kc) {
-    const pullbackSell = prevC.high >= kc.middle && curC.close < curC.open && isUpperRejection;
-    const vwapResist = curPrice < m5.vwap;
+  // === SHORT TETİĞİ (Düşen Trendde EMA9/EMA21 Tepkisinden Satış) ===
+  if (isDownTrend) {
+    const touchesResist = prevC.high >= m5Ema9 || prevC.high >= m5Ema21 || curC.high >= m5Ema21;
+    const closesWeak = curC.close < curC.open && (isUpperWick || curC.close <= prevC.low);
 
-    if (pullbackSell && vwapResist) {
-      score = -75;
-      reasons.push({ type: 'neg', text: '🎯 DÜŞÜŞ TRENDİ TEPKİ TETİĞİ: Keltner direncinden satıcı fitiliyle aşağı dönüş' });
+    if (touchesResist && closesWeak && curPrice < m5.vwap) {
+      score -= 70;
+      reasons.push({ type: 'neg', text: '🎯 TREND TEPKİ SATIŞI: H1 Düşüşte + EMA Direnci Test Edildi + Satıcı Mumu Onaylandı' });
     }
   }
 
-  // DXY Teyidi
+  // DXY 5dk Katkısı
   if (dxyChange5m < -0.015 && score > 0) score += 10;
   if (dxyChange5m > 0.015 && score < 0) score -= 10;
 
   if (newsScore !== 0) score += newsScore;
 
-  // Düşen kırmızı mumda LONG, fırlayan yeşil mumda SHORT engeli
+  // Kırmızı mumda LONG, yeşil mumda SHORT engeli
   if (score > 0 && curC.close < curC.open) score = 0;
   if (score < 0 && curC.close > curC.open) score = 0;
 
@@ -801,7 +792,7 @@ function analyzeTimeframe(candles) {
   return { price, ema9, ema21, ema50, atr, vwap, trend };
 }
 
-// === AKTİF İŞLEM TAKİP MOTORU (%80 TP1 VE %50 ERKEN ZIRH) ===
+// === AKTİF İŞLEM MOTORU (%80 TP1 + $1.40 HIZLI ERKEN ZIRH) ===
 function checkActiveTradeOnTick(spotPrice) {
   if (!db.activeTrade || !spotPrice) return null;
   let soundEvent = null;
@@ -829,10 +820,9 @@ function checkActiveTradeOnTick(spotPrice) {
     return 'TP_HIT';
   }
 
-  // 3) ERKEN ZIRH: FİYAT TP1 YOLUNUN %50'SİNE GELDİYSE STOPU GİRİŞE ÇEK
+  // 3) ERKEN ZIRH: FİYAT +$1.40 KÂRA GEÇTİĞİ AN STOPU BAŞABAŞA ÇEK
   if (!t.tp1Hit && !t.earlyShieldHit) {
-    const tp1Dist = Math.abs(t.tp1 - t.entry);
-    const shieldTrigger = isLong ? t.entry + tp1Dist * 0.50 : t.entry - tp1Dist * 0.50;
+    const shieldTrigger = isLong ? t.entry + 1.40 : t.entry - 1.40;
     if ((isLong && spotPrice >= shieldTrigger) || (!isLong && spotPrice <= shieldTrigger)) {
       t.earlyShieldHit = true;
       t.sl = t.entry;
@@ -881,7 +871,7 @@ function getStats() {
   return { total, wins, losses: total - wins, winRate: total > 0 ? Math.round((wins / total) * 100) : 0, totalProfit: totalProfit.toFixed(2) };
 }
 
-// === CANLI ANALİZ VE İŞLEM MOTORU ===
+// === ANALİZ VE OTOMATİK İŞLEM MOTORU ===
 async function executeFullAnalysisEngine(currentUser = null) {
   await syncFromFirebase();
   const session = getMarketSession();
@@ -913,13 +903,11 @@ async function executeFullAnalysisEngine(currentUser = null) {
   const m15 = analyzeTimeframe(calM15);
   const h1 = analyzeTimeframe(calH1);
 
-  const kc = calcKeltnerChannels(calM5, 20, 14, 2.0);
-
   const { score, reasons } = computeSignalScore(
     m5, m15, h1,
     dxyData.change5m || 0,
     newsData.sentimentScore || 0,
-    calM5, kc
+    calM5
   );
 
   const targetDir = score > 0 ? 'LONG' : 'SHORT';
@@ -939,19 +927,19 @@ async function executeFullAnalysisEngine(currentUser = null) {
     const remainMin = Math.ceil((25 * 60 * 1000 - (Date.now() - db.lastStopTimestamp)) / 60000);
     signal = `🛑 ${targetDir} KİLİDİ (${remainMin} DK BEKLEME)`;
     direction = 'LOCKED';
-  } else if (score >= 60) {
+  } else if (score >= 50) {
     signal = `🟢 ${currentInstrument.name} LONG GİR (OTOMATİK)`;
     direction = 'LONG';
-  } else if (score <= -60) {
+  } else if (score <= -50) {
     signal = `🔴 ${currentInstrument.name} SHORT GİR (OTOMATİK)`;
     direction = 'SHORT';
   }
 
   const isShort = score < 0;
-  const tradePlan = calculateSmartTradePlan(spotPrice, isShort, calM5);
+  const tradePlan = calculateSmartTradePlan(spotPrice, isShort);
   let soundEvent = checkActiveTradeOnTick(spotPrice);
 
-  if (!db.activeTrade && !isOpeningTradeLock && !calendarData.killSwitch && !sameDirStopLock && Math.abs(score) >= 60) {
+  if (!db.activeTrade && !isOpeningTradeLock && !calendarData.killSwitch && !sameDirStopLock && Math.abs(score) >= 50) {
     isOpeningTradeLock = true;
     try {
       const dir = score > 0 ? 'LONG' : 'SHORT';
@@ -1017,10 +1005,10 @@ app.get('/api/cron', async (req, res) => {
   }
 });
 
-// === SİMÜLASYON MOTORU (KESİNTİSİZ 5 GÜNLÜK PULLBACK & WIN-RATE OPTİMİZASYONU) ===
+// === SİMÜLASYON MOTORU (5 GÜNLÜK PULLBACK & ASİMETRİK %90+ HEDEFİ) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
-    const hours = Number(req.query.hours) || 120; // 5 gün tam tarama
+    const hours = Number(req.query.hours) || 120;
     const mode = req.query.mode || '5days';
 
     const [tvMap, rawM5, rawM15, rawH1, rawDxyM5, calendarData] = await Promise.all([
@@ -1059,7 +1047,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopDirection = null;
     const simTrades = [];
 
-    for (let i = 35; i < calM5.length; i++) {
+    for (let i = 25; i < calM5.length; i++) {
       const c = calM5[i];
       if (c.time < startTimestampSec) continue;
 
@@ -1122,8 +1110,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         }
 
         if (!simActive.tp1Hit && !simActive.earlyShieldHit) {
-          const tp1Dist = Math.abs(simActive.tp1 - simActive.entry);
-          const shieldTrigger = isLong ? simActive.entry + tp1Dist * 0.50 : simActive.entry - tp1Dist * 0.50;
+          const shieldTrigger = isLong ? simActive.entry + 1.40 : simActive.entry - 1.40;
           if ((isLong && c.high >= shieldTrigger) || (!isLong && c.low <= shieldTrigger)) {
             simActive.earlyShieldHit = true;
             simActive.sl = simActive.entry;
@@ -1149,11 +1136,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       const h1 = analyzeTimeframe(h1Slice);
       const dxyChg5m = dxyMap5m[c.time] || 0;
 
-      const kcSim = calcKeltnerChannels(m5Slice, 20, 14, 2.0);
+      const { score } = computeSignalScore(m5, m15, h1, dxyChg5m, 0, m5Slice);
 
-      const { score } = computeSignalScore(m5, m15, h1, dxyChg5m, 0, m5Slice, kcSim);
-
-      if (Math.abs(score) >= 60) {
+      if (Math.abs(score) >= 50) {
         const isShort = score < 0;
         const candidateDir = isShort ? 'SHORT' : 'LONG';
 
@@ -1161,7 +1146,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        const plan = calculateSmartTradePlan(c.close, isShort, m5Slice);
+        const plan = calculateSmartTradePlan(c.close, isShort);
         simActive = {
           openTime: `${dateStr} ${timeStr}`,
           direction: candidateDir,
@@ -1254,5 +1239,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 %90 Hedefli Saf XAU/USD Trend Pullback Sunucusu Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 %90+ Win-Rate & Yüksek Sinyalli Pullback XAU/USD Sunucusu Aktif: Port ${PORT}`));
 module.exports = app;
