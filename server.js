@@ -591,7 +591,7 @@ function calcEMA(closes, period) {
 }
 
 function calcVWAP(candles) {
-  const slice = candles.slice(-60);
+  const slice = candles.slice(-72);
   let cumPV = 0, cumVol = 0;
   for (const c of slice) {
     const vol = c.volume || 100;
@@ -638,9 +638,7 @@ function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   const recentHigh = Math.max(...lookback.map(c => c.high));
 
   // 3. LİKİDİTE SÜPÜRMESİ TESPİTİ (Liquidity Sweep)
-  // Fiyat önceki dibi iğneyle kırıp altına stop patlatmış, ama mum içeriye yeşil kapatmış
   const bullSweep = (prevC.low < recentLow || curC.low < recentLow) && curC.close > recentLow && curC.close > curC.open;
-  // Fiyat önceki tepeyi iğneyle kırıp üstüne stop patlatmış, ama mum içeriye kırmızı kapatmış
   const bearSweep = (prevC.high > recentHigh || curC.high > recentHigh) && curC.close < recentHigh && curC.close < curC.open;
 
   // 4. FAIR VALUE GAP (FVG / Kurumsal Hacim Dengesizliği)
@@ -870,9 +868,9 @@ async function executeFullAnalysisEngine(currentUser = null) {
 
   const [tvMap, rawM5, rawM15, rawH1, newsData, calendarData] = await Promise.all([
     getLivePriceData(currentInstrument.tvSym),
-    getCandles(currentInstrument.yahooSym, '5m', '5d'),
-    getCandles(currentInstrument.yahooSym, '15m', '5d'),
-    getCandles(currentInstrument.yahooSym, '1h', '1mo'),
+    getCandles(currentInstrument.yahooSym, '5m', '1mo'), // 1 aylık geniş analiz
+    getCandles(currentInstrument.yahooSym, '15m', '1mo'),
+    getCandles(currentInstrument.yahooSym, '1h', '3mo'),
     getGoldNewsSentiment(),
     getEconomicCalendar()
   ]);
@@ -996,18 +994,18 @@ app.get('/api/cron', async (req, res) => {
   }
 });
 
-// === SİMÜLASYON MOTORU (KURUMSAL LİKİDİTE AVLAMASI: 5 GÜN TESTİ) ===
+// === SİMÜLASYON MOTORU (1 AYLIK / 30 GÜNLÜK TAM TARAMA DESTEĞİ) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
-    const hours = Number(req.query.hours) || 120;
-    const mode = req.query.mode || '5days';
+    const hours = Number(req.query.hours) || 720; // Varsayılan 30 Gün (720 saat)
+    const mode = req.query.mode || '1month';
 
     const [tvMap, rawM5, rawM15, rawH1, rawDxyM5, calendarData] = await Promise.all([
       getLivePriceData('OANDA:XAUUSD'),
-      getCandles('GC=F', '5m', '5d'),
+      getCandles('GC=F', '5m', '1mo'), // 1 AYLIK 5 DAKİKALIK TÜM MUMLAR
       getCandles('GC=F', '15m', '1mo'),
-      getCandles('GC=F', '1h', '1mo'),
-      getCandles('DX-Y.NYB', '5m', '5d').catch(() => []),
+      getCandles('GC=F', '1h', '3mo'),
+      getCandles('DX-Y.NYB', '5m', '1mo').catch(() => []),
       getEconomicCalendar()
     ]);
 
@@ -1023,6 +1021,15 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
     const nowSec = Math.floor(Date.now() / 1000);
     let startTimestampSec = nowSec - hours * 3600;
+
+    if (mode === 'today') {
+      const trOffsetSec = 3 * 3600, nowTrSec = nowSec + trOffsetSec;
+      startTimestampSec = nowTrSec - (nowTrSec % 86400) - trOffsetSec;
+    } else if (mode === '5days') {
+      startTimestampSec = nowSec - 5 * 86400;
+    } else if (mode === '1month') {
+      startTimestampSec = nowSec - 30 * 86400;
+    }
 
     const dxyMap5m = {};
     if (Array.isArray(rawDxyM5)) {
@@ -1119,7 +1126,6 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       });
       if (isNewsLocked) continue;
 
-      // Aşırı işlem engeli: En az 2 mum (10 dk) bekleme
       if (i - lastTradeCandleIndex < 2) continue;
 
       const m5Slice = calM5.slice(Math.max(0, i - 60), i + 1);
@@ -1236,5 +1242,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite & FVG AI Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite & FVG AI Motoru (1 Aylık Test Destekli) Aktif: Port ${PORT}`));
 module.exports = app;
