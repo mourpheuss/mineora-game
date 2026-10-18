@@ -125,7 +125,7 @@ function getMarketSession() {
       brokerSym: 'GOLD',
       tvSym: 'OANDA:XAUUSD',
       yahooSym: 'GC=F',
-      tp1Dist: 2.80,
+      tp1Dist: 3.50, // TP1 $3.50 seviyesine yükseltildi
       tp2Dist: 6.80,
       maxSlDist: 3.20,
       minAtr: 1.8,
@@ -601,10 +601,10 @@ function calcVWAP(candles) {
   return cumVol === 0 ? slice[slice.length - 1].close : cumPV / cumVol;
 }
 
-// === KURUMSAL ASİMETRİK PLAN ($2.80 TP1 / $3.20 SL) ===
+// === KURUMSAL ASİMETRİK PLAN ($3.50 TP1 / $3.20 SL) ===
 function calculateSmartTradePlan(spotPrice, isShort) {
   const slDist = 3.20;
-  const tp1Dist = 2.80;
+  const tp1Dist = 3.50; // Güncellenen TP1 mesafesi
   const tp2Dist = 6.80;
 
   return {
@@ -628,49 +628,47 @@ function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   const prevC = m5Candles[m5Candles.length - 2];
   const prev2C = m5Candles[m5Candles.length - 3] || prevC;
 
-  // 1. ANA SEANS TRENDİ (H1 EMA 50 & M15 EMA 21)
+  // 1. ANA SEANS TRENDİ (H1 EMA 50 & M15 EMA 21)[cite: 25]
   const isUpTrend = h1.price > h1.ema50 && m15.price > m15.ema21;
   const isDownTrend = h1.price < h1.ema50 && m15.price < m15.ema21;
 
-  // 2. SON 15 MUMUN LİKİDİTE DİBİ VE TEPESİ (Sweep Alanı)
+  // 2. LİKİDİTE ALANI TESPİTİ[cite: 25]
   const lookback = m5Candles.slice(-18, -2);
   const recentLow = Math.min(...lookback.map(c => c.low));
   const recentHigh = Math.max(...lookback.map(c => c.high));
 
-  // 3. LİKİDİTE SÜPÜRMESİ TESPİTİ (Liquidity Sweep)
+  // 3. LİKİDİTE SÜPÜRMESİ (Liquidity Sweep)[cite: 25]
   const bullSweep = (prevC.low < recentLow || curC.low < recentLow) && curC.close > recentLow && curC.close > curC.open;
   const bearSweep = (prevC.high > recentHigh || curC.high > recentHigh) && curC.close < recentHigh && curC.close < curC.open;
 
-  // 4. FAIR VALUE GAP (FVG / Kurumsal Hacim Dengesizliği)
+  // 4. FAIR VALUE GAP (FVG)[cite: 25]
   const bullFvg = curC.low > prev2C.high && curC.close > curC.open;
   const bearFvg = curC.high < prev2C.low && curC.close < curC.open;
 
-  // 5. MUM İĞNE REJECTION
+  // 5. MUM İĞNE REJECTION[cite: 25]
   const candleRange = Math.max(0.1, curC.high - curC.low);
   const lowerWick = Math.min(curC.open, curC.close) - curC.low;
   const upperWick = curC.high - Math.max(curC.open, curC.close);
   const isLowerRejection = lowerWick >= candleRange * 0.30;
   const isUpperRejection = upperWick >= candleRange * 0.30;
 
-  // === %90+ KALİTELİ LONG TETİĞİ ===
+  // === LONG TETİĞİ ===[cite: 25]
   if (isUpTrend && (bullSweep || (curPrice > m5.vwap && bullFvg && isLowerRejection))) {
     score = 75;
     reasons.push({ type: 'pos', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Stoplar patlatılıp içeri dönüldü + FVG Desteği' });
   }
 
-  // === %90+ KALİTELİ SHORT TETİĞİ ===
+  // === SHORT TETİĞİ ===[cite: 25]
   if (isDownTrend && (bearSweep || (curPrice < m5.vwap && bearFvg && isUpperRejection))) {
     score = -75;
     reasons.push({ type: 'neg', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Alıcılar tuzağa düşürüldü + FVG Direnci' });
   }
 
-  // DXY 5m Teyidi
   if (dxyChange5m < -0.015 && score > 0) score += 10;
   if (dxyChange5m > 0.015 && score < 0) score -= 10;
 
   if (newsScore !== 0) score += newsScore;
 
-  // Düşen kırmızı mumda LONG, fırlayan yeşil mumda SHORT engeli
   if (score > 0 && curC.close < curC.open) score = 0;
   if (score < 0 && curC.close > curC.open) score = 0;
 
@@ -868,7 +866,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
 
   const [tvMap, rawM5, rawM15, rawH1, newsData, calendarData] = await Promise.all([
     getLivePriceData(currentInstrument.tvSym),
-    getCandles(currentInstrument.yahooSym, '5m', '1mo'), // 1 aylık geniş analiz
+    getCandles(currentInstrument.yahooSym, '5m', '1mo'),
     getCandles(currentInstrument.yahooSym, '15m', '1mo'),
     getCandles(currentInstrument.yahooSym, '1h', '3mo'),
     getGoldNewsSentiment(),
@@ -997,12 +995,12 @@ app.get('/api/cron', async (req, res) => {
 // === SİMÜLASYON MOTORU (1 AYLIK / 30 GÜNLÜK TAM TARAMA DESTEĞİ) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
-    const hours = Number(req.query.hours) || 720; // Varsayılan 30 Gün (720 saat)
+    const hours = Number(req.query.hours) || 720;
     const mode = req.query.mode || '1month';
 
     const [tvMap, rawM5, rawM15, rawH1, rawDxyM5, calendarData] = await Promise.all([
       getLivePriceData('OANDA:XAUUSD'),
-      getCandles('GC=F', '5m', '1mo'), // 1 AYLIK 5 DAKİKALIK TÜM MUMLAR
+      getCandles('GC=F', '5m', '1mo'),
       getCandles('GC=F', '15m', '1mo'),
       getCandles('GC=F', '1h', '3mo'),
       getCandles('DX-Y.NYB', '5m', '1mo').catch(() => []),
@@ -1242,5 +1240,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite & FVG AI Motoru (1 Aylık Test Destekli) Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite & FVG AI Motoru (TP1: $3.50) Aktif: Port ${PORT}`));
 module.exports = app;
