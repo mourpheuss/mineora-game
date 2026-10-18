@@ -125,7 +125,7 @@ function getMarketSession() {
       brokerSym: 'GOLD',
       tvSym: 'OANDA:XAUUSD',
       yahooSym: 'GC=F',
-      tp1Dist: 3.50, // TP1 $3.50 seviyesine yükseltildi
+      tp1Dist: 3.50,
       tp2Dist: 6.80,
       maxSlDist: 3.20,
       minAtr: 1.8,
@@ -590,6 +590,44 @@ function calcEMA(closes, period) {
   return ema;
 }
 
+function calcATR(candles, period = 14) {
+  if (candles.length <= period) return 2.2;
+  const trs = [];
+  for (let i = 1; i < candles.length; i++) {
+    trs.push(Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - candles[i - 1].close), Math.abs(candles[i].low - candles[i - 1].close)));
+  }
+  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < trs.length; i++) atr = (atr * (period - 1) + trs[i]) / period;
+  return Number(atr.toFixed(2));
+}
+
+function calcRSISeries(closes, period = 14) {
+  if (closes.length <= period) return [50];
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff >= 0) gains += diff; else losses -= diff;
+  }
+  let avgGain = gains / period, avgLoss = losses / period;
+  const rsiSeries = [];
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    avgGain = (avgGain * (period - 1) + (diff >= 0 ? diff : 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    rsiSeries.push(100 - 100 / (1 + rs));
+  }
+  return rsiSeries.length ? rsiSeries : [50];
+}
+
+function calcStochRSI(closes, period = 14) {
+  const rsiSeries = calcRSISeries(closes, period);
+  if (rsiSeries.length < period) return 50;
+  const recent = rsiSeries.slice(-period);
+  const minRSI = Math.min(...recent), maxRSI = Math.max(...recent);
+  return maxRSI === minRSI ? 50 : Math.round(((rsiSeries[rsiSeries.length - 1] - minRSI) / (maxRSI - minRSI)) * 100);
+}
+
 function calcVWAP(candles) {
   const slice = candles.slice(-72);
   let cumPV = 0, cumVol = 0;
@@ -604,7 +642,7 @@ function calcVWAP(candles) {
 // === KURUMSAL ASİMETRİK PLAN ($3.50 TP1 / $3.20 SL) ===
 function calculateSmartTradePlan(spotPrice, isShort) {
   const slDist = 3.20;
-  const tp1Dist = 3.50; // Güncellenen TP1 mesafesi
+  const tp1Dist = 3.50;
   const tp2Dist = 6.80;
 
   return {
@@ -618,7 +656,7 @@ function calculateSmartTradePlan(spotPrice, isShort) {
   };
 }
 
-// === KURUMSAL LİKİDİTE SÜPÜRMESİ & FVG AI TETİK MOTORU ===
+// === PRENSİBİ BOZMAYAN MİKRO-LİKİDİTE & FVG MOTORU ===
 function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   let score = 0;
   const reasons = [];
@@ -628,39 +666,35 @@ function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   const prevC = m5Candles[m5Candles.length - 2];
   const prev2C = m5Candles[m5Candles.length - 3] || prevC;
 
-  // 1. ANA SEANS TRENDİ (H1 EMA 50 & M15 EMA 21)[cite: 25]
   const isUpTrend = h1.price > h1.ema50 && m15.price > m15.ema21;
   const isDownTrend = h1.price < h1.ema50 && m15.price < m15.ema21;
 
-  // 2. LİKİDİTE ALANI TESPİTİ[cite: 25]
-  const lookback = m5Candles.slice(-18, -2);
+  // Mikro Likidite Alanı (12 Mum)
+  const lookback = m5Candles.slice(-12, -1);
   const recentLow = Math.min(...lookback.map(c => c.low));
   const recentHigh = Math.max(...lookback.map(c => c.high));
 
-  // 3. LİKİDİTE SÜPÜRMESİ (Liquidity Sweep)[cite: 25]
-  const bullSweep = (prevC.low < recentLow || curC.low < recentLow) && curC.close > recentLow && curC.close > curC.open;
-  const bearSweep = (prevC.high > recentHigh || curC.high > recentHigh) && curC.close < recentHigh && curC.close < curC.open;
+  // Likidite Süpürmesi (Sweep)
+  const bullSweep = (prevC.low <= recentLow || curC.low <= recentLow) && curC.close >= recentLow && curC.close > curC.open;
+  const bearSweep = (prevC.high >= recentHigh || curC.high >= recentHigh) && curC.close <= recentHigh && curC.close < curC.open;
 
-  // 4. FAIR VALUE GAP (FVG)[cite: 25]
-  const bullFvg = curC.low > prev2C.high && curC.close > curC.open;
-  const bearFvg = curC.high < prev2C.low && curC.close < curC.open;
+  // FVG & Gövde Teyidi
+  const bullFvg = curC.low >= prev2C.high && curC.close > curC.open;
+  const bearFvg = curC.high <= prev2C.low && curC.close < curC.open;
 
-  // 5. MUM İĞNE REJECTION[cite: 25]
   const candleRange = Math.max(0.1, curC.high - curC.low);
   const lowerWick = Math.min(curC.open, curC.close) - curC.low;
   const upperWick = curC.high - Math.max(curC.open, curC.close);
-  const isLowerRejection = lowerWick >= candleRange * 0.30;
-  const isUpperRejection = upperWick >= candleRange * 0.30;
+  const isLowerRejection = lowerWick >= candleRange * 0.20;
+  const isUpperRejection = upperWick >= candleRange * 0.20;
 
-  // === LONG TETİĞİ ===[cite: 25]
-  if (isUpTrend && (bullSweep || (curPrice > m5.vwap && bullFvg && isLowerRejection))) {
-    score = 75;
+  if (isUpTrend && (bullSweep || (curPrice > m5.vwap && (bullFvg || isLowerRejection)))) {
+    score = 70;
     reasons.push({ type: 'pos', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Stoplar patlatılıp içeri dönüldü + FVG Desteği' });
   }
 
-  // === SHORT TETİĞİ ===[cite: 25]
-  if (isDownTrend && (bearSweep || (curPrice < m5.vwap && bearFvg && isUpperRejection))) {
-    score = -75;
+  if (isDownTrend && (bearSweep || (curPrice < m5.vwap && (bearFvg || isUpperRejection)))) {
+    score = -70;
     reasons.push({ type: 'neg', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Alıcılar tuzağa düşürüldü + FVG Direnci' });
   }
 
@@ -701,7 +735,7 @@ async function getGoldNewsSentiment() {
       const block = match[1];
       const tM = block.match(/<title>([\s\S]*?)<\/title>/);
       const pM = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[\vert{}\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
+      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
     }
     let rawScore = 0;
     const analyzed = items.map(item => {
@@ -769,14 +803,19 @@ async function getCandles(symbol, interval, range) {
   return candles;
 }
 
+// === FRONTEND ÇÖKMELERİNİ ÖNLEYEN EKSİKSİZ HESAPLAMA ===
 function analyzeTimeframe(candles) {
   const closes = candles.map(c => c.close), price = closes[closes.length - 1];
   const ema9 = calcEMA(closes, 9), ema21 = calcEMA(closes, 21), ema50 = calcEMA(closes, 50);
+  const atr = calcATR(candles, 14);
+  const rsiSeries = calcRSISeries(closes, 14);
+  const rsi = Math.round(rsiSeries[rsiSeries.length - 1] || 50);
+  const stochRsi = calcStochRSI(closes, 14);
   const vwap = calcVWAP(candles);
   let trend = 'NÖTR';
   if (ema9 > ema21 && price > ema21) trend = 'BULLISH (YÜKSELİŞ)';
   else if (ema9 < ema21 && price < ema21) trend = 'BEARISH (DÜŞÜŞ)';
-  return { price, ema9, ema21, ema50, vwap, trend };
+  return { price, ema9, ema21, ema50, atr, rsi, stochRsi, vwap, trend };
 }
 
 // === AKTİF İŞLEM MOTORU (%80 TP1 + +$1.40 HIZLI ERKEN ZIRH) ===
@@ -875,6 +914,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
 
   const oandaData = tvMap[currentInstrument.tvSym];
   const dxyData = tvMap['TVC:DXY'] || { price: 0, change5m: 0, change15m: 0, changeDaily: 0 };
+  const us10yData = tvMap['TVC:US10Y'] || { price: 0, change5m: 0, change15m: 0, changeDaily: 0 };
 
   const lastRawClose = rawM5[rawM5.length - 1].close;
   const spotPrice = oandaData && oandaData.price ? oandaData.price : lastRawClose;
@@ -968,7 +1008,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
     currentMarket: currentInstrument.name,
     isWeekendMode: false,
     timeframes: { m5, m15, h1 },
-    macro: { dxy: dxyData },
+    macro: { dxy: dxyData, us10y: us10yData },
     news: newsData,
     calendar: calendarData,
     tracker: {
@@ -992,7 +1032,7 @@ app.get('/api/cron', async (req, res) => {
   }
 });
 
-// === SİMÜLASYON MOTORU (1 AYLIK / 30 GÜNLÜK TAM TARAMA DESTEĞİ) ===
+// === SİMÜLASYON MOTORU (1 AYLIK / 30 GÜNLÜK TAM TARAMA) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const hours = Number(req.query.hours) || 720;
@@ -1044,7 +1084,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopDirection = null;
     const simTrades = [];
 
-    for (let i = 25; i < calM5.length; i++) {
+    for (let i = 20; i < calM5.length; i++) {
       const c = calM5[i];
       if (c.time < startTimestampSec) continue;
 
@@ -1124,7 +1164,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       });
       if (isNewsLocked) continue;
 
-      if (i - lastTradeCandleIndex < 2) continue;
+      if (i - lastTradeCandleIndex < 1) continue;
 
       const m5Slice = calM5.slice(Math.max(0, i - 60), i + 1);
       const m15Slice = calM15.filter(x => x.time <= c.time).slice(-60);
@@ -1209,7 +1249,7 @@ app.get('/api/tick', requireAuth, async (req, res) => {
       timestamp: getTRTime(),
       spotPrice: spotPrice ? spotPrice.toFixed(2) : null,
       currentMarket: currentInstrument.name,
-      macro: { dxy: tvMap['TVC:DXY'] || null },
+      macro: { dxy: tvMap['TVC:DXY'] || null, us10y: tvMap['TVC:US10Y'] || null },
       tracker: {
         activeTrade: db.activeTrade,
         history: db.history.slice(0, 15),
@@ -1240,5 +1280,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite & FVG AI Motoru (TP1: $3.50) Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite AI (Sorunsuz UI & Yüksek Frekans) Aktif: Port ${PORT}`));
 module.exports = app;
