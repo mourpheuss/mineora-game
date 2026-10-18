@@ -476,7 +476,7 @@ app.post('/api/close-active-trade', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/clear-history', requireAdmin, async (req, res) => {
+app.post('/api/clear-history', requireAuth, async (req, res) => {
   db.history = [];
   await saveDB(db);
   res.json({ ok: true });
