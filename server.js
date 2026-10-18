@@ -117,7 +117,6 @@ let newsCache = { timestamp: 0, data: null };
 let calendarCache = { timestamp: 0, data: null };
 let lastKnownSpot = 0;
 
-// === SAF XAU/USD (ALTIN) PİYASA PROFİLİ ===
 function getMarketSession() {
   return {
     isWeekend: false,
@@ -126,13 +125,21 @@ function getMarketSession() {
       brokerSym: 'GOLD',
       tvSym: 'OANDA:XAUUSD',
       yahooSym: 'GC=F',
-      tp1Dist: 3.60, // Keltner scalping ilk hedef (+$3.60)
-      tp2Dist: 8.00, // Ana trend hedefi (+$8.00)
-      maxSlDist: 3.80, // Genişletilmiş güvenli stop ($3.80)
+      tp1Dist: 3.50,
+      tp2Dist: 7.50,
+      maxSlDist: 4.50,
       minAtr: 2.0,
       maxSpread: 1.5
     }
   };
+}
+
+// === AKTİF İŞLEM SEANSI FİLTRESİ (09:00 - 20:30 TR SAATİ) ===
+function isWithinTradeHours(dateObj) {
+  const hour = dateObj.getHours();
+  const minute = dateObj.getMinutes();
+  const totalMin = hour * 60 + minute;
+  return totalMin >= 9 * 60 && totalMin <= 20 * 60 + 30; // Gece sığ piyasasını filtrele
 }
 
 function getAuthUser(req) {
@@ -220,7 +227,7 @@ app.delete('/api/users/:username', requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- METATRADER ENTEGRASYONU ---
+// --- METATRADER KÖPRÜSÜ ---
 async function resolveMetaApiRegionUrl(token, accountId) {
   try {
     const res = await fetch(`https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`, {
@@ -379,7 +386,7 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
   await saveDB(db);
 }
 
-// === ORİJİNAL %60 ERKEN ZIRH: STOPU GİRİŞE ÇEKME ===
+// === %60 ERKEN ZIRH: STOPU GİRİŞE ÇEKME ===
 async function moveAllUsersMTToBreakeven(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -395,7 +402,7 @@ async function moveAllUsersMTToBreakeven(tradeObj) {
   }));
 }
 
-// === ORİJİNAL %80 TP1 KÂR ALMA ===
+// === %80 TP1 KÂR ALMA ===
 async function partialCloseAllUsersMTAtTP1(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -428,7 +435,7 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
   await saveDB(db);
 }
 
-// === İŞLEMİ TAMAMEN KAPATMA ===
+// === İŞLEMİ KAPATMA ===
 async function closeAllUsersMTTrade(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -582,13 +589,40 @@ app.post('/api/metaapi-test-trade', requireAuth, async (req, res) => {
   }
 });
 
-// --- YENİ TEKNİK HESAPLAMALAR: VWAP, KELTNER KANALLARI, ATR, EMA ---
+// --- TEKNİK HESAPLAMALAR ---
 function calcEMA(closes, period) {
   if (closes.length < period) return closes[closes.length - 1] || 0;
   const k = 2 / (period + 1);
   let ema = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
   for (let i = period; i < closes.length; i++) ema = closes[i] * k + ema * (1 - k);
   return ema;
+}
+
+function calcRSISeries(closes, period = 9) {
+  if (closes.length <= period) return [50];
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff >= 0) gains += diff; else losses -= diff;
+  }
+  let avgGain = gains / period, avgLoss = losses / period;
+  const rsiSeries = [];
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    avgGain = (avgGain * (period - 1) + (diff >= 0 ? diff : 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    rsiSeries.push(100 - 100 / (1 + rs));
+  }
+  return rsiSeries.length ? rsiSeries : [50];
+}
+
+function calcStochRSI(closes, rsiPeriod = 9, stochPeriod = 14) {
+  const rsiSeries = calcRSISeries(closes, rsiPeriod);
+  if (rsiSeries.length < stochPeriod) return 50;
+  const recent = rsiSeries.slice(-stochPeriod);
+  const minRSI = Math.min(...recent), maxRSI = Math.max(...recent);
+  return maxRSI === minRSI ? 50 : ((rsiSeries[rsiSeries.length - 1] - minRSI) / (maxRSI - minRSI)) * 100;
 }
 
 function calcATR(candles, period = 14) {
@@ -603,7 +637,7 @@ function calcATR(candles, period = 14) {
 }
 
 function calcVWAP(candles) {
-  const slice = candles.slice(-72); // Son 6 saatlik aktif seans VWAP'ı
+  const slice = candles.slice(-60);
   let cumPV = 0, cumVol = 0;
   for (const c of slice) {
     const vol = c.volume || 100;
@@ -613,35 +647,49 @@ function calcVWAP(candles) {
   return cumVol === 0 ? slice[slice.length - 1].close : cumPV / cumVol;
 }
 
-// === KELTNER KANALLARI (EMA 20 + 2.25 ATR): DOĞAL VOLATİLİTE BANDI ===
-function calcKeltnerChannels(candles, emaPeriod = 20, atrPeriod = 14, multiplier = 2.25) {
-  if (candles.length < emaPeriod) return null;
-  const closes = candles.map(c => c.close);
-  const middle = calcEMA(closes, emaPeriod);
-  const atr = calcATR(candles, atrPeriod);
+// === BOLLINGER BANTLARI (34, 2) ===
+function calcBollingerBands(closes, period = 34, multiplier = 2) {
+  if (closes.length < period) return null;
+  const slice = closes.slice(-period);
+  const sma = slice.reduce((a, b) => a + b, 0) / period;
+  const variance = slice.reduce((acc, val) => acc + Math.pow(val - sma, 2), 0) / period;
+  const stdDev = Math.sqrt(variance);
   return {
-    middle: Number(middle.toFixed(2)),
-    upper: Number((middle + multiplier * atr).toFixed(2)),
-    lower: Number((middle - multiplier * atr).toFixed(2)),
-    atr
+    middle: Number(sma.toFixed(2)),
+    upper: Number((sma + multiplier * stdDev).toFixed(2)),
+    lower: Number((sma - multiplier * stdDev).toFixed(2))
   };
 }
 
-// === SWING SEVİYESİ TESPİTİ (STOP İÇİN EN YAKIN FİTİL) ===
-function getSwingStructure(candles, lookback = 12) {
-  const slice = candles.slice(-lookback);
-  const support = Math.min(...slice.map(c => c.low));
-  const resistance = Math.max(...slice.map(c => c.high));
-  return { support, resistance };
+// === SUPERTREND (32, 1) ===
+function calcSuperTrend(candles, period = 32, factor = 1) {
+  if (candles.length < period + 1) return { trend: 'NEUTRAL', value: 0 };
+  const atr = calcATR(candles, period);
+  let upperBand = 0, lowerBand = 0, inUpTrend = true;
+
+  for (let i = period; i < candles.length; i++) {
+    const c = candles[i];
+    const hl2 = (c.high + c.low) / 2;
+    const basicUpper = hl2 + factor * atr;
+    const basicLower = hl2 - factor * atr;
+
+    upperBand = (basicUpper < upperBand || (candles[i - 1] && candles[i - 1].close > upperBand)) ? basicUpper : upperBand;
+    lowerBand = (basicLower > lowerBand || (candles[i - 1] && candles[i - 1].close < lowerBand)) ? basicLower : lowerBand;
+
+    if (inUpTrend && c.close < lowerBand) inUpTrend = false;
+    else if (!inUpTrend && c.close > upperBand) inUpTrend = true;
+  }
+  return {
+    trend: inUpTrend ? 'UP' : 'DOWN',
+    value: inUpTrend ? lowerBand : upperBand
+  };
 }
 
-// === OPTİMİZE EDİLMİŞ STOP ($3.80) VE HEDEF PLANI (TP1: +$3.60 | TP2: +$8.00) ===
-function calculateSmartTradePlan(spotPrice, isShort, m5Candles, kc) {
-  const maxSL = 3.80; // Genişletilmiş güvenli stop
-  const tp1Dist = 3.60; // Hızlı ilk kâr alma (+$3.60)
-  const tp2Dist = 8.00; // Ana trend koşusu (+$8.00)
+function calculateSmartTradePlan(spotPrice, isShort, m5Candles, bb) {
+  const maxSL = 4.20; // Güvenli tavan stop
+  const tp1Dist = 3.50; // Hızlı ilk kâr
+  const tp2Dist = 7.50; // Ana koşu hedefi
 
-  // En yakın fitil arkası kontrolü
   const recent = m5Candles.slice(-5);
   const localLow = Math.min(...recent.map(c => c.low));
   const localHigh = Math.max(...recent.map(c => c.high));
@@ -649,10 +697,10 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, kc) {
   let slDist;
   if (!isShort) {
     const rawDist = spotPrice - (localLow - 0.50);
-    slDist = Math.max(2.60, Math.min(maxSL, rawDist));
+    slDist = Math.max(2.80, Math.min(maxSL, rawDist));
   } else {
     const rawDist = (localHigh + 0.50) - spotPrice;
-    slDist = Math.max(2.60, Math.min(maxSL, rawDist));
+    slDist = Math.max(2.80, Math.min(maxSL, rawDist));
   }
 
   return {
@@ -666,8 +714,8 @@ function calculateSmartTradePlan(spotPrice, isShort, m5Candles, kc) {
   };
 }
 
-// === YENİ SEANS LİKİDİTESİ + VWAP + KELTNER BREAKOUT/PULLBACK MOTORU ===
-function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles, kc, sr) {
+// === FİLTRELİ VE KORUMALI SKOR MOTORU (TREND KALKANI & BÖLGE TEYİDİ) ===
+function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles, bb, superTrend) {
   let score = 0;
   const reasons = [];
 
@@ -675,67 +723,56 @@ function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles, kc, 
   const curC = m5Candles[m5Candles.length - 1];
   const prevC = m5Candles[m5Candles.length - 2];
 
-  // 1. KURUMSAL VWAP YÖNÜ (Ana Hakimiyet)
-  const isAboveVwap = curPrice > m5.vwap;
-  const isBelowVwap = curPrice < m5.vwap;
+  // 1. ANA H1 TRENDİ (TEK YÖN KALKANI)
+  const isUpTrend = h1.price > h1.ema50;
+  const isDownTrend = h1.price < h1.ema50;
 
-  if (isAboveVwap) {
-    score += 25;
-    reasons.push({ type: 'pos', text: 'Kurumsal VWAP Üstü: Alıcılar fiyatı yukarıda tutuyor' });
-  } else if (isBelowVwap) {
-    score -= 25;
-    reasons.push({ type: 'neg', text: 'Kurumsal VWAP Altı: Satıcılar fiyatı baskılıyor' });
-  }
+  // 2. BOLLINGER BANTLARI (34, 2)
+  const atBbLower = bb && (curPrice <= bb.lower || prevC.low <= bb.lower);
+  const atBbUpper = bb && (curPrice >= bb.upper || prevC.high >= bb.upper);
 
-  // 2. KELTNER KANALI DİNAMİĞİ (Trend Patlaması veya Orta Bant Pullback)
-  if (kc) {
-    // LONG Kurulumu: Üst bant kırılımı VEYA Orta banda geri çekilip alıcı tepkisi
-    const bullBreakout = curPrice >= kc.upper;
-    const bullPullback = curPrice >= kc.middle && prevC.low <= kc.middle && curC.close > curC.open;
+  // 3. RSI (9) & STOCH RSI
+  const stochDip = m5.stochRsi <= 15;
+  const stochTepe = m5.stochRsi >= 85;
 
-    if (isAboveVwap && (bullBreakout || bullPullback)) {
-      score += 35;
-      reasons.push({ type: 'pos', text: bullBreakout ? '🎯 Keltner Üst Bant Hacim Kırılımı' : '🎯 Keltner Orta Banttan Alıcı Desteği (Pullback)' });
-    }
+  // 4. SUPERTREND (32, 1)
+  const superUp = superTrend && superTrend.trend === 'UP';
+  const superDown = superTrend && superTrend.trend === 'DOWN';
 
-    // SHORT Kurulumu: Alt bant kırılımı VEYA Orta banda çarpıp satıcı tepkisi
-    const bearBreakout = curPrice <= kc.lower;
-    const bearPullback = curPrice <= kc.middle && prevC.high >= kc.middle && curC.close < curC.open;
+  // 5. MUM DÖNÜŞ İĞNESİ
+  const candleRange = Math.max(0.1, curC.high - curC.low);
+  const isLowerWick = (Math.min(curC.open, curC.close) - curC.low) >= candleRange * 0.30;
+  const isUpperWick = (curC.high - Math.max(curC.open, curC.close)) >= candleRange * 0.30;
 
-    if (isBelowVwap && (bearBreakout || bearPullback)) {
-      score -= 35;
-      reasons.push({ type: 'neg', text: bearBreakout ? '🎯 Keltner Alt Bant Hacim Kırılımı' : '🎯 Keltner Orta Banttan Satıcı Baskısı (Pullback)' });
+  // === LONG TETİĞİ: Sadece Ana Trend Yukarısı veya Güçlü Dipte İzin Verilir ===
+  if (atBbLower && stochDip && (isLowerWick || curC.close >= prevC.high) && curC.close > curC.open) {
+    if (!isDownTrend) { // H1 EMA 50 altındayken körlemesine LONG açılmaz
+      score += 65;
+      reasons.push({ type: 'pos', text: '🎯 34 BB Alt Bandı + Stoch Dip + Alıcı Mumu Onayı' });
     }
   }
 
-  // 3. H1 & M15 ÜST ZAMAN DİLİMİ TREND UYUMU
-  if (h1.price > h1.ema50 && m15.price > m15.ema21) {
-    score += 15;
-    reasons.push({ type: 'pos', text: 'H1 ve M15 Ana Trendi Yükselişi Onaylıyor' });
-  } else if (h1.price < h1.ema50 && m15.price < m15.ema21) {
-    score -= 15;
-    reasons.push({ type: 'neg', text: 'H1 ve M15 Ana Trendi Düşüşü Onaylıyor' });
+  // === SHORT TETİĞİ: Sadece Ana Trend Aşağısı veya Güçlü Tepede İzin Verilir ===
+  if (atBbUpper && stochTepe && (isUpperWick || curC.close <= prevC.low) && curC.close < curC.open) {
+    if (!isUpTrend) { // H1 EMA 50 üzerindeyken yükselen trendin önüne yatıp SHORT açılmaz
+      score -= 65;
+      reasons.push({ type: 'neg', text: '🎯 34 BB Üst Bandı + Stoch Tepe + Satıcı Mumu Onayı' });
+    }
   }
 
-  // 4. HIZLI 5 DAKİKALIK DXY TERS KORELASYON DESTEĞİ
-  if (dxyChange5m < -0.015) {
-    score += 15;
-    reasons.push({ type: 'pos', text: `DXY son 5dk düşüşte (%${dxyChange5m.toFixed(2)}) -> Altını destekliyor` });
-  } else if (dxyChange5m > 0.015) {
-    score -= 15;
-    reasons.push({ type: 'neg', text: `DXY son 5dk yükselişte (+%${dxyChange5m.toFixed(2)}) -> Altını baskılıyor` });
-  }
+  // SuperTrend Desteği
+  if (superUp && score > 0) score += 15;
+  if (superDown && score < 0) score -= 15;
+
+  // DXY 5m Etkisi
+  if (dxyChange5m < -0.015 && score > 0) score += 10;
+  if (dxyChange5m > 0.015 && score < 0) score -= 10;
 
   if (newsScore !== 0) score += newsScore;
 
-  // Düşen Bıçak Kalkanı: Kırmızı mumda LONG, fırlayan yeşil mumda SHORT ertelenir
-  if (score > 0 && curC.close < curC.open) {
-    score = 0;
-    reasons.push({ type: 'warn', text: 'Düşen Bıçak Koruması: M5 mumu kırmızı olduğu için LONG ertelendi.' });
-  } else if (score < 0 && curC.close > curC.open) {
-    score = 0;
-    reasons.push({ type: 'warn', text: 'Yükselen Dalga Koruması: M5 mumu yeşil olduğu için SHORT ertelendi.' });
-  }
+  // Düşen Bıçak Kalkanı
+  if (score > 0 && curC.close < curC.open) score = 0;
+  if (score < 0 && curC.close > curC.open) score = 0;
 
   return { score: Math.max(-100, Math.min(100, score)), reasons };
 }
@@ -766,7 +803,7 @@ async function getGoldNewsSentiment() {
       const block = match[1];
       const tM = block.match(/<title>([\s\S]*?)<\/title>/);
       const pM = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[\vert{}\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
+      if (tM) items.push({ title: tM[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), pubDate: pM ? getTRTime(new Date(pM[1]), false) : '' });
     }
     let rawScore = 0;
     const analyzed = items.map(item => {
@@ -837,11 +874,12 @@ async function getCandles(symbol, interval, range) {
 function analyzeTimeframe(candles) {
   const closes = candles.map(c => c.close), price = closes[closes.length - 1];
   const ema9 = calcEMA(closes, 9), ema21 = calcEMA(closes, 21), ema50 = calcEMA(closes, 50);
-  const atr = calcATR(candles, 14), vwap = calcVWAP(candles);
+  const rsiSeries = calcRSISeries(closes, 9), rsi = rsiSeries[rsiSeries.length - 1];
+  const stochRsi = calcStochRSI(closes, 9, 14), atr = calcATR(candles, 14), vwap = calcVWAP(candles);
   let trend = 'NÖTR';
   if (ema9 > ema21 && price > ema21) trend = 'BULLISH (YÜKSELİŞ)';
   else if (ema9 < ema21 && price < ema21) trend = 'BEARISH (DÜŞÜŞ)';
-  return { price, ema9, ema21, ema50, atr, vwap, trend };
+  return { price, ema9, ema21, ema50, rsi, stochRsi, atr, vwap, trend };
 }
 
 // === AKTİF İŞLEM TAKİP MOTORU (%80 TP1 VE %60 ERKEN ZIRH) ===
@@ -956,14 +994,14 @@ async function executeFullAnalysisEngine(currentUser = null) {
   const m15 = analyzeTimeframe(calM15);
   const h1 = analyzeTimeframe(calH1);
 
-  const kc = calcKeltnerChannels(calM5, 20, 14, 2.25);
-  const sr = getSwingStructure(calM15, 15);
+  const bb = calcBollingerBands(calM5.map(c => c.close), 34, 2);
+  const superTrend = calcSuperTrend(calM5, 32, 1);
 
   const { score, reasons } = computeSignalScore(
     m5, m15, h1,
     dxyData.change5m || 0,
     newsData.sentimentScore || 0,
-    calM5, kc, sr
+    calM5, bb, superTrend
   );
 
   const targetDir = score > 0 ? 'LONG' : 'SHORT';
@@ -973,29 +1011,34 @@ async function executeFullAnalysisEngine(currentUser = null) {
     (Date.now() - db.lastStopTimestamp < 25 * 60 * 1000)
   );
 
+  const inTradingHours = isWithinTradeHours(new Date());
+
   let signal = '⏳ BEKLE (OTOMATİK TARANIYOR)';
   let direction = 'NEUTRAL';
 
-  if (calendarData.killSwitch) {
+  if (!inTradingHours) {
+    signal = '🌙 GECE SEANSI (İŞLEM KAPALI)';
+    direction = 'LOCKED';
+  } else if (calendarData.killSwitch) {
     signal = '⛔ VERİ SAATİ (OTOMATİK KİLİT)';
     direction = 'LOCKED';
   } else if (sameDirStopLock) {
     const remainMin = Math.ceil((25 * 60 * 1000 - (Date.now() - db.lastStopTimestamp)) / 60000);
     signal = `🛑 ${targetDir} KİLİDİ (${remainMin} DK BEKLEME)`;
     direction = 'LOCKED';
-  } else if (score >= 45) {
+  } else if (score >= 55) {
     signal = `🟢 ${currentInstrument.name} LONG GİR (OTOMATİK)`;
     direction = 'LONG';
-  } else if (score <= -45) {
+  } else if (score <= -55) {
     signal = `🔴 ${currentInstrument.name} SHORT GİR (OTOMATİK)`;
     direction = 'SHORT';
   }
 
   const isShort = score < 0;
-  const tradePlan = calculateSmartTradePlan(spotPrice, isShort, calM5, kc);
+  const tradePlan = calculateSmartTradePlan(spotPrice, isShort, calM5, bb);
   let soundEvent = checkActiveTradeOnTick(spotPrice);
 
-  if (!db.activeTrade && !isOpeningTradeLock && !calendarData.killSwitch && !sameDirStopLock && Math.abs(score) >= 45) {
+  if (!db.activeTrade && !isOpeningTradeLock && inTradingHours && !calendarData.killSwitch && !sameDirStopLock && Math.abs(score) >= 55) {
     isOpeningTradeLock = true;
     try {
       const dir = score > 0 ? 'LONG' : 'SHORT';
@@ -1061,7 +1104,7 @@ app.get('/api/cron', async (req, res) => {
   }
 });
 
-// === SİMÜLASYON MOTORU (SEANS VWAP + KELTNER MODELİ) ===
+// === SİMÜLASYON MOTORU (SEANS SAATİ & TREND KALKANI KİLİTLİ) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const hours = Number(req.query.hours) || 24;
@@ -1107,7 +1150,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopDirection = null;
     const simTrades = [];
 
-    for (let i = 25; i < calM5.length; i++) {
+    for (let i = 35; i < calM5.length; i++) {
       const c = calM5[i];
       if (c.time < startTimestampSec) continue;
 
@@ -1180,6 +1223,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
+      // SADECE AKTİF SEANS SAATLERİNDE (09:00 - 20:30) İŞLEME GİR
+      if (!isWithinTradeHours(dObj)) continue;
+
       const candleMs = c.time * 1000;
       const isNewsLocked = (calendarData.allHighUsdTimestamps || []).some(ev => {
         const diffMin = (ev.timestampMs - candleMs) / 60000;
@@ -1197,12 +1243,12 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       const h1 = analyzeTimeframe(h1Slice);
       const dxyChg5m = dxyMap5m[c.time] || 0;
 
-      const kcSim = calcKeltnerChannels(m5Slice, 20, 14, 2.25);
-      const srSim = getSwingStructure(m15Slice, 15);
+      const bbSim = calcBollingerBands(m5Slice.map(x => x.close), 34, 2);
+      const superTrendSim = calcSuperTrend(m5Slice, 32, 1);
 
-      const { score } = computeSignalScore(m5, m15, h1, dxyChg5m, 0, m5Slice, kcSim, srSim);
+      const { score } = computeSignalScore(m5, m15, h1, dxyChg5m, 0, m5Slice, bbSim, superTrendSim);
 
-      if (Math.abs(score) >= 45) {
+      if (Math.abs(score) >= 55) {
         const isShort = score < 0;
         const candidateDir = isShort ? 'SHORT' : 'LONG';
 
@@ -1210,7 +1256,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        const plan = calculateSmartTradePlan(c.close, isShort, m5Slice, kcSim);
+        const plan = calculateSmartTradePlan(c.close, isShort, m5Slice, bbSim);
         simActive = {
           openTime: `${dateStr} ${timeStr}`,
           direction: candidateDir,
@@ -1303,5 +1349,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Seans VWAP + Keltner Breakout Sunucusu Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 Profesyonel Seans Korumalı XAU/USD Sunucusu Aktif: Port ${PORT}`));
 module.exports = app;
