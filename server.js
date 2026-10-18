@@ -125,9 +125,9 @@ function getMarketSession() {
       brokerSym: 'GOLD',
       tvSym: 'OANDA:XAUUSD',
       yahooSym: 'GC=F',
-      tp1Dist: 2.80, // %80 kâr garantisi (+$2.80)
-      tp2Dist: 6.80, // Trend hedefi (+$6.80)
-      maxSlDist: 3.20, // Koruyucu stop ($3.20)
+      tp1Dist: 2.80,
+      tp2Dist: 6.80,
+      maxSlDist: 3.20,
       minAtr: 1.8,
       maxSpread: 1.5
     }
@@ -601,7 +601,7 @@ function calcVWAP(candles) {
   return cumVol === 0 ? slice[slice.length - 1].close : cumPV / cumVol;
 }
 
-// === ASİMETRİK PLAN ($2.80 TP1 / $3.20 SL) ===
+// === KURUMSAL ASİMETRİK PLAN ($2.80 TP1 / $3.20 SL) ===
 function calculateSmartTradePlan(spotPrice, isShort) {
   const slDist = 3.20;
   const tp1Dist = 2.80;
@@ -618,7 +618,7 @@ function calculateSmartTradePlan(spotPrice, isShort) {
   };
 }
 
-// === GELİŞMİŞ LİKİDİTE & FVG MOTORU (MİKRO LİKİDİTE DAHİL) ===
+// === KURUMSAL LİKİDİTE SÜPÜRMESİ & FVG AI TETİK MOTORU ===
 function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   let score = 0;
   const reasons = [];
@@ -628,42 +628,45 @@ function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   const prevC = m5Candles[m5Candles.length - 2];
   const prev2C = m5Candles[m5Candles.length - 3] || prevC;
 
-  // 1. ANA SEANS TRENDİ (H1 EMA 50)
-  const isUpTrend = h1.price > h1.ema50;
-  const isDownTrend = h1.price < h1.ema50;
+  // 1. ANA SEANS TRENDİ (H1 EMA 50 & M15 EMA 21)
+  const isUpTrend = h1.price > h1.ema50 && m15.price > m15.ema21;
+  const isDownTrend = h1.price < h1.ema50 && m15.price < m15.ema21;
 
-  // 2. MİKRO LİKİDİTE PENCERESİ (Son 12 Mum / 1 Saatlik Alan)
-  const lookback = m5Candles.slice(-12, -1);
+  // 2. SON 15 MUMUN LİKİDİTE DİBİ VE TEPESİ (Sweep Alanı)
+  const lookback = m5Candles.slice(-18, -2);
   const recentLow = Math.min(...lookback.map(c => c.low));
   const recentHigh = Math.max(...lookback.map(c => c.high));
 
-  // 3. LİKİDİTE SÜPÜRMESİ (Liquidity Sweep)
-  const bullSweep = (prevC.low <= recentLow || curC.low <= recentLow) && curC.close >= recentLow && curC.close > curC.open;
-  const bearSweep = (prevC.high >= recentHigh || curC.high >= recentHigh) && curC.close <= recentHigh && curC.close < curC.open;
+  // 3. LİKİDİTE SÜPÜRMESİ TESPİTİ (Liquidity Sweep)
+  // Fiyat önceki dibi iğneyle kırıp altına stop patlatmış, ama mum içeriye yeşil kapatmış
+  const bullSweep = (prevC.low < recentLow || curC.low < recentLow) && curC.close > recentLow && curC.close > curC.open;
+  // Fiyat önceki tepeyi iğneyle kırıp üstüne stop patlatmış, ama mum içeriye kırmızı kapatmış
+  const bearSweep = (prevC.high > recentHigh || curC.high > recentHigh) && curC.close < recentHigh && curC.close < curC.open;
 
-  // 4. FAIR VALUE GAP & GÖVDE TEYİDİ
+  // 4. FAIR VALUE GAP (FVG / Kurumsal Hacim Dengesizliği)
+  const bullFvg = curC.low > prev2C.high && curC.close > curC.open;
+  const bearFvg = curC.high < prev2C.low && curC.close < curC.open;
+
+  // 5. MUM İĞNE REJECTION
   const candleRange = Math.max(0.1, curC.high - curC.low);
   const lowerWick = Math.min(curC.open, curC.close) - curC.low;
   const upperWick = curC.high - Math.max(curC.open, curC.close);
-  const isLowerRejection = lowerWick >= candleRange * 0.22;
-  const isUpperRejection = upperWick >= candleRange * 0.22;
+  const isLowerRejection = lowerWick >= candleRange * 0.30;
+  const isUpperRejection = upperWick >= candleRange * 0.30;
 
-  const bullFvg = curC.low >= prev2C.high && curC.close > curC.open;
-  const bearFvg = curC.high <= prev2C.low && curC.close < curC.open;
-
-  // === LONG TETİĞİ ===
-  if (isUpTrend && (bullSweep || (curPrice > m5.vwap && (bullFvg || isLowerRejection)))) {
-    score = 70;
+  // === %90+ KALİTELİ LONG TETİĞİ ===
+  if (isUpTrend && (bullSweep || (curPrice > m5.vwap && bullFvg && isLowerRejection))) {
+    score = 75;
     reasons.push({ type: 'pos', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Stoplar patlatılıp içeri dönüldü + FVG Desteği' });
   }
 
-  // === SHORT TETİĞİ ===
-  if (isDownTrend && (bearSweep || (curPrice < m5.vwap && (bearFvg || isUpperRejection)))) {
-    score = -70;
+  // === %90+ KALİTELİ SHORT TETİĞİ ===
+  if (isDownTrend && (bearSweep || (curPrice < m5.vwap && bearFvg && isUpperRejection))) {
+    score = -75;
     reasons.push({ type: 'neg', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Alıcılar tuzağa düşürüldü + FVG Direnci' });
   }
 
-  // DXY Teyidi
+  // DXY 5m Teyidi
   if (dxyChange5m < -0.015 && score > 0) score += 10;
   if (dxyChange5m > 0.015 && score < 0) score -= 10;
 
@@ -993,7 +996,7 @@ app.get('/api/cron', async (req, res) => {
   }
 });
 
-// === SİMÜLASYON MOTORU (OPTİMİZE EDİLMİŞ SİNYAL SAYISI + KORUNAN %90+ BAŞARI) ===
+// === SİMÜLASYON MOTORU (KURUMSAL LİKİDİTE AVLAMASI: 5 GÜN TESTİ) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const hours = Number(req.query.hours) || 120;
@@ -1036,7 +1039,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopDirection = null;
     const simTrades = [];
 
-    for (let i = 20; i < calM5.length; i++) {
+    for (let i = 25; i < calM5.length; i++) {
       const c = calM5[i];
       if (c.time < startTimestampSec) continue;
 
@@ -1116,8 +1119,8 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       });
       if (isNewsLocked) continue;
 
-      // 1 mum (5 dk) esnek soğuma: Sinyal kaçırmaz
-      if (i - lastTradeCandleIndex < 1) continue;
+      // Aşırı işlem engeli: En az 2 mum (10 dk) bekleme
+      if (i - lastTradeCandleIndex < 2) continue;
 
       const m5Slice = calM5.slice(Math.max(0, i - 60), i + 1);
       const m15Slice = calM15.filter(x => x.time <= c.time).slice(-60);
@@ -1233,5 +1236,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 Optimize Edilmiş Yüksek Sinyalli AI Likidite XAU/USD Sunucusu Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite & FVG AI Motoru Aktif: Port ${PORT}`));
 module.exports = app;
