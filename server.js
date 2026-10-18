@@ -125,10 +125,10 @@ function getMarketSession() {
       brokerSym: 'GOLD',
       tvSym: 'OANDA:XAUUSD',
       yahooSym: 'GC=F',
-      tp1Dist: 2.60, // Hızlı %80 kâr (+$2.60)
-      tp2Dist: 6.80, // Trend hedefi (+$6.80)
-      maxSlDist: 3.40, // Güvenli stop ($3.40)
-      minAtr: 2.0,
+      tp1Dist: 2.80,
+      tp2Dist: 6.80,
+      maxSlDist: 3.20,
+      minAtr: 1.8,
       maxSpread: 1.5
     }
   };
@@ -363,7 +363,7 @@ async function openMobileMTTradeForAllUsers(tradeObj) {
       volume: Number(lotSize.toFixed(2)),
       stopLoss: calibratedSL,
       takeProfit: calibratedTP2,
-      comment: `XAU_PRO_${u.username}`
+      comment: `XAU_AI_${u.username}`
     });
 
     if (res && (res.orderId || res.positionId)) {
@@ -427,7 +427,7 @@ async function partialCloseAllUsersMTAtTP1(tradeObj) {
   await saveDB(db);
 }
 
-// === İŞLEMİ KAPATMA ===
+// === İŞLEMİ TAMAMEN KAPATMA ===
 async function closeAllUsersMTTrade(tradeObj) {
   if (!tradeObj || !tradeObj.userPositions) return;
   const connected = (db.users || []).filter(u => tradeObj.userPositions[u.username]);
@@ -590,17 +590,6 @@ function calcEMA(closes, period) {
   return ema;
 }
 
-function calcATR(candles, period = 14) {
-  if (candles.length <= period) return 2.2;
-  const trs = [];
-  for (let i = 1; i < candles.length; i++) {
-    trs.push(Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - candles[i - 1].close), Math.abs(candles[i].low - candles[i - 1].close)));
-  }
-  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = period; i < trs.length; i++) atr = (atr * (period - 1) + trs[i]) / period;
-  return atr;
-}
-
 function calcVWAP(candles) {
   const slice = candles.slice(-60);
   let cumPV = 0, cumVol = 0;
@@ -612,10 +601,10 @@ function calcVWAP(candles) {
   return cumVol === 0 ? slice[slice.length - 1].close : cumPV / cumVol;
 }
 
-// === %90+ BAŞARI İÇİN ASİMETRİK PLAN ($2.60 TP1 / $3.40 SL) ===
+// === KURUMSAL ASİMETRİK PLAN ($2.80 TP1 / $3.20 SL) ===
 function calculateSmartTradePlan(spotPrice, isShort) {
-  const slDist = 3.40;
-  const tp1Dist = 2.60;
+  const slDist = 3.20;
+  const tp1Dist = 2.80;
   const tp2Dist = 6.80;
 
   return {
@@ -629,7 +618,7 @@ function calculateSmartTradePlan(spotPrice, isShort) {
   };
 }
 
-// === %90 HEDEFİ: EMA 9 / EMA 21 DİNAMİK PULLBACK & REJECTION TETİKLEYİCİSİ ===
+// === KURUMSAL LİKİDİTE SÜPÜRMESİ & FVG AI TETİK MOTORU ===
 function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   let score = 0;
   const reasons = [];
@@ -637,51 +626,53 @@ function computeSignalScore(m5, m15, h1, dxyChange5m, newsScore, m5Candles) {
   const curPrice = m5.price;
   const curC = m5Candles[m5Candles.length - 1];
   const prevC = m5Candles[m5Candles.length - 2];
+  const prev2C = m5Candles[m5Candles.length - 3] || prevC;
 
-  // 1. ANA TREND KONTROLÜ (H1 EMA 50)
-  const isUpTrend = h1.price > h1.ema50;
-  const isDownTrend = h1.price < h1.ema50;
+  // 1. ANA SEANS TRENDİ (H1 EMA 50 & M15 EMA 21)
+  const isUpTrend = h1.price > h1.ema50 && m15.price > m15.ema21;
+  const isDownTrend = h1.price < h1.ema50 && m15.price < m15.ema21;
 
-  // 2. M5 DİNAMİK KANAL ORTALAMALARI
-  const m5Ema9 = m5.ema9;
-  const m5Ema21 = m5.ema21;
+  // 2. SON 15 MUMUN LİKİDİTE DİBİ VE TEPESİ (Sweep Alanı)
+  const lookback = m5Candles.slice(-18, -2);
+  const recentLow = Math.min(...lookback.map(c => c.low));
+  const recentHigh = Math.max(...lookback.map(c => c.high));
 
-  // 3. FİTİL TESPİTİ (Rejection Wick)
+  // 3. LİKİDİTE SÜPÜRMESİ TESPİTİ (Liquidity Sweep)
+  // Fiyat önceki dibi iğneyle kırıp altına stop patlatmış, ama mum içeriye yeşil kapatmış
+  const bullSweep = (prevC.low < recentLow || curC.low < recentLow) && curC.close > recentLow && curC.close > curC.open;
+  // Fiyat önceki tepeyi iğneyle kırıp üstüne stop patlatmış, ama mum içeriye kırmızı kapatmış
+  const bearSweep = (prevC.high > recentHigh || curC.high > recentHigh) && curC.close < recentHigh && curC.close < curC.open;
+
+  // 4. FAIR VALUE GAP (FVG / Kurumsal Hacim Dengesizliği)
+  const bullFvg = curC.low > prev2C.high && curC.close > curC.open;
+  const bearFvg = curC.high < prev2C.low && curC.close < curC.open;
+
+  // 5. MUM İĞNE REJECTION
   const candleRange = Math.max(0.1, curC.high - curC.low);
   const lowerWick = Math.min(curC.open, curC.close) - curC.low;
   const upperWick = curC.high - Math.max(curC.open, curC.close);
-  const isLowerWick = lowerWick >= candleRange * 0.25;
-  const isUpperWick = upperWick >= candleRange * 0.25;
+  const isLowerRejection = lowerWick >= candleRange * 0.30;
+  const isUpperRejection = upperWick >= candleRange * 0.30;
 
-  // === LONG TETİĞİ (Yükselen Trendde EMA9/EMA21 Düzeltmesinden Alış) ===
-  if (isUpTrend) {
-    const touchesSupport = prevC.low <= m5Ema9 || prevC.low <= m5Ema21 || curC.low <= m5Ema21;
-    const closesStrong = curC.close > curC.open && (isLowerWick || curC.close >= prevC.high);
-
-    if (touchesSupport && closesStrong && curPrice > m5.vwap) {
-      score += 70;
-      reasons.push({ type: 'pos', text: '🎯 TREND PULLBACK ALIMI: H1 Yükselişte + EMA Desteği Test Edildi + Alıcı Mumu Onaylandı' });
-    }
+  // === %90+ KALİTELİ LONG TETİĞİ ===
+  if (isUpTrend && (bullSweep || (curPrice > m5.vwap && bullFvg && isLowerRejection))) {
+    score = 75;
+    reasons.push({ type: 'pos', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Stoplar patlatılıp içeri dönüldü + FVG Desteği' });
   }
 
-  // === SHORT TETİĞİ (Düşen Trendde EMA9/EMA21 Tepkisinden Satış) ===
-  if (isDownTrend) {
-    const touchesResist = prevC.high >= m5Ema9 || prevC.high >= m5Ema21 || curC.high >= m5Ema21;
-    const closesWeak = curC.close < curC.open && (isUpperWick || curC.close <= prevC.low);
-
-    if (touchesResist && closesWeak && curPrice < m5.vwap) {
-      score -= 70;
-      reasons.push({ type: 'neg', text: '🎯 TREND TEPKİ SATIŞI: H1 Düşüşte + EMA Direnci Test Edildi + Satıcı Mumu Onaylandı' });
-    }
+  // === %90+ KALİTELİ SHORT TETİĞİ ===
+  if (isDownTrend && (bearSweep || (curPrice < m5.vwap && bearFvg && isUpperRejection))) {
+    score = -75;
+    reasons.push({ type: 'neg', text: '💎 KURUMSAL LİKİDİTE AVLANDI: Alıcılar tuzağa düşürüldü + FVG Direnci' });
   }
 
-  // DXY 5dk Katkısı
+  // DXY 5m Teyidi
   if (dxyChange5m < -0.015 && score > 0) score += 10;
   if (dxyChange5m > 0.015 && score < 0) score -= 10;
 
   if (newsScore !== 0) score += newsScore;
 
-  // Kırmızı mumda LONG, yeşil mumda SHORT engeli
+  // Düşen kırmızı mumda LONG, fırlayan yeşil mumda SHORT engeli
   if (score > 0 && curC.close < curC.open) score = 0;
   if (score < 0 && curC.close > curC.open) score = 0;
 
@@ -785,14 +776,14 @@ async function getCandles(symbol, interval, range) {
 function analyzeTimeframe(candles) {
   const closes = candles.map(c => c.close), price = closes[closes.length - 1];
   const ema9 = calcEMA(closes, 9), ema21 = calcEMA(closes, 21), ema50 = calcEMA(closes, 50);
-  const atr = calcATR(candles, 14), vwap = calcVWAP(candles);
+  const vwap = calcVWAP(candles);
   let trend = 'NÖTR';
   if (ema9 > ema21 && price > ema21) trend = 'BULLISH (YÜKSELİŞ)';
   else if (ema9 < ema21 && price < ema21) trend = 'BEARISH (DÜŞÜŞ)';
-  return { price, ema9, ema21, ema50, atr, vwap, trend };
+  return { price, ema9, ema21, ema50, vwap, trend };
 }
 
-// === AKTİF İŞLEM MOTORU (%80 TP1 + $1.40 HIZLI ERKEN ZIRH) ===
+// === AKTİF İŞLEM MOTORU (%80 TP1 + +$1.40 HIZLI ERKEN ZIRH) ===
 function checkActiveTradeOnTick(spotPrice) {
   if (!db.activeTrade || !spotPrice) return null;
   let soundEvent = null;
@@ -871,7 +862,7 @@ function getStats() {
   return { total, wins, losses: total - wins, winRate: total > 0 ? Math.round((wins / total) * 100) : 0, totalProfit: totalProfit.toFixed(2) };
 }
 
-// === ANALİZ VE OTOMATİK İŞLEM MOTORU ===
+// === CANLI ANALİZ VE İŞLEM MOTORU ===
 async function executeFullAnalysisEngine(currentUser = null) {
   await syncFromFirebase();
   const session = getMarketSession();
@@ -927,10 +918,10 @@ async function executeFullAnalysisEngine(currentUser = null) {
     const remainMin = Math.ceil((25 * 60 * 1000 - (Date.now() - db.lastStopTimestamp)) / 60000);
     signal = `🛑 ${targetDir} KİLİDİ (${remainMin} DK BEKLEME)`;
     direction = 'LOCKED';
-  } else if (score >= 50) {
+  } else if (score >= 60) {
     signal = `🟢 ${currentInstrument.name} LONG GİR (OTOMATİK)`;
     direction = 'LONG';
-  } else if (score <= -50) {
+  } else if (score <= -60) {
     signal = `🔴 ${currentInstrument.name} SHORT GİR (OTOMATİK)`;
     direction = 'SHORT';
   }
@@ -939,7 +930,7 @@ async function executeFullAnalysisEngine(currentUser = null) {
   const tradePlan = calculateSmartTradePlan(spotPrice, isShort);
   let soundEvent = checkActiveTradeOnTick(spotPrice);
 
-  if (!db.activeTrade && !isOpeningTradeLock && !calendarData.killSwitch && !sameDirStopLock && Math.abs(score) >= 50) {
+  if (!db.activeTrade && !isOpeningTradeLock && !calendarData.killSwitch && !sameDirStopLock && Math.abs(score) >= 60) {
     isOpeningTradeLock = true;
     try {
       const dir = score > 0 ? 'LONG' : 'SHORT';
@@ -1005,7 +996,7 @@ app.get('/api/cron', async (req, res) => {
   }
 });
 
-// === SİMÜLASYON MOTORU (5 GÜNLÜK PULLBACK & ASİMETRİK %90+ HEDEFİ) ===
+// === SİMÜLASYON MOTORU (KURUMSAL LİKİDİTE AVLAMASI: 5 GÜN TESTİ) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const hours = Number(req.query.hours) || 120;
@@ -1043,6 +1034,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     }
 
     let simActive = null;
+    let lastTradeCandleIndex = -99;
     let lastStopCandleIndex = -99;
     let lastStopDirection = null;
     const simTrades = [];
@@ -1110,6 +1102,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         }
 
         if (!simActive.tp1Hit && !simActive.earlyShieldHit) {
+          const tp1Dist = Math.abs(simActive.tp1 - simActive.entry);
           const shieldTrigger = isLong ? simActive.entry + 1.40 : simActive.entry - 1.40;
           if ((isLong && c.high >= shieldTrigger) || (!isLong && c.low <= shieldTrigger)) {
             simActive.earlyShieldHit = true;
@@ -1126,6 +1119,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       });
       if (isNewsLocked) continue;
 
+      // Aşırı işlem engeli: En az 2 mum (10 dk) bekleme
+      if (i - lastTradeCandleIndex < 2) continue;
+
       const m5Slice = calM5.slice(Math.max(0, i - 60), i + 1);
       const m15Slice = calM15.filter(x => x.time <= c.time).slice(-60);
       const h1Slice = calH1.filter(x => x.time <= c.time).slice(-60);
@@ -1138,7 +1134,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
       const { score } = computeSignalScore(m5, m15, h1, dxyChg5m, 0, m5Slice);
 
-      if (Math.abs(score) >= 50) {
+      if (Math.abs(score) >= 60) {
         const isShort = score < 0;
         const candidateDir = isShort ? 'SHORT' : 'LONG';
 
@@ -1147,6 +1143,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         }
 
         const plan = calculateSmartTradePlan(c.close, isShort);
+        lastTradeCandleIndex = i;
         simActive = {
           openTime: `${dateStr} ${timeStr}`,
           direction: candidateDir,
@@ -1239,5 +1236,5 @@ app.post('/api/telegram-config', requireAdmin, async (req, res) => {
   res.json({ ok: true, enabled: db.telegram.enabled });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`👑 %90+ Win-Rate & Yüksek Sinyalli Pullback XAU/USD Sunucusu Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`👑 Kurumsal Likidite & FVG AI Motoru Aktif: Port ${PORT}`));
 module.exports = app;
