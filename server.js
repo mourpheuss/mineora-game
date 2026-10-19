@@ -185,7 +185,6 @@ async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
   }
 }
 
-// 3.000 (3K) MUM VERİ DERİNLİĞİ
 async function getBitgetCandles3K(symbol, granularity = '15m', targetCount = 3000) {
   try {
     let allCandles = [];
@@ -256,7 +255,6 @@ function calcBollinger(closes, period = 20, multiplier = 2.0) {
   };
 }
 
-// LUXALGO ULTIMATE RSI
 function calcLuxAlgoUltimateRSI(closes, period = 14, smooth = 5) {
   if (closes.length <= period + smooth) return { rsi: 50, signal: 50, prevRsi: 50, prevSignal: 50 };
 
@@ -295,7 +293,6 @@ function calcLuxAlgoUltimateRSI(closes, period = 14, smooth = 5) {
   };
 }
 
-// OTOMATİK DİNAMİK DESTEK & DİRENÇ (SMC ORDER BLOCK)
 function findDynamicSupportResistance(candles) {
   const lookback = candles.slice(-60, -1);
   let highest = -Infinity;
@@ -318,30 +315,29 @@ function findDynamicSupportResistance(candles) {
   };
 }
 
-// MÜKEMMELLEŞTİRİLMİŞ SMC & RİSK PLANI
 function calculateSMCPlan(entryPrice, isShort, atr, levels) {
   const precision = entryPrice < 0.01 ? 6 : (entryPrice < 1 ? 5 : (entryPrice < 50 ? 4 : 2));
 
   let slDist, tp1Dist, tp2Dist;
 
   if (isShort) {
-    const targetSl = Math.max(levels.swingResistance, entryPrice + atr * 0.65);
+    const targetSl = Math.max(levels.swingResistance, entryPrice + atr * 0.60);
     slDist = Math.abs(targetSl - entryPrice);
-    if (slDist < atr * 0.55) slDist = atr * 0.55;
-    if (entryPrice > 10000 && slDist > 125) slDist = 125; // BTC tavan
-    if (entryPrice <= 2 && slDist > 0.0060) slDist = 0.0060;
+    if (slDist < atr * 0.50) slDist = atr * 0.50;
+    if (entryPrice > 10000 && slDist > 120) slDist = 120;
+    if (entryPrice <= 2 && slDist > 0.0055) slDist = 0.0055;
 
-    tp1Dist = Number((slDist * 1.10).toFixed(precision));
-    tp2Dist = Number((slDist * 2.25).toFixed(precision));
+    tp1Dist = Number((slDist * 1.05).toFixed(precision));
+    tp2Dist = Number((slDist * 2.20).toFixed(precision));
   } else {
-    const targetSl = Math.min(levels.swingSupport, entryPrice - atr * 0.65);
+    const targetSl = Math.min(levels.swingSupport, entryPrice - atr * 0.60);
     slDist = Math.abs(entryPrice - targetSl);
-    if (slDist < atr * 0.55) slDist = atr * 0.55;
-    if (entryPrice > 10000 && slDist > 125) slDist = 125;
-    if (entryPrice <= 2 && slDist > 0.0060) slDist = 0.0060;
+    if (slDist < atr * 0.50) slDist = atr * 0.50;
+    if (entryPrice > 10000 && slDist > 120) slDist = 120;
+    if (entryPrice <= 2 && slDist > 0.0055) slDist = 0.0055;
 
-    tp1Dist = Number((slDist * 1.10).toFixed(precision));
-    tp2Dist = Number((slDist * 2.25).toFixed(precision));
+    tp1Dist = Number((slDist * 1.05).toFixed(precision));
+    tp2Dist = Number((slDist * 2.20).toFixed(precision));
   }
 
   slDist = Number(slDist.toFixed(precision));
@@ -357,7 +353,7 @@ function calculateSMCPlan(entryPrice, isShort, atr, levels) {
   };
 }
 
-// 3K GRAFİK MÜKEMMEL SMC + ULTIMATE RSI MOTORU
+// SNIPER ORDER BLOCK VE ULTIMATE RSI MOTORU
 function evaluateSMCRSIStrategy(candles, atr) {
   if (candles.length < 200) return { score: 0, reasons: [] };
 
@@ -366,9 +362,8 @@ function evaluateSMCRSIStrategy(candles, atr) {
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
 
-  // EMA200 Eğimi (Slope) Kontrolü
   const ema200Cur = calcEMA(closes, 200);
-  const ema200Prev = calcEMA(closes.slice(0, -5), 200);
+  const ema200Prev = calcEMA(closes.slice(0, -6), 200);
   const ema200SlopeUp = ema200Cur >= ema200Prev;
 
   const ema50 = calcEMA(closes, 50);
@@ -378,28 +373,28 @@ function evaluateSMCRSIStrategy(candles, atr) {
 
   const reasons = [];
 
-  // SHORT TETİKLEMESİ
+  // SHORT: Dirence/Üst Banda Tam İğne + Onaylı Kırmızı Gövde
   const isBearTrend = curPrice < ema200Cur && curPrice <= ema50 * 1.002 && !ema200SlopeUp;
-  const isResistanceTouch = curC.high >= bb.upper || curC.high >= levels.swingResistance * 0.998;
+  const isResistanceTouch = curC.high >= bb.upper || curC.high >= levels.swingResistance * 0.999;
   const isRsiBearCross = ultRsi.rsi < ultRsi.signal && ultRsi.prevRsi >= ultRsi.prevSignal && ultRsi.rsi >= 46;
   const isRedCandle = curC.close < curC.open && curC.close < prevC.close;
 
   if (isBearTrend && isResistanceTouch && (isRsiBearCross || ultRsi.rsi >= 58) && isRedCandle) {
-    reasons.push('EMA 200/50 Negatif Eğim & Ayı Trendi');
-    reasons.push('Dinamik Direnç & Bollinger Üst Bant Reddi');
+    reasons.push('EMA 200/50 Ayı Trendi');
+    reasons.push('Sniper Direnç Teması');
     reasons.push(`Ultimate RSI Negatif Kesişim (${ultRsi.rsi})`);
     return { score: -95, isShort: true, levels, reasons };
   }
 
-  // LONG TETİKLEMESİ
+  // LONG: Desteğe/Alt Banda Tam İğne + Onaylı Yeşil Gövde
   const isBullTrend = curPrice > ema200Cur && curPrice >= ema50 * 0.998 && ema200SlopeUp;
-  const isSupportTouch = curC.low <= bb.lower || curC.low <= levels.swingSupport * 1.002;
+  const isSupportTouch = curC.low <= bb.lower || curC.low <= levels.swingSupport * 1.001;
   const isRsiBullCross = ultRsi.rsi > ultRsi.signal && ultRsi.prevRsi <= ultRsi.prevSignal && ultRsi.rsi <= 54;
   const isGreenCandle = curC.close > curC.open && curC.close > prevC.close;
 
   if (isBullTrend && isSupportTouch && (isRsiBullCross || ultRsi.rsi <= 42) && isGreenCandle) {
-    reasons.push('EMA 200/50 Pozitif Eğim & Boğa Trendi');
-    reasons.push('Dinamik Destek & Bollinger Alt Bant Tepkisi');
+    reasons.push('EMA 200/50 Boğa Trendi');
+    reasons.push('Sniper Destek Teması');
     reasons.push(`Ultimate RSI Pozitif Kesişim (${ultRsi.rsi})`);
     return { score: 95, isShort: false, levels, reasons };
   }
@@ -407,7 +402,7 @@ function evaluateSMCRSIStrategy(candles, atr) {
   return { score: 0, reasons: [] };
 }
 
-// === SİMÜLASYON MOTORU (ERKEN BREAKEVEN KORUMASIYLA) ===
+// === SİMÜLASYON MOTORU (MİKRO KÂR KİLİTLİ) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -455,24 +450,26 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // 2. TP1 Kontrolü
+        // 2. TP1 Kontrolü (%80 Kâr Realizasyonu)
         const hitTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
         if (!simActive.tp1Hit && hitTP1) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
-        // 3. ERKEN BREAKEVEN: Fiyat TP1 yolunun %60'ına ulaştıysa stop hemen maliyete kilitlenir
-        const earlyBELevel = isLong ? (simActive.entry + simActive.tp1Dist * 0.60) : (simActive.entry - simActive.tp1Dist * 0.60);
-        const reachedEarlyBE = isLong ? c.high >= earlyBELevel : c.low <= earlyBELevel;
-        if (!simActive.tp1Hit && !simActive.beHit && reachedEarlyBE) {
-          simActive.beHit = true;
-          simActive.sl = simActive.entry;
+        // 3. MİKRO KÂR KİLİDİ: TP1 yolunun %55'ine ulaşınca stopu +%25 kâr seviyesine kilitle
+        const microProfitDist = simActive.tp1Dist * 0.25;
+        const triggerLevel = isLong ? (simActive.entry + simActive.tp1Dist * 0.55) : (simActive.entry - simActive.tp1Dist * 0.55);
+        const reachedTrigger = isLong ? c.high >= triggerLevel : c.low <= triggerLevel;
+
+        if (!simActive.tp1Hit && !simActive.lockedProfit && reachedTrigger) {
+          simActive.lockedProfit = true;
+          simActive.sl = isLong ? (simActive.entry + microProfitDist) : (simActive.entry - microProfitDist);
         }
 
         // 4. Stop Kontrolü
         let isStopped = false;
-        if (simActive.tp1Hit || simActive.beHit) {
+        if (simActive.tp1Hit || simActive.lockedProfit) {
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
         } else {
           isStopped = isLong ? c.close <= simActive.sl : c.close >= simActive.sl;
@@ -484,12 +481,12 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           let result = 'LOSS';
 
           if (simActive.tp1Hit) {
-            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.75).toFixed(4));
+            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.80).toFixed(4));
             status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
             result = 'WIN';
-          } else if (simActive.beHit) {
-            profit = 0;
-            status = 'ERKEN BAŞABAŞ KORUNDU 🛡️';
+          } else if (simActive.lockedProfit) {
+            profit = Number((microProfitDist).toFixed(4));
+            status = 'KÂR KİLİTLENDİ 🔒';
             result = 'WIN';
           } else {
             profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
@@ -534,7 +531,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           tp2: plan.tp2,
           tp1Dist: plan.tp1Dist,
           tp1Hit: false,
-          beHit: false
+          lockedProfit: false
         };
       }
     }
@@ -582,7 +579,7 @@ app.get('/api/scan', requireAuth, async (req, res) => {
         score: setup.score,
         signal: setup.score >= 90 ? 'LONG 🟢 (SMC+RSI)' : (setup.score <= -90 ? 'SHORT 🔴 (SMC+RSI)' : 'NÖTR ⏳'),
         tradePlan: plan,
-        reasons: setup.reasons.length ? setup.reasons : ['Order Block Teması Bekleniyor']
+        reasons: setup.reasons.length ? setup.reasons : ['Sniper Seviyesi Bekleniyor']
       });
     }
 
@@ -592,5 +589,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget SMC & Ultimate RSI Kusursuz Motor: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Ultra Optimize SMC Motoru Aktif: Port ${PORT}`));
 module.exports = app;
