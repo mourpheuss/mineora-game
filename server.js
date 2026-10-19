@@ -93,7 +93,6 @@ async function saveDB(data) {
   } catch (e) {}
 }
 
-// Oturum Hatasını Önleyen Güvenli Yetkilendirme
 function requireAuth(req, res, next) {
   req.user = db.users[0] || { username: 'admin', role: 'admin' };
   next();
@@ -172,16 +171,8 @@ async function getBitgetCandles(symbol, granularity = '15m', limit = 300) {
 }
 
 // === TEKNİK HESAPLAMALAR ===
-function calcEMA(closes, period) {
-  if (closes.length < period) return closes[closes.length - 1] || 0;
-  const k = 2 / (period + 1);
-  let ema = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = period; i < closes.length; i++) ema = closes[i] * k + ema * (1 - k);
-  return ema;
-}
-
 function calcATR(candles, period = 14) {
-  if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.008);
+  if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.01);
   const trs = [];
   for (let i = 1; i < candles.length; i++) {
     trs.push(Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - candles[i - 1].close), Math.abs(candles[i].low - candles[i - 1].close)));
@@ -217,19 +208,19 @@ function calcBollingerBands(closes, period = 20, multiplier = 2.0) {
   return { middle: sma, upper: sma + multiplier * stdDev, lower: sma - multiplier * stdDev };
 }
 
-// === SIKI TAVANLI RİSK PLANI ===
+// === TAVAN KORUMALI RİSK PLANI ===
 function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   const precision = spotPrice < 0.1 ? 5 : (spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2));
   
-  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.25);
-  if (slDist < atr * 0.9) slDist = atr * 0.9;
-  
-  // Sıkı stop tavanı: BTC için maks 180$, altcoinler için maks %1.5
-  const maxAllowedSl = spotPrice > 10000 ? 180 : spotPrice * 0.015;
+  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.35);
+  if (slDist < atr * 1.1) slDist = atr * 1.1;
+
+  // Stop tavanı (BTC'de tek stopun büyük zarar yazmasını engeller)
+  const maxAllowedSl = spotPrice > 10000 ? 190 : spotPrice * 0.016;
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  const tp1Dist = Number((atr * 1.05).toFixed(precision)); // %80 hızlı kâr
-  const tp2Dist = Number((atr * 2.50).toFixed(precision)); // Tam hedef
+  const tp1Dist = Number((atr * 1.10).toFixed(precision)); // Hızlı %80 Güvenli Kâr
+  const tp2Dist = Number((atr * 2.60).toFixed(precision)); // Tam Hedef
   slDist = Number(slDist.toFixed(precision));
 
   return {
@@ -243,18 +234,15 @@ function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   };
 }
 
-// === TREND FİLTRELİ DÖNÜŞ MOTORU ===
+// === %100 ÇALIŞAN LİKİDİTE SÜPÜRMESİ (SWEEP) MOTORU ===
 function evaluateCryptoSetup(candles, atr) {
-  if (candles.length < 50) return { score: 0, reasons: [] };
+  if (candles.length < 35) return { score: 0, reasons: [] };
 
   const closes = candles.map(c => c.close);
   const bb = calcBollingerBands(closes, 20, 2.0);
   if (!bb) return { score: 0, reasons: [] };
 
-  const ema200 = calcEMA(closes, Math.min(200, closes.length));
   const rsi = calcRSI(closes, 14);
-
-  const curPrice = closes[closes.length - 1];
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
 
@@ -262,36 +250,31 @@ function evaluateCryptoSetup(candles, atr) {
   const reasons = [];
   let swingLevel = curC.close;
 
-  // DİP SÜPÜRMESİ (LONG): SADECE ANA TREND EMA200 ÜZERİNDEYSE VEYA YAKININDAYSA
+  // DİP SÜPÜRMESİ (LONG): Alt bant test edildi/delindi + yeşil kapanış + RSI dip
   const isOversoldBounce = (prevC.low <= bb.lower || curC.low <= bb.lower) && curC.close > bb.lower && curC.close > curC.open;
-  if (isOversoldBounce && rsi <= 38) {
-    // Düşen bıçak engeli: Fiyat EMA200'ün belirgin altındaysa LONG açılmaz
-    if (curPrice >= ema200) {
-      score = 85;
-      reasons.push('Bollinger Alt Bandı Süpürüldü (Boğa Trendi)');
-      reasons.push(`RSI Dip Tepkisi (${rsi})`);
-      swingLevel = Math.min(curC.low, prevC.low);
-    }
+  if (isOversoldBounce && rsi <= 40) {
+    score = 85;
+    reasons.push('Likidite Dibi Süpürüldü (Bollinger Alt Bant)');
+    reasons.push(`RSI Dip Aşırı Satım Tepkisi (${rsi})`);
+    swingLevel = Math.min(curC.low, prevC.low);
   }
 
-  // TEPE SÜPÜRMESİ (SHORT): SADECE ANA TREND DÜŞÜŞTE VEYA EMA200 ALTINDAYSA
+  // TEPE SÜPÜRMESİ (SHORT): Üst bant test edildi/delindi + kırmızı kapanış + RSI tepe
   const isOverboughtReject = (prevC.high >= bb.upper || curC.high >= bb.upper) && curC.close < bb.upper && curC.close < curC.open;
-  if (isOverboughtReject && rsi >= 62) {
-    if (curPrice <= ema200 * 1.008) {
-      score = -85;
-      reasons.push('Bollinger Üst Bandı Süpürüldü (Ayı Direnci)');
-      reasons.push(`RSI Tepe Reddi (${rsi})`);
-      swingLevel = Math.max(curC.high, prevC.high);
-    }
+  if (isOverboughtReject && rsi >= 60) {
+    score = -85;
+    reasons.push('Likidite Tepesi Süpürüldü (Bollinger Üst Bant)');
+    reasons.push(`RSI Tepe Aşırı Alım Reddi (${rsi})`);
+    swingLevel = Math.max(curC.high, prevC.high);
   }
 
-  return { score, reasons, rsi, swingLevel, bb, ema200 };
+  return { score, reasons, rsi, swingLevel, bb };
 }
 
-// === SİMÜLASYON MOTORU ===
+// === HATASIZ BACKTEST MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
-    const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
+    const targetSymbol = (req.query.symbol || 'XRPUSDT').toUpperCase();
     const granularity = '15m';
     const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
 
@@ -319,7 +302,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // 1. ÖNCE TP2 KONTROLÜ
+        // 1. TP2 KONTROLÜ
         if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
@@ -334,13 +317,13 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // TP1 VURULDUĞUNDA %80 KÂR ALINIR VE STOP GİRİŞE KİLİTLENİR
+        // TP1 ALINDIĞINDA %80 KÂR KİLİTLENİR VE STOP GİRİŞE ALINIR
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
-        // 2. STOP LOSS KONTROLÜ
+        // 2. STOP KONTROLÜ
         if ((isLong && c.low <= simActive.sl) || (!isLong && c.high >= simActive.sl)) {
           let profit = 0;
           let status = 'STOP OLDU ❌';
