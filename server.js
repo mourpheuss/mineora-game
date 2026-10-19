@@ -204,25 +204,6 @@ async function getBitgetCandles(symbol, granularity = '15m', limit = 450) {
   }
 }
 
-// === İNDİKATÖR ZİNCİRİ HESAPLAMALARI ===
-function calcEMAArray(closes, period) {
-  const k = 2 / (period + 1);
-  const emas = new Array(closes.length);
-  let sum = 0;
-  for (let i = 0; i < period; i++) sum += closes[i];
-  emas[period - 1] = sum / period;
-  for (let i = period; i < closes.length; i++) {
-    emas[i] = closes[i] * k + emas[i - 1] * (1 - k);
-  }
-  return emas;
-}
-
-function calcEMA(closes, period) {
-  if (closes.length < period) return closes[closes.length - 1] || 0;
-  const arr = calcEMAArray(closes, period);
-  return arr[arr.length - 1];
-}
-
 function calcATR(candles, period = 14) {
   if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.008);
   const trs = [];
@@ -234,98 +215,20 @@ function calcATR(candles, period = 14) {
   return Math.max(0.0001, atr);
 }
 
-function calcRSI(closes, period = 14) {
-  if (closes.length <= period) return 50;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const diff = closes[i] - closes[i - 1];
-    if (diff >= 0) gains += diff; else losses -= diff;
-  }
-  let avgGain = gains / period, avgLoss = losses / period;
-  for (let i = period + 1; i < closes.length; i++) {
-    const diff = closes[i] - closes[i - 1];
-    avgGain = (avgGain * (period - 1) + (diff >= 0 ? diff : 0)) / period;
-    avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
-  }
-  if (avgLoss === 0) return 100;
-  return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
-}
-
-// ADX (Testere Filtresi)
-function calcADX(candles, period = 14) {
-  if (candles.length < period * 2) return 25;
-  let trList = [], plusDM = [], minusDM = [];
-
-  for (let i = 1; i < candles.length; i++) {
-    const upMove = candles[i].high - candles[i - 1].high;
-    const downMove = candles[i - 1].low - candles[i].low;
-
-    plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
-    minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
-    trList.push(Math.max(
-      candles[i].high - candles[i].low,
-      Math.abs(candles[i].high - candles[i - 1].close),
-      Math.abs(candles[i].low - candles[i - 1].close)
-    ));
-  }
-
-  let trSmooth = trList.slice(0, period).reduce((a, b) => a + b, 0);
-  let plusDMSmooth = plusDM.slice(0, period).reduce((a, b) => a + b, 0);
-  let minusDMSmooth = minusDM.slice(0, period).reduce((a, b) => a + b, 0);
-
-  const dxList = [];
-  for (let i = period; i < trList.length; i++) {
-    trSmooth = trSmooth - (trSmooth / period) + trList[i];
-    plusDMSmooth = plusDMSmooth - (plusDMSmooth / period) + plusDM[i];
-    minusDMSmooth = minusDMSmooth - (minusDMSmooth / period) + minusDM[i];
-
-    const plusDI = trSmooth > 0 ? (plusDMSmooth / trSmooth) * 100 : 0;
-    const minusDI = trSmooth > 0 ? (minusDMSmooth / trSmooth) * 100 : 0;
-    const sumDI = plusDI + minusDI;
-    const dx = sumDI > 0 ? (Math.abs(plusDI - minusDI) / sumDI) * 100 : 0;
-    dxList.push(dx);
-  }
-
-  if (dxList.length < period) return 25;
-  const adx = dxList.slice(-period).reduce((a, b) => a + b, 0) / period;
-  return Number(adx.toFixed(1));
-}
-
-// MACD (Tetikleyici İndikatör)
-function calcMACD(closes) {
-  if (closes.length < 35) return { macd: 0, signal: 0, hist: 0, prevHist: 0 };
-  const ema12 = calcEMAArray(closes, 12);
-  const ema26 = calcEMAArray(closes, 26);
-
-  const macdLine = [];
-  for (let i = 25; i < closes.length; i++) {
-    macdLine.push(ema12[i] - ema26[i]);
-  }
-
-  const signalLine = calcEMAArray(macdLine, 9);
-  const curMacd = macdLine[macdLine.length - 1];
-  const curSignal = signalLine[signalLine.length - 1];
-  const prevMacd = macdLine[macdLine.length - 2];
-  const prevSignal = signalLine[signalLine.length - 2];
-
-  return {
-    macd: curMacd,
-    signal: curSignal,
-    hist: curMacd - curSignal,
-    prevHist: prevMacd - prevSignal
-  };
-}
-
-// RİSK VE KÂR PLANI
-function calculateChainPlan(entryPrice, isShort, atr) {
+// === KURUMSAL RİSK PLANI (1:1.5 R:R) ===
+function calculateInstitutionalPlan(entryPrice, isShort, atr, sweepLevel) {
   const precision = entryPrice < 0.01 ? 6 : (entryPrice < 1 ? 5 : (entryPrice < 50 ? 4 : 2));
   
-  // SL: 0.80x ATR (Dinamik ve korunaklı)
-  const slDist = Number((atr * 0.80).toFixed(precision));
-  // TP1: 0.85x ATR (%75 kâr realizasyonu + stop girişe)
-  const tp1Dist = Number((atr * 0.85).toFixed(precision));
-  // TP2: 2.20x ATR
-  const tp2Dist = Number((atr * 2.20).toFixed(precision));
+  // Stop: Likiditenin süpürüldüğü iğne ucunun hemen arkası (Dar SL)
+  let slDist = Math.abs(entryPrice - sweepLevel) + (atr * 0.15);
+  if (slDist < atr * 0.45) slDist = atr * 0.45;
+  if (slDist > atr * 0.90) slDist = atr * 0.90;
+
+  // Hedef 1: 1.0x SL Mesafesi (%60 pozisyon kapat, stop maliyete)
+  const tp1Dist = Number((slDist * 1.05).toFixed(precision));
+  // Hedef 2: 2.0x SL Mesafesi (%40 pozisyon trende)
+  const tp2Dist = Number((slDist * 2.10).toFixed(precision));
+  slDist = Number(slDist.toFixed(precision));
 
   return {
     entry: Number(entryPrice.toFixed(precision)),
@@ -338,52 +241,35 @@ function calculateChainPlan(entryPrice, isShort, atr) {
   };
 }
 
-// === İNDİKATÖRLER ZİNCİRİ KARAR MOTORU ===
-function evaluateIndicatorChain(candles, atr) {
-  if (candles.length < 50) return { score: 0, reasons: [] };
+// === RANGE LİKİDİTE SÜPÜRME MOTORU ===
+function evaluateLiquiditySweep(candles) {
+  if (candles.length < 30) return { score: 0 };
 
-  const closes = candles.map(c => c.close);
-  const curPrice = closes[closes.length - 1];
+  const c0 = candles[candles.length - 1]; // Tetikleyici mum
+  // Son 16 mumluk range sınırları
+  const lookback = candles.slice(-18, -2);
+  const rangeHigh = Math.max(...lookback.map(c => c.high));
+  const rangeLow = Math.min(...lookback.map(c => c.low));
 
-  // 1. KATMAN: Trend Filtresi (EMA 200 & EMA 50)
-  const ema50 = calcEMA(closes, 50);
-  const ema200 = calcEMA(closes, Math.min(200, closes.length));
-  const isTrendBull = curPrice > ema200 && curPrice >= ema50;
-  const isTrendBear = curPrice < ema200 && curPrice <= ema50;
+  // LONG SETUP: 
+  // Fiyat range dibini aşağı kırdı (iğne attı), ancak mum range içine geri dönüp YEŞİL kapattı!
+  const sweptLow = c0.low < rangeLow;
+  const closedBackInsideBull = c0.close > rangeLow && c0.close > c0.open;
 
-  // 2. KATMAN: Testere Rejim Filtresi (ADX >= 22)
-  const adx = calcADX(candles, 14);
-  if (adx < 22) return { score: 0, reasons: ['Yatay Piyasa (ADX < 22)'] };
-
-  // 3. KATMAN: Momentum Teyidi (RSI 14)
-  const rsi = calcRSI(closes, 14);
-
-  // 4. KATMAN: Tetikleyici (MACD Kesişimi)
-  const macd = calcMACD(closes);
-  const isMacdBullCross = macd.prevHist <= 0 && macd.hist > 0;
-  const isMacdBearCross = macd.prevHist >= 0 && macd.hist < 0;
-
-  const reasons = [];
-
-  // LONG ZİNCİRİ: Trend Boğa + ADX Güçlü + RSI 45-65 + MACD Yukarı Kesişim
-  if (isTrendBull && isMacdBullCross && rsi >= 45 && rsi <= 68) {
-    reasons.push('EMA200 & EMA50 Boğa Trendi');
-    reasons.push(`Trend Güçlü (ADX: ${adx})`);
-    reasons.push(`RSI Teyitli (${rsi})`);
-    reasons.push('MACD Yukarı Kesişim');
-    return { score: 95, isShort: false, reasons };
+  if (sweptLow && closedBackInsideBull) {
+    return { score: 90, isShort: false, sweepLevel: c0.low };
   }
 
-  // SHORT ZİNCİRİ: Trend Ayı + ADX Güçlü + RSI 32-55 + MACD Aşağı Kesişim
-  if (isTrendBear && isMacdBearCross && rsi <= 55 && rsi >= 32) {
-    reasons.push('EMA200 & EMA50 Ayı Trendi');
-    reasons.push(`Trend Güçlü (ADX: ${adx})`);
-    reasons.push(`RSI Teyitli (${rsi})`);
-    reasons.push('MACD Aşağı Kesişim');
-    return { score: -95, isShort: true, reasons };
+  // SHORT SETUP:
+  // Fiyat range tepesini yukarı kırdı (iğne attı), ancak mum range içine geri dönüp KIRMIZI kapattı!
+  const sweptHigh = c0.high > rangeHigh;
+  const closedBackInsideBear = c0.close < rangeHigh && c0.close < c0.open;
+
+  if (sweptHigh && closedBackInsideBear) {
+    return { score: -90, isShort: true, sweepLevel: c0.high };
   }
 
-  return { score: 0, reasons: [] };
+  return { score: 0 };
 }
 
 // === SİMÜLASYON MOTORU ===
@@ -393,7 +279,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     const granularity = '15m';
     
     const candles = await getBitgetCandles(targetSymbol, granularity, 450);
-    if (candles.length < 50) {
+    if (candles.length < 40) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
@@ -403,7 +289,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopIndex = -99;
     const simTrades = [];
 
-    for (let i = 35; i < candles.length; i++) {
+    for (let i = 25; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
       const atr = calcATR(slice, 14);
@@ -433,14 +319,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // TP1 Kontrolü (%75 Kâr Alımı + Stop Maliyete)
+        // TP1 Kontrolü (Stop maliyete kilitlenir)
         const reachedTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
         if (!simActive.tp1Hit && reachedTP1) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
-        // Stop Kontrolü (Fitil Hatasız Kapanış Teyidi)
+        // Stop Kontrolü
         let isStopped = false;
         if (simActive.tp1Hit) {
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
@@ -454,7 +340,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           let result = 'LOSS';
 
           if (simActive.tp1Hit) {
-            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.75).toFixed(4));
+            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.60).toFixed(4));
             status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
             result = 'WIN';
           } else {
@@ -477,21 +363,21 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası en az 6 mum (1.5 saat) bekleme
-      if (i - lastStopIndex < 6) continue;
-      if (i - lastTradeIndex < 3) continue;
+      // Stop sonrası en az 4 mum (1 saat) soğuma
+      if (i - lastStopIndex < 4) continue;
+      if (i - lastTradeIndex < 2) continue;
 
-      const chainSetup = evaluateIndicatorChain(slice, atr);
+      const setup = evaluateLiquiditySweep(slice);
 
-      if (Math.abs(chainSetup.score) >= 90) {
-        const plan = calculateChainPlan(c.close, chainSetup.isShort, atr);
+      if (Math.abs(setup.score) >= 80) {
+        const plan = calculateInstitutionalPlan(c.close, setup.isShort, atr, setup.sweepLevel);
         lastTradeIndex = i;
         openCandleIndex = i;
 
         simActive = {
           symbol: targetSymbol,
           openTime: `${dateStr} ${timeStr}`,
-          direction: chainSetup.isShort ? 'SHORT' : 'LONG',
+          direction: setup.isShort ? 'SHORT' : 'LONG',
           entry: plan.entry,
           sl: plan.sl,
           tp1: plan.tp1,
@@ -529,22 +415,22 @@ app.get('/api/scan', requireAuth, async (req, res) => {
     const results = [];
 
     for (const coin of topCoins) {
-      const candles = await getBitgetCandles(coin.symbol, '15m', 55);
-      if (candles.length < 40) continue;
+      const candles = await getBitgetCandles(coin.symbol, '15m', 45);
+      if (candles.length < 30) continue;
 
       const atr = calcATR(candles, 14);
-      const chainSetup = evaluateIndicatorChain(candles, atr);
-      const plan = calculateChainPlan(coin.lastPrice, chainSetup.isShort, atr);
+      const setup = evaluateLiquiditySweep(candles);
+      const plan = calculateInstitutionalPlan(coin.lastPrice, setup.isShort, atr, setup.sweepLevel || coin.lastPrice);
 
       results.push({
         symbol: coin.symbol,
         price: coin.lastPrice,
         volume24h: `$${(coin.volume24h / 1000000).toFixed(1)}M`,
         change24h: coin.change24h.toFixed(2) + '%',
-        score: chainSetup.score,
-        signal: chainSetup.score >= 90 ? 'LONG 🟢' : (chainSetup.score <= -90 ? 'SHORT 🔴' : 'NÖTR ⏳'),
+        score: setup.score,
+        signal: setup.score >= 80 ? 'LONG 🟢 (SWEEP)' : (setup.score <= -80 ? 'SHORT 🔴 (SWEEP)' : 'NÖTR ⏳'),
         tradePlan: plan,
-        reasons: chainSetup.reasons.length ? chainSetup.reasons : ['Fırsat Bekleniyor']
+        reasons: [setup.score !== 0 ? 'Likidite Süpürmesi & Range Dönüşü' : 'Beklemede']
       });
     }
 
@@ -554,5 +440,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget İndikatör Zinciri Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Likidite Avı Motoru Aktif: Port ${PORT}`));
 module.exports = app;
