@@ -347,6 +347,34 @@
       enabled: false
     };
 
+    // ARAYÜZ YENİLEME FONKSİYONU (EN BAŞTA TANIMLANDI)
+    function renderMarginUI() {
+      const margin = Number(appSettings.tradeSizeUSDT) || 50;
+      const lev = Number(appSettings.leverage) || 10;
+      const totalVolume = margin * lev;
+
+      const levText = document.getElementById('levVolumeText');
+      if (levText) levText.textContent = `${margin} USDT = ${totalVolume} USDT Pozisyon`;
+      
+      const levLabel = document.getElementById('quickLevLabel');
+      if (levLabel) levLabel.textContent = lev;
+
+      const curLev = document.getElementById('currentLev');
+      if (curLev) curLev.textContent = `${lev}x`;
+    }
+
+    function updateBitgetStatus(isConnected) {
+      const badge = document.getElementById('bgStatusBadge');
+      if (!badge) return;
+      if (isConnected) {
+        badge.className = "text-[11px] bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700 font-semibold";
+        badge.textContent = "🟢 Bitget API Bağlı & Aktif";
+      } else {
+        badge.className = "text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-semibold";
+        badge.textContent = "🔑 Bitget API Bağlı Değil";
+      }
+    }
+
     async function apiFetch(url, options = {}) {
       const headers = { 
         ...(options.headers || {}), 
@@ -402,13 +430,6 @@
       document.getElementById('loginScreen').classList.remove('hidden');
     }
 
-    async function checkSessionOnLoad() {
-      if (authToken) {
-        enterTerminal();
-      }
-    }
-
-    // TARAYICI HAFIZASINDAN KALICI YÜKLEME KİLİDİ
     function applyLocalBitgetConfig() {
       try {
         const cached = localStorage.getItem('bitget_local_cfg');
@@ -436,10 +457,7 @@
     }
 
     async function loadUserSettings() {
-      // 1. Önce tarayıcı hafızasını hemen yükle (asla sıfırlanmaz)
       applyLocalBitgetConfig();
-
-      // 2. Sunucudaki güncel durumu arka planda eşitle
       try {
         const res = await apiFetch('/api/me');
         const data = await res.json();
@@ -449,21 +467,6 @@
           applyLocalBitgetConfig();
         }
       } catch (e) {}
-    }
-
-    function renderMarginUI() {
-      const margin = Number(appSettings.tradeSizeUSDT) || 50;
-      const lev = Number(appSettings.leverage) || 10;
-      const totalVolume = margin * lev;
-
-      const levText = document.getElementById('levVolumeText');
-      if (levText) levText.textContent = `${margin} USDT = ${totalVolume} USDT Pozisyon`;
-      
-      const levLabel = document.getElementById('quickLevLabel');
-      if (levLabel) levLabel.textContent = lev;
-
-      const curLev = document.getElementById('currentLev');
-      if (curLev) curLev.textContent = `${lev}x`;
     }
 
     let marginDebounceTimer = null;
@@ -476,7 +479,6 @@
       if (document.getElementById('quickTradeSizeInput')) document.getElementById('quickTradeSizeInput').value = num;
       renderMarginUI();
 
-      // Yerel hafızaya kaydet
       const cached = localStorage.getItem('bitget_local_cfg');
       if (cached) {
         const bg = JSON.parse(cached);
@@ -515,18 +517,6 @@
       updateQuickTradeSize(appSettings.tradeSizeUSDT);
     }
 
-    function updateBitgetStatus(isConnected) {
-      const badge = document.getElementById('bgStatusBadge');
-      if (!badge) return;
-      if (isConnected) {
-        badge.className = "text-[11px] bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700 font-semibold";
-        badge.textContent = "🟢 Bitget API Bağlı & Aktif";
-      } else {
-        badge.className = "text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-semibold";
-        badge.textContent = "🔑 Bitget API Bağlı Değil";
-      }
-    }
-
     async function saveBitgetConfig() {
       const apiKey = document.getElementById('bgApiKey').value.trim();
       const secretKey = document.getElementById('bgSecretKey').value.trim();
@@ -537,7 +527,6 @@
 
       const payload = { apiKey, secretKey, passphrase, leverage, tradeSizeUSDT, enabled };
 
-      // Tarayıcı hafızasına mühürle
       localStorage.setItem('bitget_local_cfg', JSON.stringify(payload));
 
       try {
@@ -551,8 +540,8 @@
           appSettings.leverage = leverage;
           appSettings.enabled = enabled;
           renderMarginUI();
-          updateBitgetStatus(apiKey && enabled);
-          alert("✅ Bitget API ayarları kalıcı olarak mühürlendi!");
+          updateBitgetStatus(Boolean(apiKey && enabled));
+          alert("✅ Bitget API ayarları kalıcı olarak kaydedildi!");
           toggleBitgetModal();
         }
       } catch (err) {
@@ -586,7 +575,6 @@
       const userBadge = document.getElementById('userRoleBadge');
       if (userBadge) userBadge.textContent = `👤 ${currentUser ? currentUser.username : 'admin'}`;
 
-      // Önce yerel hafızadan hemen rozeti yak
       applyLocalBitgetConfig();
       loadUserSettings();
 
@@ -846,7 +834,10 @@
       } catch (e) {}
     }
 
-    checkSessionOnLoad();
+    // Doğrudan oturum kontrolü
+    if (authToken) {
+      enterTerminal();
+    }
   </script>
 </body>
 </html>
