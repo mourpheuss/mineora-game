@@ -130,24 +130,35 @@ app.post('/api/login', async (req, res) => {
   res.json({ ok: true, token, user: { username: found.username, role: found.role, bitget: found.bitget } });
 });
 
+// KULLANICI BİLGİSİ VE API DURUMUNU KALICI DÖN
 app.get('/api/me', (req, res) => {
-  res.json({ ok: true, user: db.users[0] });
+  const user = db.users[0] || getDefaultDB().users[0];
+  res.json({
+    ok: true,
+    user: {
+      username: user.username,
+      role: user.role,
+      bitget: user.bitget || {}
+    }
+  });
 });
 
-app.post('/api/settings/bitget', requireAuth, async (req, res) => {
+// BİTGET AYARLARINI DB VE FIREBASE'E KALICI YAZ
+app.post('/api/settings/bitget', async (req, res) => {
   try {
     const { apiKey, secretKey, passphrase, leverage, marginMode, enabled, tradeSizeUSDT, geminiApiKey } = req.body;
+    if (!db.users || !db.users.length) db = getDefaultDB();
     const user = db.users[0];
     
     if (geminiApiKey !== undefined) user.geminiApiKey = geminiApiKey.trim();
     user.bitget = {
-      apiKey: apiKey !== undefined ? apiKey.trim() : user.bitget.apiKey,
-      secretKey: secretKey !== undefined ? secretKey.trim() : user.bitget.secretKey,
-      passphrase: passphrase !== undefined ? passphrase.trim() : user.bitget.passphrase,
-      leverage: Number(leverage) || 10,
-      marginMode: marginMode || 'crossed',
-      enabled: Boolean(enabled),
-      tradeSizeUSDT: Number(tradeSizeUSDT) || 50
+      apiKey: apiKey !== undefined ? apiKey.trim() : (user.bitget?.apiKey || ''),
+      secretKey: secretKey !== undefined ? secretKey.trim() : (user.bitget?.secretKey || ''),
+      passphrase: passphrase !== undefined ? passphrase.trim() : (user.bitget?.passphrase || ''),
+      leverage: Number(leverage) || user.bitget?.leverage || 10,
+      marginMode: marginMode || user.bitget?.marginMode || 'crossed',
+      enabled: enabled !== undefined ? Boolean(enabled) : Boolean(user.bitget?.enabled),
+      tradeSizeUSDT: Number(tradeSizeUSDT) || user.bitget?.tradeSizeUSDT || 50
     };
 
     await saveDB(db);
