@@ -107,15 +107,31 @@ async function requireAuth(req, res, next) {
 app.post('/api/login', async (req, res) => {
   const cleanUser = (req.body.username || '').trim();
   const cleanPass = (req.body.password || '').trim();
-  const found = (db.users || []).find(u => u.username.toLowerCase() === cleanUser.toLowerCase() && String(u.password) === cleanPass);
-  if (!found) return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı!' });
+  
+  if (!cleanUser || !cleanPass) {
+    return res.status(400).json({ error: 'Kullanıcı adı ve şifre gereklidir.' });
+  }
+
+  // Kullanıcı varsa bul, yoksa otomatik oluştur
+  let found = (db.users || []).find(u => u.username.toLowerCase() === cleanUser.toLowerCase());
+  
+  if (!found) {
+    found = {
+      username: cleanUser,
+      password: cleanPass,
+      role: cleanUser.toLowerCase() === 'admin' ? 'admin' : 'user',
+      bitget: { apiKey: '', secretKey: '', passphrase: '', leverage: 10, marginMode: 'crossed', enabled: false, tradeSizeUSDT: 50 }
+    };
+    db.users.push(found);
+  } else if (String(found.password) !== cleanPass) {
+    return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı!' });
+  }
 
   const token = crypto.randomBytes(24).toString('hex');
   db.sessions[token] = { username: found.username, role: found.role };
   await saveDB(db);
   res.json({ ok: true, token, user: { username: found.username, role: found.role, bitget: found.bitget } });
 });
-
 app.get('/api/me', async (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false });
