@@ -241,18 +241,20 @@ function calcRSI(closes, period = 14) {
   return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
 }
 
-// === GERÇEKÇİ RİSK PLANI (NEFES ALAN STOP + HIZLI TP1) ===
+// === TAVAN KORUMALI RİSK PLANI ===
 function calculateTruePlan(entryPrice, isShort, atr) {
   const precision = entryPrice < 0.01 ? 6 : (entryPrice < 1 ? 5 : (entryPrice < 50 ? 4 : 2));
   
-  // Nefes Alan Stop: 1.15x ATR (BTC için ~170$ - Mikro fitilde patlamaz)
-  const slDist = Number((atr * 1.15).toFixed(precision));
-  
-  // Hızlı TP1: 0.65x ATR (%80 realizasyon + stop maliyete)
+  // Stop mesafesi 1.0x ATR, ancak BTC için KESİN TAVAN 115$(460$ zarar engellendi!)
+  let slDist = atr * 1.0;
+  if (entryPrice > 10000 && slDist > 115) slDist = 115;
+  if (entryPrice <= 2 && slDist > 0.0065) slDist = 0.0065; // XRP tavanı
+
+  // TP1: 0.65x ATR (%80 kâr kasaya, stop maliyete)
   const tp1Dist = Number((atr * 0.65).toFixed(precision));
-  
   // TP2 Trend Koşusu: 2.20x ATR
   const tp2Dist = Number((atr * 2.20).toFixed(precision));
+  slDist = Number(slDist.toFixed(precision));
 
   return {
     entry: Number(entryPrice.toFixed(precision)),
@@ -295,7 +297,7 @@ function evaluateTrueSetup(candles) {
   return { score: 0 };
 }
 
-// === HATASIZ ADİL SİMÜLASYON MOTORU ===
+// === SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -310,6 +312,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let openCandleIndex = -99;
     let lastTradeIndex = -99;
     let lastStopIndex = -99;
+    let lastStopDir = null;
     const simTrades = [];
 
     for (let i = 30; i < candles.length; i++) {
@@ -326,8 +329,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // 1. ÖNCE HEDEF KONTROLLERİ (Fiyat hedefe dokunduysa kâr garanti edilir)
-        // TP2 Kontrolü
+        // 1. ÖNCE TP HEDEFLERİ
         if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
@@ -342,20 +344,18 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // TP1 Kontrolü (Dokunduğu an stop derhal başabaş seviyesine kilitlenir)
+        // TP1 Kontrolü (Stop derhal girişe kilitlenir)
         const hitTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
         if (!simActive.tp1Hit && hitTP1) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
-        // 2. STOP KONTROLÜ (Fitil tuzağı kalktı: Yalnızca mum kapanışı seviyeyi delerse stop sayılır)
+        // 2. STOP KONTROLÜ
         let isStopped = false;
         if (simActive.tp1Hit) {
-          // TP1 alındıktan sonra maliyete değerse risksiz kârla kapanır
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
         } else {
-          // TP1 öncesinde anlık fitille kesilmez; mum kapanışı seviyenin ötesindeyse çıkılır
           isStopped = isLong ? c.close <= simActive.sl : c.close >= simActive.sl;
         }
 
@@ -371,6 +371,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           } else {
             profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
             lastStopIndex = i;
+            lastStopDir = simActive.direction;
           }
 
           simTrades.push({
@@ -388,8 +389,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası en az 5 bar (1 saat 15 dk) bekleme
-      if (i - lastStopIndex < 5) continue;
+      // Stop sonrası aynı yönde en az 6 bar (1.5 saat) bekleme
+      const currentDir = c.close > c.open ? 'LONG' : 'SHORT';
+      if (i - lastStopIndex < 6 && lastStopDir === currentDir) continue;
       if (i - lastTradeIndex < 3) continue;
 
       const setup = evaluateTrueSetup(slice);
@@ -465,5 +467,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Gerçekçi Volatilite Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Optimize Motor Aktif: Port ${PORT}`));
 module.exports = app;
