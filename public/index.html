@@ -124,7 +124,7 @@
         </div>
         <div>
           <label class="text-[11px] text-slate-400 block mb-1">İşlem Başına Marjin (USDT)</label>
-          <input id="bgTradeSize" type="number" value="50" min="10" step="5" onchange="updateQuickTradeSize(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-300 font-bold" />
+          <input id="bgTradeSize" type="number" value="50" min="10" step="5" oninput="updateQuickTradeSize(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-300 font-bold" />
         </div>
         <div class="flex items-end">
           <label class="flex items-center gap-2 cursor-pointer pb-2 text-xs text-cyan-300">
@@ -172,7 +172,7 @@
       <div class="flex flex-wrap justify-between items-center gap-3 mb-4 pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
           <h2 class="text-base font-bold text-purple-300">⏪ Kripto Likidite Simülasyonu</h2>
-          <select id="btCoinSelect" class="bg-slate-950 text-cyan-300 font-bold text-xs rounded border border-purple-400 px-2 py-1 outline-none">
+          <select id="btCoinSelect" onchange="runBacktest(currentBtHours)" class="bg-slate-950 text-cyan-300 font-bold text-xs rounded border border-purple-400 px-2 py-1 outline-none">
             <option value="BTCUSDT">BTCUSDT</option>
             <option value="ETHUSDT">ETHUSDT</option>
             <option value="SOLUSDT">SOLUSDT</option>
@@ -181,17 +181,17 @@
           </select>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <button onclick="runBacktest(24)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 24 Saat</button>
-          <button onclick="runBacktest(72)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 3 Gün</button>
-          <button onclick="runBacktest(120)" class="bg-slate-800 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-lg border border-amber-500/40">Son 5 Gün</button>
-          <button onclick="runBacktest(720)" class="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Son 1 Ay</button>
+          <button id="btBtn_24" onclick="runBacktest(24)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 24 Saat</button>
+          <button id="btBtn_72" onclick="runBacktest(72)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 3 Gün</button>
+          <button id="btBtn_120" onclick="runBacktest(120)" class="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-400">Son 5 Gün</button>
+          <button id="btBtn_720" onclick="runBacktest(720)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 1 Ay</button>
           <button onclick="document.getElementById('backtestModal').classList.add('hidden')" class="bg-rose-950 text-rose-300 text-xs font-bold px-3 py-1.5 rounded-lg">Kapat ✕</button>
         </div>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4 text-center">
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-slate-400 block">SİNYAL</span><strong id="btTotal" class="text-xl font-black text-white">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-emerald-300 block">BAŞARILI</span><strong id="btWins" class="text-xl font-black text-emerald-400">--</strong></div>
-        <div class="bg-slate-950 p-3 rounded-lg border border-rose-300 block">STOP</span><strong id="btLosses" class="text-xl font-black text-rose-400">--</strong></div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-rose-300 block">STOP</span><strong id="btLosses" class="text-xl font-black text-rose-400">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-purple-300 block">BAŞARI ORANI</span><strong id="btWinRate" class="text-xl font-black text-purple-400">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-cyan-500/50">
           <span class="text-[11px] text-cyan-300 block">TOPLAM PUAN / USDT KÂRI</span>
@@ -337,6 +337,7 @@
     let currentUser = { username: 'admin' };
     let soundEnabled = true;
     let currentSymbol = 'BTCUSDT';
+    let currentBtHours = 120;
     let tvWidget = null;
     let scanInterval = null;
 
@@ -420,7 +421,6 @@
           appSettings.leverage = Number(bg.leverage) || 10;
           appSettings.enabled = Boolean(bg.enabled);
 
-          // Alanları doldur
           document.getElementById('quickTradeSizeInput').value = appSettings.tradeSizeUSDT;
           document.getElementById('bgTradeSize').value = appSettings.tradeSizeUSDT;
           document.getElementById('bgLeverage').value = appSettings.leverage;
@@ -450,7 +450,6 @@
       if (curLev) curLev.textContent = `${lev}x`;
     }
 
-    // ANLIK MARJİN VE POZİSYON SENKRONİZASYONU
     let marginDebounceTimer = null;
     function updateQuickTradeSize(val) {
       const num = Number(val);
@@ -473,7 +472,7 @@
             })
           });
         } catch (e) {}
-      }, 500);
+      }, 400);
     }
 
     function syncLeverage(val) {
@@ -481,6 +480,7 @@
       if (isNaN(num) || num <= 0) return;
       appSettings.leverage = num;
       renderMarginUI();
+      updateQuickTradeSize(appSettings.tradeSizeUSDT);
     }
 
     function updateBitgetStatus(isConnected) {
@@ -539,7 +539,7 @@
       setTimeout(() => {
         box.className = "mt-3 p-3 rounded-lg border text-xs font-medium bg-emerald-950 border-emerald-600 text-emerald-300";
         box.textContent = "✅ Bitget V2 Vadeli İşlem API Anahtarı Doğrulandı. İşleme hazır!";
-      }, 1200);
+      }, 1000);
     }
 
     function enterTerminal() {
@@ -599,15 +599,31 @@
       document.getElementById('backtestModal').classList.remove('hidden');
       const btSel = document.getElementById('btCoinSelect');
       if (btSel) btSel.value = currentSymbol;
-      runBacktest(120);
+      runBacktest(currentBtHours);
+    }
+
+    function updateBtButtonsHighlight(hours) {
+      const btHoursMap = [24, 72, 120, 720];
+      btHoursMap.forEach(h => {
+        const btn = document.getElementById(`btBtn_${h}`);
+        if (!btn) return;
+        if (h === hours) {
+          btn.className = "bg-purple-600 text-white text-xs font-black px-3 py-1.5 rounded-lg border border-purple-400 shadow-md";
+        } else {
+          btn.className = "bg-slate-800 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700";
+        }
+      });
     }
 
     async function runBacktest(hours = 120) {
+      currentBtHours = hours;
+      updateBtButtonsHighlight(hours);
+
       const selectEl = document.getElementById('btCoinSelect');
       const sym = (selectEl && selectEl.value) ? selectEl.value : currentSymbol;
       
       const tbody = document.getElementById('btTableBody');
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-purple-300">⏳ ${sym} için 3.000 mumluk SMC ve Ultimate RSI taranıyor...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-purple-300">⏳ ${sym} için son ${hours} saatlik SMC verileri taranıyor...</td></tr>`;
 
       try {
         const res = await apiFetch(`/api/backtest?symbol=${sym}&hours=${hours}`);
@@ -627,7 +643,6 @@
         document.getElementById('btLosses').textContent = data.losses || 0;
         document.getElementById('btWinRate').textContent = '%' + (data.winRate || 0);
 
-        // Ham puan ve marjine göre hesaplanan USDT kazancı
         const totalProfitPoints = Number(data.totalProfit) || 0;
         
         let totalUsdtProfit = 0;
@@ -635,7 +650,6 @@
           data.trades.forEach(t => {
             const entry = Number(t.entry) || 1;
             const pts = Number(t.profitDollar) || 0;
-            // USDT kâr formülü = (Puan / Giriş) * Kaldıraçlı Hacim
             const tradeUsdt = (pts / entry) * posVolume;
             totalUsdtProfit += tradeUsdt;
           });
@@ -695,7 +709,6 @@
         tbody.innerHTML = '';
         data.coins.forEach(c => {
           const tr = document.createElement('tr');
-          const isSignal = c.signal.includes('LONG') || c.signal.includes('SHORT');
           tr.innerHTML = `
             <td class="py-2 px-3 font-bold text-cyan-300 cursor-pointer" onclick="changeActiveSymbol('${c.symbol}'); toggleScannerModal();">${c.symbol}</td>
             <td class="py-2 px-3">$${c.price}</td>
