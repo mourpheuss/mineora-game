@@ -4,7 +4,6 @@ process.env.TZ = 'Europe/Istanbul';
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -94,7 +93,7 @@ async function saveDB(data) {
   } catch (e) {}
 }
 
-// OTURUM KONTROLÜ - Vercel Serverless Korumalı (Asla 401 Hatası Fırlatmaz)
+// Oturum Hatasını Önleyen Güvenli Yetkilendirme
 function requireAuth(req, res, next) {
   req.user = db.users[0] || { username: 'admin', role: 'admin' };
   next();
@@ -173,8 +172,16 @@ async function getBitgetCandles(symbol, granularity = '15m', limit = 300) {
 }
 
 // === TEKNİK HESAPLAMALAR ===
+function calcEMA(closes, period) {
+  if (closes.length < period) return closes[closes.length - 1] || 0;
+  const k = 2 / (period + 1);
+  let ema = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < closes.length; i++) ema = closes[i] * k + ema * (1 - k);
+  return ema;
+}
+
 function calcATR(candles, period = 14) {
-  if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.01);
+  if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.008);
   const trs = [];
   for (let i = 1; i < candles.length; i++) {
     trs.push(Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - candles[i - 1].close), Math.abs(candles[i].low - candles[i - 1].close)));
@@ -210,15 +217,19 @@ function calcBollingerBands(closes, period = 20, multiplier = 2.0) {
   return { middle: sma, upper: sma + multiplier * stdDev, lower: sma - multiplier * stdDev };
 }
 
-// === GÜVENLİ HEDEF PLANI (KORUYUCU ZIRH) ===
+// === SIKI TAVANLI RİSK PLANI ===
 function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   const precision = spotPrice < 0.1 ? 5 : (spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2));
   
-  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.4);
-  if (slDist < atr * 1.3) slDist = atr * 1.3;
+  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.25);
+  if (slDist < atr * 0.9) slDist = atr * 0.9;
+  
+  // Sıkı stop tavanı: BTC için maks 180$, altcoinler için maks %1.5
+  const maxAllowedSl = spotPrice > 10000 ? 180 : spotPrice * 0.015;
+  if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  const tp1Dist = Number((atr * 1.1).toFixed(precision)); // Hızlı %80 Güvenli Kâr
-  const tp2Dist = Number((atr * 2.6).toFixed(precision)); // Tam Hedef
+  const tp1Dist = Number((atr * 1.05).toFixed(precision)); // %80 hızlı kâr
+  const tp2Dist = Number((atr * 2.50).toFixed(precision)); // Tam hedef
   slDist = Number(slDist.toFixed(precision));
 
   return {
@@ -232,15 +243,18 @@ function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   };
 }
 
-// === %100 ÇALIŞAN LİKİDİTE MOTORU ===
+// === TREND FİLTRELİ DÖNÜŞ MOTORU ===
 function evaluateCryptoSetup(candles, atr) {
-  if (candles.length < 35) return { score: 0, reasons: [] };
+  if (candles.length < 50) return { score: 0, reasons: [] };
 
   const closes = candles.map(c => c.close);
   const bb = calcBollingerBands(closes, 20, 2.0);
   if (!bb) return { score: 0, reasons: [] };
 
+  const ema200 = calcEMA(closes, Math.min(200, closes.length));
   const rsi = calcRSI(closes, 14);
+
+  const curPrice = closes[closes.length - 1];
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
 
@@ -248,31 +262,36 @@ function evaluateCryptoSetup(candles, atr) {
   const reasons = [];
   let swingLevel = curC.close;
 
-  // DİP SÜPÜRMESİ & AŞIRI SATIM REAKSİYONU (LONG)
+  // DİP SÜPÜRMESİ (LONG): SADECE ANA TREND EMA200 ÜZERİNDEYSE VEYA YAKININDAYSA
   const isOversoldBounce = (prevC.low <= bb.lower || curC.low <= bb.lower) && curC.close > bb.lower && curC.close > curC.open;
   if (isOversoldBounce && rsi <= 38) {
-    score = 85;
-    reasons.push('Likidite Dibi Süpürüldü (Bollinger Alt Bant)');
-    reasons.push(`RSI Dip Aşırı Satım Tepkisi (${rsi})`);
-    swingLevel = Math.min(curC.low, prevC.low);
+    // Düşen bıçak engeli: Fiyat EMA200'ün belirgin altındaysa LONG açılmaz
+    if (curPrice >= ema200) {
+      score = 85;
+      reasons.push('Bollinger Alt Bandı Süpürüldü (Boğa Trendi)');
+      reasons.push(`RSI Dip Tepkisi (${rsi})`);
+      swingLevel = Math.min(curC.low, prevC.low);
+    }
   }
 
-  // TEPE SÜPÜRMESİ & AŞIRI ALIM REDDİ (SHORT)
+  // TEPE SÜPÜRMESİ (SHORT): SADECE ANA TREND DÜŞÜŞTE VEYA EMA200 ALTINDAYSA
   const isOverboughtReject = (prevC.high >= bb.upper || curC.high >= bb.upper) && curC.close < bb.upper && curC.close < curC.open;
   if (isOverboughtReject && rsi >= 62) {
-    score = -85;
-    reasons.push('Likidite Tepesi Süpürüldü (Bollinger Üst Bant)');
-    reasons.push(`RSI Tepe Aşırı Alım Reddi (${rsi})`);
-    swingLevel = Math.max(curC.high, prevC.high);
+    if (curPrice <= ema200 * 1.008) {
+      score = -85;
+      reasons.push('Bollinger Üst Bandı Süpürüldü (Ayı Direnci)');
+      reasons.push(`RSI Tepe Reddi (${rsi})`);
+      swingLevel = Math.max(curC.high, prevC.high);
+    }
   }
 
-  return { score, reasons, rsi, swingLevel, bb };
+  return { score, reasons, rsi, swingLevel, bb, ema200 };
 }
 
-// === HATASIZ BACKTEST SİMÜLASYONU ===
+// === SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
-    const targetSymbol = (req.query.symbol || 'XRPUSDT').toUpperCase();
+    const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
     const granularity = '15m';
     const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
 
