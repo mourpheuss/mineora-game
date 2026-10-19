@@ -415,64 +415,70 @@
       try {
         const res = await apiFetch('/api/me');
         const data = await res.json();
-        if (data && data.user && data.user.bitget) {
-          const bg = data.user.bitget;
+        
+        // Sunucudan gelen veriyi önceliklendir, yoksa localStorage'a bak
+        let bg = data?.user?.bitget;
+        if (!bg || !bg.apiKey) {
+          const cachedBg = localStorage.getItem('bitget_local_cfg');
+          if (cachedBg) bg = JSON.parse(cachedBg);
+        }
+
+        if (bg) {
           appSettings.tradeSizeUSDT = Number(bg.tradeSizeUSDT) || 50;
           appSettings.leverage = Number(bg.leverage) || 10;
           appSettings.enabled = Boolean(bg.enabled);
 
-          document.getElementById('quickTradeSizeInput').value = appSettings.tradeSizeUSDT;
-          document.getElementById('bgTradeSize').value = appSettings.tradeSizeUSDT;
-          document.getElementById('bgLeverage').value = appSettings.leverage;
-          document.getElementById('bgEnabled').checked = appSettings.enabled;
-          if (bg.apiKey) document.getElementById('bgApiKey').value = bg.apiKey;
-          if (bg.secretKey) document.getElementById('bgSecretKey').value = bg.secretKey;
-          if (bg.passphrase) document.getElementById('bgPassphrase').value = bg.passphrase;
+          // Form alanlarını doldur
+          if (document.getElementById('quickTradeSizeInput')) document.getElementById('quickTradeSizeInput').value = appSettings.tradeSizeUSDT;
+          if (document.getElementById('bgTradeSize')) document.getElementById('bgTradeSize').value = appSettings.tradeSizeUSDT;
+          if (document.getElementById('bgLeverage')) document.getElementById('bgLeverage').value = appSettings.leverage;
+          if (document.getElementById('bgEnabled')) document.getElementById('bgEnabled').checked = appSettings.enabled;
+          if (document.getElementById('bgApiKey') && bg.apiKey) document.getElementById('bgApiKey').value = bg.apiKey;
+          if (document.getElementById('bgSecretKey') && bg.secretKey) document.getElementById('bgSecretKey').value = bg.secretKey;
+          if (document.getElementById('bgPassphrase') && bg.passphrase) document.getElementById('bgPassphrase').value = bg.passphrase;
 
           renderMarginUI();
-          updateBitgetStatus(bg.apiKey && bg.enabled);
+          
+          // API Key varsa rozeti doğrudan yeşil yap
+          const isConnected = Boolean(bg.apiKey && bg.apiKey.length > 5 && bg.enabled);
+          updateBitgetStatus(isConnected);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error("Ayar yükleme hatası:", e);
+      }
     }
 
-    function renderMarginUI() {
-      const margin = Number(appSettings.tradeSizeUSDT) || 50;
-      const lev = Number(appSettings.leverage) || 10;
-      const totalVolume = margin * lev;
+    async function saveBitgetConfig() {
+      const apiKey = document.getElementById('bgApiKey').value.trim();
+      const secretKey = document.getElementById('bgSecretKey').value.trim();
+      const passphrase = document.getElementById('bgPassphrase').value.trim();
+      const leverage = Number(document.getElementById('bgLeverage').value) || 10;
+      const tradeSizeUSDT = Number(document.getElementById('bgTradeSize').value) || 50;
+      const enabled = document.getElementById('bgEnabled').checked;
 
-      const levText = document.getElementById('levVolumeText');
-      if (levText) levText.textContent = `${margin} USDT = ${totalVolume} USDT Pozisyon`;
-      
-      const levLabel = document.getElementById('quickLevLabel');
-      if (levLabel) levLabel.textContent = lev;
+      const payload = { apiKey, secretKey, passphrase, leverage, tradeSizeUSDT, enabled };
 
-      const curLev = document.getElementById('currentLev');
-      if (curLev) curLev.textContent = `${lev}x`;
-    }
+      // Tarayıcı hafızasına da yedekle (sayfa yenilendiğinde anında hatırlanması için)
+      localStorage.setItem('bitget_local_cfg', JSON.stringify(payload));
 
-    let marginDebounceTimer = null;
-    function updateQuickTradeSize(val) {
-      const num = Number(val);
-      if (isNaN(num) || num <= 0) return;
-
-      appSettings.tradeSizeUSDT = num;
-      document.getElementById('bgTradeSize').value = num;
-      document.getElementById('quickTradeSizeInput').value = num;
-      renderMarginUI();
-
-      clearTimeout(marginDebounceTimer);
-      marginDebounceTimer = setTimeout(async () => {
-        try {
-          await apiFetch('/api/settings/bitget', {
-            method: 'POST',
-            body: JSON.stringify({
-              tradeSizeUSDT: appSettings.tradeSizeUSDT,
-              leverage: appSettings.leverage,
-              enabled: appSettings.enabled
-            })
-          });
-        } catch (e) {}
-      }, 400);
+      try {
+        const res = await apiFetch('/api/settings/bitget', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          appSettings.tradeSizeUSDT = tradeSizeUSDT;
+          appSettings.leverage = leverage;
+          appSettings.enabled = enabled;
+          renderMarginUI();
+          updateBitgetStatus(apiKey && enabled);
+          alert("✅ Bitget API ayarları kalıcı olarak kaydedildi!");
+          toggleBitgetModal();
+        }
+      } catch (err) {
+        alert("Ayar kaydı sırasında hata: " + err.message);
+      }
     }
 
     function syncLeverage(val) {
