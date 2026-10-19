@@ -164,7 +164,7 @@ app.post('/api/clear-history', (req, res) => {
   res.json({ ok: true });
 });
 
-// === BITGET V2 VERİLERİ ===
+// === BITGET V2 VERİ ÇEKME ===
 async function getTopVolumeBitgetCoins(minVolumeUSDT = 15000000) {
   try {
     const res = await fetch('https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES');
@@ -242,7 +242,7 @@ function calcRSI(closes, period = 14) {
   return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
 }
 
-// === GERÇEKÇİ RİSK PLANI (Hızlı TP1 + Dinamik SL) ===
+// === RİSK PLANI ===
 function calculateTradePlan(spotPrice, isShort, atr, swingLevel) {
   const precision = spotPrice < 0.1 ? 5 : (spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2));
   
@@ -252,8 +252,7 @@ function calculateTradePlan(spotPrice, isShort, atr, swingLevel) {
   const maxAllowedSl = spotPrice > 10000 ? 150 : (spotPrice > 1000 ? 14 : spotPrice * 0.014);
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  // Hızlı TP1: 0.65x ATR (İlk sıçramada %80 kâr kasaya)
-  const tp1Dist = Number((atr * 0.65).toFixed(precision)); 
+  const tp1Dist = Number((atr * 0.65).toFixed(precision)); // %80 Kâr Alımı
   const tp2Dist = Number((atr * 2.20).toFixed(precision)); 
   slDist = Number(slDist.toFixed(precision));
 
@@ -278,6 +277,7 @@ function evaluateHybridDecision(candles, atr) {
   const prevC = candles[candles.length - 2];
 
   const ema50 = calcEMA(closes, 50);
+  const ema200 = calcEMA(closes, Math.min(200, closes.length));
   const rsi = calcRSI(closes, 14);
 
   // Likidite Süpürmesi
@@ -290,34 +290,34 @@ function evaluateHybridDecision(candles, atr) {
   const reasons = [];
   let swingLevel = curC.close;
 
-  // LONG: Dip süpürülmesi veya EMA50 desteğinde yeşil dönüş
+  // LONG: Fiyat EMA200 ve EMA50 üzerinde olmalı (Düşüşte Long AÇILAMAZ!)
   const isDipSweep = (prevC.low <= lowMin || curC.low <= lowMin);
   const isGreenConfirm = curC.close > curC.open && curC.close >= prevC.close;
 
-  if (curPrice >= ema50 * 0.995 && (isDipSweep || curC.low <= ema50) && isGreenConfirm && rsi >= 38 && rsi <= 65) {
+  if (curPrice >= ema50 && curPrice >= ema200 * 0.995 && isDipSweep && isGreenConfirm && rsi >= 40 && rsi <= 65) {
     score = 85;
     confidence = 88;
-    reasons.push('Likidite Dibi Süpürüldü (Sweep)');
-    reasons.push('EMA50 Destek Tepkisi ve Yeşil Gövde Teyidi');
+    reasons.push('Boğa Trendi & Likidite Dibi Süpürüldü (Sweep)');
+    reasons.push('EMA Destek Tepkisi ve Yeşil Gövde Teyidi');
     swingLevel = Math.min(curC.low, prevC.low);
   }
 
-  // SHORT: Tepe süpürülmesi veya EMA50 direncinde kırmızı dönüş
+  // SHORT: Fiyat EMA200 ve EMA50 altında olmalı (Yükselişte Short AÇILAMAZ!)
   const isTopSweep = (prevC.high >= highMax || curC.high >= highMax);
   const isRedConfirm = curC.close < curC.open && curC.close <= prevC.close;
 
-  if (curPrice <= ema50 * 1.005 && (isTopSweep || curC.high >= ema50) && isRedConfirm && rsi <= 62 && rsi >= 35) {
+  if (curPrice <= ema50 && curPrice <= ema200 * 1.005 && isTopSweep && isRedConfirm && rsi <= 60 && rsi >= 35) {
     score = -85;
     confidence = 88;
-    reasons.push('Likidite Tepesi Süpürüldü (Sweep)');
-    reasons.push('EMA50 Direnç Reddi ve Kırmızı Gövde Teyidi');
+    reasons.push('Ayı Trendi & Likidite Tepesi Süpürüldü (Sweep)');
+    reasons.push('EMA Direnç Reddi ve Kırmızı Gövde Teyidi');
     swingLevel = Math.max(curC.high, prevC.high);
   }
 
   return { score, confidence, reasons, swingLevel };
 }
 
-// === DÜZELTİLMİŞ DOĞRU ADİL SİMÜLASYON MOTORU ===
+// === AKILLI VE KESİN KORUMALI BACKTEST MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -333,6 +333,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let openCandleIndex = -99;
     let lastTradeIndex = -99;
     let lastStopIndex = -99;
+    let lastStopDir = null; // Hangi yönde stop olunduğunu hatırla
     const simTrades = [];
 
     for (let i = 30; i < candles.length; i++) {
@@ -348,7 +349,6 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         if (i === openCandleIndex) continue;
 
         const isLong = simActive.direction === 'LONG';
-        const isBullCandle = c.close >= c.open;
 
         // 1. ÖNCE TP KONTROLLERİ
         // TP2 Kontrolü
@@ -370,17 +370,16 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         const hitTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
         if (!simActive.tp1Hit && hitTP1) {
           simActive.tp1Hit = true;
-          simActive.sl = simActive.entry; // Stopu maliyete kilitle
+          simActive.sl = simActive.entry; // Stopu kesin maliyete çek
         }
 
-        // 2. ADİL STOP KONTROLÜ
-        // Mum bizim yönümüzde kapandıysa anlık iç fitil stop sayılmaz.
+        // 2. STOP KONTROLÜ
         let isStopped = false;
         if (simActive.tp1Hit) {
-          // TP1 vurulduysa maliyete dokunursa kârlı başabaş çıkar
+          // TP1 vurulduysa maliyet seviyesine değerse risksiz çıkar
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
         } else {
-          // Kapanış stop seviyesini resmen kırdıysa veya çok derin aşım olduysa stop sayılır
+          // Kapanış seviyeyi kırdıysa veya derin ihlal olduysa çıkar
           isStopped = isLong 
             ? (c.close <= simActive.sl || c.low <= simActive.sl - (atr * 0.40))
             : (c.close >= simActive.sl || c.high >= simActive.sl + (atr * 0.40));
@@ -398,6 +397,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           } else {
             profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
             lastStopIndex = i;
+            lastStopDir = simActive.direction; // Stop olunan yön kilitlenir!
           }
 
           simTrades.push({
@@ -415,8 +415,10 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası en az 6 mum (1.5 saat) bekleme kilidi
-      if (i - lastStopIndex < 6) continue;
+      // KATI SOĞUMA KİLİDİ:
+      // Eğer bir yönde (örn. LONG) stop olduysak EN AZ 10 MUM (2.5 Saat) o yönde ASLA işlem açılmaz!
+      const candidateDir = c.close > c.open ? 'LONG' : 'SHORT';
+      if (i - lastStopIndex < 10 && lastStopDir === candidateDir) continue;
       if (i - lastTradeIndex < 3) continue;
 
       const aiSetup = evaluateHybridDecision(slice, atr);
@@ -498,5 +500,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Adil Simülasyon Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Korumalı Simülasyon Motoru Aktif: Port ${PORT}`));
 module.exports = app;
