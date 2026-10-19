@@ -185,13 +185,16 @@ async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
   }
 }
 
+// 3.000 MUM KADAR DİNAMİK DERİNLİK ALAN MOTOR
 async function getBitgetCandles3K(symbol, granularity = '15m', targetCount = 3000) {
   try {
     let allCandles = [];
     let endTime = '';
+    const batches = Math.ceil(targetCount / 1000);
 
-    for (let batch = 0; batch < 3; batch++) {
-      let url = `https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=${granularity}&limit=1000`;
+    for (let batch = 0; batch < batches; batch++) {
+      const limit = Math.min(1000, targetCount - allCandles.length);
+      let url = `https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=${granularity}&limit=${limit}`;
       if (endTime) url += `&endTime=${endTime}`;
 
       const res = await fetch(url);
@@ -353,7 +356,6 @@ function calculateSMCPlan(entryPrice, isShort, atr, levels) {
   };
 }
 
-// SNIPER ORDER BLOCK VE ULTIMATE RSI MOTORU
 function evaluateSMCRSIStrategy(candles, atr) {
   if (candles.length < 200) return { score: 0, reasons: [] };
 
@@ -373,7 +375,7 @@ function evaluateSMCRSIStrategy(candles, atr) {
 
   const reasons = [];
 
-  // SHORT: Dirence/Üst Banda Tam İğne + Onaylı Kırmızı Gövde
+  // SHORT
   const isBearTrend = curPrice < ema200Cur && curPrice <= ema50 * 1.002 && !ema200SlopeUp;
   const isResistanceTouch = curC.high >= bb.upper || curC.high >= levels.swingResistance * 0.999;
   const isRsiBearCross = ultRsi.rsi < ultRsi.signal && ultRsi.prevRsi >= ultRsi.prevSignal && ultRsi.rsi >= 46;
@@ -386,7 +388,7 @@ function evaluateSMCRSIStrategy(candles, atr) {
     return { score: -95, isShort: true, levels, reasons };
   }
 
-  // LONG: Desteğe/Alt Banda Tam İğne + Onaylı Yeşil Gövde
+  // LONG
   const isBullTrend = curPrice > ema200Cur && curPrice >= ema50 * 0.998 && ema200SlopeUp;
   const isSupportTouch = curC.low <= bb.lower || curC.low <= levels.swingSupport * 1.001;
   const isRsiBullCross = ultRsi.rsi > ultRsi.signal && ultRsi.prevRsi <= ultRsi.prevSignal && ultRsi.rsi <= 54;
@@ -402,15 +404,19 @@ function evaluateSMCRSIStrategy(candles, atr) {
   return { score: 0, reasons: [] };
 }
 
-// === SİMÜLASYON MOTORU (MİKRO KÂR KİLİTLİ) ===
+// === DİNAMİK ZAMAN DİLİMLİ SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
     const granularity = '15m';
+    const hours = Math.max(12, Math.min(720, Number(req.query.hours) || 120));
 
-    const candles = await getBitgetCandles3K(targetSymbol, granularity, 3000);
+    // Saat başına 4 mum + göstergelerin oturması için +200 bar
+    const neededCandles = Math.min(3000, (hours * 4) + 200);
+
+    const candles = await getBitgetCandles3K(targetSymbol, granularity, neededCandles);
     if (candles.length < 220) {
-      return res.status(400).json({ error: 'Yeterli mum verisi alınamadı (3K bekleniyordu).' });
+      return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
     let simActive = null;
@@ -420,6 +426,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopDir = null;
     const simTrades = [];
 
+    // EMA200 için döngü 200. mumdan başlar
     for (let i = 200; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
@@ -457,7 +464,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           simActive.sl = simActive.entry;
         }
 
-        // 3. MİKRO KÂR KİLİDİ: TP1 yolunun %55'ine ulaşınca stopu +%25 kâr seviyesine kilitle
+        // 3. Mikro Kâr Kilidi
         const microProfitDist = simActive.tp1Dist * 0.25;
         const triggerLevel = isLong ? (simActive.entry + simActive.tp1Dist * 0.55) : (simActive.entry - simActive.tp1Dist * 0.55);
         const reachedTrigger = isLong ? c.high >= triggerLevel : c.low <= triggerLevel;
@@ -544,6 +551,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     const precision = targetSymbol.includes('BTC') ? 2 : (targetSymbol.includes('ETH') ? 2 : 4);
     res.json({
       symbol: targetSymbol,
+      hoursRequested: hours,
       candleCount: candles.length,
       totalSignals: simTrades.length,
       wins,
@@ -589,5 +597,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Ultra Optimize SMC Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Kusursuz Zaman Ayarlı SMC Motoru Aktif: Port ${PORT}`));
 module.exports = app;
