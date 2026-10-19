@@ -16,7 +16,7 @@
         <div class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></div>
         <h1 class="text-2xl font-black text-cyan-400 tracking-wide">BITGET FUTURES PRO</h1>
       </div>
-      <p class="text-xs text-center text-slate-400 mb-6">Yapay Zeka Destekli Vadeli Kripto Likidite (Sweep) & FVG Terminali</p>
+      <p class="text-xs text-center text-slate-400 mb-6">Yapay Zeka Destekli Vadeli Kripto Likidite & SMC Terminali</p>
 
       <div id="loginError" class="hidden bg-rose-950 border border-rose-600 text-rose-300 text-xs p-3 rounded-lg mb-4 text-center font-semibold"></div>
 
@@ -233,7 +233,7 @@
             </span>
           </div>
           <div id="activeTradeBox" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-400">
-            Şu anda açık işlem bulunmuyor. Piyasa Likidite Süpürmesi (Sweep) veya FVG tetiklendiğinde emir otomatik açılır.
+            Şu anda açık işlem bulunmuyor. Piyasa Likidite Süpürmesi veya Order Block tetiklendiğinde emir otomatik açılır.
           </div>
         </div>
       </div>
@@ -357,9 +357,6 @@
       
       try {
         const res = await fetch(url, { ...options, headers });
-        if (res.status === 401) {
-          console.warn("Geçici yetkilendirme uyarısı alındı.");
-        }
         return res;
       } catch (err) {
         console.error("İstek hatası:", err);
@@ -411,74 +408,95 @@
       }
     }
 
-    async function loadUserSettings() {
+    // TARAYICI HAFIZASINDAN KALICI YÜKLEME KİLİDİ
+    function applyLocalBitgetConfig() {
       try {
-        const res = await apiFetch('/api/me');
-        const data = await res.json();
-        
-        // Sunucudan gelen veriyi önceliklendir, yoksa localStorage'a bak
-        let bg = data?.user?.bitget;
-        if (!bg || !bg.apiKey) {
-          const cachedBg = localStorage.getItem('bitget_local_cfg');
-          if (cachedBg) bg = JSON.parse(cachedBg);
-        }
-
-        if (bg) {
+        const cached = localStorage.getItem('bitget_local_cfg');
+        if (!cached) return false;
+        const bg = JSON.parse(cached);
+        if (bg && bg.apiKey && bg.apiKey.length > 5) {
           appSettings.tradeSizeUSDT = Number(bg.tradeSizeUSDT) || 50;
           appSettings.leverage = Number(bg.leverage) || 10;
           appSettings.enabled = Boolean(bg.enabled);
 
-          // Form alanlarını doldur
           if (document.getElementById('quickTradeSizeInput')) document.getElementById('quickTradeSizeInput').value = appSettings.tradeSizeUSDT;
           if (document.getElementById('bgTradeSize')) document.getElementById('bgTradeSize').value = appSettings.tradeSizeUSDT;
           if (document.getElementById('bgLeverage')) document.getElementById('bgLeverage').value = appSettings.leverage;
           if (document.getElementById('bgEnabled')) document.getElementById('bgEnabled').checked = appSettings.enabled;
-          if (document.getElementById('bgApiKey') && bg.apiKey) document.getElementById('bgApiKey').value = bg.apiKey;
-          if (document.getElementById('bgSecretKey') && bg.secretKey) document.getElementById('bgSecretKey').value = bg.secretKey;
-          if (document.getElementById('bgPassphrase') && bg.passphrase) document.getElementById('bgPassphrase').value = bg.passphrase;
+          if (document.getElementById('bgApiKey')) document.getElementById('bgApiKey').value = bg.apiKey;
+          if (document.getElementById('bgSecretKey')) document.getElementById('bgSecretKey').value = bg.secretKey || '';
+          if (document.getElementById('bgPassphrase')) document.getElementById('bgPassphrase').value = bg.passphrase || '';
 
           renderMarginUI();
-          
-          // API Key varsa rozeti doğrudan yeşil yap
-          const isConnected = Boolean(bg.apiKey && bg.apiKey.length > 5 && bg.enabled);
-          updateBitgetStatus(isConnected);
+          updateBitgetStatus(true);
+          return true;
         }
-      } catch (e) {
-        console.error("Ayar yükleme hatası:", e);
-      }
+      } catch (e) {}
+      return false;
     }
 
-    async function saveBitgetConfig() {
-      const apiKey = document.getElementById('bgApiKey').value.trim();
-      const secretKey = document.getElementById('bgSecretKey').value.trim();
-      const passphrase = document.getElementById('bgPassphrase').value.trim();
-      const leverage = Number(document.getElementById('bgLeverage').value) || 10;
-      const tradeSizeUSDT = Number(document.getElementById('bgTradeSize').value) || 50;
-      const enabled = document.getElementById('bgEnabled').checked;
+    async function loadUserSettings() {
+      // 1. Önce tarayıcı hafızasını hemen yükle (asla sıfırlanmaz)
+      applyLocalBitgetConfig();
 
-      const payload = { apiKey, secretKey, passphrase, leverage, tradeSizeUSDT, enabled };
-
-      // Tarayıcı hafızasına da yedekle (sayfa yenilendiğinde anında hatırlanması için)
-      localStorage.setItem('bitget_local_cfg', JSON.stringify(payload));
-
+      // 2. Sunucudaki güncel durumu arka planda eşitle
       try {
-        const res = await apiFetch('/api/settings/bitget', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
+        const res = await apiFetch('/api/me');
         const data = await res.json();
-        if (data.ok) {
-          appSettings.tradeSizeUSDT = tradeSizeUSDT;
-          appSettings.leverage = leverage;
-          appSettings.enabled = enabled;
-          renderMarginUI();
-          updateBitgetStatus(apiKey && enabled);
-          alert("✅ Bitget API ayarları kalıcı olarak kaydedildi!");
-          toggleBitgetModal();
+        const bg = data?.user?.bitget;
+        if (bg && bg.apiKey && bg.apiKey.length > 5) {
+          localStorage.setItem('bitget_local_cfg', JSON.stringify(bg));
+          applyLocalBitgetConfig();
         }
-      } catch (err) {
-        alert("Ayar kaydı sırasında hata: " + err.message);
+      } catch (e) {}
+    }
+
+    function renderMarginUI() {
+      const margin = Number(appSettings.tradeSizeUSDT) || 50;
+      const lev = Number(appSettings.leverage) || 10;
+      const totalVolume = margin * lev;
+
+      const levText = document.getElementById('levVolumeText');
+      if (levText) levText.textContent = `${margin} USDT = ${totalVolume} USDT Pozisyon`;
+      
+      const levLabel = document.getElementById('quickLevLabel');
+      if (levLabel) levLabel.textContent = lev;
+
+      const curLev = document.getElementById('currentLev');
+      if (curLev) curLev.textContent = `${lev}x`;
+    }
+
+    let marginDebounceTimer = null;
+    function updateQuickTradeSize(val) {
+      const num = Number(val);
+      if (isNaN(num) || num <= 0) return;
+
+      appSettings.tradeSizeUSDT = num;
+      if (document.getElementById('bgTradeSize')) document.getElementById('bgTradeSize').value = num;
+      if (document.getElementById('quickTradeSizeInput')) document.getElementById('quickTradeSizeInput').value = num;
+      renderMarginUI();
+
+      // Yerel hafızaya kaydet
+      const cached = localStorage.getItem('bitget_local_cfg');
+      if (cached) {
+        const bg = JSON.parse(cached);
+        bg.tradeSizeUSDT = num;
+        localStorage.setItem('bitget_local_cfg', JSON.stringify(bg));
       }
+
+      clearTimeout(marginDebounceTimer);
+      marginDebounceTimer = setTimeout(async () => {
+        try {
+          await apiFetch('/api/settings/bitget', {
+            method: 'POST',
+            body: JSON.stringify({
+              tradeSizeUSDT: appSettings.tradeSizeUSDT,
+              leverage: appSettings.leverage,
+              enabled: appSettings.enabled
+            })
+          });
+        } catch (e) {}
+      }, 400);
     }
 
     function syncLeverage(val) {
@@ -486,6 +504,14 @@
       if (isNaN(num) || num <= 0) return;
       appSettings.leverage = num;
       renderMarginUI();
+
+      const cached = localStorage.getItem('bitget_local_cfg');
+      if (cached) {
+        const bg = JSON.parse(cached);
+        bg.leverage = num;
+        localStorage.setItem('bitget_local_cfg', JSON.stringify(bg));
+      }
+
       updateQuickTradeSize(appSettings.tradeSizeUSDT);
     }
 
@@ -509,10 +535,15 @@
       const tradeSizeUSDT = Number(document.getElementById('bgTradeSize').value) || 50;
       const enabled = document.getElementById('bgEnabled').checked;
 
+      const payload = { apiKey, secretKey, passphrase, leverage, tradeSizeUSDT, enabled };
+
+      // Tarayıcı hafızasına mühürle
+      localStorage.setItem('bitget_local_cfg', JSON.stringify(payload));
+
       try {
         const res = await apiFetch('/api/settings/bitget', {
           method: 'POST',
-          body: JSON.stringify({ apiKey, secretKey, passphrase, leverage, tradeSizeUSDT, enabled })
+          body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (data.ok) {
@@ -521,7 +552,7 @@
           appSettings.enabled = enabled;
           renderMarginUI();
           updateBitgetStatus(apiKey && enabled);
-          alert("✅ Bitget ayarları başarıyla kaydedildi!");
+          alert("✅ Bitget API ayarları kalıcı olarak mühürlendi!");
           toggleBitgetModal();
         }
       } catch (err) {
@@ -555,7 +586,10 @@
       const userBadge = document.getElementById('userRoleBadge');
       if (userBadge) userBadge.textContent = `👤 ${currentUser ? currentUser.username : 'admin'}`;
 
+      // Önce yerel hafızadan hemen rozeti yak
+      applyLocalBitgetConfig();
       loadUserSettings();
+
       initTradingViewChart(currentSymbol);
       fetchLiveScan();
       if (scanInterval) clearInterval(scanInterval);
