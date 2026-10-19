@@ -228,19 +228,20 @@ function calcRSI(closes, period = 14) {
   return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
 }
 
-// === GÜVENLİ ASİMETRİK RİSK PLANI ===
+// === YÜKSEK WIN RATE HEDEF PLANI (Hızlı TP1 + Güvenli SL) ===
 function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   const precision = spotPrice < 0.1 ? 5 : (spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2));
   
-  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.35);
+  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.30);
   if (slDist < atr * 1.1) slDist = atr * 1.1;
 
-  // Stop tavanı (BTC için $190, altcoinler için maks %1.6)
+  // BTC için tavan stop $190, altcoinler için %1.6
   const maxAllowedSl = spotPrice > 10000 ? 190 : (spotPrice > 1000 ? 15 : spotPrice * 0.016);
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  const tp1Dist = Number((atr * 1.15).toFixed(precision)); // %80 Hızlı Güvenli Kâr
-  const tp2Dist = Number((atr * 2.70).toFixed(precision)); // Tam Hedef
+  // TP1: Doğal tepki boyu (0.75x ATR). Neredeyse her başarılı pullback'te ilk mumda vurulur!
+  const tp1Dist = Number((atr * 0.75).toFixed(precision)); 
+  const tp2Dist = Number((atr * 2.50).toFixed(precision)); 
   slDist = Number(slDist.toFixed(precision));
 
   return {
@@ -254,7 +255,7 @@ function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   };
 }
 
-// === ÇİFT ZAMAN DİLİMLİ TREND VE LİKİDİTE MOTORU ===
+// === TREND ODAKLI LİKİDİTE MOTORU ===
 function evaluateCryptoSetup(candles, atr) {
   if (candles.length < 55) return { score: 0, reasons: [] };
 
@@ -268,11 +269,9 @@ function evaluateCryptoSetup(candles, atr) {
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
 
-  // 1. KATI TREND KURALI (Trende Karşı İşlem AÇILAMAZ)
-  // Boğa Trendi: Fiyat hem EMA200 hem EMA50 üzerinde ve EMA21 > EMA50
-  const isUpTrend = curPrice > ema200 && curPrice > ema50 && ema21 >= ema50;
-  // Ayı Trendi: Fiyat hem EMA200 hem EMA50 altında ve EMA21 < EMA50
-  const isDownTrend = curPrice < ema200 && curPrice < ema50 && ema21 <= ema50;
+  // 1. KATI TREND KURALI: Trende karşı işlem açılmaz
+  const isUpTrend = curPrice > ema50 && ema21 >= ema50;
+  const isDownTrend = curPrice < ema50 && ema21 <= ema50;
 
   // 2. DİP/TEPE LİKİDİTE İĞNESİ (Son 15 Mum)
   const lookback = candles.slice(-16, -2);
@@ -283,25 +282,25 @@ function evaluateCryptoSetup(candles, atr) {
   const reasons = [];
   let swingLevel = curC.close;
 
-  // LONG: YALNIZCA BOĞA TRENDİNDE PULLBACK VEYA DİP SÜPÜRMESİ
+  // LONG: Yükseliş trendinde pullback veya dip süpürmesi
   const isBullSweep = (prevC.low <= recentLow || curC.low <= recentLow) && curC.close > curC.open;
   const isBullPullback = curC.low <= ema21 && curC.close > ema21 && curC.close > curC.open;
 
   if (isUpTrend && (isBullSweep || isBullPullback) && rsi >= 40 && rsi <= 64) {
     score = 85;
-    reasons.push('Ana Boğa Trendi (EMA200 & EMA50 Üstü)');
+    reasons.push('Ana Boğa Trendi (EMA50 Üstü)');
     reasons.push(isBullSweep ? 'Likidite Dibi Süpürüldü (Sweep)' : 'EMA21 Destek Tepkisi');
     reasons.push(`Sağlıklı RSI Momentumu (${rsi})`);
     swingLevel = Math.min(curC.low, prevC.low);
   }
 
-  // SHORT: YALNIZCA AYI TRENDİNDE DİRENÇ TEPKİSİ VEYA TEPE SÜPÜRMESİ
+  // SHORT: Düşüş trendinde direnç reddi veya tepe süpürmesi
   const isBearSweep = (prevC.high >= recentHigh || curC.high >= recentHigh) && curC.close < curC.open;
   const isBearPullback = curC.high >= ema21 && curC.close < ema21 && curC.close < curC.open;
 
   if (isDownTrend && (isBearSweep || isBearPullback) && rsi <= 60 && rsi >= 36) {
     score = -85;
-    reasons.push('Ana Ayı Trendi (EMA200 & EMA50 Altı)');
+    reasons.push('Ana Ayı Trendi (EMA50 Altı)');
     reasons.push(isBearSweep ? 'Likidite Tepesi Süpürüldü (Sweep)' : 'EMA21 Direnç Reddi');
     reasons.push(`Sağlıklı RSI Satış İvmesi (${rsi})`);
     swingLevel = Math.max(curC.high, prevC.high);
@@ -310,7 +309,7 @@ function evaluateCryptoSetup(candles, atr) {
   return { score, reasons, rsi, swingLevel, ema50, ema200 };
 }
 
-// === SİMÜLASYON MOTORU (WİCK TUZAĞI DÜZELTİLMİŞ) ===
+// === YÜKSEK BAŞARI ORANLI SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -358,18 +357,18 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // 2. TP1 VURULDUĞUNDA %80 KÂR ALINIR VE STOP GİRİŞE KİLİTLENİR
+        // 2. TP1 VURULDUĞUNDA %75 KÂR AL + STOPU KESİN GİRİŞE KİLİTLE
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
         // 3. STOP LOSS KONTROLÜ
-        // TP1 vurulduysa fitille stop kabul edilir (başabaş kâr koruması).
-        // TP1 vurulmamışsa anlık fitille stop olunmaz, mum kapanışıyla teyit aranır.
+        // TP1 vurulduysa iğne temasında başabaş kârla çıkar.
+        // TP1 vurulmamışsa anlık fitille stop olunmaz; mum kapanışıyla veya derin ihlalde çıkar.
         const isStopBreached = isLong 
-          ? (simActive.tp1Hit ? c.low <= simActive.sl : (c.close <= simActive.sl || c.low <= simActive.sl - (atr * 0.35)))
-          : (simActive.tp1Hit ? c.high >= simActive.sl : (c.close >= simActive.sl || c.high >= simActive.sl + (atr * 0.35)));
+          ? (simActive.tp1Hit ? c.low <= simActive.sl : (c.close <= simActive.sl || c.low <= simActive.sl - (atr * 0.4)))
+          : (simActive.tp1Hit ? c.high >= simActive.sl : (c.close >= simActive.sl || c.high >= simActive.sl + (atr * 0.4)));
 
         if (isStopBreached) {
           let profit = 0;
@@ -377,7 +376,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           let result = 'LOSS';
 
           if (simActive.tp1Hit) {
-            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.8).toFixed(4));
+            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.75).toFixed(4));
             status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
             result = 'WIN';
           } else {
@@ -401,10 +400,10 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası aynı yönde en az 6 mum (1.5 saat) bekleme kilidi
+      // Stop sonrası aynı yöne en az 6 mum (1.5 saat) bekleme kilidi
       const dirCandidate = c.close > c.open ? 'LONG' : 'SHORT';
       if (i - lastStopIndex < 6 && lastStopDir === dirCandidate) continue;
-      if (i - lastTradeIndex < 4) continue;
+      if (i - lastTradeIndex < 3) continue;
 
       const setup = evaluateCryptoSetup(slice, atr);
 
@@ -480,5 +479,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Kurumsal Trend Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Scalp Motoru Aktif: Port ${PORT}`));
 module.exports = app;
