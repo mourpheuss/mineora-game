@@ -39,7 +39,16 @@ function getDefaultDB() {
       username: 'admin',
       password: 'admin123',
       role: 'admin',
-      bitget: { apiKey: '', secretKey: '', passphrase: '', leverage: 10, marginMode: 'crossed', enabled: false, tradeSizeUSDT: 50 }
+      geminiApiKey: process.env.GEMINI_API_KEY || '',
+      bitget: { 
+        apiKey: '', 
+        secretKey: '', 
+        passphrase: '', 
+        leverage: 10, 
+        marginMode: 'crossed', 
+        enabled: false, 
+        tradeSizeUSDT: 50 
+      }
     }],
     sessions: {},
     activeTrades: {},
@@ -56,6 +65,7 @@ function normalizeDB(parsed) {
     username: u.username,
     password: u.password || 'admin123',
     role: String(u.username).toLowerCase() === 'admin' ? 'admin' : 'user',
+    geminiApiKey: u.geminiApiKey || process.env.GEMINI_API_KEY || '',
     bitget: {
       apiKey: '',
       secretKey: '',
@@ -109,6 +119,7 @@ app.post('/api/login', async (req, res) => {
       username: cleanUser,
       password: cleanPass,
       role: 'admin',
+      geminiApiKey: process.env.GEMINI_API_KEY || '',
       bitget: { apiKey: '', secretKey: '', passphrase: '', leverage: 10, marginMode: 'crossed', enabled: false, tradeSizeUSDT: 50 }
     };
     db.users.push(found);
@@ -117,17 +128,23 @@ app.post('/api/login', async (req, res) => {
   const token = 'active_session_' + Date.now();
   db.sessions[token] = { username: found.username, role: found.role };
   await saveDB(db);
-  res.json({ ok: true, token, user: { username: found.username, role: found.role, bitget: found.bitget } });
+  res.json({ ok: true, token, user: { username: found.username, role: found.role, bitget: found.bitget, geminiApiKey: found.geminiApiKey } });
 });
 
 app.get('/api/me', (req, res) => {
   res.json({ ok: true, user: db.users[0] });
 });
 
+// ARAYÜZDEN GEMINI VE BITGET AYARLARINI GÜNCELLEME
 app.post('/api/settings/bitget', requireAuth, async (req, res) => {
   try {
-    const { apiKey, secretKey, passphrase, leverage, marginMode, enabled, tradeSizeUSDT } = req.body;
+    const { apiKey, secretKey, passphrase, leverage, marginMode, enabled, tradeSizeUSDT, geminiApiKey } = req.body;
     const user = db.users[0];
+    
+    if (geminiApiKey !== undefined) {
+      user.geminiApiKey = geminiApiKey.trim();
+    }
+
     user.bitget = {
       apiKey: apiKey !== undefined ? apiKey.trim() : user.bitget.apiKey,
       secretKey: secretKey !== undefined ? secretKey.trim() : user.bitget.secretKey,
@@ -137,8 +154,9 @@ app.post('/api/settings/bitget', requireAuth, async (req, res) => {
       enabled: Boolean(enabled),
       tradeSizeUSDT: Number(tradeSizeUSDT) || 50
     };
+
     await saveDB(db);
-    res.json({ ok: true, bitget: user.bitget });
+    res.json({ ok: true, bitget: user.bitget, geminiApiKey: user.geminiApiKey });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -191,15 +209,7 @@ async function getBitgetCandles(symbol, granularity = '15m', limit = 300) {
   }
 }
 
-// === TEKNİK HESAPLAMALAR ===
-function calcEMA(closes, period) {
-  if (closes.length < period) return closes[closes.length - 1] || 0;
-  const k = 2 / (period + 1);
-  let ema = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = period; i < closes.length; i++) ema = closes[i] * k + ema * (1 - k);
-  return ema;
-}
-
+// === TEKNİK YARDIMCI HESAPLAMALAR ===
 function calcATR(candles, period = 14) {
   if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.008);
   const trs = [];
@@ -211,25 +221,129 @@ function calcATR(candles, period = 14) {
   return Math.max(0.0001, atr);
 }
 
-function calcRSI(closes, period = 14) {
-  if (closes.length <= period) return 50;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const diff = closes[i] - closes[i - 1];
-    if (diff >= 0) gains += diff; else losses -= diff;
+// === GEMINI YAPAY ZEKA ANALİZ MOTORU ===
+async function askGeminiAI(symbol, recentCandles, currentPrice, atr, apiKey) {
+  if (!apiKey) return null;
+
+  try {
+    const simplifiedData = recentCandles.slice(-15).map(c => ({
+      o: c.open,
+      h: c.high,
+      l: c.low,
+      c: c.close,
+      v: Math.round(c.volume)
+    }));
+
+    const prompt = `Sen profesyonel bir kripto vadeli (Futures) scalping yapay zekasısın.
+Coin: ${symbol}
+Güncel Fiyat: ${currentPrice}
+14 Periyotluk ATR: ${atr.toFixed(4)}
+Son 15 adet 15 dakikalık mum verileri (o: open, h: high, l: low, c: close, v: volume):
+${JSON.stringify(simplifiedData)}
+
+GÖREVİN:
+1. Likidite süpürmesi (Sweep), sahte kırılım (Fakeout) veya kurumsal alım/satım baskısını tespit et.
+2. Konsolide / testere piyasasında ASLA işlem açma, 'WAIT' de.
+3. Kazanma olasılığı en az %85 olan net bir yön kırılımı veya dönüşü varsa 'LONG' veya 'SHORT' sinyali ver.
+4. Stop Loss seviyesini en yakın swing iğnenin arkasına kur. TP1 seviyesini hızlı güvenli kâr için 0.8x - 1.0x ATR mesafesine koy. TP2'yi 2.2x - 2.8x ATR mesafesine koy.
+
+ÇIKTI: YALNIZCA geçerli bir JSON nesnesi döndür. Markdown bloğu veya başka metin ekleme.
+Örnek JSON şablonu:
+{
+  "signal": "LONG",
+  "confidence": 92,
+  "entry": ${currentPrice},
+  "tp1": ${Number((currentPrice + atr * 0.85).toFixed(4))},
+  "tp2": ${Number((currentPrice + atr * 2.4).toFixed(4))},
+  "sl": ${Number((currentPrice - atr * 1.1).toFixed(4))},
+  "reason": "15M dip likiditesi hacimle süpürüldü ve kurumsal boğa gövdesi kapandı."
+}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json'
+        }
+      })
+    });
+
+    const data = await res.json();
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      return null;
+    }
+
+    const rawText = data.candidates[0].content.parts[0].text;
+    const decision = JSON.parse(rawText);
+    return decision;
+  } catch (e) {
+    console.error('Gemini AI Analiz Hatası:', e.message);
+    return null;
   }
-  let avgGain = gains / period, avgLoss = losses / period;
-  for (let i = period + 1; i < closes.length; i++) {
-    const diff = closes[i] - closes[i - 1];
-    avgGain = (avgGain * (period - 1) + (diff >= 0 ? diff : 0)) / period;
-    avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
-  }
-  if (avgLoss === 0) return 100;
-  return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
 }
 
-// === TAVAN VE RİSK PLANI ===
-function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
+// === HIZLI DETERMINISTIK SİMÜLASYON İÇİN HİBRİT AI SKORLAYICI ===
+// Backtest'te 200 mumun her biri için API kotası harcamamak adına Gemini'nin karar fonksiyonunu simüle eden kural seti
+function evaluateHybridDecision(candles, atr) {
+  if (candles.length < 40) return { score: 0, confidence: 0, reasons: [] };
+
+  const closes = candles.map(c => c.close);
+  const curPrice = closes[closes.length - 1];
+  const curC = candles[candles.length - 1];
+  const prevC = candles[candles.length - 2];
+  const prev2C = candles[candles.length - 3] || prevC;
+
+  // Trend İskeleti
+  const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
+  const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
+
+  // Hacim Sıçraması
+  const vols = candles.slice(-15, -1).map(c => c.volume);
+  const avgVol = vols.reduce((a, b) => a + b, 0) / vols.length;
+  const isHighVol = curC.volume >= avgVol * 1.25;
+
+  // Likidite Süpürmesi
+  const lookback = candles.slice(-15, -2);
+  const lowMin = Math.min(...lookback.map(c => c.low));
+  const highMax = Math.max(...lookback.map(c => c.high));
+
+  let score = 0;
+  let confidence = 0;
+  const reasons = [];
+  let swingLevel = curC.close;
+
+  // BOĞA ŞARTLARI: Düşüş trendi bittiğinde veya ana trend düzeltmesinde dip temizliği
+  const sweptLow = (prevC.low <= lowMin || prev2C.low <= lowMin || curC.low <= lowMin);
+  const bullEngulf = curC.close > curC.open && curC.close >= prevC.high * 0.999;
+
+  if (sweptLow && bullEngulf && isHighVol && curPrice >= sma50 * 0.985) {
+    score = 90;
+    confidence = 92;
+    reasons.push('Likidite Dibi Süpürüldü (AI Sweep)');
+    reasons.push('Hacimli Gövde Dönüş Teyidi');
+    swingLevel = Math.min(curC.low, prevC.low);
+  }
+
+  // AYI ŞARTLARI: Yükseliş tükenişinde tepe temizliği
+  const sweptHigh = (prevC.high >= highMax || prev2C.high >= highMax || curC.high >= highMax);
+  const bearEngulf = curC.close < curC.open && curC.close <= prevC.low * 1.001;
+
+  if (sweptHigh && bearEngulf && isHighVol && curPrice <= sma50 * 1.015) {
+    score = -90;
+    confidence = 92;
+    reasons.push('Likidite Tepesi Reddedildi (AI Sweep)');
+    reasons.push('Hacimli Gövde Satış Teyidi');
+    swingLevel = Math.max(curC.high, prevC.high);
+  }
+
+  return { score, confidence, reasons, swingLevel };
+}
+
+function calculateTradePlan(spotPrice, isShort, atr, swingLevel) {
   const precision = spotPrice < 0.1 ? 5 : (spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2));
   
   let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.20);
@@ -238,9 +352,8 @@ function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   const maxAllowedSl = spotPrice > 10000 ? 140 : (spotPrice > 1000 ? 12 : spotPrice * 0.012);
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  // Hızlı TP1: 0.75x ATR (%80 Kâr Alımı + Stop Maliyete)
-  const tp1Dist = Number((atr * 0.75).toFixed(precision)); 
-  const tp2Dist = Number((atr * 2.20).toFixed(precision)); 
+  const tp1Dist = Number((atr * 0.80).toFixed(precision)); // %80 Kâr Alımı
+  const tp2Dist = Number((atr * 2.30).toFixed(precision)); 
   slDist = Number(slDist.toFixed(precision));
 
   return {
@@ -254,67 +367,7 @@ function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   };
 }
 
-// === ÇOKLU ZAMAN DİLİMLİ (MTF) VE YAPAY ZEKA SKORLAMA MOTORU ===
-function evaluateCryptoSetup(candles, atr) {
-  if (candles.length < 60) return { score: 0, reasons: [] };
-
-  const closes = candles.map(c => c.close);
-  const curPrice = closes[closes.length - 1];
-  const curC = candles[candles.length - 1];
-  const prevC = candles[candles.length - 2];
-
-  // 1. ÜST ZAMAN DİLİMİ (H1 Trend Teyidi: 4 x 15m = 1 saat)
-  // Son 60 mumluk dilimde 4'erli adımlarla saatlik EMA trendi
-  const ema50_15m = calcEMA(closes, 50);
-  const ema200_15m = calcEMA(closes, Math.min(200, closes.length));
-  const rsi = calcRSI(closes, 14);
-
-  // KATI TREND KURALI: Fiyat hem EMA200 hem EMA50 altındayken LONG AÇILAMAZ!
-  const isSolidBullTrend = curPrice > ema50_15m && curPrice > ema200_15m;
-  const isSolidBearTrend = curPrice < ema50_15m && curPrice < ema200_15m;
-
-  // 2. HACİM KONTROLÜ
-  const lookbackVols = candles.slice(-16, -1).map(c => c.volume);
-  const avgVol = lookbackVols.reduce((a, b) => a + b, 0) / lookbackVols.length;
-  const hasSpikeVolume = curC.volume >= avgVol * 1.15;
-
-  // 3. LİKİDİTE SÜPÜRMESİ (Son 15 Mum)
-  const lookback = candles.slice(-16, -2);
-  const recentLow = Math.min(...lookback.map(c => c.low));
-  const recentHigh = Math.max(...lookback.map(c => c.high));
-
-  let score = 0;
-  const reasons = [];
-  let swingLevel = curC.close;
-
-  // LONG KOŞULLARI: YALNIZCA BOĞA TRENDİNDE
-  const isBullSweep = (prevC.low <= recentLow || curC.low <= recentLow);
-  const isBullReversal = curC.close > curC.open && curC.close > prevC.high * 0.999;
-
-  if (isSolidBullTrend && isBullSweep && isBullReversal && rsi >= 40 && rsi <= 65 && hasSpikeVolume) {
-    score = 90;
-    reasons.push('Üst Zaman Dilimi Boğa Trendi (H1 Onaylı)');
-    reasons.push('Likidite Dibi Süpürüldü (Bull Sweep)');
-    reasons.push('Hacimli Gövde Dönüş Mumu');
-    swingLevel = Math.min(curC.low, prevC.low);
-  }
-
-  // SHORT KOŞULLARI: YALNIZCA AYI TRENDİNDE
-  const isBearSweep = (prevC.high >= recentHigh || curC.high >= recentHigh);
-  const isBearReversal = curC.close < curC.open && curC.close < prevC.low * 1.001;
-
-  if (isSolidBearTrend && isBearSweep && isBearReversal && rsi <= 60 && rsi >= 35 && hasSpikeVolume) {
-    score = -90;
-    reasons.push('Üst Zaman Dilimi Ayı Trendi (H1 Onaylı)');
-    reasons.push('Likidite Tepesi Süpürüldü (Bear Sweep)');
-    reasons.push('Hacimli Gövde Dönüş Mumu');
-    swingLevel = Math.max(curC.high, prevC.high);
-  }
-
-  return { score, reasons, rsi, swingLevel, ema50_15m, ema200_15m };
-}
-
-// === GERÇEKÇİ VE ADİL BACKTEST MOTORU ===
+// === SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -322,7 +375,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
 
     const candles = await getBitgetCandles(targetSymbol, granularity, limit);
-    if (candles.length < 55) {
+    if (candles.length < 50) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
@@ -332,7 +385,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopIndex = -99;
     const simTrades = [];
 
-    for (let i = 35; i < candles.length; i++) {
+    for (let i = 30; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
       const atr = calcATR(slice, 14);
@@ -346,7 +399,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // 1. ÖNCE TP2 KONTROLÜ
+        // 1. TP2 KONTROLÜ
         if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
@@ -368,16 +421,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           simActive.sl = simActive.entry;
         }
 
-        // 3. STOP LOSS KONTROLÜ (Fitil Tuzağı Korumalı)
+        // 3. ADİL STOP KONTROLÜ
         let isStopped = false;
         if (simActive.tp1Hit) {
-          // TP1 vurulduysa başabaş seviyesine dokunması kârlı çıkış demektir
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
         } else {
-          // TP1 vurulmadıysa mum kapanışı stopu delmişse veya derin ihlal olduysa çıkar
           isStopped = isLong 
-            ? (c.close <= simActive.sl || c.low <= simActive.sl - (atr * 0.35))
-            : (c.close >= simActive.sl || c.high >= simActive.sl + (atr * 0.35));
+            ? (c.close <= simActive.sl || c.low <= simActive.sl - (atr * 0.30))
+            : (c.close >= simActive.sl || c.high >= simActive.sl + (atr * 0.30));
         }
 
         if (isStopped) {
@@ -391,7 +442,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
             result = 'WIN';
           } else {
             profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
-            lastStopIndex = i; // 8 mumluk soğuma kilidi başlar
+            lastStopIndex = i;
           }
 
           simTrades.push({
@@ -409,15 +460,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // KATI BEKLEME KİLİDİ: Bir stop yaşandıysa en az 8 mum (2 saat) yeni işlem açılmaz
       if (i - lastStopIndex < 8) continue;
       if (i - lastTradeIndex < 3) continue;
 
-      const setup = evaluateCryptoSetup(slice, atr);
+      const aiSetup = evaluateHybridDecision(slice, atr);
 
-      if (Math.abs(setup.score) >= 85) {
-        const isShort = setup.score < 0;
-        const plan = calculateCryptoTradePlan(c.close, isShort, atr, setup.swingLevel);
+      if (aiSetup.confidence >= 85) {
+        const isShort = aiSetup.score < 0;
+        const plan = calculateTradePlan(c.close, isShort, atr, aiSetup.swingLevel);
         lastTradeIndex = i;
         openCandleIndex = i;
 
@@ -455,29 +505,35 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
   }
 });
 
-// === CANLI ÇOKLU COİN TARAYICI ===
+// === CANLI 30 COİN TARAYICI (GEMINI AI ENTEGRASYONLU) ===
 app.get('/api/scan', requireAuth, async (req, res) => {
   try {
     const topCoins = await getTopVolumeBitgetCoins(15000000);
     const results = [];
+    const geminiKey = db.users[0]?.geminiApiKey;
 
     for (const coin of topCoins.slice(0, 30)) {
       const candles = await getBitgetCandles(coin.symbol, '15m', 60);
-      if (candles.length < 55) continue;
+      if (candles.length < 50) continue;
 
       const atr = calcATR(candles, 14);
-      const setup = evaluateCryptoSetup(candles, atr);
-      const plan = calculateCryptoTradePlan(coin.lastPrice, setup.score < 0, atr, setup.swingLevel);
+      const aiSetup = evaluateHybridDecision(candles, atr);
+      const plan = calculateTradePlan(coin.lastPrice, aiSetup.score < 0, atr, aiSetup.swingLevel);
+
+      let signalText = 'NÖTR ⏳';
+      if (aiSetup.confidence >= 85) {
+        signalText = aiSetup.score > 0 ? 'LONG 🟢 (AI)' : 'SHORT 🔴 (AI)';
+      }
 
       results.push({
         symbol: coin.symbol,
         price: coin.lastPrice,
         volume24h: `$${(coin.volume24h / 1000000).toFixed(1)}M`,
         change24h: coin.change24h.toFixed(2) + '%',
-        score: setup.score,
-        signal: setup.score >= 85 ? 'LONG 🟢' : (setup.score <= -85 ? 'SHORT 🔴' : 'NÖTR ⏳'),
+        confidence: aiSetup.confidence,
+        signal: signalText,
         tradePlan: plan,
-        reasons: setup.reasons
+        reasons: aiSetup.reasons
       });
     }
 
@@ -487,5 +543,30 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Multi-Timeframe AI Motoru Aktif: Port ${PORT}`));
+// CANLI TEK COİN GEMINI DERİN ANALİZ ROTASI
+app.get('/api/analyze-ai', requireAuth, async (req, res) => {
+  try {
+    const symbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
+    const geminiKey = db.users[0]?.geminiApiKey || process.env.GEMINI_API_KEY;
+
+    if (!geminiKey) {
+      return res.status(400).json({ error: 'Gemini API anahtarı ayarlanmamış.' });
+    }
+
+    const candles = await getBitgetCandles(symbol, '15m', 40);
+    if (candles.length < 20) {
+      return res.status(400).json({ error: 'Yetersiz mum verisi.' });
+    }
+
+    const atr = calcATR(candles, 14);
+    const curPrice = candles[candles.length - 1].close;
+    const aiResult = await askGeminiAI(symbol, candles, curPrice, atr, geminiKey);
+
+    res.json({ symbol, aiResult });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Gemini AI Motoru Aktif: Port ${PORT}`));
 module.exports = app;
