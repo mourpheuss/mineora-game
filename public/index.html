@@ -55,13 +55,12 @@
       <div class="flex flex-wrap items-center gap-2.5">
         <!-- COIN SEÇİCİ & ANLIK FİYAT -->
         <div class="bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2">
-          <select id="selectedSymbol" onchange="changeActiveSymbol(this.value)" class="bg-slate-900 text-cyan-300 font-bold text-xs rounded border border-slate-700 px-2 py-1 outline-none cursor-pointer">
+          <select id="selectedSymbol" onchange="changeActiveSymbol(this.value)" class="bg-slate-900 text-cyan-300 font-bold text-xs rounded border border-slate-700 px-2 py-1 outline-none cursor-pointer max-w-[140px]">
             <option value="BTCUSDT">BTCUSDT</option>
             <option value="ETHUSDT">ETHUSDT</option>
             <option value="SOLUSDT">SOLUSDT</option>
             <option value="XRPUSDT">XRPUSDT</option>
             <option value="DOGEUSDT">DOGEUSDT</option>
-            <option value="NEARUSDT">NEARUSDT</option>
           </select>
           <span id="spotPrice" class="text-xl font-extrabold text-white">Yükleniyor...</span>
         </div>
@@ -143,7 +142,7 @@
     <!-- PİYASA ÇOKLU COİN TARAYICI MODALI -->
     <div id="scannerModal" class="hidden bg-slate-900 border-2 border-teal-500 rounded-xl p-5 mb-4 shadow-2xl">
       <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-        <h3 class="text-base font-bold text-teal-400">🔍 Bitget Çoklu Vadeli İşlem Taraması (> $10M Hacim)</h3>
+        <h3 class="text-base font-bold text-teal-400">🔍 Bitget Çoklu Vadeli İşlem Taraması (Tüm Çiftler)</h3>
         <button onclick="toggleScannerModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300">Kapat ✕</button>
       </div>
       <div class="overflow-x-auto max-h-80 overflow-y-auto">
@@ -172,7 +171,7 @@
       <div class="flex flex-wrap justify-between items-center gap-3 mb-4 pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
           <h2 class="text-base font-bold text-purple-300">⏪ Kripto Likidite Simülasyonu</h2>
-          <select id="btCoinSelect" onchange="runBacktest(currentBtHours)" class="bg-slate-950 text-cyan-300 font-bold text-xs rounded border border-purple-400 px-2 py-1 outline-none">
+          <select id="btCoinSelect" onchange="runBacktest(currentBtHours)" class="bg-slate-950 text-cyan-300 font-bold text-xs rounded border border-purple-400 px-2 py-1 outline-none max-w-[140px]">
             <option value="BTCUSDT">BTCUSDT</option>
             <option value="ETHUSDT">ETHUSDT</option>
             <option value="SOLUSDT">SOLUSDT</option>
@@ -191,7 +190,7 @@
       <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4 text-center">
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-slate-400 block">SİNYAL</span><strong id="btTotal" class="text-xl font-black text-white">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-emerald-300 block">BAŞARILI</span><strong id="btWins" class="text-xl font-black text-emerald-400">--</strong></div>
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-rose-300 block">STOP</span><strong id="btLosses" class="text-xl font-black text-rose-400">--</strong></div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-rose-300 block">STOP</span><strong id="btLosses" class="text-xl font-black text-rose-400">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-purple-300 block">BAŞARI ORANI</span><strong id="btWinRate" class="text-xl font-black text-purple-400">--</strong></div>
         <div class="bg-slate-950 p-3 rounded-lg border border-cyan-500/50">
           <span class="text-[11px] text-cyan-300 block">TOPLAM PUAN / USDT KÂRI</span>
@@ -340,6 +339,7 @@
     let currentBtHours = 120;
     let tvWidget = null;
     let scanInterval = null;
+    let allAvailableCoins = [];
 
     let appSettings = {
       tradeSizeUSDT: 50,
@@ -556,14 +556,41 @@
       scanInterval = setInterval(fetchLiveScan, 8000);
     }
 
+    function populateCoinSelects(coins) {
+      if (!coins || !coins.length) return;
+      const symbols = coins.map(c => c.symbol);
+      if (allAvailableCoins.length === symbols.length) return;
+      allAvailableCoins = symbols;
+
+      const selSym = document.getElementById('selectedSymbol');
+      const btSel = document.getElementById('btCoinSelect');
+
+      const currentVal1 = selSym ? selSym.value : currentSymbol;
+      const currentVal2 = btSel ? btSel.value : currentSymbol;
+
+      const optionsHtml = symbols.map(s => `<option value="${s}">${s}</option>`).join('');
+
+      if (selSym) {
+        selSym.innerHTML = optionsHtml;
+        selSym.value = symbols.includes(currentVal1) ? currentVal1 : symbols[0];
+      }
+      if (btSel) {
+        btSel.innerHTML = optionsHtml;
+        btSel.value = symbols.includes(currentVal2) ? currentVal2 : symbols[0];
+      }
+    }
+
     function initTradingViewChart(sym) {
       if (typeof TradingView === 'undefined') return;
       const container = document.getElementById('tv_chart_container');
       if (!container) return;
       container.innerHTML = '';
+
+      const tvSymbol = sym.replace('USDT', '') + 'USDT';
+
       tvWidget = new TradingView.widget({
         "autosize": true,
-        "symbol": `BINANCE:${sym}`,
+        "symbol": `BINANCE:${tvSymbol}`,
         "interval": "15",
         "timezone": "Europe/Istanbul",
         "theme": "dark",
@@ -580,9 +607,11 @@
     function changeActiveSymbol(sym) {
       currentSymbol = sym;
       const selSym = document.getElementById('selectedSymbol');
-      if (selSym) selSym.value = sym;
+      if (selSym && selSym.value !== sym) selSym.value = sym;
+
       const btSel = document.getElementById('btCoinSelect');
-      if (btSel) btSel.value = sym;
+      if (btSel && btSel.value !== sym) btSel.value = sym;
+
       initTradingViewChart(sym);
       fetchLiveScan();
     }
@@ -732,7 +761,9 @@
       try {
         const res = await apiFetch('/api/scan');
         const data = await res.json();
-        if (!data || !data.coins) return;
+        if (!data || !data.coins || !data.coins.length) return;
+
+        populateCoinSelects(data.coins);
 
         const lastUp = document.getElementById('lastUpdate');
         if (lastUp) lastUp.textContent = data.timestamp;
