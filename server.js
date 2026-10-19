@@ -163,8 +163,8 @@ app.post('/api/clear-history', (req, res) => {
   res.json({ ok: true });
 });
 
-// === BITGET V2 VERİLERİ ===
-async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
+// === TÜM AKTİF BİTGET VADELİ (USDT-FUTURES) COINLERİ ===
+async function getTopVolumeBitgetCoins(minVolumeUSDT = 1000000) {
   try {
     const res = await fetch('https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES');
     const json = await res.json();
@@ -173,7 +173,6 @@ async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
     return json.data
       .filter(c => Number(c.usdtVolume || c.quoteVolume || 0) >= minVolumeUSDT && c.symbol.endsWith('USDT'))
       .sort((a, b) => Number(b.usdtVolume || b.quoteVolume || 0) - Number(a.usdtVolume || a.quoteVolume || 0))
-      .slice(0, 35)
       .map(c => ({
         symbol: c.symbol,
         lastPrice: Number(c.lastPr),
