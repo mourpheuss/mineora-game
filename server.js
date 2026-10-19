@@ -92,6 +92,18 @@ function loadLocalDB() {
 
 let db = loadLocalDB();
 
+// Sunucu kalktığında Firebase'den veriyi anında senkronize et
+async function syncFromFirebase() {
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/bitget_crypto_state.json`);
+    const remoteData = await res.json();
+    if (remoteData && remoteData.users && remoteData.users.length) {
+      db = normalizeDB(remoteData);
+    }
+  } catch (e) {}
+}
+syncFromFirebase();
+
 async function saveDB(data) {
   try { fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (e) {}
   try {
@@ -130,7 +142,7 @@ app.post('/api/login', async (req, res) => {
   res.json({ ok: true, token, user: { username: found.username, role: found.role, bitget: found.bitget } });
 });
 
-// KULLANICI BİLGİSİ VE API DURUMUNU KALICI DÖN
+// KULLANICI BİLGİSİ VE API AYARLARI KORUMASI
 app.get('/api/me', (req, res) => {
   const user = db.users[0] || getDefaultDB().users[0];
   res.json({
@@ -143,7 +155,7 @@ app.get('/api/me', (req, res) => {
   });
 });
 
-// BİTGET AYARLARINI DB VE FIREBASE'E KALICI YAZ
+// BİTGET AYARLARINI KALICI KAYDET
 app.post('/api/settings/bitget', async (req, res) => {
   try {
     const { apiKey, secretKey, passphrase, leverage, marginMode, enabled, tradeSizeUSDT, geminiApiKey } = req.body;
@@ -174,17 +186,16 @@ app.post('/api/clear-history', (req, res) => {
   res.json({ ok: true });
 });
 
-// === BITGET V2 VERİLERİ ===
-async function getTopVolumeBitgetCoins(limit = 35) {
+// === TÜM AKTİF BİTGET VADELİ (USDT-FUTURES) COINLERİ ===
+async function getTopVolumeBitgetCoins(minVolumeUSDT = 1000000) {
   try {
     const res = await fetch('https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES');
     const json = await res.json();
     if (json.code !== '00000' || !Array.isArray(json.data)) return [];
 
     return json.data
-      .filter(c => c.symbol && c.symbol.endsWith('USDT'))
+      .filter(c => Number(c.usdtVolume || c.quoteVolume || 0) >= minVolumeUSDT && c.symbol.endsWith('USDT'))
       .sort((a, b) => Number(b.usdtVolume || b.quoteVolume || 0) - Number(a.usdtVolume || a.quoteVolume || 0))
-      .slice(0, limit)
       .map(c => ({
         symbol: c.symbol,
         lastPrice: Number(c.lastPr),
@@ -196,27 +207,7 @@ async function getTopVolumeBitgetCoins(limit = 35) {
   }
 }
 
-// HIZLI VE OPTİMİZE MUM ÇEKME
-async function getFastCandles(symbol, granularity = '15m', limit = 220) {
-  try {
-    const res = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=${granularity}&limit=${limit}`);
-    const json = await res.json();
-    if (json.code !== '00000' || !Array.isArray(json.data)) return [];
-
-    return json.data.map(c => ({
-      time: Math.floor(Number(c[0]) / 1000),
-      open: Number(c[1]),
-      high: Number(c[2]),
-      low: Number(c[3]),
-      close: Number(c[4]),
-      volume: Number(c[5])
-    })).reverse();
-  } catch (e) {
-    return [];
-  }
-}
-
-// 3.000 MUM SAYFALAMA MOTORU (SADECE SİMÜLASYON İÇİN)
+// 3.000 MUM KADAR DİNAMİK DERİNLİK ALAN MOTOR
 async function getBitgetCandles3K(symbol, granularity = '15m', targetCount = 3000) {
   try {
     let allCandles = [];
@@ -435,7 +426,7 @@ function evaluateSMCRSIStrategy(candles, atr) {
   return { score: 0, reasons: [] };
 }
 
-// === SİMÜLASYON MOTORU ===
+// === DİNAMİK ZAMAN DİLİMLİ SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -443,6 +434,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     const hours = Math.max(12, Math.min(720, Number(req.query.hours) || 120));
 
     const neededCandles = Math.min(3000, (hours * 4) + 200);
+
     const candles = await getBitgetCandles3K(targetSymbol, granularity, neededCandles);
     if (candles.length < 220) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
@@ -469,6 +461,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
+        // 1. TP2 Kontrolü
         const hitTP2 = isLong ? c.high >= simActive.tp2 : c.low <= simActive.tp2;
         if (hitTP2) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
@@ -484,12 +477,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
+        // 2. TP1 Kontrolü
         const hitTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
         if (!simActive.tp1Hit && hitTP1) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
+        // 3. Mikro Kâr Kilidi
         const microProfitDist = simActive.tp1Dist * 0.25;
         const triggerLevel = isLong ? (simActive.entry + simActive.tp1Dist * 0.55) : (simActive.entry - simActive.tp1Dist * 0.55);
         const reachedTrigger = isLong ? c.high >= triggerLevel : c.low <= triggerLevel;
@@ -499,6 +494,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           simActive.sl = isLong ? (simActive.entry + microProfitDist) : (simActive.entry - microProfitDist);
         }
 
+        // 4. Stop Kontrolü
         let isStopped = false;
         if (simActive.tp1Hit || simActive.lockedProfit) {
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
@@ -588,20 +584,34 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
   }
 });
 
-// === CANLI ÇOK HIZLI ÇOKLU COİN TARAYICI (TIMEOUT'SUZ PARALEL MOTOR) ===
+// === HIZLI VE KİLİTLENMEYEN ÇOKLU COİN TARAYICI ===
 app.get('/api/scan', requireAuth, async (req, res) => {
   try {
-    const topCoins = await getTopVolumeBitgetCoins(30);
+    const allCoins = await getTopVolumeBitgetCoins(1000000);
+    if (!allCoins || !allCoins.length) {
+      return res.json({ timestamp: getTRTime(), count: 0, coins: [] });
+    }
 
-    const scanPromises = topCoins.map(async (coin) => {
+    const topBatch = allCoins.slice(0, 25);
+    const analyzedPromises = topBatch.map(async (coin) => {
       try {
-        const candles = await getFastCandles(coin.symbol, '15m', 210);
-        if (candles.length < 200) return null;
+        const candles = await getBitgetCandles3K(coin.symbol, '15m', 150);
+        if (!candles || candles.length < 100) {
+          return {
+            symbol: coin.symbol,
+            price: coin.lastPrice,
+            volume24h: `$${(coin.volume24h / 1000000).toFixed(1)}M`,
+            change24h: coin.change24h.toFixed(2) + '%',
+            score: 0,
+            signal: 'NÖTR ⏳',
+            tradePlan: null,
+            reasons: ['Veri bekleniyor']
+          };
+        }
 
         const atr = calcATR(candles, 14);
         const setup = evaluateSMCRSIStrategy(candles, atr);
-        const levels = setup.levels || findDynamicSupportResistance(candles);
-        const plan = calculateSMCPlan(coin.lastPrice, setup.isShort, atr, levels);
+        const plan = calculateSMCPlan(coin.lastPrice, setup.isShort, atr, setup.levels || findDynamicSupportResistance(candles));
 
         return {
           symbol: coin.symbol,
@@ -609,23 +619,39 @@ app.get('/api/scan', requireAuth, async (req, res) => {
           volume24h: `$${(coin.volume24h / 1000000).toFixed(1)}M`,
           change24h: coin.change24h.toFixed(2) + '%',
           score: setup.score,
-          signal: setup.score >= 90 ? 'LONG 🟢 (SMC+RSI)' : (setup.score <= -90 ? 'SHORT 🔴 (SMC+RSI)' : 'NÖTR ⏳'),
+          signal: setup.score >= 90 ? 'LONG 🟢 (SMC)' : (setup.score <= -90 ? 'SHORT 🔴 (SMC)' : 'NÖTR ⏳'),
           tradePlan: plan,
-          reasons: setup.reasons && setup.reasons.length ? setup.reasons : ['Sniper Seviyesi Bekleniyor']
+          reasons: setup.reasons.length ? setup.reasons : ['Sniper Seviyesi Bekleniyor']
         };
-      } catch (err) {
+      } catch (e) {
         return null;
       }
     });
 
-    const settled = await Promise.all(scanPromises);
-    const results = settled.filter(Boolean);
+    const analyzedCoins = (await Promise.all(analyzedPromises)).filter(Boolean);
 
-    res.json({ timestamp: getTRTime(), count: results.length, coins: results });
+    const remainingCoins = allCoins.slice(25).map(coin => ({
+      symbol: coin.symbol,
+      price: coin.lastPrice,
+      volume24h: `$${(coin.volume24h / 1000000).toFixed(1)}M`,
+      change24h: coin.change24h.toFixed(2) + '%',
+      score: 0,
+      signal: 'NÖTR ⏳',
+      tradePlan: null,
+      reasons: ['İzleniyor']
+    }));
+
+    const finalResults = [...analyzedCoins, ...remainingCoins];
+
+    res.json({
+      timestamp: getTRTime(),
+      count: finalResults.length,
+      coins: finalResults
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Ultra Hızlı SMC Terminali Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Otomasyon Motoru Hazır: Port ${PORT}`));
 module.exports = app;
