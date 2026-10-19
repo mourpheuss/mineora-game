@@ -185,7 +185,7 @@ async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
   }
 }
 
-async function getBitgetCandles(symbol, granularity = '15m', limit = 480) {
+async function getBitgetCandles(symbol, granularity = '15m', limit = 450) {
   try {
     const res = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=${granularity}&limit=${limit}`);
     const json = await res.json();
@@ -204,7 +204,7 @@ async function getBitgetCandles(symbol, granularity = '15m', limit = 480) {
   }
 }
 
-// === TEKNİK HESAPLAMALAR ===
+// === TEKNİK METRİKLER ===
 function calcATR(candles, period = 14) {
   if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.008);
   const trs = [];
@@ -224,18 +224,34 @@ function calcEMA(closes, period) {
   return ema;
 }
 
-// SINIRLI VE KORUMALI RİSK PLANI (ZARAR KESİNLİKLE SINIRLANDI)
-function calculateStrictPlan(entryPrice, isShort, atr) {
+function calcRSI(closes, period = 14) {
+  if (closes.length <= period) return 50;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff >= 0) gains += diff; else losses -= diff;
+  }
+  let avgGain = gains / period, avgLoss = losses / period;
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    avgGain = (avgGain * (period - 1) + (diff >= 0 ? diff : 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
+  }
+  if (avgLoss === 0) return 100;
+  return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
+}
+
+// === GERÇEKÇİ RİSK PLANI (NEFES ALAN STOP + HIZLI TP1) ===
+function calculateTruePlan(entryPrice, isShort, atr) {
   const precision = entryPrice < 0.01 ? 6 : (entryPrice < 1 ? 5 : (entryPrice < 50 ? 4 : 2));
   
-  // SL: Maksimum 0.60x ATR (BTC için kesin tavan 90$)
-  let slDist = Number((atr * 0.60).toFixed(precision));
-  if (entryPrice > 10000 && slDist > 90) slDist = 90;
-  if (entryPrice <= 2 && slDist > 0.0055) slDist = 0.0055;
-
-  // TP1: 0.85x ATR (%70 kâr realize edilir, stop derhal maliyete çekilir)
-  const tp1Dist = Number((atr * 0.85).toFixed(precision));
-  // TP2: 2.20x ATR (Kalan %30 trendi koşar)
+  // Nefes Alan Stop: 1.15x ATR (BTC için ~170$ - Mikro fitilde patlamaz)
+  const slDist = Number((atr * 1.15).toFixed(precision));
+  
+  // Hızlı TP1: 0.65x ATR (%80 realizasyon + stop maliyete)
+  const tp1Dist = Number((atr * 0.65).toFixed(precision));
+  
+  // TP2 Trend Koşusu: 2.20x ATR
   const tp2Dist = Number((atr * 2.20).toFixed(precision));
 
   return {
@@ -249,8 +265,8 @@ function calculateStrictPlan(entryPrice, isShort, atr) {
   };
 }
 
-// ANA TREND VE HACİM ONAYLI SEÇİCİ TETİKLEYİCİ
-function evaluateSelectiveSetup(candles) {
+// === TREND İÇİNDE DÜZELTME DÖNÜŞ MOTORU ===
+function evaluateTrueSetup(candles) {
   if (candles.length < 50) return { score: 0 };
 
   const closes = candles.map(c => c.close);
@@ -258,33 +274,20 @@ function evaluateSelectiveSetup(candles) {
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
 
-  // H1 Ana Trend Filtresi (EMA 100) & EMA 50
-  const h1TrendEma = calcEMA(closes, Math.min(100, closes.length));
   const ema50 = calcEMA(closes, 50);
+  const ema200 = calcEMA(closes, Math.min(150, closes.length));
+  const rsi = calcRSI(closes, 14);
 
-  // Son 16 mumluk dip ve tepeler
-  const lookback = candles.slice(-18, -2);
-  const minLow = Math.min(...lookback.map(c => c.low));
-  const maxHigh = Math.max(...lookback.map(c => c.high));
-
-  // Hacim artış kontrolü
-  const avgVol = lookback.slice(-10).reduce((a, b) => a + b.volume, 0) / 10;
-  const isVolConfirmed = curC.volume >= avgVol * 1.10;
-
-  // 1. BOĞA: Fiyat H1 ve EMA50 üzerinde + Dip süpürüldü + Güçlü yeşil gövde
-  if (curPrice > h1TrendEma && curPrice >= ema50) {
-    const isDipSwept = prevC.low <= minLow || curC.low <= minLow;
-    const isGreenConfirmed = curC.close > curC.open && curC.close > prevC.close;
-    if (isDipSwept && isGreenConfirmed && isVolConfirmed) {
+  // 1. BOĞA: Fiyat EMA200 ve EMA50 üzerinde, RSI 40-55 arası düzeltme yapmış, güncel mum güçlü yeşil teyit vermiş
+  if (curPrice > ema200 && curPrice >= ema50 * 0.998) {
+    if (prevC.close <= prevC.open && curC.close > curC.open && curC.close >= prevC.high * 0.999 && rsi >= 42 && rsi <= 64) {
       return { score: 90, isShort: false };
     }
   }
 
-  // 2. AYI: Fiyat H1 ve EMA50 altında + Tepe süpürüldü + Güçlü kırmızı gövde
-  if (curPrice < h1TrendEma && curPrice <= ema50) {
-    const isTopSwept = prevC.high >= maxHigh || curC.high >= maxHigh;
-    const isRedConfirmed = curC.close < curC.open && curC.close < prevC.close;
-    if (isTopSwept && isRedConfirmed && isVolConfirmed) {
+  // 2. AYI: Fiyat EMA200 ve EMA50 altında, RSI 45-60 arası yukarı düzeltme yapmış, güncel mum güçlü kırmızı teyit vermiş
+  if (curPrice < ema200 && curPrice <= ema50 * 1.002) {
+    if (prevC.close >= prevC.open && curC.close < curC.open && curC.close <= prevC.low * 1.001 && rsi <= 58 && rsi >= 36) {
       return { score: -90, isShort: true };
     }
   }
@@ -292,14 +295,14 @@ function evaluateSelectiveSetup(candles) {
   return { score: 0 };
 }
 
-// === SİMÜLASYON MOTORU ===
+// === HATASIZ ADİL SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
     const granularity = '15m';
     
-    const candles = await getBitgetCandles(targetSymbol, granularity, 480);
-    if (candles.length < 50) {
+    const candles = await getBitgetCandles(targetSymbol, granularity, 450);
+    if (candles.length < 40) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
@@ -307,10 +310,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let openCandleIndex = -99;
     let lastTradeIndex = -99;
     let lastStopIndex = -99;
-    let lastStopDir = null;
     const simTrades = [];
 
-    for (let i = 35; i < candles.length; i++) {
+    for (let i = 30; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
       const atr = calcATR(slice, 14);
@@ -324,9 +326,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // TP2 Kontrolü (Büyük Hedef)
-        const reachedTP2 = isLong ? c.high >= simActive.tp2 : c.low <= simActive.tp2;
-        if (reachedTP2) {
+        // 1. ÖNCE HEDEF KONTROLLERİ (Fiyat hedefe dokunduysa kâr garanti edilir)
+        // TP2 Kontrolü
+        if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
             ...simActive,
@@ -340,18 +342,20 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // TP1 Kontrolü (Stop Girişe Çekilir)
-        const reachedTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
-        if (!simActive.tp1Hit && reachedTP1) {
+        // TP1 Kontrolü (Dokunduğu an stop derhal başabaş seviyesine kilitlenir)
+        const hitTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
+        if (!simActive.tp1Hit && hitTP1) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
-        // Stop Kontrolü (Kapanış Esaslı)
+        // 2. STOP KONTROLÜ (Fitil tuzağı kalktı: Yalnızca mum kapanışı seviyeyi delerse stop sayılır)
         let isStopped = false;
         if (simActive.tp1Hit) {
+          // TP1 alındıktan sonra maliyete değerse risksiz kârla kapanır
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
         } else {
+          // TP1 öncesinde anlık fitille kesilmez; mum kapanışı seviyenin ötesindeyse çıkılır
           isStopped = isLong ? c.close <= simActive.sl : c.close >= simActive.sl;
         }
 
@@ -361,13 +365,12 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           let result = 'LOSS';
 
           if (simActive.tp1Hit) {
-            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.70).toFixed(4));
+            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.80).toFixed(4));
             status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
             result = 'WIN';
           } else {
             profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
             lastStopIndex = i;
-            lastStopDir = simActive.direction;
           }
 
           simTrades.push({
@@ -385,16 +388,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası aynı yönde en az 8 mum (2 saat) bekleme
-      const currentDir = c.close > c.open ? 'LONG' : 'SHORT';
-      if (i - lastStopIndex < 8 && lastStopDir === currentDir) continue;
-      // İki işlem arasında en az 4 mum (1 saat) boşluk
-      if (i - lastTradeIndex < 4) continue;
+      // Stop sonrası en az 5 bar (1 saat 15 dk) bekleme
+      if (i - lastStopIndex < 5) continue;
+      if (i - lastTradeIndex < 3) continue;
 
-      const setup = evaluateSelectiveSetup(slice);
+      const setup = evaluateTrueSetup(slice);
 
       if (Math.abs(setup.score) >= 80) {
-        const plan = calculateStrictPlan(c.close, setup.isShort, atr);
+        const plan = calculateTruePlan(c.close, setup.isShort, atr);
         lastTradeIndex = i;
         openCandleIndex = i;
 
@@ -443,8 +444,8 @@ app.get('/api/scan', requireAuth, async (req, res) => {
       if (candles.length < 40) continue;
 
       const atr = calcATR(candles, 14);
-      const setup = evaluateSelectiveSetup(candles);
-      const plan = calculateStrictPlan(coin.lastPrice, setup.isShort, atr);
+      const setup = evaluateTrueSetup(candles);
+      const plan = calculateTruePlan(coin.lastPrice, setup.isShort, atr);
 
       results.push({
         symbol: coin.symbol,
@@ -454,7 +455,7 @@ app.get('/api/scan', requireAuth, async (req, res) => {
         score: setup.score,
         signal: setup.score >= 80 ? 'LONG 🟢' : (setup.score <= -80 ? 'SHORT 🔴' : 'NÖTR ⏳'),
         tradePlan: plan,
-        reasons: [setup.score !== 0 ? 'H1 Trend & Likidite Teyidi' : 'Beklemede']
+        reasons: [setup.score !== 0 ? 'Trend Düzeltme Dönüşü' : 'Beklemede']
       });
     }
 
@@ -464,5 +465,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Seçici Motor Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Gerçekçi Volatilite Motoru Aktif: Port ${PORT}`));
 module.exports = app;
