@@ -128,7 +128,7 @@ app.post('/api/login', async (req, res) => {
   const token = 'active_session_' + Date.now();
   db.sessions[token] = { username: found.username, role: found.role };
   await saveDB(db);
-  res.json({ ok: true, token, user: { username: found.username, role: found.role, bitget: found.bitget, geminiApiKey: found.geminiApiKey } });
+  res.json({ ok: true, token, user: { username: found.username, role: found.role, bitget: found.bitget } });
 });
 
 app.get('/api/me', (req, res) => {
@@ -152,7 +152,7 @@ app.post('/api/settings/bitget', requireAuth, async (req, res) => {
     };
 
     await saveDB(db);
-    res.json({ ok: true, bitget: user.bitget, geminiApiKey: user.geminiApiKey });
+    res.json({ ok: true, bitget: user.bitget });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -216,20 +216,52 @@ function calcATR(candles, period = 14) {
   return Math.max(0.0001, atr);
 }
 
-// === SCALP RİSK VE KÂR PLANI ===
-function calculateScalpPlan(entryPrice, isShort, atr, swingLevel) {
+// === SUPERTREND MOTORU (Trend Filtresi) ===
+function calcSupertrend(candles, period = 10, multiplier = 3.0) {
+  if (candles.length < period) return { isBull: true, level: candles[candles.length - 1].close };
+  
+  let upperBand = 0, lowerBand = 0;
+  let inBull = true;
+
+  for (let i = period; i < candles.length; i++) {
+    const c = candles[i];
+    const slice = candles.slice(0, i + 1);
+    const atr = calcATR(slice, period);
+    const hl2 = (c.high + c.low) / 2;
+
+    const basicUpper = hl2 + multiplier * atr;
+    const basicLower = hl2 - multiplier * atr;
+
+    if (inBull) {
+      lowerBand = Math.max(basicLower, lowerBand);
+      if (c.close < lowerBand) {
+        inBull = false;
+        upperBand = basicUpper;
+      }
+    } else {
+      upperBand = Math.min(basicUpper, upperBand);
+      if (c.close > upperBand) {
+        inBull = true;
+        lowerBand = basicLower;
+      }
+    }
+  }
+
+  return { isBull: inBull, level: inBull ? lowerBand : upperBand };
+}
+
+// === RİSK PLANI ===
+function calculateTrendPlan(entryPrice, isShort, atr, swingLevel) {
   const precision = entryPrice < 0.1 ? 5 : (entryPrice < 2 ? 4 : (entryPrice < 50 ? 3 : 2));
   
-  // Stop swing seviyesinin hemen arkası
-  let slDist = Math.abs(entryPrice - swingLevel) + (atr * 0.15);
-  if (slDist < atr * 0.70) slDist = atr * 0.70;
+  let slDist = Math.abs(entryPrice - swingLevel) + (atr * 0.20);
+  if (slDist < atr * 0.85) slDist = atr * 0.85;
 
-  const maxAllowedSl = entryPrice > 10000 ? 130 : (entryPrice > 1000 ? 12 : entryPrice * 0.012);
+  const maxAllowedSl = entryPrice > 10000 ? 150 : (entryPrice > 1000 ? 14 : entryPrice * 0.014);
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  // Ultra Hızlı TP1: 0.50x ATR (İlk sıçramada %85 realizasyon)
-  const tp1Dist = Number((atr * 0.50).toFixed(precision)); 
-  const tp2Dist = Number((atr * 1.80).toFixed(precision)); 
+  const tp1Dist = Number((atr * 0.70).toFixed(precision)); // %80 Kâr Alımı
+  const tp2Dist = Number((atr * 2.20).toFixed(precision)); 
   slDist = Number(slDist.toFixed(precision));
 
   return {
@@ -243,47 +275,40 @@ function calculateScalpPlan(entryPrice, isShort, atr, swingLevel) {
   };
 }
 
-// === TURTLE SOUP (LİKİDİTE SÜPÜRME DÖNÜŞÜ) MOTORU ===
-function evaluateTurtleSoupSetup(candles, atr) {
-  if (candles.length < 25) return { score: 0, reasons: [] };
+// === SADECE TREND YÖNÜNDE PULLBACK MOTORU ===
+function evaluateSupertrendSetup(candles, atr) {
+  if (candles.length < 35) return { score: 0, reasons: [] };
 
-  const c0 = candles[candles.length - 1]; // Tetiklenen mum
-  const lookback = candles.slice(-10, -1);
-  const minLow = Math.min(...lookback.map(c => c.low));
-  const maxHigh = Math.max(...lookback.map(c => c.high));
+  const st = calcSupertrend(candles, 10, 3.0);
+  const curC = candles[candles.length - 1];
+  const prevC = candles[candles.length - 2];
 
   let score = 0;
   const reasons = [];
-  let swingLevel = c0.close;
+  let swingLevel = curC.close;
 
-  // 1. BOĞA TURTLE SOUP (LONG)
-  // Kural: Son 8 mumun en düşüğü aşağı iğnelendi ama mum o seviyenin ÜSTÜNDE ve YEŞİL kapandı!
-  const dippedBelowLow = c0.low < minLow;
-  const closedAboveLow = c0.close > minLow && c0.close > c0.open;
-
-  if (dippedBelowLow && closedAboveLow) {
-    score = 90;
-    reasons.push('Dip Likiditesi Süpürüldü (Turtle Soup)');
-    reasons.push('Seviye Üstü Boğa Kapanışı Teyit Edildi');
-    swingLevel = c0.low;
+  // 1. BOĞA TRENDİNDE PULLBACK (YALNIZCA LONG)
+  // Süpertrend boğa + Önceki mum düzeltme yaptı + Güncel mum yeşil kapandı
+  if (st.isBull && prevC.close <= prevC.open && curC.close > curC.open && curC.close >= prevC.high * 0.999) {
+    score = 85;
+    reasons.push('Süpertrend Boğa Kanalı');
+    reasons.push('Düzeltme Sonrası Yeşil Gövde Teyidi');
+    swingLevel = Math.min(curC.low, prevC.low);
   }
 
-  // 2. AYI TURTLE SOUP (SHORT)
-  // Kural: Son 8 mumun en yükseği yukarı iğnelendi ama mum o seviyenin ALTINDA ve KIRMIZI kapandı!
-  const poppedAboveHigh = c0.high > maxHigh;
-  const closedBelowHigh = c0.close < maxHigh && c0.close < c0.open;
-
-  if (poppedAboveHigh && closedBelowHigh) {
-    score = -90;
-    reasons.push('Tepe Likiditesi Süpürüldü (Turtle Soup)');
-    reasons.push('Seviye Altı Ayı Kapanışı Teyit Edildi');
-    swingLevel = c0.high;
+  // 2. AYI TRENDİNDE PULLBACK (YALNIZCA SHORT)
+  // Süpertrend ayı + Önceki mum yukarı sıçradı + Güncel mum kırmızı kapandı
+  if (!st.isBull && prevC.close >= prevC.open && curC.close < curC.open && curC.close <= prevC.low * 1.001) {
+    score = -85;
+    reasons.push('Süpertrend Ayı Kanalı');
+    reasons.push('Düzeltme Sonrası Kırmızı Gövde Teyidi');
+    swingLevel = Math.max(curC.high, prevC.high);
   }
 
-  return { score, reasons, swingLevel };
+  return { score, reasons, swingLevel, isBull: st.isBull };
 }
 
-// === GERÇEKÇİ SIRALI SİMÜLASYON MOTORU ===
+// === HATASIZ KRONOLOJİK SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -291,7 +316,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
 
     const candles = await getBitgetCandles(targetSymbol, granularity, limit);
-    if (candles.length < 35) {
+    if (candles.length < 40) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
@@ -301,7 +326,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopIndex = -99;
     const simTrades = [];
 
-    for (let i = 20; i < candles.length; i++) {
+    for (let i = 25; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
       const atr = calcATR(slice, 14);
@@ -315,8 +340,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // TP2 Kontrolü
-        if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
+        // 1. ÖNCE HEDEF KONTROLÜ (Fiyat hedefe değdiyse kâr anında cebedir!)
+        const reachedTP2 = isLong ? c.high >= simActive.tp2 : c.low <= simActive.tp2;
+        if (reachedTP2) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
             ...simActive,
@@ -330,20 +356,19 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // TP1 Kontrolü (Hızlı 0.50x ATR -> %85 Kâr Alımı + Stop Maliyete)
-        const hitTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
-        if (!simActive.tp1Hit && hitTP1) {
+        const reachedTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
+        if (!simActive.tp1Hit && reachedTP1) {
           simActive.tp1Hit = true;
-          simActive.sl = simActive.entry;
+          simActive.sl = simActive.entry; // Stop kesin maliyete çekildi
         }
 
-        // Kapanış Odaklı Kesin Stop Kontrolü
+        // 2. STOP KONTROLÜ
         let isStopped = false;
         if (simActive.tp1Hit) {
-          // TP1 alındıktan sonra maliyete dokunursa risksiz başabaş kârla kapanır
+          // TP1 vurulduysa maliyet seviyesine dokununca risksiz kârla kapanır
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
         } else {
-          // TP1 öncesinde anlık fitille stop olunmaz; mum kapanışı seviyeyi kırdıysa çıkılır
+          // TP1 vurulmadıysa mum KAPANIŞI stopu ihlal ederse stop olur (fitil tuzağı kalktı)
           isStopped = isLong ? c.close <= simActive.sl : c.close >= simActive.sl;
         }
 
@@ -353,7 +378,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           let result = 'LOSS';
 
           if (simActive.tp1Hit) {
-            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.85).toFixed(4));
+            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.80).toFixed(4));
             status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
             result = 'WIN';
           } else {
@@ -376,15 +401,15 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası en az 4 mum (1 saat) bekleme
-      if (i - lastStopIndex < 4) continue;
-      if (i - lastTradeIndex < 2) continue;
+      // Stop sonrası en az 6 mum (1.5 saat) bekle
+      if (i - lastStopIndex < 6) continue;
+      if (i - lastTradeIndex < 3) continue;
 
-      const setup = evaluateTurtleSoupSetup(slice, atr);
+      const setup = evaluateSupertrendSetup(slice, atr);
 
       if (Math.abs(setup.score) >= 80) {
         const isShort = setup.score < 0;
-        const plan = calculateScalpPlan(c.close, isShort, atr, setup.swingLevel);
+        const plan = calculateTrendPlan(c.close, isShort, atr, setup.swingLevel);
         lastTradeIndex = i;
         openCandleIndex = i;
 
@@ -429,12 +454,12 @@ app.get('/api/scan', requireAuth, async (req, res) => {
     const results = [];
 
     for (const coin of topCoins.slice(0, 30)) {
-      const candles = await getBitgetCandles(coin.symbol, '15m', 40);
-      if (candles.length < 25) continue;
+      const candles = await getBitgetCandles(coin.symbol, '15m', 50);
+      if (candles.length < 35) continue;
 
       const atr = calcATR(candles, 14);
-      const setup = evaluateTurtleSoupSetup(candles, atr);
-      const plan = calculateScalpPlan(coin.lastPrice, setup.score < 0, atr, setup.swingLevel);
+      const setup = evaluateSupertrendSetup(candles, atr);
+      const plan = calculateTrendPlan(coin.lastPrice, setup.score < 0, atr, setup.swingLevel);
 
       results.push({
         symbol: coin.symbol,
@@ -442,7 +467,7 @@ app.get('/api/scan', requireAuth, async (req, res) => {
         volume24h: `$${(coin.volume24h / 1000000).toFixed(1)}M`,
         change24h: coin.change24h.toFixed(2) + '%',
         score: setup.score,
-        signal: setup.score >= 80 ? 'LONG 🟢 (TURTLE)' : (setup.score <= -80 ? 'SHORT 🔴 (TURTLE)' : 'NÖTR ⏳'),
+        signal: setup.score >= 80 ? 'LONG 🟢' : (setup.score <= -80 ? 'SHORT 🔴' : 'NÖTR ⏳'),
         tradePlan: plan,
         reasons: setup.reasons
       });
@@ -454,5 +479,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Turtle Soup Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Süpertrend Motoru Aktif: Port ${PORT}`));
 module.exports = app;
