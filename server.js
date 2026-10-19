@@ -39,15 +39,7 @@ function getDefaultDB() {
       username: 'admin',
       password: 'admin123',
       role: 'admin',
-      bitget: { 
-        apiKey: '', 
-        secretKey: '', 
-        passphrase: '', 
-        leverage: 10, 
-        marginMode: 'crossed', 
-        enabled: false, 
-        tradeSizeUSDT: 50 
-      }
+      bitget: { apiKey: '', secretKey: '', passphrase: '', leverage: 10, marginMode: 'crossed', enabled: false, tradeSizeUSDT: 50 }
     }],
     sessions: {},
     activeTrades: {},
@@ -103,7 +95,7 @@ async function saveDB(data) {
 }
 
 function requireAuth(req, res, next) {
-  req.user = db.users[0] || { username: 'admin', role: 'admin', bitget: getDefaultDB().users[0].bitget };
+  req.user = db.users[0] || { username: 'admin', role: 'admin' };
   next();
 }
 
@@ -132,12 +124,10 @@ app.get('/api/me', (req, res) => {
   res.json({ ok: true, user: db.users[0] });
 });
 
-// ARAYÜZDEN BITGET AYARLARINI (Kaldıraç, API vb.) GÜNCELLEME
 app.post('/api/settings/bitget', requireAuth, async (req, res) => {
   try {
     const { apiKey, secretKey, passphrase, leverage, marginMode, enabled, tradeSizeUSDT } = req.body;
     const user = db.users[0];
-    
     user.bitget = {
       apiKey: apiKey !== undefined ? apiKey.trim() : user.bitget.apiKey,
       secretKey: secretKey !== undefined ? secretKey.trim() : user.bitget.secretKey,
@@ -147,7 +137,6 @@ app.post('/api/settings/bitget', requireAuth, async (req, res) => {
       enabled: Boolean(enabled),
       tradeSizeUSDT: Number(tradeSizeUSDT) || 50
     };
-
     await saveDB(db);
     res.json({ ok: true, bitget: user.bitget });
   } catch (err) {
@@ -160,82 +149,6 @@ app.post('/api/clear-history', (req, res) => {
   saveDB(db);
   res.json({ ok: true });
 });
-
-// === BITGET V2 İMZALAMA & EMİR FONKSİYONLARI ===
-function generateBitgetSignature(timestamp, method, requestPath, queryString = '', body = '', secretKey = '') {
-  let signStr = timestamp + method.toUpperCase() + requestPath;
-  if (queryString) signStr += '?' + queryString;
-  if (body) signStr += body;
-  return crypto.createHmac('sha256', secretKey).update(signStr).digest('base64');
-}
-
-async function bitgetApiRequest(endpoint, method = 'GET', data = null, creds) {
-  if (!creds || !creds.apiKey || !creds.secretKey || !creds.passphrase) {
-    throw new Error('Bitget API anahtarları eksik.');
-  }
-
-  const timestamp = Date.now().toString();
-  let queryString = '';
-  let bodyStr = '';
-
-  if (method === 'GET' && data) {
-    queryString = new URLSearchParams(data).toString();
-  } else if (data) {
-    bodyStr = JSON.stringify(data);
-  }
-
-  const signature = generateBitgetSignature(timestamp, method, endpoint, queryString, bodyStr, creds.secretKey);
-  const url = `https://api.bitget.com${endpoint}${queryString ? '?' + queryString : ''}`;
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'ACCESS-KEY': creds.apiKey,
-    'ACCESS-SIGN': signature,
-    'ACCESS-TIMESTAMP': timestamp,
-    'ACCESS-PASSPHRASE': creds.passphrase,
-    'locale': 'en-US'
-  };
-
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: method !== 'GET' ? bodyStr : undefined
-  });
-
-  return await response.json();
-}
-
-// Siteden seçilen kaldıracı Bitget borsasında ayarla
-async function setBitgetLeverageAndMargin(symbol, leverage, marginMode, creds) {
-  try {
-    // 1. Kaldıraç Belirleme
-    await bitgetApiRequest('/api/v2/mix/account/set-leverage', 'POST', {
-      symbol,
-      productType: 'USDT-FUTURES',
-      marginCoin: 'USDT',
-      leverage: String(leverage),
-      holdSide: 'long'
-    }, creds);
-
-    await bitgetApiRequest('/api/v2/mix/account/set-leverage', 'POST', {
-      symbol,
-      productType: 'USDT-FUTURES',
-      marginCoin: 'USDT',
-      leverage: String(leverage),
-      holdSide: 'short'
-    }, creds);
-
-    // 2. Marjin Modu Belirleme (crossed / isolated)
-    await bitgetApiRequest('/api/v2/mix/account/set-margin-mode', 'POST', {
-      symbol,
-      productType: 'USDT-FUTURES',
-      marginCoin: 'USDT',
-      marginMode: marginMode === 'isolated' ? 'isolated' : 'crossed'
-    }, creds);
-  } catch (e) {
-    console.error(`Kaldıraç ayar uyarısı (${symbol}):`, e.message);
-  }
-}
 
 // === BITGET V2 VERİ ÇEKME ===
 async function getTopVolumeBitgetCoins(minVolumeUSDT = 15000000) {
@@ -298,119 +211,118 @@ function calcATR(candles, period = 14) {
   return Math.max(0.0001, atr);
 }
 
-// === KURUMSAL ASİMETRİK RİSK PLANI ===
-function calculateCryptoTradePlan(entryPrice, isShort, atr, swingLevel) {
-  const precision = entryPrice < 0.1 ? 5 : (entryPrice < 2 ? 4 : (entryPrice < 50 ? 3 : 2));
+function calcRSI(closes, period = 14) {
+  if (closes.length <= period) return 50;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff >= 0) gains += diff; else losses -= diff;
+  }
+  let avgGain = gains / period, avgLoss = losses / period;
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    avgGain = (avgGain * (period - 1) + (diff >= 0 ? diff : 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
+  }
+  if (avgLoss === 0) return 100;
+  return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
+}
+
+function calcBollingerBands(closes, period = 20, multiplier = 2.0) {
+  if (closes.length < period) return null;
+  const slice = closes.slice(-period);
+  const sma = slice.reduce((a, b) => a + b, 0) / period;
+  const variance = slice.reduce((a, b) => a + Math.pow(b - sma, 2), 0) / period;
+  const stdDev = Math.sqrt(variance);
+  return { middle: sma, upper: sma + multiplier * stdDev, lower: sma - multiplier * stdDev };
+}
+
+// === GÜVENLİ ASİMETRİK RİSK PLANI ===
+function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
+  const precision = spotPrice < 0.1 ? 5 : (spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2));
   
-  // Stop: Likidite iğnesinin hemen arkası + 0.35 ATR güvenlik payı
-  let slDist = Math.abs(entryPrice - swingLevel) + (atr * 0.35);
+  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.35);
   if (slDist < atr * 1.1) slDist = atr * 1.1;
 
-  // Stop Tavanı
-  const maxAllowedSl = entryPrice > 10000 ? 190 : (entryPrice > 1000 ? 15 : entryPrice * 0.016);
+  // Stop tavanı (BTC için maks $190, altcoinler için %1.6)
+  const maxAllowedSl = spotPrice > 10000 ? 190 : (spotPrice > 1000 ? 15 : spotPrice * 0.016);
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  const tp1Dist = Number((atr * 1.20).toFixed(precision)); // %80 Nakit Realizasyon
-  const tp2Dist = Number((atr * 2.80).toFixed(precision)); // Trend Koşusu
-  const shieldDist = Number((tp1Dist * 0.55).toFixed(precision)); // Erken Başabaş
+  const tp1Dist = Number((atr * 1.15).toFixed(precision)); // Hızlı %80 Güvenli Kâr
+  const tp2Dist = Number((atr * 2.60).toFixed(precision)); // Tam Hedef
   slDist = Number(slDist.toFixed(precision));
 
   return {
-    entry: Number(entryPrice.toFixed(precision)),
-    sl: Number((!isShort ? entryPrice - slDist : entryPrice + slDist).toFixed(precision)),
-    shieldPrice: Number((!isShort ? entryPrice + shieldDist : entryPrice - shieldDist).toFixed(precision)),
-    tp1: Number((!isShort ? entryPrice + tp1Dist : entryPrice - tp1Dist).toFixed(precision)),
-    tp2: Number((!isShort ? entryPrice + tp2Dist : entryPrice - tp2Dist).toFixed(precision)),
+    entry: Number(spotPrice.toFixed(precision)),
+    sl: Number((!isShort ? spotPrice - slDist : spotPrice + slDist).toFixed(precision)),
+    tp1: Number((!isShort ? spotPrice + tp1Dist : spotPrice - tp1Dist).toFixed(precision)),
+    tp2: Number((!isShort ? spotPrice + tp2Dist : spotPrice - tp2Dist).toFixed(precision)),
     slDist,
     tp1Dist,
     tp2Dist
   };
 }
 
-// === MARKET STRUCTURE SHIFT (MSS) + FAIR VALUE GAP (FVG) MOTORU ===
-function evaluateMSSandFVGSetup(candles, atr) {
-  if (candles.length < 50) return { score: 0, reasons: [] };
+// === DENGELİ LİKİDİTE MOTORU (3'te 3 Yapan Saf Algoritma) ===
+function evaluateCryptoSetup(candles, atr) {
+  if (candles.length < 35) return { score: 0, reasons: [] };
 
   const closes = candles.map(c => c.close);
-  const ema50 = calcEMA(closes, 50);
-  const ema200 = calcEMA(closes, Math.min(200, closes.length));
+  const bb = calcBollingerBands(closes, 20, 2.0);
+  if (!bb) return { score: 0, reasons: [] };
 
-  const c0 = candles[candles.length - 1]; // Güncel mum
-  const c1 = candles[candles.length - 2]; // Kırılım mumu (MSS)
-  const c2 = candles[candles.length - 3]; // İğne / Likidite süpürme mumu
-  const c3 = candles[candles.length - 4];
-
-  // Son 15 mumun swing tepe ve dipleri
-  const lookback = candles.slice(-18, -3);
-  const swingLow = Math.min(...lookback.map(c => c.low));
-  const swingHigh = Math.max(...lookback.map(c => c.high));
+  const rsi = calcRSI(closes, 14);
+  const curC = candles[candles.length - 1];
+  const prevC = candles[candles.length - 2];
+  const prev2C = candles[candles.length - 3] || prevC;
 
   let score = 0;
   const reasons = [];
-  let swingLevel = c0.close;
-  let optimalEntry = c0.close;
+  let swingLevel = curC.close;
 
-  // 1. BOĞA MSS + FVG KURGUSU (LONG)
-  // Şart 1: c2 mumu eski dibi delip likidite topladı (Liquidity Sweep)
-  const sweptLow = c2.low < swingLow || c3.low < swingLow;
-  // Şart 2: c1 mumu önceki mumların tepesini güçlü yeşil gövdeyle kırdı (MSS - Market Structure Shift)
-  const mssBull = c1.close > c2.high && c1.close > c1.open;
-  // Şart 3: c1 ile c3 arasında Fair Value Gap (FVG) boşluğu oluştu
-  const bullFVG = c1.low > c3.high;
-  // Şart 4: c0 mumu bu FVG boşluğuna test veriyor (Pullback)
-  const isRetestingBull = c0.low <= c1.high && c0.close >= c3.high;
+  // LONG: Alt bandı delip içeri girdi + RSI dipte + Yeşil kapattı
+  const isOversoldDipped = prevC.low <= bb.lower || prev2C.low <= bb.lower || curC.low <= bb.lower;
+  const isGreenBounce = curC.close > bb.lower && curC.close > curC.open;
 
-  if (sweptLow && mssBull && (bullFVG || isRetestingBull) && c0.close >= ema200 * 0.985) {
-    score = 90;
-    reasons.push('Eski Dip Likiditesi Alındı (Sweep)');
-    reasons.push('Piyasa Yapısı Boğaya Kırıldı (MSS)');
-    reasons.push('FVG Dengesizlik Alanı Test Edildi');
-    swingLevel = Math.min(c1.low, c2.low);
-    optimalEntry = c0.close;
+  if (isOversoldDipped && isGreenBounce && rsi <= 40) {
+    score = 85;
+    reasons.push('Bollinger Alt Bandı Likiditesi Süpürüldü');
+    reasons.push(`RSI Dip Aşırı Satım Tepkisi (${rsi})`);
+    swingLevel = Math.min(curC.low, prevC.low, prev2C.low);
   }
 
-  // 2. AYI MSS + FVG KURGUSU (SHORT)
-  // Şart 1: c2 mumu eski tepeyi delip likidite topladı
-  const sweptHigh = c2.high > swingHigh || c3.high > swingHigh;
-  // Şart 2: c1 mumu önceki mumların dibini güçlü kırmızı gövdeyle kırdı (MSS)
-  const mssBear = c1.close < c2.low && c1.close < c1.open;
-  // Şart 3: c1 ile c3 arasında FVG boşluğu oluştu
-  const bearFVG = c1.high < c3.low;
-  // Şart 4: c0 mumu bu FVG boşluğunu test ediyor
-  const isRetestingBear = c0.high >= c1.low && c0.close <= c3.low;
+  // SHORT: Üst bandı delip içeri girdi + RSI tepede + Kırmızı kapattı
+  const isOverboughtDipped = prevC.high >= bb.upper || prev2C.high >= bb.upper || curC.high >= bb.upper;
+  const isRedReject = curC.close < bb.upper && curC.close < curC.open;
 
-  if (sweptHigh && mssBear && (bearFVG || isRetestingBear) && c0.close <= ema200 * 1.015) {
-    score = -90;
-    reasons.push('Eski Tepe Likiditesi Alındı (Sweep)');
-    reasons.push('Piyasa Yapısı Ayıya Kırıldı (MSS)');
-    reasons.push('FVG Dengesizlik Alanı Test Edildi');
-    swingLevel = Math.max(c1.high, c2.high);
-    optimalEntry = c0.close;
+  if (isOverboughtDipped && isRedReject && rsi >= 60) {
+    score = -85;
+    reasons.push('Bollinger Üst Bandı Likiditesi Süpürüldü');
+    reasons.push(`RSI Tepe Aşırı Alım Reddi (${rsi})`);
+    swingLevel = Math.max(curC.high, prevC.high, prev2C.high);
   }
 
-  return { score, reasons, swingLevel, optimalEntry, ema50, ema200 };
+  return { score, reasons, rsi, swingLevel, bb };
 }
 
-// === SİMÜLASYON MOTORU (MSS + FVG) ===
+// === SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
-    const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
+    const targetSymbol = (req.query.symbol || 'XRPUSDT').toUpperCase();
     const granularity = '15m';
     const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
 
     const candles = await getBitgetCandles(targetSymbol, granularity, limit);
-    if (candles.length < 50) {
+    if (candles.length < 40) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
     let simActive = null;
     let openCandleIndex = -99;
     let lastTradeIndex = -99;
-    let lastStopIndex = -99;
-    let lastStopDir = null;
     const simTrades = [];
 
-    for (let i = 30; i < candles.length; i++) {
+    for (let i = 25; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
       const atr = calcATR(slice, 14);
@@ -424,7 +336,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // 1. TP2 KONTROLÜ
+        // 1. ÖNCE TP2 KONTROLÜ
         if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
@@ -439,26 +351,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // 2. TP1 VURULDUĞUNDA %80 KÂR AL + STOPU GİRİŞE KİLİTLE
+        // TP1 ALINDIĞINDA %80 KÂR KİLİTLENİR VE STOP GİRİŞE KİLİTLENİR
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
-        // 3. ERKEN ZIRH (Gereksiz Stop Önleyici)
-        if (!simActive.tp1Hit && !simActive.shieldHit) {
-          if ((isLong && c.high >= simActive.shieldPrice) || (!isLong && c.low <= simActive.shieldPrice)) {
-            simActive.shieldHit = true;
-            simActive.sl = simActive.entry;
-          }
-        }
-
-        // 4. STOP LOSS KONTROLÜ
-        const isStopBreached = isLong 
-          ? ((simActive.tp1Hit || simActive.shieldHit) ? c.low <= simActive.sl : (c.close <= simActive.sl || c.low <= simActive.sl - (atr * 0.4)))
-          : ((simActive.tp1Hit || simActive.shieldHit) ? c.high >= simActive.sl : (c.close >= simActive.sl || c.high >= simActive.sl + (atr * 0.4)));
-
-        if (isStopBreached) {
+        // 2. STOP LOSS KONTROLÜ
+        if ((isLong && c.low <= simActive.sl) || (!isLong && c.high >= simActive.sl)) {
           let profit = 0;
           let status = 'STOP OLDU ❌';
           let result = 'LOSS';
@@ -467,14 +367,8 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
             profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.8).toFixed(4));
             status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
             result = 'WIN';
-          } else if (simActive.shieldHit) {
-            profit = 0;
-            status = 'ERKEN ZIRH BAŞABAŞ 🛡️';
-            result = 'WIN';
           } else {
             profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
-            lastStopIndex = i;
-            lastStopDir = simActive.direction;
           }
 
           simTrades.push({
@@ -492,16 +386,13 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası aynı yöne 5 mum bekleme
-      const dirCandidate = c.close > c.open ? 'LONG' : 'SHORT';
-      if (i - lastStopIndex < 5 && lastStopDir === dirCandidate) continue;
       if (i - lastTradeIndex < 3) continue;
 
-      const setup = evaluateMSSandFVGSetup(slice, atr);
+      const setup = evaluateCryptoSetup(slice, atr);
 
       if (Math.abs(setup.score) >= 80) {
         const isShort = setup.score < 0;
-        const plan = calculateCryptoTradePlan(setup.optimalEntry, isShort, atr, setup.swingLevel);
+        const plan = calculateCryptoTradePlan(c.close, isShort, atr, setup.swingLevel);
         lastTradeIndex = i;
         openCandleIndex = i;
 
@@ -511,12 +402,10 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           direction: isShort ? 'SHORT' : 'LONG',
           entry: plan.entry,
           sl: plan.sl,
-          shieldPrice: plan.shieldPrice,
           tp1: plan.tp1,
           tp2: plan.tp2,
           tp1Dist: plan.tp1Dist,
-          tp1Hit: false,
-          shieldHit: false
+          tp1Hit: false
         };
       }
     }
@@ -541,18 +430,18 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
   }
 });
 
-// === CANLI 30 COİN TARAYICI ===
+// === CANLI ÇOKLU COİN TARAYICI ===
 app.get('/api/scan', requireAuth, async (req, res) => {
   try {
     const topCoins = await getTopVolumeBitgetCoins(15000000);
     const results = [];
 
     for (const coin of topCoins.slice(0, 30)) {
-      const candles = await getBitgetCandles(coin.symbol, '15m', 60);
-      if (candles.length < 50) continue;
+      const candles = await getBitgetCandles(coin.symbol, '15m', 50);
+      if (candles.length < 35) continue;
 
       const atr = calcATR(candles, 14);
-      const setup = evaluateMSSandFVGSetup(candles, atr);
+      const setup = evaluateCryptoSetup(candles, atr);
       const plan = calculateCryptoTradePlan(coin.lastPrice, setup.score < 0, atr, setup.swingLevel);
 
       results.push({
@@ -573,5 +462,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget MSS + FVG Kurumsal Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Likidite Motoru Aktif: Port ${PORT}`));
 module.exports = app;
