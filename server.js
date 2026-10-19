@@ -139,7 +139,7 @@ app.post('/api/clear-history', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// === BITGET V2 VERİ ÇEKME ===
+// === BITGET V2 MARKET VERİLERİ ===
 async function getTopVolumeBitgetCoins(minVolumeUSDT = 15000000) {
   try {
     const res = await fetch('https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES');
@@ -180,7 +180,7 @@ async function getBitgetCandles(symbol, granularity = '15m', limit = 300) {
   }
 }
 
-// === MATEMATİKSEL İNDİKATÖR FONKSİYONLARI ===
+// === TEKNİK HESAPLAMALAR ===
 function calcEMA(closes, period) {
   if (closes.length < period) return closes[closes.length - 1] || 0;
   const k = 2 / (period + 1);
@@ -190,7 +190,7 @@ function calcEMA(closes, period) {
 }
 
 function calcATR(candles, period = 14) {
-  if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.005);
+  if (candles.length <= period) return Math.max(0.0001, candles[candles.length - 1].close * 0.01);
   const trs = [];
   for (let i = 1; i < candles.length; i++) {
     trs.push(Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - candles[i - 1].close), Math.abs(candles[i].low - candles[i - 1].close)));
@@ -217,29 +217,17 @@ function calcRSI(closes, period = 14) {
   return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
 }
 
-function calcVWAP(candles) {
-  const slice = candles.slice(-50);
-  let cumPV = 0, cumVol = 0;
-  for (const c of slice) {
-    const vol = c.volume || 100;
-    cumPV += ((c.high + c.low + c.close) / 3) * vol;
-    cumVol += vol;
-  }
-  return cumVol === 0 ? slice[slice.length - 1].close : cumPV / cumVol;
-}
-
-// === SIKI RİSK VE KÂR PLANI (Gereksiz Zarar Ettirmeyen Asimetrik Model) ===
-function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
+// === GERÇEKÇİ KRİPTO RİSK/KÂR HESABI ===
+function calculateCryptoTradePlan(spotPrice, isShort, atr) {
   const precision = spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2);
   
-  // Stop mesafesi swing seviyesine veya maksimum 0.85 ATR'ye kilitlenir
-  let slDist = Math.abs(spotPrice - swingLevel);
-  if (slDist < atr * 0.45) slDist = atr * 0.45;
-  if (slDist > atr * 0.90) slDist = atr * 0.90; // Stop asla devasa olamaz
-
-  const tp1Dist = Number((slDist * 1.35).toFixed(precision)); // Net R:R 1.35x
-  const tp2Dist = Number((slDist * 2.80).toFixed(precision)); // Net R:R 2.80x
-  slDist = Number(slDist.toFixed(precision));
+  // Mikro iğnelerin patlatamayacağı güvenli stop (%1.20 minimum)
+  const minSlDist = spotPrice * 0.012;
+  const slDist = Number(Math.max(minSlDist, atr * 1.5).toFixed(precision));
+  
+  // TP1: Güvenli R:R (1.4x), TP2: Trend Koşusu (2.8x)
+  const tp1Dist = Number((slDist * 1.40).toFixed(precision));
+  const tp2Dist = Number((slDist * 2.80).toFixed(precision));
 
   return {
     entry: Number(spotPrice.toFixed(precision)),
@@ -252,85 +240,69 @@ function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
   };
 }
 
-// === GELİŞMİŞ KURUMSAL STRATEJİ MOTORU (TREND + MOMENTUM REVERSAL) ===
+// === GÜÇLÜ TREND & MOMENTUM MOTORU ===
 function evaluateCryptoSetup(candles, atr) {
-  if (candles.length < 55) return { score: 0, reasons: [] };
+  if (candles.length < 50) return { score: 0, reasons: [] };
 
   const closes = candles.map(c => c.close);
-  const ema9 = calcEMA(closes, 9);
-  const ema21 = calcEMA(closes, 21);
-  const ema55 = calcEMA(closes, 55);
+  const ema20 = calcEMA(closes, 20);
+  const ema50 = calcEMA(closes, 50);
   const ema200 = calcEMA(closes, Math.min(200, closes.length));
-  const vwap = calcVWAP(candles);
-
-  const prevCloses = closes.slice(0, -1);
-  const rsiCurrent = calcRSI(closes, 14);
-  const rsiPrev = calcRSI(prevCloses, 14);
+  const rsi = calcRSI(closes, 14);
 
   const curPrice = closes[closes.length - 1];
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
 
-  // 1. ANA SEANS TRENDİ (EMA 200 ve EMA 55 Yönü)
-  const isSolidUpTrend = curPrice > ema200 && ema21 > ema55;
-  const isSolidDownTrend = curPrice < ema200 && ema21 < ema55;
+  // 1. GÜÇLÜ TREND ŞARTI
+  const isBullishTrend = curPrice > ema200 && ema20 > ema50;
+  const isBearishTrend = curPrice < ema200 && ema20 < ema50;
 
-  // 2. SWING DESTEK VE DİRENÇ (Son 8 Mum)
-  const recent8 = candles.slice(-10, -2);
-  const localLow = Math.min(...recent8.map(c => c.low));
-  const localHigh = Math.max(...recent8.map(c => c.high));
+  // 2. DONCHIAN KANAL KIRILIMI (Son 20 Mumun Zirvesi/Dibi)
+  const channel = candles.slice(-22, -2);
+  const highest20 = Math.max(...channel.map(c => c.high));
+  const lowest20 = Math.min(...channel.map(c => c.low));
 
-  // 3. RETEST / PULLBACK TEPKİSİ
-  const bullPullback = (curC.low <= ema21 || curC.low <= vwap) && curC.close > curC.open && curC.close > ema21;
-  const bearPullback = (curC.high >= ema21 || curC.high >= vwap) && curC.close < curC.open && curC.close < ema21;
-
-  // 4. LİKİDİTE İĞNESİ (SWEEP)
-  const bullSweep = prevC.low < localLow && curC.close > localLow && curC.close > curC.open;
-  const bearSweep = prevC.high > localHigh && curC.close < localHigh && curC.close < curC.open;
+  // 3. HACİM ARTIŞI
+  const recentVols = candles.slice(-15, -1).map(c => c.volume);
+  const avgVol = recentVols.reduce((a, b) => a + b, 0) / recentVols.length;
+  const hasVolume = curC.volume >= avgVol * 1.2;
 
   let score = 0;
   const reasons = [];
-  let swingLevel = curPrice;
 
-  // === %85+ KALİTE LONG KURULUMU ===
-  if (isSolidUpTrend && (bullSweep || bullPullback)) {
-    // RSI aşırı alımda değilken ve yukarı dönüş başlarken
-    if (rsiCurrent > rsiPrev && rsiCurrent <= 62) {
+  // YÜKSEK BAŞARI ORANLI LONG
+  if (isBullishTrend && curC.close > highest20 && curC.close > curC.open) {
+    if (rsi >= 52 && rsi <= 68 && hasVolume) {
       score = 85;
-      reasons.push('Ana Boğa Trendi (EMA200 ve EMA55 Üstü)');
-      reasons.push(bullSweep ? '💎 Likidite Dibi Süpürüldü (Sweep)' : '⚡ EMA21/VWAP Pullback Tepkisi');
-      reasons.push(`RSI Pozitif Dönüşü (${rsiCurrent})`);
-      swingLevel = Math.min(curC.low, prevC.low);
+      reasons.push('Ana Boğa Trendi (EMA200 Üstü)');
+      reasons.push('20 Mum Direnç Kırılımı (Breakout)');
+      reasons.push(`Hacimli Alım Desteği (RSI: ${rsi})`);
     }
   }
 
-  // === %85+ KALİTE SHORT KURULUMU ===
-  if (isSolidDownTrend && (bearSweep || bearPullback)) {
-    // RSI aşırı satımda değilken ve aşağı dönüş başlarken
-    if (rsiCurrent < rsiPrev && rsiCurrent >= 38) {
+  // YÜKSEK BAŞARI ORANLI SHORT
+  if (isBearishTrend && curC.close < lowest20 && curC.close < curC.open) {
+    if (rsi <= 48 && rsi >= 32 && hasVolume) {
       score = -85;
-      reasons.push('Ana Ayı Trendi (EMA200 ve EMA55 Altı)');
-      reasons.push(bearSweep ? '💎 Likidite Tepesi Süpürüldü (Sweep)' : '⚡ EMA21/VWAP Pullback Reddi');
-      reasons.push(`RSI Negatif Dönüşü (${rsiCurrent})`);
-      swingLevel = Math.max(curC.high, prevC.high);
+      reasons.push('Ana Ayı Trendi (EMA200 Altı)');
+      reasons.push('20 Mum Destek Kırılımı (Breakdown)');
+      reasons.push(`Hacimli Satış Baskısı (RSI: ${rsi})`);
     }
   }
 
-  if (score > 0 && curC.close < curC.open) score = 0;
-  if (score < 0 && curC.close > curC.open) score = 0;
-
-  return { score, reasons, ema21, ema55, ema200, vwap, rsi: rsiCurrent, swingLevel };
+  return { score, reasons, ema20, ema50, ema200, rsi };
 }
 
-// === GERİYE DÖNÜK TEST (BACKTEST) MOTORU ===
+// === SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
-    const granularity = '15m'; // 15 Dakikalık kurumsal veri
+    const granularity = '15m';
     const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
 
     const candles = await getBitgetCandles(targetSymbol, granularity, limit);
-    if (candles.length < 55) {
+    if (candles.length < 50) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
@@ -338,7 +310,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastTradeIndex = -99;
     const simTrades = [];
 
-    for (let i = 50; i < candles.length; i++) {
+    for (let i = 35; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
       const atr = calcATR(slice, 14);
@@ -350,18 +322,18 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       if (simActive) {
         const isLong = simActive.direction === 'LONG';
 
-        // 1. SL KONTROLÜ
+        // 1. SL Kontrolü
         if ((isLong && c.low <= simActive.sl) || (!isLong && c.high >= simActive.sl)) {
           let profit = 0;
           let status = 'STOP OLDU ❌';
           let result = 'LOSS';
 
           if (simActive.tp1Hit) {
-            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.8).toFixed(2));
+            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.8).toFixed(4));
             status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
             result = 'WIN';
           } else {
-            profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(2));
+            profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
           }
 
           simTrades.push({
@@ -376,9 +348,9 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // 2. TP2 TAM HEDEF KONTROLÜ
+        // 2. TP2 Kontrolü
         if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
-          const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(2));
+          const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
             ...simActive,
             closeTime: `${dateStr} ${timeStr}`,
@@ -391,21 +363,22 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // 3. TP1 KONTROLÜ (%80 KÂR + STOPU MALİYETE ÇEK)
+        // 3. TP1 Kontrolü (%80 Kâr Al + Kalanı Girişe Kilitle)
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) {
           simActive.tp1Hit = true;
-          simActive.sl = simActive.entry; // Kesin risksiz başabaş kilidi
+          simActive.sl = simActive.entry;
         }
         continue;
       }
 
-      if (i - lastTradeIndex < 3) continue;
+      // Ardışık işlem engeli (En az 4 mum bekle)
+      if (i - lastTradeIndex < 4) continue;
 
       const setup = evaluateCryptoSetup(slice, atr);
 
       if (Math.abs(setup.score) >= 80) {
         const isShort = setup.score < 0;
-        const plan = calculateCryptoTradePlan(c.close, isShort, atr, setup.swingLevel);
+        const plan = calculateCryptoTradePlan(c.close, isShort, atr);
         lastTradeIndex = i;
 
         simActive = {
@@ -433,7 +406,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
       wins,
       losses,
       winRate,
-      totalProfit: totalProfit.toFixed(2),
+      totalProfit: totalProfit.toFixed(4),
       trades: simTrades.reverse()
     });
   } catch (err) {
@@ -448,12 +421,12 @@ app.get('/api/scan', requireAuth, async (req, res) => {
     const results = [];
 
     for (const coin of topCoins.slice(0, 20)) {
-      const candles = await getBitgetCandles(coin.symbol, '15m', 65);
-      if (candles.length < 55) continue;
+      const candles = await getBitgetCandles(coin.symbol, '15m', 60);
+      if (candles.length < 50) continue;
 
       const atr = calcATR(candles, 14);
       const setup = evaluateCryptoSetup(candles, atr);
-      const plan = calculateCryptoTradePlan(coin.lastPrice, setup.score < 0, atr, setup.swingLevel);
+      const plan = calculateCryptoTradePlan(coin.lastPrice, setup.score < 0, atr);
 
       results.push({
         symbol: coin.symbol,
@@ -473,5 +446,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Kurumsal Kripto Motoru (Yüksek Kazanma Oranı) Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Kripto Motoru Aktif: Port ${PORT}`));
 module.exports = app;
