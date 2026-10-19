@@ -216,7 +216,15 @@ function calcATR(candles, period = 14) {
   return Math.max(0.0001, atr);
 }
 
-// === SUPERTREND MOTORU (Trend Filtresi) ===
+function calcEMA(closes, period) {
+  if (closes.length < period) return closes[closes.length - 1] || 0;
+  const k = 2 / (period + 1);
+  let ema = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < closes.length; i++) ema = closes[i] * k + ema * (1 - k);
+  return ema;
+}
+
+// === SUPERTREND HESAPLAMASI ===
 function calcSupertrend(candles, period = 10, multiplier = 3.0) {
   if (candles.length < period) return { isBull: true, level: candles[candles.length - 1].close };
   
@@ -261,7 +269,7 @@ function calculateTrendPlan(entryPrice, isShort, atr, swingLevel) {
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
   const tp1Dist = Number((atr * 0.70).toFixed(precision)); // %80 Kâr Alımı
-  const tp2Dist = Number((atr * 2.20).toFixed(precision)); 
+  const tp2Dist = Number((atr * 2.40).toFixed(precision)); 
   slDist = Number(slDist.toFixed(precision));
 
   return {
@@ -275,40 +283,47 @@ function calculateTrendPlan(entryPrice, isShort, atr, swingLevel) {
   };
 }
 
-// === SADECE TREND YÖNÜNDE PULLBACK MOTORU ===
+// === H1 SAATLİK TREND KİLİTLİ SUPERTREND MOTORU ===
 function evaluateSupertrendSetup(candles, atr) {
-  if (candles.length < 35) return { score: 0, reasons: [] };
+  if (candles.length < 50) return { score: 0, reasons: [] };
 
   const st = calcSupertrend(candles, 10, 3.0);
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
+  const curPrice = curC.close;
+
+  // H1 (1 Saatlik) Ana Trend Filtresi: 15 dakikalık grafikte EMA 100 ~ 25 saatlik trend
+  const closes = candles.map(c => c.close);
+  const h1TrendEma = calcEMA(closes, Math.min(100, closes.length));
 
   let score = 0;
   const reasons = [];
   let swingLevel = curC.close;
 
-  // 1. BOĞA TRENDİNDE PULLBACK (YALNIZCA LONG)
-  // Süpertrend boğa + Önceki mum düzeltme yaptı + Güncel mum yeşil kapandı
-  if (st.isBull && prevC.close <= prevC.open && curC.close > curC.open && curC.close >= prevC.high * 0.999) {
-    score = 85;
-    reasons.push('Süpertrend Boğa Kanalı');
-    reasons.push('Düzeltme Sonrası Yeşil Gövde Teyidi');
-    swingLevel = Math.min(curC.low, prevC.low);
+  // 1. BOĞA: YALNIZCA FİYAT H1 TRENDİNİN ÜZERİNDEYKEN LONG AÇILABİLİR!
+  if (curPrice >= h1TrendEma && st.isBull) {
+    if (prevC.close <= prevC.open && curC.close > curC.open && curC.close >= prevC.high * 0.999) {
+      score = 85;
+      reasons.push('H1 Boğa Trendi Onaylı');
+      reasons.push('Süpertrend Destek Sıçraması (Pullback)');
+      swingLevel = Math.min(curC.low, prevC.low);
+    }
   }
 
-  // 2. AYI TRENDİNDE PULLBACK (YALNIZCA SHORT)
-  // Süpertrend ayı + Önceki mum yukarı sıçradı + Güncel mum kırmızı kapandı
-  if (!st.isBull && prevC.close >= prevC.open && curC.close < curC.open && curC.close <= prevC.low * 1.001) {
-    score = -85;
-    reasons.push('Süpertrend Ayı Kanalı');
-    reasons.push('Düzeltme Sonrası Kırmızı Gövde Teyidi');
-    swingLevel = Math.max(curC.high, prevC.high);
+  // 2. AYI: YALNIZCA FİYAT H1 TRENDİNİN ALTINDAYKEN SHORT AÇILABİLİR!
+  if (curPrice <= h1TrendEma && !st.isBull) {
+    if (prevC.close >= prevC.open && curC.close < curC.open && curC.close <= prevC.low * 1.001) {
+      score = -85;
+      reasons.push('H1 Ayı Trendi Onaylı');
+      reasons.push('Süpertrend Direnç Reddi (Pullback)');
+      swingLevel = Math.max(curC.high, prevC.high);
+    }
   }
 
   return { score, reasons, swingLevel, isBull: st.isBull };
 }
 
-// === HATASIZ KRONOLOJİK SİMÜLASYON MOTORU ===
+// === SİMÜLASYON MOTORU ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -340,7 +355,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // 1. ÖNCE HEDEF KONTROLÜ (Fiyat hedefe değdiyse kâr anında cebedir!)
+        // 1. ÖNCE TP HEDEFLERİ
         const reachedTP2 = isLong ? c.high >= simActive.tp2 : c.low <= simActive.tp2;
         if (reachedTP2) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
@@ -359,16 +374,14 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         const reachedTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
         if (!simActive.tp1Hit && reachedTP1) {
           simActive.tp1Hit = true;
-          simActive.sl = simActive.entry; // Stop kesin maliyete çekildi
+          simActive.sl = simActive.entry; // Stop maliyete kilitlendi
         }
 
         // 2. STOP KONTROLÜ
         let isStopped = false;
         if (simActive.tp1Hit) {
-          // TP1 vurulduysa maliyet seviyesine dokununca risksiz kârla kapanır
           isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
         } else {
-          // TP1 vurulmadıysa mum KAPANIŞI stopu ihlal ederse stop olur (fitil tuzağı kalktı)
           isStopped = isLong ? c.close <= simActive.sl : c.close >= simActive.sl;
         }
 
@@ -479,5 +492,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Süpertrend Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Trend Kilitli Süpertrend Motoru Aktif: Port ${PORT}`));
 module.exports = app;
