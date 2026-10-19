@@ -4,6 +4,7 @@ process.env.TZ = 'Europe/Istanbul';
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,7 +39,15 @@ function getDefaultDB() {
       username: 'admin',
       password: 'admin123',
       role: 'admin',
-      bitget: { apiKey: '', secretKey: '', passphrase: '', leverage: 10, marginMode: 'crossed', enabled: false, tradeSizeUSDT: 50 }
+      bitget: { 
+        apiKey: '', 
+        secretKey: '', 
+        passphrase: '', 
+        leverage: 10, 
+        marginMode: 'crossed', 
+        enabled: false, 
+        tradeSizeUSDT: 50 
+      }
     }],
     sessions: {},
     activeTrades: {},
@@ -94,7 +103,7 @@ async function saveDB(data) {
 }
 
 function requireAuth(req, res, next) {
-  req.user = db.users[0] || { username: 'admin', role: 'admin' };
+  req.user = db.users[0] || { username: 'admin', role: 'admin', bitget: getDefaultDB().users[0].bitget };
   next();
 }
 
@@ -120,7 +129,30 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-  res.json({ ok: true, user: db.users[0] || { username: 'admin', role: 'admin' } });
+  res.json({ ok: true, user: db.users[0] });
+});
+
+// ARAYÜZDEN BITGET AYARLARINI (Kaldıraç, API vb.) GÜNCELLEME
+app.post('/api/settings/bitget', requireAuth, async (req, res) => {
+  try {
+    const { apiKey, secretKey, passphrase, leverage, marginMode, enabled, tradeSizeUSDT } = req.body;
+    const user = db.users[0];
+    
+    user.bitget = {
+      apiKey: apiKey !== undefined ? apiKey.trim() : user.bitget.apiKey,
+      secretKey: secretKey !== undefined ? secretKey.trim() : user.bitget.secretKey,
+      passphrase: passphrase !== undefined ? passphrase.trim() : user.bitget.passphrase,
+      leverage: Number(leverage) || 10,
+      marginMode: marginMode || 'crossed',
+      enabled: Boolean(enabled),
+      tradeSizeUSDT: Number(tradeSizeUSDT) || 50
+    };
+
+    await saveDB(db);
+    res.json({ ok: true, bitget: user.bitget });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/clear-history', (req, res) => {
@@ -128,6 +160,82 @@ app.post('/api/clear-history', (req, res) => {
   saveDB(db);
   res.json({ ok: true });
 });
+
+// === BITGET V2 İMZALAMA & EMİR FONKSİYONLARI ===
+function generateBitgetSignature(timestamp, method, requestPath, queryString = '', body = '', secretKey = '') {
+  let signStr = timestamp + method.toUpperCase() + requestPath;
+  if (queryString) signStr += '?' + queryString;
+  if (body) signStr += body;
+  return crypto.createHmac('sha256', secretKey).update(signStr).digest('base64');
+}
+
+async function bitgetApiRequest(endpoint, method = 'GET', data = null, creds) {
+  if (!creds || !creds.apiKey || !creds.secretKey || !creds.passphrase) {
+    throw new Error('Bitget API anahtarları eksik.');
+  }
+
+  const timestamp = Date.now().toString();
+  let queryString = '';
+  let bodyStr = '';
+
+  if (method === 'GET' && data) {
+    queryString = new URLSearchParams(data).toString();
+  } else if (data) {
+    bodyStr = JSON.stringify(data);
+  }
+
+  const signature = generateBitgetSignature(timestamp, method, endpoint, queryString, bodyStr, creds.secretKey);
+  const url = `https://api.bitget.com${endpoint}${queryString ? '?' + queryString : ''}`;
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'ACCESS-KEY': creds.apiKey,
+    'ACCESS-SIGN': signature,
+    'ACCESS-TIMESTAMP': timestamp,
+    'ACCESS-PASSPHRASE': creds.passphrase,
+    'locale': 'en-US'
+  };
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: method !== 'GET' ? bodyStr : undefined
+  });
+
+  return await response.json();
+}
+
+// Siteden seçilen kaldıracı Bitget borsasında ayarla
+async function setBitgetLeverageAndMargin(symbol, leverage, marginMode, creds) {
+  try {
+    // 1. Kaldıraç Belirleme
+    await bitgetApiRequest('/api/v2/mix/account/set-leverage', 'POST', {
+      symbol,
+      productType: 'USDT-FUTURES',
+      marginCoin: 'USDT',
+      leverage: String(leverage),
+      holdSide: 'long'
+    }, creds);
+
+    await bitgetApiRequest('/api/v2/mix/account/set-leverage', 'POST', {
+      symbol,
+      productType: 'USDT-FUTURES',
+      marginCoin: 'USDT',
+      leverage: String(leverage),
+      holdSide: 'short'
+    }, creds);
+
+    // 2. Marjin Modu Belirleme (crossed / isolated)
+    await bitgetApiRequest('/api/v2/mix/account/set-margin-mode', 'POST', {
+      symbol,
+      productType: 'USDT-FUTURES',
+      marginCoin: 'USDT',
+      marginMode: marginMode === 'isolated' ? 'isolated' : 'crossed'
+    }, creds);
+  } catch (e) {
+    console.error(`Kaldıraç ayar uyarısı (${symbol}):`, e.message);
+  }
+}
 
 // === BITGET V2 VERİ ÇEKME ===
 async function getTopVolumeBitgetCoins(minVolumeUSDT = 15000000) {
@@ -190,110 +298,100 @@ function calcATR(candles, period = 14) {
   return Math.max(0.0001, atr);
 }
 
-function calcRSI(closes, period = 14) {
-  if (closes.length <= period) return 50;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const diff = closes[i] - closes[i - 1];
-    if (diff >= 0) gains += diff; else losses -= diff;
-  }
-  let avgGain = gains / period, avgLoss = losses / period;
-  for (let i = period + 1; i < closes.length; i++) {
-    const diff = closes[i] - closes[i - 1];
-    avgGain = (avgGain * (period - 1) + (diff >= 0 ? diff : 0)) / period;
-    avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
-  }
-  if (avgLoss === 0) return 100;
-  return Number((100 - 100 / (1 + (avgGain / avgLoss))).toFixed(1));
-}
-
-// === GELİŞMİŞ ASİMETRİK RİSK PLANI ===
-function calculateCryptoTradePlan(spotPrice, isShort, atr, swingLevel) {
-  const precision = spotPrice < 0.1 ? 5 : (spotPrice < 2 ? 4 : (spotPrice < 50 ? 3 : 2));
+// === KURUMSAL ASİMETRİK RİSK PLANI ===
+function calculateCryptoTradePlan(entryPrice, isShort, atr, swingLevel) {
+  const precision = entryPrice < 0.1 ? 5 : (entryPrice < 2 ? 4 : (entryPrice < 50 ? 3 : 2));
   
-  let slDist = Math.abs(spotPrice - swingLevel) + (atr * 0.35);
+  // Stop: Likidite iğnesinin hemen arkası + 0.35 ATR güvenlik payı
+  let slDist = Math.abs(entryPrice - swingLevel) + (atr * 0.35);
   if (slDist < atr * 1.1) slDist = atr * 1.1;
 
-  const maxAllowedSl = spotPrice > 10000 ? 180 : (spotPrice > 1000 ? 15 : spotPrice * 0.015);
+  // Stop Tavanı
+  const maxAllowedSl = entryPrice > 10000 ? 190 : (entryPrice > 1000 ? 15 : entryPrice * 0.016);
   if (slDist > maxAllowedSl) slDist = maxAllowedSl;
 
-  const tp1Dist = Number((atr * 1.15).toFixed(precision)); 
-  const tp2Dist = Number((atr * 2.80).toFixed(precision)); 
-  const shieldDist = Number((tp1Dist * 0.55).toFixed(precision)); // Erken Başabaş Seviyesi
+  const tp1Dist = Number((atr * 1.20).toFixed(precision)); // %80 Nakit Realizasyon
+  const tp2Dist = Number((atr * 2.80).toFixed(precision)); // Trend Koşusu
+  const shieldDist = Number((tp1Dist * 0.55).toFixed(precision)); // Erken Başabaş
   slDist = Number(slDist.toFixed(precision));
 
   return {
-    entry: Number(spotPrice.toFixed(precision)),
-    sl: Number((!isShort ? spotPrice - slDist : spotPrice + slDist).toFixed(precision)),
-    shieldPrice: Number((!isShort ? spotPrice + shieldDist : spotPrice - shieldDist).toFixed(precision)),
-    tp1: Number((!isShort ? spotPrice + tp1Dist : spotPrice - tp1Dist).toFixed(precision)),
-    tp2: Number((!isShort ? spotPrice + tp2Dist : spotPrice - tp2Dist).toFixed(precision)),
+    entry: Number(entryPrice.toFixed(precision)),
+    sl: Number((!isShort ? entryPrice - slDist : entryPrice + slDist).toFixed(precision)),
+    shieldPrice: Number((!isShort ? entryPrice + shieldDist : entryPrice - shieldDist).toFixed(precision)),
+    tp1: Number((!isShort ? entryPrice + tp1Dist : entryPrice - tp1Dist).toFixed(precision)),
+    tp2: Number((!isShort ? entryPrice + tp2Dist : entryPrice - tp2Dist).toFixed(precision)),
     slDist,
     tp1Dist,
     tp2Dist
   };
 }
 
-// === HACİM VE SEVİYE ONAYLI TREND MOTORU ===
-function evaluateCryptoSetup(candles, atr) {
-  if (candles.length < 55) return { score: 0, reasons: [] };
+// === MARKET STRUCTURE SHIFT (MSS) + FAIR VALUE GAP (FVG) MOTORU ===
+function evaluateMSSandFVGSetup(candles, atr) {
+  if (candles.length < 50) return { score: 0, reasons: [] };
 
   const closes = candles.map(c => c.close);
-  const ema21 = calcEMA(closes, 21);
   const ema50 = calcEMA(closes, 50);
   const ema200 = calcEMA(closes, Math.min(200, closes.length));
-  const rsi = calcRSI(closes, 14);
 
-  const curPrice = closes[closes.length - 1];
-  const curC = candles[candles.length - 1];
-  const prevC = candles[candles.length - 2];
+  const c0 = candles[candles.length - 1]; // Güncel mum
+  const c1 = candles[candles.length - 2]; // Kırılım mumu (MSS)
+  const c2 = candles[candles.length - 3]; // İğne / Likidite süpürme mumu
+  const c3 = candles[candles.length - 4];
 
-  // 1. KATI TREND KURALI
-  const isSolidUpTrend = curPrice > ema200 && curPrice > ema50 && ema21 >= ema50;
-  const isSolidDownTrend = curPrice < ema200 && curPrice < ema50 && ema21 <= ema50;
-
-  // 2. HACİM FİLTRESİ (Son 15 mumun ortalama hacmi)
-  const recentVols = candles.slice(-16, -1).map(c => c.volume);
-  const avgVol = recentVols.reduce((a, b) => a + b, 0) / recentVols.length;
-  const hasVolume = curC.volume >= avgVol * 1.1;
-
-  // 3. DİP/TEPE LİKİDİTE İĞNESİ (Son 15 Mum)
-  const lookback = candles.slice(-16, -2);
-  const recentLow = Math.min(...lookback.map(c => c.low));
-  const recentHigh = Math.max(...lookback.map(c => c.high));
+  // Son 15 mumun swing tepe ve dipleri
+  const lookback = candles.slice(-18, -3);
+  const swingLow = Math.min(...lookback.map(c => c.low));
+  const swingHigh = Math.max(...lookback.map(c => c.high));
 
   let score = 0;
   const reasons = [];
-  let swingLevel = curC.close;
+  let swingLevel = c0.close;
+  let optimalEntry = c0.close;
 
-  // LONG
-  const isBullSweep = (prevC.low <= recentLow || curC.low <= recentLow) && curC.close > curC.open;
-  const isBullPullback = curC.low <= ema21 && curC.close > ema21 && curC.close > curC.open;
+  // 1. BOĞA MSS + FVG KURGUSU (LONG)
+  // Şart 1: c2 mumu eski dibi delip likidite topladı (Liquidity Sweep)
+  const sweptLow = c2.low < swingLow || c3.low < swingLow;
+  // Şart 2: c1 mumu önceki mumların tepesini güçlü yeşil gövdeyle kırdı (MSS - Market Structure Shift)
+  const mssBull = c1.close > c2.high && c1.close > c1.open;
+  // Şart 3: c1 ile c3 arasında Fair Value Gap (FVG) boşluğu oluştu
+  const bullFVG = c1.low > c3.high;
+  // Şart 4: c0 mumu bu FVG boşluğuna test veriyor (Pullback)
+  const isRetestingBull = c0.low <= c1.high && c0.close >= c3.high;
 
-  if (isSolidUpTrend && (isBullSweep || isBullPullback) && rsi >= 40 && rsi <= 62 && hasVolume) {
-    score = 85;
-    reasons.push('Ana Boğa Trendi (EMA200 ve EMA50 Üstü)');
-    reasons.push(isBullSweep ? 'Likidite Dibi Süpürüldü (Sweep)' : 'EMA21 Destek Tepkisi');
-    reasons.push(`Hacimli Giriş (RSI: ${rsi})`);
-    swingLevel = Math.min(curC.low, prevC.low);
+  if (sweptLow && mssBull && (bullFVG || isRetestingBull) && c0.close >= ema200 * 0.985) {
+    score = 90;
+    reasons.push('Eski Dip Likiditesi Alındı (Sweep)');
+    reasons.push('Piyasa Yapısı Boğaya Kırıldı (MSS)');
+    reasons.push('FVG Dengesizlik Alanı Test Edildi');
+    swingLevel = Math.min(c1.low, c2.low);
+    optimalEntry = c0.close;
   }
 
-  // SHORT
-  const isBearSweep = (prevC.high >= recentHigh || curC.high >= recentHigh) && curC.close < curC.open;
-  const isBearPullback = curC.high >= ema21 && curC.close < ema21 && curC.close < curC.open;
+  // 2. AYI MSS + FVG KURGUSU (SHORT)
+  // Şart 1: c2 mumu eski tepeyi delip likidite topladı
+  const sweptHigh = c2.high > swingHigh || c3.high > swingHigh;
+  // Şart 2: c1 mumu önceki mumların dibini güçlü kırmızı gövdeyle kırdı (MSS)
+  const mssBear = c1.close < c2.low && c1.close < c1.open;
+  // Şart 3: c1 ile c3 arasında FVG boşluğu oluştu
+  const bearFVG = c1.high < c3.low;
+  // Şart 4: c0 mumu bu FVG boşluğunu test ediyor
+  const isRetestingBear = c0.high >= c1.low && c0.close <= c3.low;
 
-  if (isSolidDownTrend && (isBearSweep || isBearPullback) && rsi <= 60 && rsi >= 38 && hasVolume) {
-    score = -85;
-    reasons.push('Ana Ayı Trendi (EMA200 ve EMA50 Altı)');
-    reasons.push(isBearSweep ? 'Likidite Tepesi Süpürüldü (Sweep)' : 'EMA21 Direnç Reddi');
-    reasons.push(`Hacimli Satış (RSI: ${rsi})`);
-    swingLevel = Math.max(curC.high, prevC.high);
+  if (sweptHigh && mssBear && (bearFVG || isRetestingBear) && c0.close <= ema200 * 1.015) {
+    score = -90;
+    reasons.push('Eski Tepe Likiditesi Alındı (Sweep)');
+    reasons.push('Piyasa Yapısı Ayıya Kırıldı (MSS)');
+    reasons.push('FVG Dengesizlik Alanı Test Edildi');
+    swingLevel = Math.max(c1.high, c2.high);
+    optimalEntry = c0.close;
   }
 
-  return { score, reasons, rsi, swingLevel, ema50, ema200 };
+  return { score, reasons, swingLevel, optimalEntry, ema50, ema200 };
 }
 
-// === SİMÜLASYON MOTORU (ERKEN ZIRH VE KORUMALI ÇIKIŞ) ===
+// === SİMÜLASYON MOTORU (MSS + FVG) ===
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
@@ -301,7 +399,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
 
     const candles = await getBitgetCandles(targetSymbol, granularity, limit);
-    if (candles.length < 55) {
+    if (candles.length < 50) {
       return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
     }
 
@@ -312,7 +410,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
     let lastStopDir = null;
     const simTrades = [];
 
-    for (let i = 35; i < candles.length; i++) {
+    for (let i = 30; i < candles.length; i++) {
       const c = candles[i];
       const slice = candles.slice(0, i + 1);
       const atr = calcATR(slice, 14);
@@ -326,7 +424,7 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
 
         const isLong = simActive.direction === 'LONG';
 
-        // 1. TP2 KONTROLÜ (Tam Hedef)
+        // 1. TP2 KONTROLÜ
         if ((isLong && c.high >= simActive.tp2) || (!isLong && c.low <= simActive.tp2)) {
           const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
           simTrades.push({
@@ -341,13 +439,13 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
           continue;
         }
 
-        // 2. TP1 KONTROLÜ (%80 Kâr Alınır ve Stop Girişe Kilitlenir)
+        // 2. TP1 VURULDUĞUNDA %80 KÂR AL + STOPU GİRİŞE KİLİTLE
         if (!simActive.tp1Hit && ((isLong && c.high >= simActive.tp1) || (!isLong && c.low <= simActive.tp1))) {
           simActive.tp1Hit = true;
           simActive.sl = simActive.entry;
         }
 
-        // 3. ERKEN ZIRH: Fiyat hedefin %55'ine varınca stopu maliyete çek (Gereksiz Stopları Önler)
+        // 3. ERKEN ZIRH (Gereksiz Stop Önleyici)
         if (!simActive.tp1Hit && !simActive.shieldHit) {
           if ((isLong && c.high >= simActive.shieldPrice) || (!isLong && c.low <= simActive.shieldPrice)) {
             simActive.shieldHit = true;
@@ -394,16 +492,16 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
         continue;
       }
 
-      // Stop sonrası aynı yöne en az 6 mum (1.5 saat) bekleme kilidi
+      // Stop sonrası aynı yöne 5 mum bekleme
       const dirCandidate = c.close > c.open ? 'LONG' : 'SHORT';
-      if (i - lastStopIndex < 6 && lastStopDir === dirCandidate) continue;
-      if (i - lastTradeIndex < 4) continue;
+      if (i - lastStopIndex < 5 && lastStopDir === dirCandidate) continue;
+      if (i - lastTradeIndex < 3) continue;
 
-      const setup = evaluateCryptoSetup(slice, atr);
+      const setup = evaluateMSSandFVGSetup(slice, atr);
 
       if (Math.abs(setup.score) >= 80) {
         const isShort = setup.score < 0;
-        const plan = calculateCryptoTradePlan(c.close, isShort, atr, setup.swingLevel);
+        const plan = calculateCryptoTradePlan(setup.optimalEntry, isShort, atr, setup.swingLevel);
         lastTradeIndex = i;
         openCandleIndex = i;
 
@@ -443,18 +541,18 @@ app.get('/api/backtest', requireAuth, async (req, res) => {
   }
 });
 
-// === CANLI ÇOKLU COİN TARAYICI ===
+// === CANLI 30 COİN TARAYICI ===
 app.get('/api/scan', requireAuth, async (req, res) => {
   try {
     const topCoins = await getTopVolumeBitgetCoins(15000000);
     const results = [];
 
-    for (const coin of topCoins.slice(0, 20)) {
+    for (const coin of topCoins.slice(0, 30)) {
       const candles = await getBitgetCandles(coin.symbol, '15m', 60);
-      if (candles.length < 55) continue;
+      if (candles.length < 50) continue;
 
       const atr = calcATR(candles, 14);
-      const setup = evaluateCryptoSetup(candles, atr);
+      const setup = evaluateMSSandFVGSetup(candles, atr);
       const plan = calculateCryptoTradePlan(coin.lastPrice, setup.score < 0, atr, setup.swingLevel);
 
       results.push({
@@ -475,5 +573,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Hacim & Erken Zırh Motoru Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget MSS + FVG Kurumsal Motoru Aktif: Port ${PORT}`));
 module.exports = app;
