@@ -51,7 +51,13 @@ function getDefaultDB() {
     }],
     sessions: {},
     activeTrades: {},
-    history: []
+    history: [],
+    // CANLI SANAL İŞLEM (PAPER TRADING) VERİLERİ
+    paperAccount: {
+      balance: 1000.0,
+      activePositions: [], // { id, symbol, direction, entry, sl, tp1, tp2, tp1Hit, openTime, sizeUSDT }
+      closedTrades: []
+    }
   };
 }
 
@@ -80,6 +86,13 @@ function normalizeDB(parsed) {
   if (!parsed.sessions || typeof parsed.sessions !== 'object') parsed.sessions = {};
   if (!parsed.activeTrades || typeof parsed.activeTrades !== 'object') parsed.activeTrades = {};
   parsed.history = Array.isArray(parsed.history) ? parsed.history.filter(Boolean) : [];
+  
+  if (!parsed.paperAccount || typeof parsed.paperAccount !== 'object') {
+    parsed.paperAccount = { balance: 1000.0, activePositions: [], closedTrades: [] };
+  } else {
+    parsed.paperAccount.activePositions = Array.isArray(parsed.paperAccount.activePositions) ? parsed.paperAccount.activePositions : [];
+    parsed.paperAccount.closedTrades = Array.isArray(parsed.paperAccount.closedTrades) ? parsed.paperAccount.closedTrades : [];
+  }
   return parsed;
 }
 
@@ -157,12 +170,6 @@ app.post('/api/settings/bitget', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/clear-history', (req, res) => {
-  db.history = [];
-  saveDB(db);
-  res.json({ ok: true });
-});
-
 // === BITGET V2 VERİ ÇEKME ===
 async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
   try {
@@ -173,7 +180,7 @@ async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
     return json.data
       .filter(c => Number(c.usdtVolume || c.quoteVolume || 0) >= minVolumeUSDT && c.symbol.endsWith('USDT'))
       .sort((a, b) => Number(b.usdtVolume || b.quoteVolume || 0) - Number(a.usdtVolume || a.quoteVolume || 0))
-      .slice(0, 35)
+      .slice(0, 30)
       .map(c => ({
         symbol: c.symbol,
         lastPrice: Number(c.lastPr),
@@ -185,7 +192,7 @@ async function getTopVolumeBitgetCoins(minVolumeUSDT = 10000000) {
   }
 }
 
-async function getBitgetCandles(symbol, granularity = '15m', limit = 300) {
+async function getBitgetCandles(symbol, granularity = '15m', limit = 150) {
   try {
     const res = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=${granularity}&limit=${limit}`);
     const json = await res.json();
@@ -224,19 +231,15 @@ function calcEMA(closes, period) {
   return ema;
 }
 
-// === ASİMETRİK KAZANÇLI RİSK-ÖDÜL PLANI ===
-function calculateAsymmetricPlan(entryPrice, isShort, atr) {
+// === RİSK / ÖDÜL PLANI ===
+function calculateLivePlan(entryPrice, isShort, atr) {
   const precision = entryPrice < 0.01 ? 6 : (entryPrice < 1 ? 5 : (entryPrice < 50 ? 4 : 2));
   
-  // SL DARALTILDI: Maksimum 0.50x ATR (Zarar kesinlikle küçük kesilir)
-  let slDist = Number((atr * 0.50).toFixed(precision));
-  if (entryPrice > 10000 && slDist > 85) slDist = 85; // BTC için maks 85$ stop
+  let slDist = Number((atr * 0.55).toFixed(precision));
+  if (entryPrice > 10000 && slDist > 90) slDist = 90; // BTC için maks $90 zarar
 
-  // TP1: 0.75x ATR (%50 kâr realize edilir, stop hemen maliyete çekilir)
-  const tp1Dist = Number((atr * 0.75).toFixed(precision)); 
-
-  // TP2: 1.80x ATR (Kalan %50 trendi sürer ve büyük kâr yazar)
-  const tp2Dist = Number((atr * 1.80).toFixed(precision)); 
+  const tp1Dist = Number((atr * 0.75).toFixed(precision));
+  const tp2Dist = Number((atr * 1.80).toFixed(precision));
 
   return {
     entry: Number(entryPrice.toFixed(precision)),
@@ -249,193 +252,193 @@ function calculateAsymmetricPlan(entryPrice, isShort, atr) {
   };
 }
 
-// === H1 TREND FİLTRELİ DİP/TEPE DÖNÜŞ MOTORU ===
-function evaluatePrecisionSetup(candles, atr) {
-  if (candles.length < 50) return { score: 0, reasons: [] };
+// === CANLI SİNYAL DEĞERLENDİRME ===
+function checkLiveSetup(candles, atr) {
+  if (candles.length < 40) return { score: 0 };
 
   const closes = candles.map(c => c.close);
   const curPrice = closes[closes.length - 1];
   const curC = candles[candles.length - 1];
   const prevC = candles[candles.length - 2];
 
-  // H1 Trend Filtresi (EMA 100)
-  const h1TrendEma = calcEMA(closes, Math.min(100, closes.length));
-  const ema21 = calcEMA(closes, 21);
-
-  // Son 12 mumun dip/tepeleri
-  const lookback = candles.slice(-14, -2);
+  const h1TrendEma = calcEMA(closes, Math.min(60, closes.length));
+  const lookback = candles.slice(-12, -2);
   const minLow = Math.min(...lookback.map(c => c.low));
   const maxHigh = Math.max(...lookback.map(c => c.high));
 
-  let score = 0;
-  const reasons = [];
-
-  // 1. BOĞA: Fiyat H1 Trendi üzerinde + Dip süpürüldü + Yeşil teyit mumu
-  const isBullTrend = curPrice >= h1TrendEma;
-  const isDipSweep = prevC.low <= minLow || curC.low <= minLow || curC.low <= ema21;
-  const isGreenConfirm = curC.close > curC.open && curC.close > prevC.close;
-
-  if (isBullTrend && isDipSweep && isGreenConfirm) {
-    score = 85;
-    reasons.push('H1 Boğa Trendi');
-    reasons.push('Likidite Dibi Süpürüldü (Sweep)');
+  // LONG
+  if (curPrice >= h1TrendEma && (curC.low <= minLow || prevC.low <= minLow) && curC.close > curC.open && curC.close > prevC.close) {
+    return { score: 90, isShort: false, reason: 'H1 Boğa Trendi + Canlı Dip Süpürmesi' };
   }
 
-  // 2. AYI: Fiyat H1 Trendi altında + Tepe süpürüldü + Kırmızı teyit mumu
-  const isBearTrend = curPrice <= h1TrendEma;
-  const isTopSweep = prevC.high >= maxHigh || curC.high >= maxHigh || curC.high >= ema21;
-  const isRedConfirm = curC.close < curC.open && curC.close < prevC.close;
-
-  if (isBearTrend && isTopSweep && isRedConfirm) {
-    score = -85;
-    reasons.push('H1 Ayı Trendi');
-    reasons.push('Likidite Tepesi Süpürüldü (Sweep)');
+  // SHORT
+  if (curPrice <= h1TrendEma && (curC.high >= maxHigh || prevC.high >= maxHigh) && curC.close < curC.open && curC.close < prevC.close) {
+    return { score: -90, isShort: true, reason: 'H1 Ayı Trendi + Canlı Tepe Süpürmesi' };
   }
 
-  return { score, reasons };
+  return { score: 0 };
 }
 
-// === MATEMATİKSEL OLARAK DOĞRULANMIŞ SİMÜLASYON MOTORU ===
+// === CANLI SANAL İŞLEM (PAPER TRADING) İZLEME DÖNGÜSÜ (HER 15 SANİYE) ===
+async function runLivePaperTradingEngine() {
+  try {
+    const topCoins = await getTopVolumeBitgetCoins(15000000);
+    if (!topCoins.length) return;
+
+    const priceMap = {};
+    topCoins.forEach(c => { priceMap[c.symbol] = c.lastPrice; });
+
+    let stateChanged = false;
+    const active = db.paperAccount.activePositions;
+
+    // 1. AÇIK POZİSYONLARI ANLIK FİYATLA KONTROL ET
+    for (let i = active.length - 1; i >= 0; i--) {
+      const pos = active[i];
+      const curPrice = priceMap[pos.symbol];
+      if (!curPrice) continue;
+
+      const isLong = pos.direction === 'LONG';
+      let isClosed = false;
+      let closePrice = curPrice;
+      let status = '';
+      let profit = 0;
+
+      // TP2 Kontrolü (Büyük Hedef)
+      if ((isLong && curPrice >= pos.tp2) || (!isLong && curPrice <= pos.tp2)) {
+        isClosed = true;
+        closePrice = pos.tp2;
+        profit = isLong ? (pos.tp2 - pos.entry) : (pos.entry - pos.tp2);
+        status = 'TP2 TAM HEDEF 🎯';
+      } 
+      // TP1 Kontrolü (Kâr Kilitleme ve Maliyete Çekme)
+      else if (!pos.tp1Hit && ((isLong && curPrice >= pos.tp1) || (!isLong && curPrice <= pos.tp1))) {
+        pos.tp1Hit = true;
+        pos.sl = pos.entry; // Stop derhal başabaş seviyesine kilitlendi
+        stateChanged = true;
+      }
+      // SL Kontrolü
+      else if ((isLong && curPrice <= pos.sl) || (!isLong && curPrice >= pos.sl)) {
+        isClosed = true;
+        closePrice = pos.sl;
+        if (pos.tp1Hit) {
+          profit = (isLong ? (pos.tp1 - pos.entry) : (pos.entry - pos.tp1)) * 0.50;
+          status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
+        } else {
+          profit = isLong ? (pos.sl - pos.entry) : (pos.entry - pos.sl);
+          status = 'STOP OLDU ❌';
+        }
+      }
+
+      if (isClosed) {
+        db.paperAccount.balance += profit;
+        db.paperAccount.closedTrades.unshift({
+          ...pos,
+          closeTime: `${getTRDate()} ${getTRTime()}`,
+          closePrice,
+          profitUSDT: Number(profit.toFixed(4)),
+          status,
+          result: profit >= 0 ? 'WIN' : 'LOSS'
+        });
+        active.splice(i, 1);
+        stateChanged = true;
+      }
+    }
+
+    // 2. YENİ CANLI POZİSYON FIRSATI ARA (Maksimum 3 Eşzamanlı Pozisyon)
+    if (active.length < 3) {
+      for (const coin of topCoins.slice(0, 15)) {
+        if (active.some(p => p.symbol === coin.symbol)) continue;
+
+        const candles = await getBitgetCandles(coin.symbol, '15m', 50);
+        if (candles.length < 35) continue;
+
+        const atr = calcATR(candles, 14);
+        const setup = checkLiveSetup(candles, atr);
+
+        if (Math.abs(setup.score) >= 85) {
+          const plan = calculateLivePlan(coin.lastPrice, setup.isShort, atr);
+          active.push({
+            id: 'paper_' + Date.now() + '_' + Math.random().toString(36).substring(4, 8),
+            symbol: coin.symbol,
+            direction: setup.isShort ? 'SHORT' : 'LONG',
+            entry: plan.entry,
+            sl: plan.sl,
+            tp1: plan.tp1,
+            tp2: plan.tp2,
+            tp1Hit: false,
+            openTime: `${getTRDate()} ${getTRTime()}`,
+            reason: setup.reason
+          });
+          stateChanged = true;
+          break; // Aynı turda tek pozisyon aç
+        }
+      }
+    }
+
+    if (stateChanged) {
+      await saveDB(db);
+    }
+  } catch (err) {
+    console.error('Canlı Paper Trading Döngü Hatası:', err.message);
+  }
+}
+
+// Canlı fiyat izleme döngüsü (15 saniyede bir tetiklenir)
+setInterval(runLivePaperTradingEngine, 15000);
+
+// === CANLI SANAL İŞLEM VERİLERİ ENDPOINT'İ ===
+app.get('/api/paper-trading', requireAuth, (req, res) => {
+  const paper = db.paperAccount;
+  const wins = paper.closedTrades.filter(t => t.result === 'WIN').length;
+  const total = paper.closedTrades.length;
+  const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+  res.json({
+    balance: Number(paper.balance.toFixed(2)),
+    winRate,
+    totalTrades: total,
+    wins,
+    losses: total - wins,
+    activePositions: paper.activePositions,
+    closedTrades: paper.closedTrades
+  });
+});
+
+app.post('/api/paper-trading/reset', requireAuth, async (req, res) => {
+  db.paperAccount = {
+    balance: 1000.0,
+    activePositions: [],
+    closedTrades: []
+  };
+  await saveDB(db);
+  res.json({ ok: true });
+});
+
+// SİMÜLASYON ENDPOINT'İ (Mevcut arayüz modalını beslemeye devam eder)
 app.get('/api/backtest', requireAuth, async (req, res) => {
   try {
     const targetSymbol = (req.query.symbol || 'BTCUSDT').toUpperCase();
-    const granularity = req.query.granularity || '15m';
-    const limit = Number(req.query.hours) ? Math.min(350, Number(req.query.hours) * 4) : 220;
+    const paper = db.paperAccount;
+    const trades = paper.closedTrades.filter(t => t.symbol === targetSymbol);
+    const wins = trades.filter(t => t.result === 'WIN').length;
+    const winRate = trades.length > 0 ? Math.round((wins / trades.length) * 100) : 0;
+    const totalProfit = trades.reduce((acc, t) => acc + (t.profitUSDT || 0), 0);
 
-    const candles = await getBitgetCandles(targetSymbol, granularity, limit);
-    if (candles.length < 35) {
-      return res.status(400).json({ error: 'Yeterli mum verisi alınamadı.' });
-    }
-
-    let simActive = null;
-    let openCandleIndex = -99;
-    let lastTradeIndex = -99;
-    let lastStopIndex = -99;
-    const simTrades = [];
-
-    for (let i = 20; i < candles.length; i++) {
-      const c = candles[i];
-      const slice = candles.slice(0, i + 1);
-      const atr = calcATR(slice, 14);
-
-      const dObj = new Date(c.time * 1000);
-      const timeStr = getTRTime(dObj, false);
-      const dateStr = getTRDate(dObj);
-
-      if (simActive) {
-        if (i === openCandleIndex) continue;
-
-        const isLong = simActive.direction === 'LONG';
-
-        // 1. ÖNCE TP2 KONTROLÜ (Büyük Hedef)
-        const reachedTP2 = isLong ? c.high >= simActive.tp2 : c.low <= simActive.tp2;
-        if (reachedTP2) {
-          const profit = Number(Math.abs(simActive.tp2 - simActive.entry).toFixed(4));
-          simTrades.push({
-            ...simActive,
-            closeTime: `${dateStr} ${timeStr}`,
-            closePrice: simActive.tp2,
-            status: 'TP2 TAM HEDEF 🎯',
-            result: 'WIN',
-            profitDollar: profit
-          });
-          simActive = null;
-          continue;
-        }
-
-        // 2. TP1 KONTROLÜ
-        const reachedTP1 = isLong ? c.high >= simActive.tp1 : c.low <= simActive.tp1;
-        if (!simActive.tp1Hit && reachedTP1) {
-          simActive.tp1Hit = true;
-          simActive.sl = simActive.entry; // Stop maliyete kilitlendi
-        }
-
-        // 3. STOP KONTROLÜ
-        let isStopped = false;
-        if (simActive.tp1Hit) {
-          // TP1 alındıktan sonra maliyete dokunursa risksiz kârla kapatır
-          isStopped = isLong ? c.low <= simActive.sl : c.high >= simActive.sl;
-        } else {
-          // Kapanış seviyeyi kırdıysa çıkar
-          isStopped = isLong ? c.close <= simActive.sl : c.close >= simActive.sl;
-        }
-
-        if (isStopped) {
-          let profit = 0;
-          let status = 'STOP OLDU ❌';
-          let result = 'LOSS';
-
-          if (simActive.tp1Hit) {
-            profit = Number((Math.abs(simActive.tp1 - simActive.entry) * 0.50).toFixed(4));
-            status = 'TP1 ALINDI + BAŞABAŞ 🛡️';
-            result = 'WIN';
-          } else {
-            profit = -Number(Math.abs(simActive.entry - simActive.sl).toFixed(4));
-            lastStopIndex = i;
-          }
-
-          simTrades.push({
-            ...simActive,
-            closeTime: `${dateStr} ${timeStr}`,
-            closePrice: simActive.sl,
-            status,
-            result,
-            profitDollar: profit
-          });
-          simActive = null;
-          continue;
-        }
-
-        continue;
-      }
-
-      // Stop sonrası en az 6 bar soğuma
-      if (i - lastStopIndex < 6) continue;
-      if (i - lastTradeIndex < 3) continue;
-
-      const setup = evaluatePrecisionSetup(slice, atr);
-
-      if (Math.abs(setup.score) >= 80) {
-        const isShort = setup.score < 0;
-        const plan = calculateAsymmetricPlan(c.close, isShort, atr);
-        lastTradeIndex = i;
-        openCandleIndex = i;
-
-        simActive = {
-          symbol: targetSymbol,
-          openTime: `${dateStr} ${timeStr}`,
-          direction: isShort ? 'SHORT' : 'LONG',
-          entry: plan.entry,
-          sl: plan.sl,
-          tp1: plan.tp1,
-          tp2: plan.tp2,
-          tp1Dist: plan.tp1Dist,
-          tp1Hit: false
-        };
-      }
-    }
-
-    const wins = simTrades.filter(t => t.result === 'WIN').length;
-    const losses = simTrades.filter(t => t.result === 'LOSS').length;
-    const winRate = simTrades.length > 0 ? Math.round((wins / simTrades.length) * 100) : 0;
-    const totalProfit = simTrades.reduce((acc, t) => acc + (Number(t.profitDollar) || 0), 0);
-
-    const precision = targetSymbol.includes('BTC') ? 2 : (targetSymbol.includes('ETH') ? 2 : 4);
     res.json({
       symbol: targetSymbol,
-      totalSignals: simTrades.length,
+      totalSignals: trades.length,
       wins,
-      losses,
+      losses: trades.length - wins,
       winRate,
-      totalProfit: totalProfit.toFixed(precision),
-      trades: simTrades.reverse()
+      totalProfit: totalProfit.toFixed(2),
+      trades
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// === CANLI 35 COİN TARAYICI ===
+// CANLI 30 COİN TARAYICI
 app.get('/api/scan', requireAuth, async (req, res) => {
   try {
     const topCoins = await getTopVolumeBitgetCoins(10000000);
@@ -446,8 +449,8 @@ app.get('/api/scan', requireAuth, async (req, res) => {
       if (candles.length < 30) continue;
 
       const atr = calcATR(candles, 14);
-      const setup = evaluatePrecisionSetup(candles, atr);
-      const plan = calculateAsymmetricPlan(coin.lastPrice, setup.score < 0, atr);
+      const setup = checkLiveSetup(candles, atr);
+      const plan = calculateLivePlan(coin.lastPrice, setup.isShort, atr);
 
       results.push({
         symbol: coin.symbol,
@@ -457,7 +460,7 @@ app.get('/api/scan', requireAuth, async (req, res) => {
         score: setup.score,
         signal: setup.score >= 80 ? 'LONG 🟢' : (setup.score <= -80 ? 'SHORT 🔴' : 'NÖTR ⏳'),
         tradePlan: plan,
-        reasons: setup.reasons
+        reasons: [setup.reason || 'Beklemede']
       });
     }
 
@@ -467,5 +470,5 @@ app.get('/api/scan', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Asimetrik Motor Aktif: Port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Bitget Canlı Paper Trading Motoru Aktif: Port ${PORT}`));
 module.exports = app;
