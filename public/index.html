@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -25,43 +25,46 @@
   <!-- TOP BANNER -->
   <div class="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white text-center py-2 px-4 text-xs font-semibold flex items-center justify-center gap-2 shadow-sm">
     <span>⚡ Staking Protocol V2 is now active on Mainnet.</span>
-    <button onclick="openModal('modal-register')" class="underline hover:text-slate-100 font-bold cursor-pointer">
+    <button onclick="handlePortalClick()" class="underline hover:text-slate-100 font-bold cursor-pointer">
       Explore Pools & Yields &rarr;
     </button>
   </div>
 
   <!-- NAVIGATION -->
-  <nav class="max-w-7xl mx-auto w-full px-6 py-5 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <a href="index.html" class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white font-bold text-base shadow-sm">
-          M
-        </div>
-        <span class="font-display font-black text-xl tracking-tight text-slate-900">MINA</span>
-      </a>
-      <span class="text-xs bg-white text-slate-600 px-2.5 py-1 rounded-md border border-slate-200 font-semibold shadow-sm ml-2 hidden sm:inline-block">
-        Staking Portal
-      </span>
-    </div>
+  <nav class="bg-slate-100/90 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/80">
+    <div class="max-w-7xl mx-auto w-full px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white font-bold text-base shadow-sm">
+            M
+          </div>
+          <span class="font-display font-black text-xl tracking-tight text-slate-900">MINA</span>
+        </a>
+        <span class="text-xs bg-white text-slate-600 px-2.5 py-1 rounded-md border border-slate-200 font-semibold shadow-sm ml-2 hidden sm:inline-block">
+          Staking Portal
+        </span>
+      </div>
 
-    <div class="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-600">
-      <a href="#about" class="hover:text-orange-600 transition">About</a>
-      <a href="#whitepaper" class="hover:text-orange-600 transition">Whitepaper</a>
-      <a href="dashboard.html" class="hover:text-orange-600 transition">Staking Portal</a>
-      <a href="#roadmap" class="hover:text-orange-600 transition">Roadmap</a>
-      <a href="#tokenomics" class="hover:text-orange-600 transition">Tokenomics</a>
-    </div>
+      <!-- ÇALIŞAN MENÜ LİNKLERİ -->
+      <div class="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-600">
+        <a href="#about" class="hover:text-orange-600 transition">About</a>
+        <a href="#whitepaper" class="hover:text-orange-600 transition">Whitepaper</a>
+        <button onclick="handlePortalClick()" class="hover:text-orange-600 transition font-semibold cursor-pointer">Staking Portal</button>
+        <a href="#roadmap" class="hover:text-orange-600 transition">Roadmap</a>
+        <a href="#tokenomics" class="hover:text-orange-600 transition">Tokenomics</a>
+      </div>
 
-    <div class="flex items-center gap-3">
-      <button onclick="openModal('modal-login')" class="text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition">
-        Sign In
-      </button>
-      <button onclick="openModal('modal-register')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
-        Sign Up
-      </button>
-      <button onclick="openModal('modal-register')" class="hidden sm:inline-flex bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
-        Launch Staking &rarr;
-      </button>
+      <div class="flex items-center gap-3">
+        <button onclick="openModal('modal-login')" class="text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition">
+          Sign In
+        </button>
+        <button onclick="openModal('modal-register')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+          Sign Up
+        </button>
+        <button onclick="handlePortalClick()" class="hidden sm:inline-flex bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+          Launch Staking &rarr;
+        </button>
+      </div>
     </div>
   </nav>
 
@@ -114,8 +117,107 @@
     </div>
   </main>
 
+  <!-- ================= ABOUT BÖLÜMÜ ================= -->
+  <section id="about" class="max-w-5xl mx-auto px-6 py-16 border-t border-slate-200 space-y-6">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-1">Architecture</span>
+      <h2 class="font-display text-3xl font-bold text-slate-900">Why Mina Protocol?</h2>
+      <p class="text-slate-500 text-xs sm:text-sm mt-2">
+        Mina, geleneksel blokzincirlerin yüzlerce gigabaytlık veri yükünü yalnızca 22 KB boyutundaki zk-SNARK kanıtlarıyla sıfırlar.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 text-left">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-feather"></i>
+        </div>
+        <strong class="text-slate-900 text-base font-bold block">22 KB Sabit Boyut</strong>
+        <p class="text-xs text-slate-500 leading-relaxed">Ağ ne kadar büyürse büyüsün blokzincir boyutu her zaman bir tweet boyutunda kalır.</p>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <strong class="text-slate-900 text-base font-bold block">Gerçek Gizlilik</strong>
+        <p class="text-xs text-slate-500 leading-relaxed">Sıfır bilgi ispatları (Zero-Knowledge) sayesinde verilerinizi ifşa etmeden transferler onaylanır.</p>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <strong class="text-slate-900 text-base font-bold block">Katman-1 Getirisi</strong>
+        <p class="text-xs text-slate-500 leading-relaxed">Doğrulayıcı düğümlere kilitlenen MINA varlıkları saniyelik getiri üretir.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= WHITEPAPER & TOKENOMICS BÖLÜMÜ ================= -->
+  <section id="whitepaper" class="max-w-5xl mx-auto px-6 py-16 border-t border-slate-200">
+    <div id="tokenomics" class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm space-y-8">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-6">
+        <div>
+          <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-1">Technical Overview</span>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900">Whitepaper & Staking Tokenomics</h2>
+        </div>
+        <a href="https://minaprotocol.com/wp-content/uploads/EconomicsWhitepaper.pdf" target="_blank" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+          <i class="fa-solid fa-file-pdf"></i> Official Mina Whitepaper (PDF)
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <span class="text-xs text-slate-500 block">30 Günlük Alpha Havuzu</span>
+          <strong class="text-xl font-bold text-slate-900 block my-1">%1.5 Günlük</strong>
+          <span class="text-[11px] text-emerald-600 font-bold block">+%45.0 Toplam Kâr</span>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <span class="text-xs text-slate-500 block">60 Günlük ZK Havuzu</span>
+          <strong class="text-xl font-bold text-slate-900 block my-1">%1.8 Günlük</strong>
+          <span class="text-[11px] text-emerald-600 font-bold block">+%108.0 Toplam Kâr</span>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <span class="text-xs text-slate-500 block">90 Günlük VIP Havuzu</span>
+          <strong class="text-xl font-bold text-slate-900 block my-1">%2.0 Günlük</strong>
+          <span class="text-[11px] text-emerald-600 font-bold block">+%180.0 Toplam Kâr</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ROADMAP BÖLÜMÜ ================= -->
+  <section id="roadmap" class="max-w-5xl mx-auto px-6 py-16 border-t border-slate-200 space-y-6">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-1">Milestones</span>
+      <h2 class="font-display text-3xl font-bold text-slate-900">Protocol Roadmap 2026</h2>
+      <p class="text-slate-500 text-xs sm:text-sm mt-2">Mina Staking altyapısının geliştirme ve genişleme yol haritası.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 text-left">
+      <div class="bg-white p-6 rounded-2xl border-2 border-emerald-500/50 shadow-sm space-y-2">
+        <span class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Q1 2026 (Tamamlandı)</span>
+        <strong class="text-slate-900 text-base font-bold block">Katman-1 Bitget Entegrasyonu</strong>
+        <p class="text-xs text-slate-500 leading-relaxed">Native MINA depozit kasası ve 4 kademeli referans komisyon motoru devreye alındı.</p>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border-2 border-orange-500/50 shadow-sm space-y-2">
+        <span class="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Q2 2026 (Canlıda)</span>
+        <strong class="text-slate-900 text-base font-bold block">Saniyelik Bileşik Kâr Sayacı</strong>
+        <p class="text-xs text-slate-500 leading-relaxed">Stake havuzlarında saniyelik kâr birikimi ve anında çekim talep altyapısı.</p>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <span class="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">Q3 2026 (Planlanan)</span>
+        <strong class="text-slate-900 text-base font-bold block">Auro Wallet Doğrudan Bağlantı</strong>
+        <p class="text-xs text-slate-500 leading-relaxed">Tarayıcı cüzdanlarıyla tek tıkla doğrudan Web3 imzalama ve otomatik doğrulama.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- FOOTER -->
-  <footer class="border-t border-slate-200 py-6 text-center text-xs text-slate-500 bg-white">
+  <footer class="border-t border-slate-200 py-8 text-center text-xs text-slate-500 bg-white">
     &copy; 2026 MINA Protocol. Native Layer-1 Zero-Knowledge Staking Platform.
   </footer>
 
@@ -208,7 +310,7 @@
   <!-- TOAST BİLDİRİM -->
   <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
 
-  <!-- FIREBASE VE OTURUM MOTORU -->
+  <!-- SCRIPTS -->
   <script src="state.js"></script>
   <script>
     function showToast(msg) {
@@ -220,6 +322,17 @@
 
     function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+    // ================= STAKING PORTAL TIKLAMA GÜVENLİĞİ =================
+    // Oturum varsa Dashboard'a atar, yoksa Sign In modalını açar (Asla admin açmaz!)
+    function handlePortalClick() {
+      const activeSession = sessionStorage.getItem('mineora_active_session');
+      if (activeSession) {
+        window.location.href = 'dashboard.html';
+      } else {
+        openModal('modal-login');
+      }
+    }
 
     // KAYIT MOTORU
     async function handleUserRegisterSubmit(e) {
@@ -319,7 +432,8 @@
 
         sessionStorage.setItem('mineora_active_session', u.username);
         
-        if (uKey === 'mourpheus' || uKey === 'admin') {
+        // SADECE ROOT ADMİN İSE ADMİNE GİDER, DİĞERLERİ NORMAL DASHBOARD'A
+        if (uKey === 'mourpheus') {
           window.location.href = 'admin.html';
         } else {
           window.location.href = 'dashboard.html';
