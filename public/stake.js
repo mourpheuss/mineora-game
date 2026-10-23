@@ -1,4 +1,4 @@
-// ================= MINA STAKING & YIELD PROTOCOL MOTORU (stake.js) =================
+// ================= MINA STAKING & 4-TIER FIREBASE KOMİSYON MOTORU (stake.js) =================
 
 const MINA_STAKE_PLANS = {
   30: { 
@@ -6,7 +6,6 @@ const MINA_STAKE_PLANS = {
     dailyRate: 1.5, 
     totalProfitPercent: 45.0, 
     title: "Genesis Alpha Pool", 
-    badge: "Flexible Term (30 Days)", 
     minDeposit: 50 
   },
   60: { 
@@ -14,7 +13,6 @@ const MINA_STAKE_PLANS = {
     dailyRate: 1.8, 
     totalProfitPercent: 108.0, 
     title: "Recursive ZK Pool", 
-    badge: "Compound Yield (60 Days)", 
     minDeposit: 100 
   },
   90: { 
@@ -22,7 +20,6 @@ const MINA_STAKE_PLANS = {
     dailyRate: 2.0, 
     totalProfitPercent: 180.0, 
     title: "Samasika Validator VIP", 
-    badge: "Institutional VIP (90 Days)", 
     minDeposit: 250 
   }
 };
@@ -70,45 +67,78 @@ function fillMaxStakeAmount() {
   }
 }
 
-// 4 KADEMELİ REFERANS KOMİSYONU DAĞITIMI (%10 - %7 - %5 - %3)
-function distributeMinaStakingCommissions(stakerUser, stakeAmount) {
-  if (!stakerUser || !stakerUser.referral_chain || !stakerUser.referral_chain.length) return;
+// 4 KADEMELİ CANLI FIREBASE KOMİSYON DAĞITICI (%10 - %7 - %5 - %3)
+// KULLANICININ YATIRDIĞI BAKİYEDEN KESİLMEZ, SPONSORLARA PROTOKOL TARAFINDAN AKTARILIR!
+async function distributeMinaStakingCommissions(stakerUsername, stakeAmount) {
+  const tierRates = [0.10, 0.07, 0.05, 0.03]; // 1. Kademe %10, 2. Kademe %7, 3. Kademe %5, 4. Kademe %3
   
-  const tierRates = [0.10, 0.07, 0.05, 0.03];
-  const chain = stakerUser.referral_chain;
+  if (!fbDb) return;
 
-  for (let i = 0; i < tierRates.length; i++) {
-    const sponsorIndex = chain.length - 1 - i;
-    if (sponsorIndex < 0) break;
+  try {
+    // 1. Yatırım yapan kullanıcının güncel sponsor zincirini çek
+    const stakerSnap = await fbDb.ref(`users/${stakerUsername.toLowerCase()}`).once('value');
+    const stakerData = stakerSnap.val();
+    if (!stakerData) return;
 
-    const sponsorUsername = chain[sponsorIndex];
-    const sponsor = getStoredUser(sponsorUsername);
-    if (!sponsor) continue;
-
-    const commissionAmount = Number((stakeAmount * tierRates[i]).toFixed(2));
-    if (commissionAmount <= 0) continue;
-
-    sponsor.mina = Number(((sponsor.mina || 0) + commissionAmount).toFixed(2));
+    let chain = stakerData.referral_chain || [];
     
-    addUserNotificationLog(
-      sponsor,
-      `Tier ${i + 1} Staking Commission (%${tierRates[i] * 100})`,
-      `${stakerUser.username} staked ${stakeAmount} MINA tokens.`,
-      `+${commissionAmount.toFixed(2)} MINA`,
-      "commission"
-    );
-
-    saveStoredUser(sponsor);
-
-    if (CurrentUser && CurrentUser.username.toLowerCase() === sponsor.username.toLowerCase()) {
-      CurrentUser.mina = sponsor.mina;
-      CurrentUser.logs = sponsor.logs;
-      updateHUD();
+    // Eğer referral_chain boşsa ama referredBy varsa tekil zincir kur
+    if ((!chain || chain.length === 0) && stakerData.referredBy) {
+      chain = [stakerData.referredBy];
     }
+
+    if (!chain || chain.length === 0) return;
+
+    // Zincirdeki sponsorlara sırayla dağıt (En yakından en uzağa)
+    for (let i = 0; i < tierRates.length; i++) {
+      const sponsorIndex = chain.length - 1 - i;
+      if (sponsorIndex < 0) break; // Üst sponsor kalmadıysa döngüyü bitir
+
+      const sponsorName = chain[sponsorIndex];
+      if (!sponsorName) continue;
+
+      const rate = tierRates[i];
+      const commissionAmount = Number((stakeAmount * rate).toFixed(2));
+      if (commissionAmount <= 0) continue;
+
+      const spKey = sponsorName.toLowerCase();
+      const spSnap = await fbDb.ref(`users/${spKey}`).once('value');
+      const sponsorUser = spSnap.val();
+
+      if (sponsorUser) {
+        // Sponsora komisyonu ekle
+        sponsorUser.mina = Number(((sponsorUser.mina || 0) + commissionAmount).toFixed(2));
+        
+        // Log kayıtlarına gelir bildirimi ekle
+        if (!sponsorUser.logs) sponsorUser.logs = [];
+        sponsorUser.logs.unshift({
+          id: Date.now() + i,
+          title: `Tier ${i + 1} Referans Komisyonu (%${rate * 100})`,
+          desc: `${stakerUsername} kullanıcısının ${stakeAmount} MINA stake işleminden kazanıldı.`,
+          amountText: `+${commissionAmount.toFixed(2)} MINA`,
+          type: "income",
+          time: new Date().toLocaleTimeString('tr-TR'),
+          date: new Date().toLocaleDateString('tr-TR')
+        });
+
+        // Firebase'e canlı kaydet
+        await fbDb.ref(`users/${spKey}`).set(sponsorUser);
+
+        // Eğer şu an giriş yapmış kullanıcı komisyonu alan sponsorsa arayüzünü anında güncelle
+        if (CurrentUser && CurrentUser.username.toLowerCase() === spKey) {
+          CurrentUser.mina = sponsorUser.mina;
+          CurrentUser.logs = sponsorUser.logs;
+          if (typeof refreshDashboardUI === 'function') refreshDashboardUI();
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Komisyon dağıtım hatası:", err);
   }
 }
 
-function executeMinaStakeDeposit() {
+// STAKE İŞLEMİ
+async function executeMinaStakeDeposit() {
   if (!CurrentUser) {
     showToast("⚠️ Please sign in to stake tokens!", "warning");
     return;
@@ -133,6 +163,7 @@ function executeMinaStakeDeposit() {
   const unlockTimestamp = now + (plan.days * 24 * 60 * 60 * 1000);
   const targetProfit = Number(((amount * plan.totalProfitPercent) / 100).toFixed(2));
 
+  // Kullanıcının boşta bakiyesinden kilitlenen tutar düşülür (KULLANICIDAN EKSTRA BİR ŞEY KESİLMEZ)
   CurrentUser.mina = Number((availableBalance - amount).toFixed(2));
   if (!CurrentUser.stakes) CurrentUser.stakes = [];
 
@@ -150,23 +181,31 @@ function executeMinaStakeDeposit() {
     principalClaimed: false
   });
 
-  // Komisyon dağıtımı
-  distributeMinaStakingCommissions(CurrentUser, amount);
+  if (!CurrentUser.logs) CurrentUser.logs = [];
+  CurrentUser.logs.unshift({
+    id: Date.now(),
+    title: "Staking Pozisyonu Kilitlendi",
+    desc: `${amount} MINA tutar ${plan.days} gün boyunca ${plan.title} havuzuna kilitlendi.`,
+    amountText: `-${amount.toFixed(2)} MINA`,
+    type: "stake",
+    time: new Date().toLocaleTimeString('tr-TR'),
+    date: new Date().toLocaleDateString('tr-TR')
+  });
 
-  addUserNotificationLog(
-    CurrentUser,
-    "Staking Position Locked",
-    `${amount} MINA locked into ${plan.title} (${plan.days} Days).`,
-    `-${amount.toFixed(2)} MINA`,
-    "stake"
-  );
+  // 1. Kendi hesabını Firebase'e kaydet
+  if (fbDb) {
+    await fbDb.ref(`users/${CurrentUser.username.toLowerCase()}`).set(CurrentUser);
+  } else {
+    saveUserWorld();
+  }
 
-  saveUserWorld();
-  updateHUD();
+  // 2. SPONSORLARINA OTOMATİK 4 KADEMELİ KOMİSYON DAĞIT
+  await distributeMinaStakingCommissions(CurrentUser.username, amount);
 
   if (amtInput) amtInput.value = "";
   updateStakeCalculator();
   renderUserStakesList();
+  if (typeof refreshDashboardUI === 'function') refreshDashboardUI();
 
   showToast(`🎉 Successfully locked ${amount} MINA for ${plan.days} days!`, "success");
 }
@@ -197,8 +236,12 @@ function accrueLiveMinaYields() {
 
   if (hasUpdate && totalAccrued > 0) {
     CurrentUser.mina = Number(((CurrentUser.mina || 0) + totalAccrued).toFixed(4));
-    saveUserWorld();
-    updateHUD();
+    if (fbDb) {
+      fbDb.ref(`users/${CurrentUser.username.toLowerCase()}/mina`).set(CurrentUser.mina);
+      fbDb.ref(`users/${CurrentUser.username.toLowerCase()}/stakes`).set(CurrentUser.stakes);
+    } else {
+      saveUserWorld();
+    }
   }
 }
 
@@ -221,17 +264,25 @@ function claimMinaPrincipal(stakeId) {
   s.principalClaimed = true;
   CurrentUser.mina = Number(((CurrentUser.mina || 0) + s.amount).toFixed(2));
 
-  addUserNotificationLog(
-    CurrentUser,
-    "Principal Released",
-    `${s.amount} MINA principal unlocked and transferred back to wallet.`,
-    `+${s.amount.toFixed(2)} MINA`,
-    "income"
-  );
+  if (!CurrentUser.logs) CurrentUser.logs = [];
+  CurrentUser.logs.unshift({
+    id: Date.now(),
+    title: "Ana Para Serbest Bırakıldı",
+    desc: `${s.amount} MINA kilit süresi doldu ve cüzdana aktarıldı.`,
+    amountText: `+${s.amount.toFixed(2)} MINA`,
+    type: "income",
+    time: new Date().toLocaleTimeString('tr-TR'),
+    date: new Date().toLocaleDateString('tr-TR')
+  });
 
-  saveUserWorld();
-  updateHUD();
+  if (fbDb) {
+    fbDb.ref(`users/${CurrentUser.username.toLowerCase()}`).set(CurrentUser);
+  } else {
+    saveUserWorld();
+  }
+
   renderUserStakesList();
+  if (typeof refreshDashboardUI === 'function') refreshDashboardUI();
 
   showToast(`🎉 ${s.amount} MINA principal returned to your balance!`, "success");
 }
@@ -300,7 +351,7 @@ function renderUserStakesList() {
   });
 }
 
-// 1 saniyelik canlı kâr sayaç döngüsü
+// Canlı kâr sayaç döngüsü
 setInterval(() => {
   accrueLiveMinaYields();
   const stakeView = document.getElementById('user-stakes-container');
