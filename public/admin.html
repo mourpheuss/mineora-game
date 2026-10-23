@@ -24,7 +24,7 @@
   <!-- ================= ROOT GÜVENLİK DUVARI ================= -->
   <div id="admin-gate-modal" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-8 space-y-6 text-center shadow-2xl">
-      <div class="w-16 h-16 rounded-2xl bg-orange-600/10 border border-orange-500/20 text-orange-500 flex items-center justify-center text-2xl mx-auto">
+      <div class="w-16 h-16 rounded-2xl bg-orange-600/10 border border-orange-500/20 text-orange-500 flex items-center justify-center text-2xl mx-auto shadow-inner">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
       <div>
@@ -34,7 +34,7 @@
 
       <form onsubmit="handleAdminLogin(event)" class="space-y-4">
         <input type="password" id="admin-pass-input" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-sm text-white tracking-widest outline-none focus:border-orange-500 font-mono" />
-        <button type="submit" id="btn-admin-login" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3.5 rounded-xl transition shadow-lg shadow-orange-600/20">
+        <button type="submit" id="btn-admin-login" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3.5 rounded-xl transition shadow-lg shadow-orange-600/20 cursor-pointer">
           Terminali Aç &rarr;
         </button>
       </form>
@@ -52,7 +52,7 @@
     <header class="flex flex-wrap justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl p-5 gap-4 shadow-xl">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-orange-600/30">
-          <i class="fa-solid fa-flask-vial"></i>
+          <i class="fa-solid fa-bolt"></i>
         </div>
         <div>
           <h1 class="text-lg font-black text-white flex items-center gap-2">
@@ -67,7 +67,7 @@
         <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
           <i class="fa-solid fa-radar"></i> Canlı Kullanıcı Radarını Gör &rarr;
         </a>
-        <button onclick="handleAdminLogout()" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-xs px-4 py-2.5 rounded-xl transition">
+        <button onclick="handleAdminLogout()" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer">
           Güvenli Çıkış
         </button>
       </div>
@@ -78,9 +78,9 @@
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
-            <i class="fa-solid fa-bolt text-orange-400"></i> Meme Coin & Mega Patlama Simülatörü
+            <i class="fa-solid fa-fire text-orange-500"></i> Meme Coin & Mega Patlama Simülatörü
           </h2>
-          <span class="text-xs text-slate-400">Küçük gürültüleri filtreler; sadece sert patlama (Z-Score &ge; 3.5 ve Hacim Süpürme) öncesini test eder.</span>
+          <span class="text-xs text-slate-400">Küçük gürültüleri filtreler; sadece sert patlama (Z-Score &ge; 3.0 ve Hacim Süpürme) öncesini test eder.</span>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -117,12 +117,12 @@
         <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30">
           <span class="text-xs text-emerald-400 block">Yakalanan Mega Hareket</span>
           <strong id="bt-stat-success" class="text-2xl font-black text-emerald-400 block mt-1">0</strong>
-          <span class="text-[10px] text-slate-500">&ge; %3–%15+ Net Kâr Hareketi</span>
+          <span class="text-[10px] text-slate-500">&ge; %2.5–%15+ Net Hareket</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-rose-500/30">
           <span class="text-xs text-rose-400 block">Eşik Altında Kalan</span>
           <strong id="bt-stat-failed" class="text-2xl font-black text-rose-400 block mt-1">0</strong>
-          <span class="text-[10px] text-slate-500">&lt; %3 Küçük Dalgalanma</span>
+          <span class="text-[10px] text-slate-500">&lt; %2.5 Küçük Dalgalanma</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-orange-500/30">
           <span class="text-xs text-orange-400 block">Algoritma İsabet Oranı</span>
@@ -263,18 +263,18 @@
             <td class="py-3 px-4 ${isVip ? 'text-amber-400 font-bold' : 'text-slate-500'}">${expireStr}</td>
             <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
               ${isVip ? `
-                <button onclick="extendUserVip('${u.username}', 30)" class="px-2.5 py-1 rounded-lg bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white text-[11px] font-bold transition">
+                <button onclick="extendUserVip('${u.username}', 30)" class="px-2.5 py-1 rounded-lg bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white text-[11px] font-bold transition cursor-pointer">
                   <i class="fa-solid fa-calendar-plus mr-1"></i> +30 Gün Uzat
                 </button>
-                <button onclick="setUserVipStatus('${u.username}', false)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition">
+                <button onclick="setUserVipStatus('${u.username}', false)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition cursor-pointer">
                   İptal Et
                 </button>
               ` : `
-                <button onclick="setUserVipStatus('${u.username}', true)" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition">
+                <button onclick="setUserVipStatus('${u.username}', true)" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition cursor-pointer">
                   VIP Onayla ($500)
                 </button>
               `}
-              <button onclick="deleteUserPermanently('${u.username}')" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white text-[11px] font-bold transition">
+              <button onclick="deleteUserPermanently('${u.username}')" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white text-[11px] font-bold transition cursor-pointer">
                 Sil
               </button>
             </td>
@@ -402,7 +402,7 @@
               mins: Math.floor(Math.random() * 4) + 6
             });
 
-            i += 12; // Aynı patlamada birden fazla sinyal basılmasını engeller
+            i += 12; // Aynı patlamada mükerrer sinyal önleme
           }
         }
 
