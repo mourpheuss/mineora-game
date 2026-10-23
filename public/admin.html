@@ -25,7 +25,7 @@
           MINA Protocol &bull; Root Admin Terminal
           <span class="text-xs bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono">ROOT</span>
         </h1>
-        <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Üye Yönetimi ve Bakiye Tanımlama</p>
+        <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Üye Yönetimi, Kilit ve Bakiye Müdahalesi</p>
       </div>
     </div>
 
@@ -94,11 +94,13 @@
 
     </div>
 
-    <!-- KULLANICI LİSTESİ & BAKİYE DÜZENLEME -->
+    <!-- KULLANICI LİSTESİ & GELİŞMİŞ MÜDAHALE MASASI -->
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h2 class="text-sm font-bold text-white uppercase tracking-wider">Kayıtlı Staker & Kullanıcı Listesi</h2>
-        <span class="text-xs text-slate-400">Manuel MINA yükleme ve üyelik düzenleme</span>
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Kayıtlı Staker & Kullanıcı Listesi</h2>
+          <span class="text-xs text-slate-400">Bakiye ekle/çıkar, hesap kilitleme ve kalıcı silme kontrolleri</span>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
@@ -108,12 +110,13 @@
               <th class="py-3 px-4">Şifre</th>
               <th class="py-3 px-4">Sponsor</th>
               <th class="py-3 px-4">MINA Bakiyesi</th>
-              <th class="py-3 px-4">Kilitli Pozisyonlar</th>
-              <th class="py-3 px-4 text-right">Müdahale</th>
+              <th class="py-3 px-4">Havuzlar</th>
+              <th class="py-3 px-4">Kasa Durumu</th>
+              <th class="py-3 px-4 text-right">Yönetici Müdahalesi</th>
             </tr>
           </thead>
           <tbody id="admin-user-table-body" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="6" class="py-8 text-center text-slate-500">Kullanıcı verisi taranıyor...</td></tr>
+            <tr><td colspan="7" class="py-8 text-center text-slate-500">Kullanıcı verisi taranıyor...</td></tr>
           </tbody>
         </table>
       </div>
@@ -156,19 +159,36 @@
     </div>
   </div>
 
-  <!-- BAKİYE DÜZENLEME MODAL -->
-  <div id="modal-mod-user" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="text-sm font-bold text-white">MINA Bakiyesi Düzenle</h3>
-        <button onclick="document.getElementById('modal-mod-user').classList.add('hidden')" class="text-slate-400 text-xs">✕</button>
+  <!-- BAKİYE EKLE / ÇIKAR MODAL -->
+  <div id="modal-mod-user" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-coins text-orange-400"></i> Bakiye Ekle / Çıkar
+        </h3>
+        <button onclick="document.getElementById('modal-mod-user').classList.add('hidden')" class="text-slate-400 text-xs hover:text-white">✕</button>
       </div>
+
+      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-medium">Kullanıcı: <strong id="mod-user-target" class="text-white"></strong></span>
+        <span class="text-xs text-orange-400 font-mono font-bold" id="mod-user-current-mina">0.00 MINA</span>
+      </div>
+
       <div>
-        <span class="text-xs text-slate-400 block mb-1">Kullanıcı: <strong id="mod-user-target" class="text-white"></strong></span>
-        <input type="number" id="mod-user-mina-input" step="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-orange-400 font-bold outline-none" />
+        <label class="text-[11px] text-slate-400 block mb-1">Yeni MINA Bakiyesi Belirle</label>
+        <input type="number" id="mod-user-mina-input" step="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-base text-orange-400 font-bold outline-none focus:border-orange-500" />
       </div>
-      <button onclick="saveUserMinaModification()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-2.5 rounded-xl transition">
-        Kaydet & Eşitle
+
+      <!-- HIZLI EKLE / ÇIKAR BUTONLARI -->
+      <div class="grid grid-cols-4 gap-2 pt-1 text-xs font-mono font-bold">
+        <button onclick="quickAdjustBalance(100)" class="bg-emerald-950 text-emerald-400 border border-emerald-800 py-1.5 rounded-lg hover:bg-emerald-900">+100</button>
+        <button onclick="quickAdjustBalance(500)" class="bg-emerald-950 text-emerald-400 border border-emerald-800 py-1.5 rounded-lg hover:bg-emerald-900">+500</button>
+        <button onclick="quickAdjustBalance(-100)" class="bg-rose-950 text-rose-400 border border-rose-800 py-1.5 rounded-lg hover:bg-rose-900">-100</button>
+        <button onclick="quickAdjustBalance(-500)" class="bg-rose-950 text-rose-400 border border-rose-800 py-1.5 rounded-lg hover:bg-rose-900">-500</button>
+      </div>
+
+      <button onclick="saveUserMinaModification()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-2">
+        Bakiyeyi Güncelle & Kaydet &rarr;
       </button>
     </div>
   </div>
@@ -197,6 +217,7 @@
     }
 
     let activeModUser = null;
+    let activeModUserCurrentMina = 0;
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -293,7 +314,7 @@
         });
       });
 
-      // 3. Kullanıcı Tablosu
+      // 3. Kullanıcı Tablosu & Gelişmiş Müdahale Masası
       fbDb.ref('users').on('value', snap => {
         const users = snap.val() || {};
         const tbody = document.getElementById('admin-user-table-body');
@@ -302,16 +323,37 @@
         Object.keys(users).forEach(k => {
           const u = users[k];
           const stakesCount = (u.stakes || []).length;
+          const isLocked = !!u.isVaultLocked;
+          const isRoot = (u.username || '').toLowerCase() === 'mourpheus';
+
           const tr = document.createElement('tr');
-          tr.className = "hover:bg-slate-950/60 transition";
+          tr.className = isLocked ? "bg-rose-950/20 border-l-2 border-rose-500 transition" : "hover:bg-slate-950/60 transition";
           tr.innerHTML = `
-            <td class="py-3 px-4 font-bold text-white">${u.username}</td>
+            <td class="py-3 px-4 font-bold text-white flex items-center gap-1.5">
+              ${u.username}
+              ${isRoot ? '<span class="text-[9px] bg-rose-950 text-rose-300 border border-rose-800 px-1 rounded font-mono">ADMIN</span>' : ''}
+            </td>
             <td class="py-3 px-4 font-mono text-slate-400">${u.pass || '••••••'}</td>
             <td class="py-3 px-4 font-mono text-slate-400">${u.referredBy || '-'}</td>
             <td class="py-3 px-4 font-mono text-orange-400 font-bold">${Number(u.mina || u.ora || 0).toFixed(2)} MINA</td>
             <td class="py-3 px-4 font-mono text-cyan-300">${stakesCount} Havuz</td>
-            <td class="py-3 px-4 text-right">
-              <button onclick="openModUserModal('${u.username}', ${Number(u.mina || u.ora || 0)})" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold">Düzenle</button>
+            <td class="py-3 px-4 font-semibold">
+              ${isLocked ? '<span class="text-rose-400 text-[11px] flex items-center gap-1"><i class="fa-solid fa-lock"></i> Kilitli</span>' : '<span class="text-emerald-400 text-[11px] flex items-center gap-1"><i class="fa-solid fa-lock-open"></i> Açık</span>'}
+            </td>
+            <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+              <button onclick="openModUserModal('${u.username}', ${Number(u.mina || u.ora || 0)})" class="px-2.5 py-1 rounded-lg bg-orange-600/30 hover:bg-orange-600 text-orange-300 hover:text-white text-[11px] font-bold transition">
+                <i class="fa-solid fa-plus-minus mr-1"></i> Bakiye
+              </button>
+              ${!isRoot ? `
+                <button onclick="toggleUserVaultLock('${u.username}', ${isLocked})" class="px-2.5 py-1 rounded-lg ${isLocked ? 'bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white' : 'bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white'} text-[11px] font-bold transition">
+                  <i class="fa-solid ${isLocked ? 'fa-lock-open' : 'fa-lock'} mr-1"></i> ${isLocked ? 'Kilidi Aç' : 'Kilitle'}
+                </button>
+                <button onclick="deleteUserPermanently('${u.username}')" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white text-[11px] font-bold transition">
+                  <i class="fa-solid fa-trash-can mr-1"></i> Sil
+                </button>
+              ` : `
+                <span class="text-[10px] text-slate-500 font-mono italic">Korumalı</span>
+              `}
             </td>
           `;
           tbody.appendChild(tr);
@@ -355,20 +397,51 @@
       });
     }
 
+    // BAKİYE AÇMA VE DÜZENLEME MODALI
     function openModUserModal(username, curMina) {
       activeModUser = username;
+      activeModUserCurrentMina = curMina;
       document.getElementById('mod-user-target').innerText = username;
+      document.getElementById('mod-user-current-mina').innerText = `${curMina.toFixed(2)} MINA`;
       document.getElementById('mod-user-mina-input').value = curMina;
       document.getElementById('modal-mod-user').classList.remove('hidden');
+    }
+
+    function quickAdjustBalance(delta) {
+      const input = document.getElementById('mod-user-mina-input');
+      const cur = parseFloat(input.value) || 0;
+      input.value = Math.max(0, cur + delta);
     }
 
     function saveUserMinaModification() {
       if (!activeModUser) return;
       const val = parseFloat(document.getElementById('mod-user-mina-input').value) || 0;
       const uKey = activeModUser.toLowerCase();
+
       fbDb.ref(`users/${uKey}/mina`).set(val).then(() => {
         document.getElementById('modal-mod-user').classList.add('hidden');
         showToast(`💾 ${activeModUser} bakiyesi ${val} MINA olarak güncellendi!`);
+      });
+    }
+
+    // KULLANICI KASASINI KİLİTLE / AÇ
+    function toggleUserVaultLock(username, currentlyLocked) {
+      const uKey = username.toLowerCase();
+      const newState = !currentlyLocked;
+
+      fbDb.ref(`users/${uKey}/isVaultLocked`).set(newState).then(() => {
+        showToast(`🔒 ${username} kasası ${newState ? 'KİLİTLENDİ' : 'AÇILDI'}!`);
+      });
+    }
+
+    // KULLANICIYI KALICI SİL
+    function deleteUserPermanently(username) {
+      const ok = confirm(`'${username}' adlı kullanıcıyı ve tüm verilerini sistemden kalıcı olarak silmek istediğinize emin misiniz?`);
+      if (!ok) return;
+
+      const uKey = username.toLowerCase();
+      fbDb.ref(`users/${uKey}`).remove().then(() => {
+        showToast(`🗑️ ${username} kullanıcısı sistemden kalıcı olarak silindi.`);
       });
     }
 
@@ -387,6 +460,7 @@
         pass: pass,
         mina: mina,
         role: "Verified Staker",
+        isVaultLocked: false,
         referredBy: sponsor || "",
         referral_chain: sponsor ? [sponsor] : [],
         refCode: `MINE-${uname.toUpperCase()}-777`,
@@ -422,14 +496,12 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      // 1. Ana sayfadan gelen şifre varsa doğrudan Firebase yetkilendirmesi dene
       const cachedPass = sessionStorage.getItem('mineora_admin_direct_pass');
       if (cachedPass) {
         document.getElementById('admin-auth-pass').value = cachedPass;
         loginAdminFirebase(cachedPass);
       }
 
-      // 2. Firebase auth dinleyicisi
       if (typeof firebase !== 'undefined' && firebase.auth) {
         firebase.auth().onAuthStateChanged(user => {
           if (user) {
