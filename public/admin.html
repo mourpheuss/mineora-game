@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MINA Protocol | Root Admin Terminal</title>
+  <!-- Favicon 404 Koruması -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   
@@ -25,7 +27,7 @@
           MINA Protocol &bull; Root Admin Terminal
           <span class="text-xs bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono">ROOT</span>
         </h1>
-        <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Üye Yönetimi, Kilit ve Bakiye Müdahalesi</p>
+        <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Üye Yönetimi, Kasa Taraması ve Bakiye Müdahalesi</p>
       </div>
     </div>
 
@@ -61,7 +63,63 @@
 
   <main class="max-w-7xl mx-auto space-y-6">
 
-    <!-- BEKLEYEN YATIRMA VE ÇEKİM KUYRUKLARI -->
+    <!-- 1. FİNANSAL KASA DENETİM KARTLARI & CANLI TARAMA BUTONU -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-orange-400"></i> Protokol Kasa Likiditesi & 24S Akış Denetimi
+          </h2>
+          <span class="text-xs text-slate-400">Tüm kullanıcı cüzdanları, kilitli stake havuzları ve son 24 saatlik onaylı hareketler</span>
+        </div>
+        <button id="btn-scan-vaults" onclick="scanAllUserVaultsFinancials()" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2">
+          <i class="fa-solid fa-rotate mr-1"></i> Kasaları Canlı Tara & Hesapla
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+        <!-- TOPLAM MINA KASASI -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+            <span class="font-semibold uppercase tracking-wider text-[11px]">Tüm Kasalardaki MINA</span>
+            <span class="p-1 rounded bg-orange-500/10 text-orange-400"><i class="fa-solid fa-vault"></i></span>
+          </div>
+          <div>
+            <strong id="stat-total-mina-vault" class="text-2xl font-black text-orange-400 font-mono">0.00</strong>
+            <span class="text-xs text-slate-500 ml-1">MINA</span>
+          </div>
+          <span class="text-[10px] text-slate-500 mt-2 block" id="stat-total-vault-sub">Boşta + Kilitli Havuzlar</span>
+        </div>
+
+        <!-- 24 SAATTE GİREN MINA -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+            <span class="font-semibold uppercase tracking-wider text-[11px] text-emerald-400">Son 24 Saatte Giren</span>
+            <span class="p-1 rounded bg-emerald-500/10 text-emerald-400"><i class="fa-solid fa-arrow-down"></i></span>
+          </div>
+          <div>
+            <strong id="stat-24h-in-mina" class="text-2xl font-black text-emerald-400 font-mono">+0.00</strong>
+            <span class="text-xs text-slate-500 ml-1">MINA</span>
+          </div>
+          <span class="text-[10px] text-slate-500 mt-2 block" id="stat-24h-in-sub">Onaylı Yatırmalar</span>
+        </div>
+
+        <!-- 24 SAATTE ÇIKAN MINA -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-rose-500/30 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+            <span class="font-semibold uppercase tracking-wider text-[11px] text-rose-400">Son 24 Saatte Çıkan</span>
+            <span class="p-1 rounded bg-rose-500/10 text-rose-400"><i class="fa-solid fa-arrow-up"></i></span>
+          </div>
+          <div>
+            <strong id="stat-24h-out-mina" class="text-2xl font-black text-rose-400 font-mono">-0.00</strong>
+            <span class="text-xs text-slate-500 ml-1">MINA</span>
+          </div>
+          <span class="text-[10px] text-slate-500 mt-2 block" id="stat-24h-out-sub">Onaylı Çekimler</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. BEKLEYEN YATIRMA VE ÇEKİM KUYRUKLARI -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       <!-- BEKLEYEN YATIRMALAR (DEPOSIT QUEUE) -->
@@ -94,7 +152,7 @@
 
     </div>
 
-    <!-- KULLANICI LİSTESİ & GELİŞMİŞ MÜDAHALE MASASI -->
+    <!-- 3. KULLANICI LİSTESİ & GELİŞMİŞ MÜDAHALE MASASI -->
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
         <div>
@@ -196,7 +254,7 @@
   <!-- TOAST BİLDİRİM -->
   <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
 
-  <!-- FIREBASE BAĞLANTISI VE MASTER SCRIPTLER -->
+  <!-- FIREBASE VE MASTER SCRIPTLER -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
@@ -235,9 +293,75 @@
         document.getElementById('admin-auth-box')?.classList.add('hidden');
         showToast("✅ Firebase Admin Yetkisi Onaylandı!");
         bindFirebaseQueues();
+        scanAllUserVaultsFinancials();
       } catch (e) {
         if (!customPass) alert("Giriş Hatası: " + e.message);
       }
+    }
+
+    // ================= TÜM KASALARI & 24S AKIŞI TARAMA MOTORU =================
+    function scanAllUserVaultsFinancials() {
+      if (!fbDb) return;
+      const btn = document.getElementById('btn-scan-vaults');
+      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1"></i> Taranıyor...`;
+
+      fbDb.ref('users').once('value').then(snap => {
+        const users = snap.val() || {};
+        let totalVaultMina = 0;
+        let totalLockedMina = 0;
+        let in24hMina = 0;
+        let out24hMina = 0;
+
+        const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+
+        Object.values(users).forEach(u => {
+          if (!u) return;
+          const walletMina = Number(parseFloat(u.mina || u.ora || 0)) || 0;
+          totalVaultMina += walletMina;
+
+          // Aktif kilitli havuzlar
+          if (Array.isArray(u.stakes)) {
+            u.stakes.forEach(s => {
+              if (s && !s.principalClaimed) {
+                const stakedAmt = Number(parseFloat(s.amount || 0)) || 0;
+                totalVaultMina += stakedAmt;
+                totalLockedMina += stakedAmt;
+              }
+            });
+          }
+
+          // Son 24 saatlik log dökümleri
+          if (Array.isArray(u.logs)) {
+            u.logs.forEach(l => {
+              const logTime = l.id || l.timestamp || 0;
+              const isRecent = logTime >= oneDayAgo;
+              const txt = (l.amountText || "").toString();
+              const numMatch = txt.match(/[\d\.]+/);
+              const val = numMatch ? parseFloat(numMatch[0]) : 0;
+
+              if (isRecent && val > 0) {
+                if (txt.startsWith('+')) {
+                  in24hMina += val;
+                } else if (txt.startsWith('-')) {
+                  out24hMina += val;
+                }
+              }
+            });
+          }
+        });
+
+        // Ekrana Yazdır
+        document.getElementById('stat-total-mina-vault').innerText = totalVaultMina.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('stat-total-vault-sub').innerText = `Kilitli: ${totalLockedMina.toFixed(2)} MINA | Boşta: ${(totalVaultMina - totalLockedMina).toFixed(2)} MINA`;
+        document.getElementById('stat-24h-in-mina').innerText = `+${in24hMina.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('stat-24h-out-mina').innerText = `-${out24hMina.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-rotate mr-1"></i> Kasaları Canlı Tara & Hesapla`;
+        showToast("🔍 Tüm kasalar ve 24 saatlik nakit akışı başarıyla tarandı!");
+      }).catch(err => {
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-rotate mr-1"></i> Kasaları Canlı Tara & Hesapla`;
+        showToast("⚠️ Tarama hatası: " + err.message);
+      });
     }
 
     function bindFirebaseQueues() {
@@ -367,9 +491,21 @@
         const u = snap.val();
         if (u) {
           u.mina = Number(((u.mina || 0) + amount).toFixed(2));
+          if (!u.logs) u.logs = [];
+          u.logs.unshift({
+            id: Date.now(),
+            title: "Yatırma Onaylandı",
+            desc: "TxID blokzincir kontrolünden geçti.",
+            amountText: `+${amount.toFixed(2)} MINA`,
+            type: "income",
+            time: new Date().toLocaleTimeString('tr-TR'),
+            date: new Date().toLocaleDateString('tr-TR')
+          });
+
           fbDb.ref(`users/${uKey}`).set(u);
           fbDb.ref(`depositQueue/${depId}`).remove();
           showToast(`✅ ${username} hesabına ${amount} ${asset} aktarıldı!`);
+          scanAllUserVaultsFinancials();
         }
       });
     }
@@ -382,6 +518,7 @@
     function approveWithdrawalOrder(withId, username, amount) {
       fbDb.ref(`withdrawalQueue/${withId}`).remove();
       showToast(`✅ ${username} çekimi tamamlandı.`);
+      scanAllUserVaultsFinancials();
     }
 
     function rejectWithdrawalOrder(withId, username, amount) {
@@ -390,14 +527,25 @@
         const u = snap.val();
         if (u) {
           u.mina = Number(((u.mina || 0) + amount).toFixed(2));
+          if (!u.logs) u.logs = [];
+          u.logs.unshift({
+            id: Date.now(),
+            title: "Çekim Reddedildi & İade",
+            desc: "Çekim emri iptal edildi, bakiye cüzdana iade edildi.",
+            amountText: `+${amount.toFixed(2)} MINA`,
+            type: "income",
+            time: new Date().toLocaleTimeString('tr-TR'),
+            date: new Date().toLocaleDateString('tr-TR')
+          });
+
           fbDb.ref(`users/${uKey}`).set(u);
           fbDb.ref(`withdrawalQueue/${withId}`).remove();
           showToast(`↩️ Çekim reddedildi, ${amount} MINA iade edildi.`);
+          scanAllUserVaultsFinancials();
         }
       });
     }
 
-    // BAKİYE AÇMA VE DÜZENLEME MODALI
     function openModUserModal(username, curMina) {
       activeModUser = username;
       activeModUserCurrentMina = curMina;
@@ -418,13 +566,35 @@
       const val = parseFloat(document.getElementById('mod-user-mina-input').value) || 0;
       const uKey = activeModUser.toLowerCase();
 
-      fbDb.ref(`users/${uKey}/mina`).set(val).then(() => {
-        document.getElementById('modal-mod-user').classList.add('hidden');
-        showToast(`💾 ${activeModUser} bakiyesi ${val} MINA olarak güncellendi!`);
+      fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+        const u = snap.val();
+        if (u) {
+          const oldVal = Number(u.mina || 0);
+          const diff = val - oldVal;
+          u.mina = val;
+
+          if (Math.abs(diff) >= 0.01) {
+            if (!u.logs) u.logs = [];
+            u.logs.unshift({
+              id: Date.now(),
+              title: "Yönetici Bakiye Müdahalesi",
+              desc: "Root Admin tarafından bakiye güncellendi.",
+              amountText: `${diff > 0 ? '+' : ''}${diff.toFixed(2)} MINA`,
+              type: diff > 0 ? "income" : "expense",
+              time: new Date().toLocaleTimeString('tr-TR'),
+              date: new Date().toLocaleDateString('tr-TR')
+            });
+          }
+
+          fbDb.ref(`users/${uKey}`).set(u).then(() => {
+            document.getElementById('modal-mod-user').classList.add('hidden');
+            showToast(`💾 ${activeModUser} bakiyesi ${val} MINA olarak güncellendi!`);
+            scanAllUserVaultsFinancials();
+          });
+        }
       });
     }
 
-    // KULLANICI KASASINI KİLİTLE / AÇ
     function toggleUserVaultLock(username, currentlyLocked) {
       const uKey = username.toLowerCase();
       const newState = !currentlyLocked;
@@ -434,7 +604,6 @@
       });
     }
 
-    // KULLANICIYI KALICI SİL
     function deleteUserPermanently(username) {
       const ok = confirm(`'${username}' adlı kullanıcıyı ve tüm verilerini sistemden kalıcı olarak silmek istediğinize emin misiniz?`);
       if (!ok) return;
@@ -442,6 +611,7 @@
       const uKey = username.toLowerCase();
       fbDb.ref(`users/${uKey}`).remove().then(() => {
         showToast(`🗑️ ${username} kullanıcısı sistemden kalıcı olarak silindi.`);
+        scanAllUserVaultsFinancials();
       });
     }
 
@@ -485,6 +655,7 @@
           document.getElementById('new-u-mina').value = "0";
           document.getElementById('new-u-sponsor').value = "";
           showToast(`🎉 ${uname} hesabı ${mina} MINA bakiyesi ile oluşturuldu!`);
+          scanAllUserVaultsFinancials();
         });
       }
     }
@@ -507,10 +678,14 @@
           if (user) {
             document.getElementById('admin-auth-box')?.classList.add('hidden');
             bindFirebaseQueues();
+            scanAllUserVaultsFinancials();
           }
         });
       }
-      setTimeout(bindFirebaseQueues, 500);
+      setTimeout(() => {
+        bindFirebaseQueues();
+        scanAllUserVaultsFinancials();
+      }, 600);
     });
   </script>
 </body>
