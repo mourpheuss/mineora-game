@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Bitget Altcoin & Meme Mega Pre-Pump Hunter</title>
+  <title>Mineora Radar | Bitget Altcoin & Meme Pre-Pump Hunter</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,10 +55,9 @@
     </div>
   </header>
 
-  <!-- ================= 1. GÖRÜNÜM: CANLI ÖN SEZME RADARI ================= -->
+  <!-- ================= 1. CANLI ÖN SEZME RADARI ================= -->
   <main id="view-live" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- METRİK ÖZETİ -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
         <span class="text-slate-500 text-xs block">Odak Pariteler</span>
@@ -82,7 +81,7 @@
       </div>
     </div>
 
-    <!-- FLASH RADAR KARTLARI -->
+    <!-- FLASH KARTLAR -->
     <div class="bg-slate-900 border-2 border-orange-500/40 rounded-3xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
@@ -99,7 +98,7 @@
 
       <div id="liveQuietCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="col-span-3 text-center py-10 text-slate-500 font-mono text-xs">
-          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Tüm Bitget tahtası taranıyor, majörler eleniyor...
+          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Tüm Bitget tahtası taranıyor...
         </div>
       </div>
     </div>
@@ -127,7 +126,7 @@
 
   </main>
 
-  <!-- ================= 2. GÖRÜNÜM: BÜYÜK AV DOĞRULAMA LAB ================= -->
+  <!-- ================= 2. BÜYÜK AV DOĞRULAMA LAB (TÜM BİTGET) ================= -->
   <main id="view-backtest" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -136,11 +135,11 @@
           <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
             <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Altcoin & Meme Patlama Doğrulama Motoru
           </h2>
-          <span class="text-xs text-slate-400">Geçmişte sert pump/dump yapmış altcoinleri bulur, patlama fitili ateşlenmeden 6-9 dk önceki sinyali doğrular.</span>
+          <span class="text-xs text-slate-400">Tüm Bitget tahtasını derinlemesine tarar; patlama fitili ateşlenmeden 6-9 dk önceki sinyalleri doğrular.</span>
         </div>
 
         <button onclick="runBitgetHistoricalBacktest()" id="btn-run-historical" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer font-mono">
-          <i class="fa-solid fa-play"></i> Tüm Bitget Altcoinlerini Tara & Test Et
+          <i class="fa-solid fa-play"></i> Tüm Bitget Tahtasını Tara & Test Et
         </button>
       </div>
 
@@ -183,7 +182,7 @@
             </tr>
           </thead>
           <tbody id="bt-table-body" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="7" class="py-10 text-center text-slate-500 font-sans">Yukarıdaki butona basarak Bitget altcoin geçmişini tarayın.</td></tr>
+            <tr><td colspan="7" class="py-10 text-center text-slate-500 font-sans">Yukarıdaki butona basarak tüm Bitget altcoin tahtasını tarayın.</td></tr>
           </tbody>
         </table>
       </div>
@@ -191,9 +190,7 @@
 
   </main>
 
-  <!-- MANTIK VE TARAMA SCRIPTLERİ -->
   <script>
-    // MAJÖR COIN KARA LİSTESİ (Hantal pariteler tamamen dışlanır)
     const MAJORS_BLACKLIST = [
       "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", 
       "ADAUSDT", "DOGEUSDT", "TRXUSDT", "AVAXUSDT", "DOTUSDT", 
@@ -224,30 +221,25 @@
       window.location.href = 'index.html';
     }
 
-    // ================= 1. CANLI ALTCOIN / MEME ERKEN TESPTİ MOTORU =================
+    // ================= 1. CANLI ALTCOIN RADARI =================
     async function scanLiveBitgetQuietAccumulation() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
         const json = await res.json();
         if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
-        // KESİN ELEME:
-        // 1. Majör coinler tamamen elenir.
-        // 2. Çoktan fırlamış (+%15, +%50, +%200) olanlar elenir.
-        // 3. Yalnızca -%3.5 ile +%4.5 arasında yatay bantta duran, 200k üzeri hacimli volatil altcoinler alınır.
         const targetAltcoins = json.data.filter(t => {
           if (!t.symbol.endsWith("USDT")) return false;
-          if (MAJORS_BLACKLIST.includes(t.symbol)) return false; // Majör engeli
+          if (MAJORS_BLACKLIST.includes(t.symbol)) return false;
           const chg = parseFloat(t.change24h || 0) * 100;
           const volUsdt = parseFloat(t.usdtVolume || 0);
           return (chg >= -3.5 && chg <= 4.5) && volUsdt >= 200000;
         });
 
-        // Hacim/fiyat oranı en sıkışık olan adaylar
         const candidates = targetAltcoins.slice(0, 9);
         const topHotCards = candidates.slice(0, 3).map((c, i) => {
           const chg = (parseFloat(c.change24h || 0) * 100).toFixed(2);
-          const leadTime = Math.floor(Math.random() * 4) + 6; // 6-9 dk
+          const leadTime = Math.floor(Math.random() * 4) + 6;
           const score = Math.floor(90 + Math.random() * 8);
           const isPump = i % 2 === 0;
 
@@ -263,7 +255,6 @@
           };
         });
 
-        // Flash Kartlar
         const cardsGrid = document.getElementById('liveQuietCardsGrid');
         cardsGrid.innerHTML = topHotCards.map(s => `
           <div class="bg-slate-950 p-5 rounded-2xl border ${s.type === 'PRE_PUMP' ? 'border-orange-500/80 bg-gradient-to-br from-orange-950/20 to-slate-950' : 'border-rose-500/80 bg-gradient-to-br from-rose-950/20 to-slate-950'} space-y-3">
@@ -293,7 +284,6 @@
           </div>
         `).join('');
 
-        // Tablo
         const tbody = document.getElementById('liveQuietTableBody');
         tbody.innerHTML = candidates.map(d => {
           const chg = (parseFloat(d.change24h || 0) * 100).toFixed(2);
@@ -317,10 +307,10 @@
       }
     }
 
-    // ================= 2. BÜYÜK AV DOĞRULAMA (ALTCOIN/MEME BACKTEST) =================
+    // ================= 2. TÜM BİTGET TAHTASINI TARAYAN BACKTEST =================
     async function runBitgetHistoricalBacktest() {
       const btn = document.getElementById('btn-run-historical');
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Altcoin Mumları Doğrulanıyor...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Bitget Tahtası Çekiliyor...`;
       btn.disabled = true;
 
       try {
@@ -331,22 +321,21 @@
           throw new Error("Bitget verisi alınamadı.");
         }
 
-        // Sadece volatil altcoin ve meme coinler (Majörler kesinlikle yok)
-        const candidates = tJson.data.filter(t => {
-          if (!t.symbol.endsWith("USDT")) return false;
-          if (MAJORS_BLACKLIST.includes(t.symbol)) return false;
-          const chg = Math.abs(parseFloat(t.change24h || 0) * 100);
-          return chg >= 12; // Son saatlerde sert kırılmış altcoinler
-        }).slice(0, 15);
-
-        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> ${candidates.length} Altcoin İnceleniyor...`;
+        // TÜM ALTCOİNLER: Majörler hariç tüm pariteleri al
+        const allAltcoins = tJson.data.filter(t => {
+          return t.symbol.endsWith("USDT") && !MAJORS_BLACKLIST.includes(t.symbol);
+        });
 
         const verifiedSignals = [];
+        let checkedCount = 0;
 
-        for (const cand of candidates) {
+        for (const cand of allAltcoins) {
+          checkedCount++;
+          btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Taranıyor (${checkedCount}/${allAltcoins.length} Coin)...`;
+          
           const sym = cand.symbol;
           try {
-            const kUrl = `https://api.bitget.com/api/v2/mix/market/candles?symbol=${sym}&granularity=1m&productType=USDT-FUTURES&limit=300`;
+            const kUrl = `https://api.bitget.com/api/v2/mix/market/candles?symbol=${sym}&granularity=1m&productType=USDT-FUTURES&limit=250`;
             const kRes = await fetch(kUrl);
             const kJson = await kRes.json();
 
@@ -361,17 +350,16 @@
               vol: parseFloat(k[5])
             })).reverse();
 
-            // Geçmiş mumlarda geriye dönük gez: ani patlama anını ve öncesindeki balina hacmini yakala
-            for (let i = 25; i < candles.length - 20; i++) {
+            for (let i = 25; i < candles.length - 15; i++) {
               const basePrice = candles[i].close;
-              const nextCandles = candles.slice(i + 1, i + 21);
+              const nextCandles = candles.slice(i + 1, i + 16);
               const maxHigh = Math.max(...nextCandles.map(c => c.high));
               const minLow = Math.min(...nextCandles.map(c => c.low));
 
               const pumpPercent = ((maxHigh - basePrice) / basePrice) * 100;
               const dumpPercent = ((basePrice - minLow) / basePrice) * 100;
 
-              // En az %10 ve üzeri gerçek altcoin patlamaları
+              // %10 ve üzeri gerçek patlamalar
               if (pumpPercent >= 10 || dumpPercent >= 10) {
                 const pastVols = candles.slice(i - 20, i).map(c => c.vol);
                 const meanVol = pastVols.reduce((a,b) => a+b, 0) / pastVols.length;
@@ -392,7 +380,7 @@
                   score: Math.min(99, Math.floor(88 + (volMultiple * 2)))
                 });
 
-                i += 20;
+                i += 15;
               }
             }
           } catch (e) {}
@@ -408,7 +396,7 @@
 
         const tbody = document.getElementById('bt-table-body');
         if (total === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Son saatlerde Bitget üzerinde sert kırılım yapan altcoin bulunamadı.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Tüm Bitget tahtası tarandı; son saatlerde patlama yapan altcoin bulunamadı.</td></tr>`;
         } else {
           tbody.innerHTML = verifiedSignals.map(s => `
             <tr class="hover:bg-slate-950/60 transition">
@@ -434,7 +422,7 @@
       } catch (err) {
         alert("Backtest Hatası: " + err.message);
       } finally {
-        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget Altcoinlerini Tara & Test Et`;
+        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget Tahtasını Tara & Test Et`;
         btn.disabled = false;
       }
     }
