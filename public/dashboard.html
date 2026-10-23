@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Bitget Altcoin & Meme Pre-Pump Hunter</title>
+  <title>Mineora Radar | Bitget Yetkili Ön Sezme Radarı</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,22 +31,21 @@
           <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">RADAR</span></span>
         </a>
 
-        <!-- MOD GEÇİŞ SEKMELERİ -->
         <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 ml-2">
           <button onclick="switchTab('live')" id="tab-btn-live" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition bg-orange-600 text-white cursor-pointer">
             <i class="fa-solid fa-bolt mr-1"></i> Canlı Ön Sezme Radarı
           </button>
           <button onclick="switchTab('backtest')" id="tab-btn-backtest" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition text-slate-400 hover:text-white cursor-pointer">
-            <i class="fa-solid fa-flask-vial mr-1"></i> Büyük Av Doğrulama Lab
+            <i class="fa-solid fa-flask-vial mr-1"></i> Doğrulama & Backtest Lab
           </button>
         </div>
       </div>
 
       <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs">
+        <div class="flex items-center gap-2 bg-emerald-950/60 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="headerUsername" class="text-white font-bold">Admin</span>
-          <span class="text-[9px] bg-orange-950 text-orange-400 border border-orange-800 px-1.5 py-0.5 rounded font-mono ml-1">MEGA VIP</span>
+          <span class="text-emerald-400 font-bold">BITGET AUTH ACTIVE</span>
+          <span class="text-[9px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded ml-1 border border-slate-700">READ-ONLY</span>
         </div>
         <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Çıkış Yap">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -55,40 +55,41 @@
     </div>
   </header>
 
-  <!-- ================= 1. CANLI ÖN SEZME RADARI ================= -->
+  <!-- ================= 1. GÖRÜNÜM: CANLI ÖN SEZME RADARI ================= -->
   <main id="view-live" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
+    <!-- METRİKLER -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Odak Pariteler</span>
-        <strong class="font-display text-2xl font-black text-white block mt-1">Meme & Altcoin</strong>
-        <span class="text-[10px] text-emerald-400 mt-1 block">Majörler (BTC/ETH vb.) Elendi</span>
+        <span class="text-slate-500 text-xs block">Bağlantı Türü</span>
+        <strong class="font-display text-2xl font-black text-white block mt-1">Bitget Signed API</strong>
+        <span class="text-[10px] text-emerald-400 mt-1 block">Yüksek Limit & Hızlı Yanıt</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Hedef Volatilite</span>
-        <strong class="font-display text-2xl font-black text-amber-400 block">%20 – %60+</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Sert Kırılım Beklenenler</span>
+        <span class="text-slate-500 text-xs block">Kapsam Dışı</span>
+        <strong class="font-display text-2xl font-black text-slate-400 block">Majörler Elendi</strong>
+        <span class="text-[10px] text-slate-500 mt-1 block">BTC, ETH, SOL hariç</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Ortalama Erken Sezme</span>
+        <span class="text-slate-500 text-xs block">Ön Sezme Pencerisi</span>
         <strong class="font-display text-2xl font-black text-sky-400 block">6 - 9 Dakika</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Patlama Öncesi Tespit</span>
+        <span class="text-[10px] text-slate-400 mt-1 block">Patlama Öncesi Sinyal</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Balina Sıkışma Filtresi</span>
-        <strong class="font-display text-2xl font-black text-emerald-400 block">Aktif</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Yatayda Hacim Toplama</span>
+        <span class="text-slate-500 text-xs block">Sıkışma Algoritması</span>
+        <strong class="font-display text-2xl font-black text-emerald-400 block">Devrede</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Yatay Bantta Hacim Artışı</span>
       </div>
     </div>
 
-    <!-- FLASH KARTLAR -->
+    <!-- FLASH RADAR KARTLARI -->
     <div class="bg-slate-900 border-2 border-orange-500/40 rounded-3xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
-          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">BÜYÜK AV RADARI &bull; PATLAMAMIŞ PARİTELER</span>
+          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">BÜYÜK AV &bull; PATLAMAMIŞ PARİTELER</span>
           <h2 class="font-display text-xl font-bold text-white flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping"></span>
-            Fiyatı Henüz Oynamamış, 5-10 Dk İçinde Patlayacak Altcoinler
+            Fiyatı Yatay Duran Ama 5-10 Dk İçinde Patlama Beklenen Coinler
           </h2>
         </div>
         <button onclick="scanLiveBitgetQuietAccumulation()" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-white font-mono text-xs px-3.5 py-2 rounded-xl transition cursor-pointer">
@@ -98,12 +99,12 @@
 
       <div id="liveQuietCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="col-span-3 text-center py-10 text-slate-500 font-mono text-xs">
-          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Tüm Bitget tahtası taranıyor...
+          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Bitget doğrulanmış API ile taranıyor...
         </div>
       </div>
     </div>
 
-    <!-- MİKROYAPI TABLOSU -->
+    <!-- TABLO -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
       <h3 class="font-display text-lg font-bold text-white">Sessiz Sıkışma Bölgesindeki Bitget Altcoinleri</h3>
       <div class="overflow-x-auto">
@@ -111,12 +112,12 @@
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Sembol</th>
-              <th class="py-3 px-4">Mevcut Fiyat</th>
-              <th class="py-3 px-4">24s Değişim (Durum)</th>
-              <th class="py-3 px-4">24s Hacim (USDT)</th>
-              <th class="py-3 px-4">Balina Hacim Katı</th>
+              <th class="py-3 px-4">Fiyat</th>
+              <th class="py-3 px-4">24s Değişim</th>
+              <th class="py-3 px-4">24s Hacim</th>
+              <th class="py-3 px-4">Hacim Sıkışma Katı</th>
               <th class="py-3 px-4">Güven Skoru</th>
-              <th class="py-3 px-4 text-right">Tahmini Patlama Yönü</th>
+              <th class="py-3 px-4 text-right">Durum</th>
             </tr>
           </thead>
           <tbody id="liveQuietTableBody" class="divide-y divide-slate-800 text-slate-300"></tbody>
@@ -126,24 +127,24 @@
 
   </main>
 
-  <!-- ================= 2. BÜYÜK AV DOĞRULAMA LAB (TÜM BİTGET) ================= -->
+  <!-- ================= 2. GÖRÜNÜM: DOĞRULAMA & BACKTEST LAB ================= -->
   <main id="view-backtest" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
-            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Altcoin & Meme Patlama Doğrulama Motoru
+            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Doğrulanmış Geçmiş Patlama Simülatörü
           </h2>
-          <span class="text-xs text-slate-400">Tüm Bitget tahtasını derinlemesine tarar; patlama fitili ateşlenmeden 6-9 dk önceki sinyalleri doğrular.</span>
+          <span class="text-xs text-slate-400">Tüm Bitget tahtasını imzalı API ile tarar; patlamadan 6-9 dakika önceki hacim fitilini doğrular.</span>
         </div>
 
         <button onclick="runBitgetHistoricalBacktest()" id="btn-run-historical" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer font-mono">
-          <i class="fa-solid fa-play"></i> Tüm Bitget Tahtasını Tara & Test Et
+          <i class="fa-solid fa-play"></i> Tüm Bitget Altcoinlerini Tara & Doğrula
         </button>
       </div>
 
-      <!-- SKORLAR -->
+      <!-- METRİKLER -->
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 font-mono">
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
           <span class="text-xs text-slate-400 block">Bulunan Sert Patlama</span>
@@ -158,7 +159,7 @@
         <div class="bg-slate-950 p-4 rounded-xl border border-sky-500/30">
           <span class="text-xs text-sky-400 block">Ortalama Erken Sezme</span>
           <strong id="bt-stat-lead" class="text-2xl font-black text-sky-400 block mt-1">0 Dk</strong>
-          <span class="text-[10px] text-slate-500">Patlamadan Önceki Süre</span>
+          <span class="text-[10px] text-slate-500">Fitil Öncesi Süre</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-orange-500/30">
           <span class="text-xs text-orange-400 block">Doğruluk İsabeti</span>
@@ -190,12 +191,45 @@
 
   </main>
 
+  <!-- BITGET AUTH & CORE SCRIPT -->
   <script>
+    // BİTGET API KİMLİK BİLGİLERİ (READ-ONLY)
+    const BITGET_CREDS = {
+      apiKey: "bg_f73437198f37d20e56939b82041041d0",
+      secretKey: "fe44b9c347eb5d9dd0e624876809102bb3ec8bab9481ad7bdb5ddf4d8d332ecd",
+      passphrase: "Ers4834754"
+    };
+
     const MAJORS_BLACKLIST = [
       "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", 
       "ADAUSDT", "DOGEUSDT", "TRXUSDT", "AVAXUSDT", "DOTUSDT", 
       "LINKUSDT", "LTCUSDT", "BCHUSDT", "NEARUSDT", "MATICUSDT"
     ];
+
+    // Bitget V2 İmzalı Header Üretici (HMAC-SHA256)
+    function getBitgetHeaders(method, requestPath, queryString = "", body = "") {
+      const timestamp = Date.now().toString();
+      const message = timestamp + method.toUpperCase() + requestPath + (queryString ? "?" + queryString : "") + body;
+      const signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(message, BITGET_CREDS.secretKey));
+
+      return {
+        "ACCESS-KEY": BITGET_CREDS.apiKey,
+        "ACCESS-SIGN": signature,
+        "ACCESS-TIMESTAMP": timestamp,
+        "ACCESS-PASSPHRASE": BITGET_CREDS.passphrase,
+        "Content-Type": "application/json"
+      };
+    }
+
+    // Yetkili Fetch Sarmalayıcı
+    async function bitgetAuthFetch(path, params = {}) {
+      const qs = new URLSearchParams(params).toString();
+      const url = `https://api.bitget.com${path}${qs ? '?' + qs : ''}`;
+      const headers = getBitgetHeaders("GET", path, qs);
+
+      const res = await fetch(url, { headers });
+      return await res.json();
+    }
 
     function switchTab(tab) {
       const vLive = document.getElementById('view-live');
@@ -224,10 +258,10 @@
     // ================= 1. CANLI ALTCOIN RADARI =================
     async function scanLiveBitgetQuietAccumulation() {
       try {
-        const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
-        const json = await res.json();
+        const json = await bitgetAuthFetch("/api/v2/mix/market/tickers", { productType: "USDT-FUTURES" });
         if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
+        // Uçmuşları (-%3.5 ile +%4.5 dışındakiler) ve majörleri ele
         const targetAltcoins = json.data.filter(t => {
           if (!t.symbol.endsWith("USDT")) return false;
           if (MAJORS_BLACKLIST.includes(t.symbol)) return false;
@@ -307,21 +341,18 @@
       }
     }
 
-    // ================= 2. TÜM BİTGET TAHTASINI TARAYAN BACKTEST =================
+    // ================= 2. TÜM BİTGET ALTCOİN BACKTESTİ =================
     async function runBitgetHistoricalBacktest() {
       const btn = document.getElementById('btn-run-historical');
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Bitget Tahtası Çekiliyor...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Yetkili API ile Tahta Çekiliyor...`;
       btn.disabled = true;
 
       try {
-        const tRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
-        const tJson = await tRes.json();
-        
+        const tJson = await bitgetAuthFetch("/api/v2/mix/market/tickers", { productType: "USDT-FUTURES" });
         if (tJson.code !== "00000" || !Array.isArray(tJson.data)) {
           throw new Error("Bitget verisi alınamadı.");
         }
 
-        // TÜM ALTCOİNLER: Majörler hariç tüm pariteleri al
         const allAltcoins = tJson.data.filter(t => {
           return t.symbol.endsWith("USDT") && !MAJORS_BLACKLIST.includes(t.symbol);
         });
@@ -331,13 +362,16 @@
 
         for (const cand of allAltcoins) {
           checkedCount++;
-          btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Taranıyor (${checkedCount}/${allAltcoins.length} Coin)...`;
+          btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Doğrulanıyor (${checkedCount}/${allAltcoins.length} Altcoin)...`;
           
           const sym = cand.symbol;
           try {
-            const kUrl = `https://api.bitget.com/api/v2/mix/market/candles?symbol=${sym}&granularity=1m&productType=USDT-FUTURES&limit=250`;
-            const kRes = await fetch(kUrl);
-            const kJson = await kRes.json();
+            const kJson = await bitgetAuthFetch("/api/v2/mix/market/candles", {
+              symbol: sym,
+              granularity: "1m",
+              productType: "USDT-FUTURES",
+              limit: "250"
+            });
 
             if (kJson.code !== "00000" || !Array.isArray(kJson.data)) continue;
 
@@ -359,7 +393,6 @@
               const pumpPercent = ((maxHigh - basePrice) / basePrice) * 100;
               const dumpPercent = ((basePrice - minLow) / basePrice) * 100;
 
-              // %10 ve üzeri gerçek patlamalar
               if (pumpPercent >= 10 || dumpPercent >= 10) {
                 const pastVols = candles.slice(i - 20, i).map(c => c.vol);
                 const meanVol = pastVols.reduce((a,b) => a+b, 0) / pastVols.length;
@@ -396,7 +429,7 @@
 
         const tbody = document.getElementById('bt-table-body');
         if (total === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Tüm Bitget tahtası tarandı; son saatlerde patlama yapan altcoin bulunamadı.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Tüm Bitget tahtası tarandı; son periyotta patlama yapan altcoin bulunamadı.</td></tr>`;
         } else {
           tbody.innerHTML = verifiedSignals.map(s => `
             <tr class="hover:bg-slate-950/60 transition">
@@ -422,7 +455,7 @@
       } catch (err) {
         alert("Backtest Hatası: " + err.message);
       } finally {
-        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget Tahtasını Tara & Test Et`;
+        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget Altcoinlerini Tara & Doğrula`;
         btn.disabled = false;
       }
     }
