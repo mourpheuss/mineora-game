@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Admin Algorithm & Backtest Lab</title>
+  <title>Mineora Radar | Admin Backtest & Algorithm Lab</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
@@ -19,21 +19,21 @@
   <!-- ADMIN HEADER -->
   <header class="max-w-7xl mx-auto flex flex-wrap justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 gap-4">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-lg">
+      <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-orange-600/30">
         <i class="fa-solid fa-flask-vial"></i>
       </div>
       <div>
         <h1 class="text-lg font-black text-white flex items-center gap-2">
           Mineora Algoritma & Backtest Laboratuvarı
-          <span class="text-xs bg-orange-950 text-orange-400 border border-orange-800 px-2 py-0.5 rounded font-mono">CORE V1</span>
+          <span class="text-xs bg-orange-950 text-orange-400 border border-orange-800 px-2 py-0.5 rounded font-mono">ROOT LAB</span>
         </h1>
         <p class="text-xs text-slate-400">Patlama/Çöküş Tespit Motoru Doğrulama ve Canlı Test Paneli</p>
       </div>
     </div>
 
     <div class="flex items-center gap-3">
-      <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition">
-        &larr; Canlı Radar Terminali
+      <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
+        <i class="fa-solid fa-radar"></i> Canlı Radar Terminali &rarr;
       </a>
     </div>
   </header>
@@ -47,27 +47,28 @@
           <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <i class="fa-solid fa-sliders text-orange-400"></i> Tarihsel Veri Simülasyonu
           </h2>
-          <span class="text-xs text-slate-400">Geçmiş 500 dakikalık 1m mumları tara, patlamadan 5-10 dk önce yakalanmış mı test et.</span>
+          <span class="text-xs text-slate-400">Geçmiş dakikalık mumları tara, patlamadan 5-10 dk önce yakalanmış mı test et.</span>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <select id="bt-symbol" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white outline-none focus:border-orange-500">
-            <option value="BTCUSDT">BTCUSDT (Bitcoin)</option>
-            <option value="ETHUSDT">ETHUSDT (Ethereum)</option>
+          <select id="bt-symbol" class="bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white outline-none focus:border-orange-500">
             <option value="SOLUSDT">SOLUSDT (Solana)</option>
             <option value="DOGEUSDT">DOGEUSDT (Dogecoin)</option>
+            <option value="BTCUSDT">BTCUSDT (Bitcoin)</option>
+            <option value="ETHUSDT">ETHUSDT (Ethereum)</option>
             <option value="SUIUSDT">SUIUSDT (Sui)</option>
             <option value="APTUSDT">APTUSDT (Aptos)</option>
             <option value="NEARUSDT">NEARUSDT (Near)</option>
+            <option value="AVAXUSDT">AVAXUSDT (Avalanche)</option>
           </select>
 
-          <select id="bt-limit" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white outline-none">
+          <select id="bt-limit" class="bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white outline-none">
             <option value="300">Son 300 Mum (5 Saat)</option>
             <option value="500">Son 500 Mum (~8.5 Saat)</option>
             <option value="1000">Son 1000 Mum (~16 Saat)</option>
           </select>
 
-          <button onclick="startAdminBacktest()" id="btn-run-bt" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2">
+          <button onclick="startAdminBacktest()" id="btn-run-bt" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer">
             <i class="fa-solid fa-play"></i> Backtest Başlat & Doğrula
           </button>
         </div>
@@ -126,7 +127,7 @@
           <tbody id="bt-table-body" class="divide-y divide-slate-800 text-slate-300">
             <tr>
               <td colspan="7" class="py-10 text-center text-slate-500 font-sans">
-                Yukarıdan parite seçip <strong>"Backtest Başlat"</strong> butonuna basın.
+                Yukarıdan parite seçip <strong>"Backtest Başlat & Doğrula"</strong> butonuna basın.
               </td>
             </tr>
           </tbody>
@@ -136,7 +137,6 @@
 
   </main>
 
-  <!-- MOTOR SCRIPTİ BAĞLANTISI -->
   <script src="radar-engine.js"></script>
   <script>
     async function startAdminBacktest() {
@@ -154,13 +154,11 @@
 
       if (!result) return alert("Veri çekilemedi!");
 
-      // Skorları güncelle
       document.getElementById('bt-stat-total').innerText = result.totalSignals;
       document.getElementById('bt-stat-success').innerText = result.successCount;
       document.getElementById('bt-stat-failed').innerText = result.failedCount;
       document.getElementById('bt-stat-winrate').innerText = `%${result.winRate}`;
 
-      // Tabloyu doldur
       const tbody = document.getElementById('bt-table-body');
       if (result.signals.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Bu zaman aralığında 75+ skorlu sert anomali bulunamadı.</td></tr>`;
