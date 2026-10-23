@@ -372,10 +372,37 @@
     }
    function handleAuthSubmit(e, type) {
   e.preventDefault();
-  const username = (document.getElementById(type === 'login' ? 'loginUser' : 'regUser')?.value || 'user').trim();
-  sessionStorage.setItem('mineora_active_session', username);
-  window.location.href = 'dashboard.html';
-} 
+  
+  if (type === 'login') {
+    const username = (document.getElementById('loginUser')?.value || '').trim();
+    const pass = (document.getElementById('loginPass')?.value || '').trim();
+
+    if (!username || !pass) {
+      alert("Please enter username and password.");
+      return;
+    }
+
+    // Aktif oturumu kaydet
+    sessionStorage.setItem('mineora_active_session', username);
+
+    // ROOT ADMIN KONTROLÜ (mourpheus veya admin)
+    const cleanUser = username.toLowerCase();
+    if (cleanUser === 'mourpheus' || cleanUser === 'admin') {
+      // Admin girişinde Firebase şifresi olarak da bu parolayı kullanabilmesi için sakla
+      sessionStorage.setItem('mineora_admin_direct_pass', pass);
+      window.location.href = 'admin.html';
+      return;
+    }
+
+    // Normal kullanıcı Staking Dashboard'a yönlendirilir
+    window.location.href = 'dashboard.html';
+  } else {
+    // Kayıt olan kullanıcı doğrudan Dashboard'a yönlendirilir
+    const regUser = (document.getElementById('regUser')?.value || '').trim();
+    sessionStorage.setItem('mineora_active_session', regUser);
+    window.location.href = 'dashboard.html';
+  }
+}
   </script>
 </body>
 </html>
