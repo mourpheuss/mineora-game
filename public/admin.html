@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Root Admin & Backtest Laboratory</title>
+  <title>Mineora Radar | Master Admin & Backtest Laboratory</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
@@ -21,14 +21,14 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-8">
 
-  <!-- ================= GİRİŞ GÜVENLİK DUVARI (GATEKEEPER) ================= -->
+  <!-- ================= ROOT GÜVENLİK DUVARI ================= -->
   <div id="admin-gate-modal" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-8 space-y-6 text-center shadow-2xl">
-      <div class="w-16 h-16 rounded-2xl bg-orange-600/10 border border-orange-500/20 text-orange-500 flex items-center justify-center text-2xl mx-auto shadow-inner">
+      <div class="w-16 h-16 rounded-2xl bg-orange-600/10 border border-orange-500/20 text-orange-500 flex items-center justify-center text-2xl mx-auto">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
       <div>
-        <h2 class="text-lg font-black text-white">Root Admin Doğrulaması</h2>
+        <h2 class="text-lg font-black text-white">Root Admin Girişi</h2>
         <p class="text-xs text-slate-400 mt-1">ersinulasduzyol@gmail.com hesabı için şifrenizi girin:</p>
       </div>
 
@@ -45,7 +45,7 @@
     </div>
   </div>
 
-  <!-- ================= ADMİN ANA ARAYÜZÜ (DOĞRULANMADAN GÖRÜNMEZ) ================= -->
+  <!-- ================= ADMİN ANA PANELİ ================= -->
   <div id="admin-main-interface" class="hidden max-w-7xl mx-auto space-y-6">
 
     <!-- HEADER -->
@@ -56,16 +56,16 @@
         </div>
         <div>
           <h1 class="text-lg font-black text-white flex items-center gap-2">
-            Mineora Radar &bull; Root Kontrol & Algoritma Lab
-            <span class="text-xs bg-orange-950 text-orange-400 border border-orange-800 px-2 py-0.5 rounded font-mono">ROOT LAB</span>
+            Mineora Radar &bull; Root Kontrol & Backtest Laboratuvarı
+            <span class="text-xs bg-orange-950 text-orange-400 border border-orange-800 px-2 py-0.5 rounded font-mono">ROOT ONLY</span>
           </h1>
-          <p class="text-xs text-slate-400">Patlama/Çöküş Tespit Motoru Doğrulama ve VIP Abone Yönetimi</p>
+          <p class="text-xs text-slate-400">Algoritmik Simülasyon Doğrulama & VIP Üye Yönetim Paneli</p>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
         <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
-          <i class="fa-solid fa-radar"></i> Canlı Terminal &rarr;
+          <i class="fa-solid fa-radar"></i> Kullanıcı Radarını Gör &rarr;
         </a>
         <button onclick="handleAdminLogout()" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-xs px-4 py-2.5 rounded-xl transition">
           Güvenli Çıkış
@@ -73,12 +73,12 @@
       </div>
     </header>
 
-    <!-- 1. BACKTEST LABORATUVARI -->
+    <!-- 1. BACKTEST LABORATUVARI (SADECE ADMİNE ÖZEL) -->
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <i class="fa-solid fa-sliders text-orange-400"></i> Tarihsel Veri Simülasyonu
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
+            <i class="fa-solid fa-sliders text-orange-400"></i> Tarihsel Veri Simülasyonu & Erken Sezme Testi
           </h2>
           <span class="text-xs text-slate-400">Geçmiş dakikalık mumları tara; algoritmanın patlamaları kaç dakika önce yakaladığını test et.</span>
         </div>
@@ -152,28 +152,30 @@
       </div>
     </div>
 
-    <!-- 2. KAYITLI TRADERLAR & VIP ABONELİK MASASI -->
+    <!-- 2. KAYITLI ÜYELER, VIP YÖNETİMİ & +30 GÜN UZATMA MASASI -->
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
         <div>
-          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Kayıtlı Traderlar & VIP Abonelik Durumları</h3>
-          <span class="text-xs text-slate-400">500$ USDT ödemesi yapan kullanıcıların VIP erişimini tek tıkla açıp kapatın</span>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+            <i class="fa-solid fa-users text-orange-400"></i> Kayıtlı Üyeler & VIP Abonelik Masası
+          </h3>
+          <span class="text-xs text-slate-400">Üye silme, VIP onaylama, süre uzatma (+30 gün) ve yetki iptali kontrolleri</span>
         </div>
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] font-mono">
+        <table class="w-full text-left text-xs font-mono">
+          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Kullanıcı Adı</th>
               <th class="py-3 px-4">E-posta</th>
-              <th class="py-3 px-4">Kayıt Tarihi</th>
               <th class="py-3 px-4">VIP Durumu</th>
-              <th class="py-3 px-4 text-right">İşlem</th>
+              <th class="py-3 px-4">Bitiş Tarihi</th>
+              <th class="py-3 px-4 text-right">Yönetici İşlemleri</th>
             </tr>
           </thead>
-          <tbody id="admin-user-list-body" class="divide-y divide-slate-800 text-slate-300 font-mono">
-            <tr><td colspan="5" class="py-6 text-center text-slate-500">Kullanıcılar yükleniyor...</td></tr>
+          <tbody id="admin-user-list-body" class="divide-y divide-slate-800 text-slate-300">
+            <tr><td colspan="5" class="py-6 text-center text-slate-500 font-sans">Kullanıcı listesi yükleniyor...</td></tr>
           </tbody>
         </table>
       </div>
@@ -183,7 +185,7 @@
 
   <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
 
-  <!-- SCRIPT MOTORU -->
+  <!-- FIREBASE VE MOTOR SCRIPTLERİ -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
@@ -207,7 +209,6 @@
       setTimeout(() => t.classList.add('hidden'), 3500);
     }
 
-    // GİRİŞ DOĞRULAMA
     async function handleAdminLogin(e) {
       e.preventDefault();
       const pass = document.getElementById('admin-pass-input').value.trim();
@@ -232,7 +233,7 @@
       window.location.href = 'index.html';
     }
 
-    // KULLANICI LİSTESİ VE VIP YÖNETİMİ
+    // ================= KULLANICI / VIP YÖNETİMİ =================
     function loadRegisteredUsers() {
       if (!fbDb) return;
       fbDb.ref('users').on('value', snap => {
@@ -242,27 +243,39 @@
 
         const keys = Object.keys(users);
         if (keys.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">Henüz kayıtlı kullanıcı yok.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-sans">Kayıtlı kullanıcı bulunamadı.</td></tr>`;
           return;
         }
 
         keys.forEach(k => {
           const u = users[k];
           const isVip = !!u.isVipActive;
-          const regDate = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('tr-TR') : '-';
+          const expireStr = u.vipExpireDate ? new Date(u.vipExpireDate).toLocaleDateString('tr-TR') : 'Süre Yok';
 
           const tr = document.createElement('tr');
           tr.className = "hover:bg-slate-900/60 transition";
           tr.innerHTML = `
             <td class="py-3 px-4 font-bold text-white">${u.username}</td>
             <td class="py-3 px-4 text-slate-400">${u.email || '-'}</td>
-            <td class="py-3 px-4 text-slate-500">${regDate}</td>
-            <td class="py-3 px-4 font-bold ${isVip ? 'text-emerald-400' : 'text-slate-500'}">
-              ${isVip ? '<span class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-[10px]">VIP AKTİF</span>' : '<span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px]">STANDART</span>'}
+            <td class="py-3 px-4">
+              ${isVip ? '<span class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-400 text-[10px] font-bold">VIP AKTİF</span>' : '<span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-500 text-[10px]">STANDART</span>'}
             </td>
-            <td class="py-3 px-4 text-right">
-              <button onclick="toggleUserVip('${u.username}', ${isVip})" class="px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition ${isVip ? 'bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}">
-                ${isVip ? 'VIP İptal Et' : 'VIP Onayla ($500)'}
+            <td class="py-3 px-4 ${isVip ? 'text-amber-400 font-bold' : 'text-slate-500'}">${expireStr}</td>
+            <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+              ${isVip ? `
+                <button onclick="extendUserVip('${u.username}', 30)" class="px-2.5 py-1 rounded-lg bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white text-[11px] font-bold transition">
+                  <i class="fa-solid fa-calendar-plus mr-1"></i> +30 Gün Uzat
+                </button>
+                <button onclick="setUserVipStatus('${u.username}', false)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition">
+                  İptal Et
+                </button>
+              ` : `
+                <button onclick="setUserVipStatus('${u.username}', true)" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition">
+                  VIP Onayla ($500)
+                </button>
+              `}
+              <button onclick="deleteUserPermanently('${u.username}')" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white text-[11px] font-bold transition">
+                Sil
               </button>
             </td>
           `;
@@ -271,14 +284,44 @@
       });
     }
 
-    function toggleUserVip(username, currentStatus) {
+    function setUserVipStatus(username, status) {
       if (!fbDb) return;
-      fbDb.ref(`users/${username.toLowerCase()}/isVipActive`).set(!currentStatus).then(() => {
+      const expire = status ? new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString() : null;
+      fbDb.ref(`users/${username.toLowerCase()}`).update({
+        isVipActive: status,
+        vipExpireDate: expire
+      }).then(() => {
         showToast(`💾 ${username} VIP durumu güncellendi!`);
       });
     }
 
-    // ================= ENTEGRE BACKTEST MOTORU =================
+    function extendUserVip(username, days) {
+      if (!fbDb) return;
+      const uKey = username.toLowerCase();
+      fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+        const u = snap.val();
+        if (!u) return;
+        const currentExp = u.vipExpireDate ? new Date(u.vipExpireDate).getTime() : Date.now();
+        const newExp = new Date(Math.max(Date.now(), currentExp) + (days * 24 * 60 * 60 * 1000)).toISOString();
+        
+        fbDb.ref(`users/${uKey}`).update({
+          isVipActive: true,
+          vipExpireDate: newExp
+        }).then(() => {
+          showToast(`⏳ ${username} süresi +${days} gün uzatıldı!`);
+        });
+      });
+    }
+
+    function deleteUserPermanently(username) {
+      if (!confirm(`'${username}' kullanıcısını kalıcı olarak silmek istiyor musunuz?`)) return;
+      if (!fbDb) return;
+      fbDb.ref(`users/${username.toLowerCase()}`).remove().then(() => {
+        showToast(`🗑️ ${username} silindi.`);
+      });
+    }
+
+    // ================= BACKTEST SİMÜLATÖRÜ =================
     async function runBacktestEngine() {
       const sym = document.getElementById('bt-symbol').value;
       const limit = parseInt(document.getElementById('bt-limit').value);
@@ -367,7 +410,7 @@
 
         const tbody = document.getElementById('bt-table-body');
         if (total === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Bu pencerede 70+ anomali tespit edilmedi.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Bu periyotta 70+ anomali tespit edilmedi.</td></tr>`;
         } else {
           tbody.innerHTML = signals.map(s => `
             <tr class="hover:bg-slate-950/60 transition">
