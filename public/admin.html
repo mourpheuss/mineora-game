@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MINA Protocol | Master Admin Operations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-4 sm:p-8">
+
+  <!-- ADMIN HEADER -->
+  <header class="max-w-7xl mx-auto flex flex-wrap justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-black text-lg">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-white flex items-center gap-2">
+          MINA Protocol &bull; Root Admin Terminal
+          <span class="text-xs bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono">ROOT</span>
+        </h1>
+        <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Bakiye Müdahalesi ve Protokol Kasası</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition">
+        &larr; Staking Dashboard
+      </a>
+      <button onclick="handleAdminLogout()" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-xs px-4 py-2.5 rounded-xl transition">
+        Çıkış
+      </button>
+    </div>
+  </header>
+
+  <!-- FIREBASE AUTH GİRİŞ KUTUSU (Giriş yapılmamışsa açılır) -->
+  <div id="admin-auth-box" class="max-w-7xl mx-auto mb-6 bg-slate-900 border-2 border-amber-500/50 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></div>
+      <div>
+        <strong class="text-sm text-amber-300 block">Firebase Root Admin Girişi</strong>
+        <span class="text-xs text-slate-400">ersinulasduzyol@gmail.com hesabı için şifrenizi girerek onay masalarını canlıya bağlayın:</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <input type="password" id="admin-auth-pass" placeholder="Firebase Şifresi" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-400" />
+      <button onclick="loginAdminFirebase()" class="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-4 py-2 rounded-xl transition">
+        Yetkilendir
+      </button>
+    </div>
+  </div>
+
+  <main class="max-w-7xl mx-auto space-y-6">
+
+    <!-- BEKLEYEN YATIRMA VE ÇEKİM KUYRUKLARI -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- BEKLEYEN YATIRMALAR (DEPOSIT QUEUE) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h2 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Bekleyen Yatırma Bildirimleri (TxID)</h2>
+          </div>
+          <span id="deposit-count" class="text-xs font-mono text-slate-400">0 Bekleyen</span>
+        </div>
+        <div id="admin-deposit-queue-list" class="space-y-3 min-h-[160px]">
+          <div class="text-center py-10 text-slate-500 text-xs">Yükleniyor...</div>
+        </div>
+      </div>
+
+      <!-- BEKLEYEN ÇEKİMLER (WITHDRAWAL QUEUE) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Bekleyen MINA Çekim Talepleri</h2>
+          </div>
+          <span id="withdraw-count" class="text-xs font-mono text-slate-400">0 Bekleyen</span>
+        </div>
+        <div id="admin-withdrawal-queue-list" class="space-y-3 min-h-[160px]">
+          <div class="text-center py-10 text-slate-500 text-xs">Yükleniyor...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- KULLANICI LİSTESİ & BAKİYE DÜZENLEME -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h2 class="text-sm font-bold text-white uppercase tracking-wider">Kayıtlı Staker & Kullanıcı Listesi</h2>
+        <span class="text-xs text-slate-400">Manuel MINA yükleme ve yetki kontrolü</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+            <tr>
+              <th class="py-3 px-4">Kullanıcı</th>
+              <th class="py-3 px-4">Sponsor</th>
+              <th class="py-3 px-4">MINA Bakiyesi</th>
+              <th class="py-3 px-4">Kilitli Pozisyonlar</th>
+              <th class="py-3 px-4 text-right">Müdahale</th>
+            </tr>
+          </thead>
+          <tbody id="admin-user-table-body" class="divide-y divide-slate-800 text-slate-300">
+            <tr><td colspan="5" class="py-8 text-center text-slate-500">Kullanıcı verisi taranıyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BAKİYE DÜZENLEME MODAL -->
+  <div id="modal-mod-user" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-sm font-bold text-white">MINA Bakiyesi Düzenle</h3>
+        <button onclick="document.getElementById('modal-mod-user').classList.add('hidden')" class="text-slate-400 text-xs">✕</button>
+      </div>
+      <div>
+        <span class="text-xs text-slate-400 block mb-1">Kullanıcı: <strong id="mod-user-target" class="text-white"></strong></span>
+        <input type="number" id="mod-user-mina-input" step="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-orange-400 font-bold outline-none" />
+      </div>
+      <button onclick="saveUserMinaModification()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-2.5 rounded-xl transition">
+        Kaydet & Eşitle
+      </button>
+    </div>
+  </div>
+
+  <!-- BİLDİRİM TOAST -->
+  <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
+
+  <script src="state.js"></script>
+  <script>
+    let activeModUser = null;
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 3500);
+    }
+
+    async function loginAdminFirebase() {
+      const pass = document.getElementById('admin-auth-pass').value.trim();
+      if (!pass) return alert("Lütfen Firebase şifrenizi girin.");
+      try {
+        await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", pass);
+        document.getElementById('admin-auth-box').classList.add('hidden');
+        showToast("✅ Firebase Admin Yetkisi Onaylandı!");
+        bindFirebaseQueues();
+      } catch (e) {
+        alert("Giriş Hatası: " + e.message);
+      }
+    }
+
+    function bindFirebaseQueues() {
+      if (!fbDb) return;
+
+      // 1. Yatırma Kuyruğu
+      fbDb.ref('depositQueue').on('value', snap => {
+        const data = snap.val();
+        const container = document.getElementById('admin-deposit-queue-list');
+        const countEl = document.getElementById('deposit-count');
+        container.innerHTML = "";
+
+        const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
+        if (countEl) countEl.innerText = `${items.length} Bekleyen`;
+
+        if (!items.length) {
+          container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Bekleyen yatırma bildirimi yok.</div>`;
+          return;
+        }
+
+        items.forEach(d => {
+          const card = document.createElement('div');
+          card.className = "p-3.5 rounded-xl bg-slate-950 border border-emerald-500/40 flex items-center justify-between text-xs";
+          card.innerHTML = `
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <strong class="text-white">${d.username}</strong>
+                <span class="text-emerald-400 font-mono font-bold">+${d.amount} ${d.asset || 'MINA'}</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono block break-all">TxHash: ${d.txHash || d.txid}</span>
+              <span class="text-[9px] text-slate-500">${d.date}</span>
+            </div>
+            <div class="flex gap-2 ml-2">
+              <button onclick="approveDepositOrder('${d.id}', '${d.username}', ${d.amount}, '${d.asset || 'MINA'}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">Onayla</button>
+              <button onclick="rejectDepositOrder('${d.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 text-xs transition">Reddet</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      });
+
+      // 2. Çekim Kuyruğu
+      fbDb.ref('withdrawalQueue').on('value', snap => {
+        const data = snap.val();
+        const container = document.getElementById('admin-withdrawal-queue-list');
+        const countEl = document.getElementById('withdraw-count');
+        container.innerHTML = "";
+
+        const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
+        if (countEl) countEl.innerText = `${items.length} Bekleyen`;
+
+        if (!items.length) {
+          container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Bekleyen MINA çekim talebi yok.</div>`;
+          return;
+        }
+
+        items.forEach(d => {
+          const card = document.createElement('div');
+          card.className = "p-3.5 rounded-xl bg-slate-950 border border-amber-500/40 flex flex-col gap-2 text-xs";
+          card.innerHTML = `
+            <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+              <strong class="text-white">${d.username}</strong>
+              <span class="text-amber-400 font-mono font-bold">-${d.amount} MINA</span>
+            </div>
+            <div class="font-mono text-[11px] text-slate-400 break-all select-all">
+              Alıcı Adres: <span class="text-cyan-300">${d.targetAddress}</span>
+            </div>
+            <div class="flex justify-end gap-2 pt-1">
+              <button onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs">Gönderildi (Kapat)</button>
+              <button onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-2.5 py-1.5 rounded-lg bg-rose-950 text-rose-300 text-xs">İade Et</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      });
+
+      // 3. Kullanıcı Tablosu
+      fbDb.ref('users').on('value', snap => {
+        const users = snap.val() || {};
+        const tbody = document.getElementById('admin-user-table-body');
+        tbody.innerHTML = "";
+
+        Object.keys(users).forEach(k => {
+          const u = users[k];
+          const stakesCount = (u.stakes || []).length;
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-950/60 transition";
+          tr.innerHTML = `
+            <td class="py-3 px-4 font-bold text-white">${u.username}</td>
+            <td class="py-3 px-4 font-mono text-slate-400">${u.referredBy || '-'}</td>
+            <td class="py-3 px-4 font-mono text-orange-400 font-bold">${Number(u.mina || u.ora || 0).toFixed(2)} MINA</td>
+            <td class="py-3 px-4 font-mono text-cyan-300">${stakesCount} Havuz</td>
+            <td class="py-3 px-4 text-right">
+              <button onclick="openModUserModal('${u.username}', ${Number(u.mina || u.ora || 0)})" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold">Düzenle</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+    }
+
+    function approveDepositOrder(depId, username, amount, asset) {
+      const uKey = username.toLowerCase();
+      fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+        const u = snap.val();
+        if (u) {
+          u.mina = Number(((u.mina || 0) + amount).toFixed(2));
+          fbDb.ref(`users/${uKey}`).set(u);
+          fbDb.ref(`depositQueue/${depId}`).remove();
+          showToast(`✅ ${username} hesabına ${amount} ${asset} aktarıldı!`);
+        }
+      });
+    }
+
+    function rejectDepositOrder(depId) {
+      fbDb.ref(`depositQueue/${depId}`).remove();
+      showToast("Bildirim reddedildi.");
+    }
+
+    function approveWithdrawalOrder(withId, username, amount) {
+      fbDb.ref(`withdrawalQueue/${withId}`).remove();
+      showToast(`✅ ${username} çekimi tamamlandı.`);
+    }
+
+    function rejectWithdrawalOrder(withId, username, amount) {
+      const uKey = username.toLowerCase();
+      fbDb.ref(`users/${uKey}`).once('value').then(snap => {
+        const u = snap.val();
+        if (u) {
+          u.mina = Number(((u.mina || 0) + amount).toFixed(2));
+          fbDb.ref(`users/${uKey}`).set(u);
+          fbDb.ref(`withdrawalQueue/${withId}`).remove();
+          showToast(`↩️ Çekim reddedildi, ${amount} MINA iade edildi.`);
+        }
+      });
+    }
+
+    function openModUserModal(username, curMina) {
+      activeModUser = username;
+      document.getElementById('mod-user-target').innerText = username;
+      document.getElementById('mod-user-mina-input').value = curMina;
+      document.getElementById('modal-mod-user').classList.remove('hidden');
+    }
+
+    function saveUserMinaModification() {
+      if (!activeModUser) return;
+      const val = parseFloat(document.getElementById('mod-user-mina-input').value) || 0;
+      const uKey = activeModUser.toLowerCase();
+      fbDb.ref(`users/${uKey}/mina`).set(val).then(() => {
+        document.getElementById('modal-mod-user').classList.add('hidden');
+        showToast(`💾 ${activeModUser} bakiyesi ${val} MINA olarak güncellendi!`);
+      });
+    }
+
+    function handleAdminLogout() {
+      sessionStorage.removeItem('mineora_active_session');
+      window.location.href = 'index.html';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().onAuthStateChanged(user => {
+          if (user) {
+            document.getElementById('admin-auth-box')?.classList.add('hidden');
+            bindFirebaseQueues();
+          }
+        });
+      }
+      setTimeout(bindFirebaseQueues, 500);
+    });
+  </script>
+</body>
+</html>
