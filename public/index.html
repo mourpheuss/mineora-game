@@ -3,305 +3,266 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MINA Protocol | Proof of Everything</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <title>Mineora Radar | Pre-Pump & Dump Intelligence Terminal</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-orange-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col justify-between selection:bg-orange-500 selection:text-white">
 
-  <!-- TOP BANNER -->
-  <div class="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white text-center py-2 px-4 text-xs font-semibold flex items-center justify-center gap-2 shadow-sm">
-    <span>⚡ Staking Protocol V2 is now active on Mainnet.</span>
-    <button onclick="handlePortalClick()" class="underline hover:text-slate-100 font-bold cursor-pointer">
-      Explore Pools & Yields &rarr;
-    </button>
+  <!-- TOP STATUS BANNER -->
+  <div class="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 text-white text-center py-2 px-4 text-xs font-semibold flex items-center justify-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+    <span>Canlı Balina Radarı Aktif: Bitget & Binance Vadeli Piyasaları 7/24 Taranıyor.</span>
   </div>
 
   <!-- NAVIGATION -->
-  <nav class="bg-slate-100/90 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/80">
-    <div class="max-w-7xl mx-auto w-full px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <a href="index.html" class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white font-bold text-base shadow-sm">
-            M
-          </div>
-          <span class="font-display font-black text-xl tracking-tight text-slate-900">MINA</span>
-        </a>
-        <span class="text-xs bg-white text-slate-600 px-2.5 py-1 rounded-md border border-slate-200 font-semibold shadow-sm ml-2 hidden sm:inline-block">
-          Staking Portal
-        </span>
+  <nav class="max-w-7xl mx-auto w-full px-6 py-5 flex items-center justify-between border-b border-slate-900">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-600/30">
+        <i class="fa-solid fa-radar text-base"></i>
       </div>
+      <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">RADAR</span></span>
+    </div>
 
-      <!-- ÇALIŞAN MENÜ LİNKLERİ -->
-      <div class="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-600">
-        <a href="#about" class="hover:text-orange-600 transition">About</a>
-        <a href="#whitepaper" class="hover:text-orange-600 transition">Whitepaper</a>
-        <button onclick="handlePortalClick()" class="hover:text-orange-600 transition font-semibold cursor-pointer">Staking Portal</button>
-        <a href="#roadmap" class="hover:text-orange-600 transition">Roadmap</a>
-        <a href="#tokenomics" class="hover:text-orange-600 transition">Tokenomics</a>
-      </div>
+    <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-300">
+      <a href="#nasil-calisir" class="hover:text-orange-400 transition">Nasıl Çalışır?</a>
+      <a href="#ozellikler" class="hover:text-orange-400 transition">Mikroyapı Metrikleri</a>
+      <a href="#fiyatlandirma" class="hover:text-orange-400 transition">Abonelik & Fiyat</a>
+      <button onclick="handleDashboardGo()" class="hover:text-orange-400 transition">Canlı Terminal</button>
+    </div>
 
-      <div class="flex items-center gap-3">
-        <button onclick="openModal('modal-login')" class="text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition">
-          Sign In
-        </button>
-        <button onclick="openModal('modal-register')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
-          Sign Up
-        </button>
-        <button onclick="handlePortalClick()" class="hidden sm:inline-flex bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
-          Launch Staking &rarr;
-        </button>
-      </div>
+    <div class="flex items-center gap-3">
+      <button onclick="openModal('modal-login')" class="text-xs font-bold text-slate-300 hover:text-white px-3 py-2 transition">
+        Giriş Yap
+      </button>
+      <button onclick="openModal('modal-register')" class="bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-lg shadow-orange-600/30">
+        Kayıt Ol & Başla
+      </button>
     </div>
   </nav>
 
   <!-- HERO SECTION -->
-  <main class="max-w-5xl mx-auto px-6 py-12 sm:py-20 text-center space-y-6 flex-1 flex flex-col justify-center">
-    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600 font-medium mx-auto shadow-sm">
-      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-      Listed on Bitget Global &bull; Zero-Knowledge Consensus
+  <main class="max-w-6xl mx-auto px-6 py-16 sm:py-24 text-center space-y-8 flex-1 flex flex-col justify-center">
+    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-orange-400 font-mono font-bold mx-auto">
+      <i class="fa-solid fa-bolt text-amber-400"></i> Erken Sezme Algoritması: 5 - 10 Dakika Önceden Tespit
     </div>
 
-    <h1 class="font-display text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-tight">
-      Proof of Everything.
+    <h1 class="font-display text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight max-w-4xl mx-auto leading-tight">
+      Mumlar Patlamadan Önce,<br />
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500">
+        Balinanın Ayak İzini Yakala.
+      </span>
     </h1>
 
-    <p class="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-      The lightweight blockchain that preserves privacy, powers verifiable internet applications, and provides high-yield consensus staking through recursive zero-knowledge proofs.
+    <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+      Açık Pozisyon (OI) sıçramaları, Kümülatif Hacim Deltası (CVD) ve gizli emir defteri baskılarını milisaniyelik analiz ediyoruz. Ani Pump ve Dump hareketlerini tahtada fitil ateşlenmeden önce ekranınıza getiriyoruz.
     </p>
 
-    <div class="flex flex-wrap justify-center items-center gap-3 pt-3">
-      <button onclick="openModal('modal-register')" class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm px-6 py-3.5 rounded-xl shadow-md transition">
-        Create Account & Stake &rarr;
+    <div class="flex flex-wrap justify-center items-center gap-4 pt-4">
+      <button onclick="openModal('modal-register')" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-black text-sm px-8 py-4 rounded-2xl shadow-xl transition flex items-center gap-2">
+        Hemen Abone Ol & Terminali Aç &rarr;
       </button>
-      <button onclick="openModal('modal-login')" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm px-6 py-3.5 rounded-xl shadow-sm transition">
-        Staker Login
-      </button>
+      <a href="#fiyatlandirma" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white font-bold text-sm px-7 py-4 rounded-2xl transition">
+        Paketleri İncele
+      </a>
     </div>
 
-    <!-- STATS STRIP -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto pt-10 text-left">
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <span class="text-xs text-slate-500 font-semibold block">Blockchain Size</span>
-        <strong class="font-display text-xl sm:text-2xl font-black text-slate-900 block mt-1">22 KB</strong>
-        <span class="text-[10px] text-emerald-600 font-bold mt-1 block">Constant Zero Proof</span>
+    <!-- METRICS STRIP -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-10 text-left font-mono">
+      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+        <span class="text-slate-500 text-xs block">Taranan Parite</span>
+        <strong class="font-display text-2xl font-bold text-white block mt-1">248+ Çift</strong>
+        <span class="text-[10px] text-emerald-400">USDT-Perpetual</span>
       </div>
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <span class="text-xs text-slate-500 font-semibold block">Total Value Locked</span>
-        <strong class="font-display text-xl sm:text-2xl font-black text-slate-900 block mt-1">$48.2M+</strong>
-        <span class="text-[10px] text-slate-500 mt-1 block">Cumulative Staking</span>
+      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+        <span class="text-slate-500 text-xs block">Erken Uyarı Süresi</span>
+        <strong class="font-display text-2xl font-bold text-orange-400 block mt-1">5 - 10 Dk</strong>
+        <span class="text-[10px] text-slate-400">Patlama Öncesi</span>
       </div>
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <span class="text-xs text-slate-500 font-semibold block">Max Target APY</span>
-        <strong class="font-display text-xl sm:text-2xl font-black text-orange-500 block mt-1">Up to %180</strong>
-        <span class="text-[10px] text-slate-500 mt-1 block">Fixed Locked Pools</span>
+      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+        <span class="text-slate-500 text-xs block">Algoritmik Filtre</span>
+        <strong class="font-display text-2xl font-bold text-sky-400 block mt-1">Z-Score 3.0+</strong>
+        <span class="text-[10px] text-slate-400">Sıfır Sahte Sinyal</span>
       </div>
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <span class="text-xs text-slate-500 font-semibold block">Bitget Status</span>
-        <strong class="font-display text-xl sm:text-2xl font-black text-slate-900 block mt-1">Live Trading</strong>
-        <span class="text-[10px] text-emerald-600 font-bold mt-1 block">USDT Spot & Futures</span>
+      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+        <span class="text-slate-500 text-xs block">Doğruluk Oranı</span>
+        <strong class="font-display text-2xl font-bold text-emerald-400 block mt-1">%83.7</strong>
+        <span class="text-[10px] text-slate-400">Geçmiş Test Doğrulaması</span>
       </div>
     </div>
   </main>
 
-  <!-- ================= ABOUT BÖLÜMÜ ================= -->
-  <section id="about" class="max-w-5xl mx-auto px-6 py-16 border-t border-slate-200 space-y-6">
-    <div class="text-center max-w-2xl mx-auto">
-      <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-1">Architecture</span>
-      <h2 class="font-display text-3xl font-bold text-slate-900">Why Mina Protocol?</h2>
-      <p class="text-slate-500 text-xs sm:text-sm mt-2">
-        Mina, geleneksel blokzincirlerin yüzlerce gigabaytlık veri yükünü yalnızca 22 KB boyutundaki zk-SNARK kanıtlarıyla sıfırlar.
-      </p>
+  <!-- NASIL ÇALIŞIR BÖLÜMÜ -->
+  <section id="nasil-calisir" class="max-w-6xl mx-auto px-6 py-20 border-t border-slate-900 space-y-12">
+    <div class="text-center max-w-2xl mx-auto space-y-2">
+      <span class="text-xs font-bold text-orange-500 uppercase tracking-widest font-mono">PİYASA MİKROYAPISI</span>
+      <h2 class="font-display text-3xl font-black text-white">Nasıl 10 Dakika Önceden Seziyoruz?</h2>
+      <p class="text-slate-400 text-xs sm:text-sm">Klasik RSI veya indikatörler fiyat oluştuktan sonra gelir. Biz doğrudan balinanın tahtaya soktuğu sermayeyi izliyoruz.</p>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 text-left">
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-        <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-          <i class="fa-solid fa-feather"></i>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+      <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-orange-600/20 text-orange-400 flex items-center justify-center font-bold text-base">
+          1
         </div>
-        <strong class="text-slate-900 text-base font-bold block">22 KB Sabit Boyut</strong>
-        <p class="text-xs text-slate-500 leading-relaxed">Ağ ne kadar büyürse büyüsün blokzincir boyutu her zaman bir tweet boyutunda kalır.</p>
+        <h3 class="text-base font-bold text-white">Sessiz Açık Pozisyon (OI) Girişi</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Fiyat henüz kıpırdamazken vadeli tarafta milyonlarca dolarlık kaldıraçlı pozisyon açılır. OI grafiğindeki dikey sıçramayı anında tespit ederiz.
+        </p>
       </div>
 
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-          <i class="fa-solid fa-user-shield"></i>
+      <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-sky-600/20 text-sky-400 flex items-center justify-center font-bold text-base">
+          2
         </div>
-        <strong class="text-slate-900 text-base font-bold block">Gerçek Gizlilik</strong>
-        <p class="text-xs text-slate-500 leading-relaxed">Sıfır bilgi ispatları (Zero-Knowledge) sayesinde verilerinizi ifşa etmeden transferler onaylanır.</p>
+        <h3 class="text-base font-bold text-white">Kümülatif Hacim Deltası (CVD)</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Piyasa alıcılarının limit satıcıları süpürdüğü ama fiyatın iceberg emirlerle tutulduğu gizli akümülasyon anını yakalarız.
+        </p>
       </div>
 
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-        <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
-          <i class="fa-solid fa-bolt"></i>
+      <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold text-base">
+          3
         </div>
-        <strong class="text-slate-900 text-base font-bold block">Katman-1 Getirisi</strong>
-        <p class="text-xs text-slate-500 leading-relaxed">Doğrulayıcı düğümlere kilitlenen MINA varlıkları saniyelik getiri üretir.</p>
+        <h3 class="text-base font-bold text-white">Volatilite Sıkışması ve Tetikleme</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Bollinger bantlarının son saatlerin en dar seviyesine ulaştığı ve yayın gerildiği anda sistem 0-100 arası Güven Skoru üreterek alarm çalar.
+        </p>
       </div>
     </div>
   </section>
 
-  <!-- ================= WHITEPAPER & TOKENOMICS BÖLÜMÜ ================= -->
-  <section id="whitepaper" class="max-w-5xl mx-auto px-6 py-16 border-t border-slate-200">
-    <div id="tokenomics" class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm space-y-8">
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-6">
+  <!-- FİYATLANDIRMA / ABONELİK BÖLÜMÜ -->
+  <section id="fiyatlandirma" class="max-w-4xl mx-auto px-6 py-20 border-t border-slate-900 space-y-12">
+    <div class="text-center max-w-2xl mx-auto space-y-2">
+      <span class="text-xs font-bold text-orange-500 uppercase tracking-widest font-mono">VIP ABONELİK PLANI</span>
+      <h2 class="font-display text-3xl font-black text-white">Profesyonel İstihbarat Terminali</h2>
+      <p class="text-slate-400 text-xs sm:text-sm">Tek bir doğru işlemde veya önlenen tek bir likidasyonda maliyetini katlayan profesyonel veri akışı.</p>
+    </div>
+
+    <!-- 500$ USDT VIP KARTI -->
+    <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-orange-500 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden">
+      <div class="absolute -right-12 -top-12 w-48 h-48 bg-orange-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-wrap justify-between items-start gap-4 border-b border-slate-800 pb-6">
         <div>
-          <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-1">Technical Overview</span>
-          <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900">Whitepaper & Staking Tokenomics</h2>
+          <span class="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-[11px] font-mono font-bold border border-orange-500/30">VIP ACCESS</span>
+          <h3 class="font-display text-2xl font-black text-white mt-2">Aylık Tam Erişim</h3>
+          <p class="text-xs text-slate-400 mt-1">Tüm pariteler için gerçek zamanlı radar ve Telegram anlık alarmları.</p>
         </div>
-        <a href="https://minaprotocol.com/wp-content/uploads/EconomicsWhitepaper.pdf" target="_blank" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2">
-          <i class="fa-solid fa-file-pdf"></i> Official Mina Whitepaper (PDF)
-        </a>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
-        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-          <span class="text-xs text-slate-500 block">30 Günlük Alpha Havuzu</span>
-          <strong class="text-xl font-bold text-slate-900 block my-1">%1.5 Günlük</strong>
-          <span class="text-[11px] text-emerald-600 font-bold block">+%45.0 Toplam Kâr</span>
-        </div>
-        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-          <span class="text-xs text-slate-500 block">60 Günlük ZK Havuzu</span>
-          <strong class="text-xl font-bold text-slate-900 block my-1">%1.8 Günlük</strong>
-          <span class="text-[11px] text-emerald-600 font-bold block">+%108.0 Toplam Kâr</span>
-        </div>
-        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-          <span class="text-xs text-slate-500 block">90 Günlük VIP Havuzu</span>
-          <strong class="text-xl font-bold text-slate-900 block my-1">%2.0 Günlük</strong>
-          <span class="text-[11px] text-emerald-600 font-bold block">+%180.0 Toplam Kâr</span>
+        <div class="text-right">
+          <strong class="font-display text-4xl font-black text-white">$500</strong>
+          <span class="text-xs text-slate-400 font-mono block">/ Aylık (USDT TRC20/BEP20)</span>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- ================= ROADMAP BÖLÜMÜ ================= -->
-  <section id="roadmap" class="max-w-5xl mx-auto px-6 py-16 border-t border-slate-200 space-y-6">
-    <div class="text-center max-w-2xl mx-auto">
-      <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-1">Milestones</span>
-      <h2 class="font-display text-3xl font-bold text-slate-900">Protocol Roadmap 2026</h2>
-      <p class="text-slate-500 text-xs sm:text-sm mt-2">Mina Staking altyapısının geliştirme ve genişleme yol haritası.</p>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 text-left">
-      <div class="bg-white p-6 rounded-2xl border-2 border-emerald-500/50 shadow-sm space-y-2">
-        <span class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Q1 2026 (Tamamlandı)</span>
-        <strong class="text-slate-900 text-base font-bold block">Katman-1 Bitget Entegrasyonu</strong>
-        <p class="text-xs text-slate-500 leading-relaxed">Native MINA depozit kasası ve 4 kademeli referans komisyon motoru devreye alındı.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6 text-xs text-slate-300">
+        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> 248+ Vadeli Çift 7/24 Kesintisiz Tarama</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> 5-10 Dk Öncesinden Pump/Dump Alarmları</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Canlı Açık Pozisyon (OI) Zıplama Radarı</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Hacim Z-Score Anomali Göstergesi</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> VIP Özel Telegram Bildirim Kanalı</div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Webhook & API Entegrasyon Desteği</div>
       </div>
 
-      <div class="bg-white p-6 rounded-2xl border-2 border-orange-500/50 shadow-sm space-y-2">
-        <span class="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Q2 2026 (Canlıda)</span>
-        <strong class="text-slate-900 text-base font-bold block">Saniyelik Bileşik Kâr Sayacı</strong>
-        <p class="text-xs text-slate-500 leading-relaxed">Stake havuzlarında saniyelik kâr birikimi ve anında çekim talep altyapısı.</p>
-      </div>
-
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-        <span class="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">Q3 2026 (Planlanan)</span>
-        <strong class="text-slate-900 text-base font-bold block">Auro Wallet Doğrudan Bağlantı</strong>
-        <p class="text-xs text-slate-500 leading-relaxed">Tarayıcı cüzdanlarıyla tek tıkla doğrudan Web3 imzalama ve otomatik doğrulama.</p>
-      </div>
+      <button onclick="openModal('modal-register')" class="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-black text-sm py-4 rounded-xl shadow-lg transition">
+        Hemen Kaydol & Abone Ol &rarr;
+      </button>
     </div>
   </section>
 
   <!-- FOOTER -->
-  <footer class="border-t border-slate-200 py-8 text-center text-xs text-slate-500 bg-white">
-    &copy; 2026 MINA Protocol. Native Layer-1 Zero-Knowledge Staking Platform.
+  <footer class="border-t border-slate-900 py-8 text-center text-xs text-slate-500">
+    &copy; 2026 Mineora Radar SaaS. Yüksek Frekanslı Kripto Piyasa Mikroyapı İstihbarat Terminali.
   </footer>
 
-  <!-- ================= SIGN IN MODAL ================= -->
-  <div id="modal-login" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-200 relative">
-      <button onclick="closeModal('modal-login')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
+  <!-- ================= GİRİŞ YAP MODAL ================= -->
+  <div id="modal-login" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+      <button onclick="closeModal('modal-login')" class="absolute top-5 right-5 text-slate-400 hover:text-white">✕</button>
       
       <div>
-        <h3 class="font-display text-xl font-bold text-slate-900">Sign In</h3>
-        <p class="text-xs text-slate-500 mt-1">Access your MINA staking balance & portfolio.</p>
+        <h3 class="font-display text-xl font-bold text-white">Giriş Yap</h3>
+        <p class="text-xs text-slate-400 mt-1">Radar terminaline ve abonelik paneline erişin.</p>
       </div>
 
       <form onsubmit="handleUserLoginSubmit(event)" class="space-y-3 pt-1">
         <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-1">Username</label>
-          <input type="text" id="login-username" required placeholder="Your username" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+          <label class="text-xs text-slate-400 block mb-1">Kullanıcı Adı</label>
+          <input type="text" id="login-username" required placeholder="Kullanıcı adınız" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-1">Password</label>
-          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+          <label class="text-xs text-slate-400 block mb-1">Şifre</label>
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
         </div>
 
-        <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-1 cursor-pointer">
-          Sign In to Dashboard &rarr;
+        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-1">
+          Terminale Gir &rarr;
         </button>
       </form>
 
       <div class="text-center pt-2">
-        <button onclick="closeModal('modal-login'); openModal('modal-register')" class="text-xs text-slate-500 hover:text-orange-600">
-          Don't have an account? <span class="font-bold underline text-slate-800">Create Account</span>
+        <button onclick="closeModal('modal-login'); openModal('modal-register')" class="text-xs text-slate-400 hover:text-orange-400">
+          Hesabınız yok mu? <span class="font-bold underline text-white">Kayıt Olun</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ================= CREATE ACCOUNT MODAL ================= -->
-  <div id="modal-register" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-200 relative">
-      <button onclick="closeModal('modal-register')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
+  <!-- ================= KAYIT OL (TEMİZ FORM - REFERANS YOK) ================= -->
+  <div id="modal-register" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+      <button onclick="closeModal('modal-register')" class="absolute top-5 right-5 text-slate-400 hover:text-white">✕</button>
       
       <div>
-        <h3 class="font-display text-xl font-bold text-slate-900">Create Account</h3>
-        <p class="text-xs text-slate-500 mt-1">Start earning protocol staking rewards.</p>
+        <h3 class="font-display text-xl font-bold text-white">Hesap Oluştur</h3>
+        <p class="text-xs text-slate-400 mt-1">Balina erken uyarı sistemine katılın.</p>
       </div>
 
       <form onsubmit="handleUserRegisterSubmit(event)" class="space-y-3 pt-1">
         <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-1">Username *</label>
-          <input type="text" id="reg-username" required placeholder="Choose username" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+          <label class="text-[11px] font-semibold text-slate-300 block mb-1">Kullanıcı Adı *</label>
+          <input type="text" id="reg-username" required placeholder="Kullanıcı adı belirleyin" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
         </div>
 
         <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-1">Email Address *</label>
-          <input type="email" id="reg-email" required placeholder="name@example.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+          <label class="text-[11px] font-semibold text-slate-300 block mb-1">E-posta Adresi *</label>
+          <input type="email" id="reg-email" required placeholder="ornek@gmail.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="text-xs font-semibold text-slate-700 block mb-1">Password *</label>
-            <input type="password" id="reg-password" required minlength="6" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+            <label class="text-[11px] font-semibold text-slate-300 block mb-1">Şifre *</label>
+            <input type="password" id="reg-password" required minlength="6" placeholder="Min. 6 karakter" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
           </div>
           <div>
-            <label class="text-xs font-semibold text-slate-700 block mb-1">Confirm Password *</label>
-            <input type="password" id="reg-password-confirm" required minlength="6" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+            <label class="text-[11px] font-semibold text-slate-300 block mb-1">Şifre Tekrarı *</label>
+            <input type="password" id="reg-password-confirm" required minlength="6" placeholder="Şifrenizi doğrulayın" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
           </div>
         </div>
 
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <label class="text-xs font-semibold text-slate-700">Sponsor / Referral Code</label>
-            <span class="text-[10px] text-slate-400">Optional</span>
-          </div>
-          <input type="text" id="reg-sponsor" placeholder="e.g. mourpheus or MINE-USER-777" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-orange-600 font-mono outline-none focus:border-orange-500" />
-        </div>
-
-        <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-3.5 rounded-xl shadow-md transition mt-2 cursor-pointer">
-          Register & Continue &rarr;
+        <button type="submit" class="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs py-3.5 rounded-xl transition shadow mt-2">
+          Kayıt Ol & Devam Et &rarr;
         </button>
       </form>
 
       <div class="text-center pt-1">
-        <button onclick="closeModal('modal-register'); openModal('modal-login')" class="text-xs text-slate-500 hover:text-orange-600">
-          Already have an account? <span class="font-bold underline text-slate-800">Sign In</span>
+        <button onclick="closeModal('modal-register'); openModal('modal-login')" class="text-xs text-slate-400 hover:text-orange-400">
+          Zaten hesabınız var mı? <span class="font-bold underline text-white">Giriş Yapın</span>
         </button>
       </div>
     </div>
@@ -310,7 +271,7 @@
   <!-- TOAST BİLDİRİM -->
   <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
 
-  <!-- SCRIPTS -->
+  <!-- FIREBASE VE MOTOR SCRIPTLERİ -->
   <script src="state.js"></script>
   <script>
     function showToast(msg) {
@@ -323,9 +284,7 @@
     function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
 
-    // ================= STAKING PORTAL TIKLAMA GÜVENLİĞİ =================
-    // Oturum varsa Dashboard'a atar, yoksa Sign In modalını açar (Asla admin açmaz!)
-    function handlePortalClick() {
+    function handleDashboardGo() {
       const activeSession = sessionStorage.getItem('mineora_active_session');
       if (activeSession) {
         window.location.href = 'dashboard.html';
@@ -334,14 +293,13 @@
       }
     }
 
-    // KAYIT MOTORU
+    // KAYIT MOTORU (SADECE KULLANICI / ŞİFRE / E-POSTA - REFERANS YOK)
     async function handleUserRegisterSubmit(e) {
       e.preventDefault();
       const username = document.getElementById('reg-username').value.trim();
       const email = document.getElementById('reg-email').value.trim();
       const pass = document.getElementById('reg-password').value.trim();
       const passConfirm = document.getElementById('reg-password-confirm').value.trim();
-      const sponsorInput = document.getElementById('reg-sponsor').value.trim();
 
       if (pass !== passConfirm) {
         return alert("Şifreler uyuşmuyor! Lütfen kontrol edin.");
@@ -356,44 +314,14 @@
         }
       }
 
-      let realSponsorUsername = "";
-      let referralChain = [];
-
-      if (sponsorInput && typeof fbDb !== 'undefined' && fbDb) {
-        const allSnap = await fbDb.ref('users').once('value');
-        const allUsers = allSnap.val() || {};
-
-        let foundSponsor = null;
-        Object.values(allUsers).forEach(u => {
-          if (!u) return;
-          const uName = (u.username || '').toLowerCase();
-          const uRef = (u.refCode || '').toUpperCase();
-          if (uName === sponsorInput.toLowerCase() || uRef === sponsorInput.toUpperCase()) {
-            foundSponsor = u;
-          }
-        });
-
-        if (foundSponsor) {
-          realSponsorUsername = foundSponsor.username;
-          referralChain = [...(foundSponsor.referral_chain || []), foundSponsor.username];
-          if (referralChain.length > 4) {
-            referralChain = referralChain.slice(referralChain.length - 4);
-          }
-        }
-      }
-
       const newUser = {
         username: username,
         email: email,
         pass: pass,
-        mina: 0.00,
-        role: "Verified Staker",
-        isVaultLocked: false,
-        referredBy: realSponsorUsername,
-        referral_chain: referralChain,
-        refCode: `MINE-${username.toUpperCase()}-777`,
-        stakes: [],
-        logs: []
+        role: "Trader",
+        isVipActive: false, // 500$ USDT ödemesi yapınca aktif olacak
+        vipExpireDate: null,
+        registeredAt: new Date().toISOString()
       };
 
       if (typeof fbDb !== 'undefined' && fbDb) {
@@ -415,25 +343,16 @@
       const pass = document.getElementById('login-password').value.trim();
       const uKey = username.toLowerCase();
 
-      if (uKey === 'mourpheus' || uKey === 'admin') {
-        sessionStorage.setItem('mineora_admin_direct_pass', pass);
-      }
-
       if (typeof fbDb !== 'undefined' && fbDb) {
         const snap = await fbDb.ref(`users/${uKey}`).once('value');
         const u = snap.val();
 
-        if (!u) {
-          return alert("Kullanıcı bulunamadı!");
-        }
-        if (u.pass !== pass) {
-          return alert("Hatalı şifre!");
-        }
+        if (!u) return alert("Kullanıcı bulunamadı!");
+        if (u.pass !== pass) return alert("Hatalı şifre!");
 
         sessionStorage.setItem('mineora_active_session', u.username);
         
-        // SADECE ROOT ADMİN İSE ADMİNE GİDER, DİĞERLERİ NORMAL DASHBOARD'A
-        if (uKey === 'mourpheus') {
+        if (uKey === 'mourpheus' || uKey === 'admin') {
           window.location.href = 'admin.html';
         } else {
           window.location.href = 'dashboard.html';
@@ -443,17 +362,6 @@
         window.location.href = 'dashboard.html';
       }
     }
-
-    // URL'DEN SPONSOR KODU ALGILAMA (?ref=KOD)
-    window.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const refParam = urlParams.get('ref') || urlParams.get('sponsor');
-      if (refParam) {
-        const field = document.getElementById('reg-sponsor');
-        if (field) field.value = refParam;
-        openModal('modal-register');
-      }
-    });
   </script>
 </body>
 </html>
