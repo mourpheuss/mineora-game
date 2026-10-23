@@ -165,18 +165,18 @@
         <!-- POOL CARDS (30, 60, 90 DAYS) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           
-          <!-- 30 DAYS -->
+          <!-- 30 DAYS (%1.5 GÜNLÜK / +%45 TOPLAM) -->
           <div id="stake-plan-card-30" onclick="selectStakePlan(30)" class="p-5 rounded-2xl bg-gradient-to-br from-orange-500/10 via-amber-500/10 to-transparent border-2 border-orange-500 shadow-md cursor-pointer transition text-left">
             <div class="flex justify-between items-center mb-2">
               <span class="text-xs font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700">30 Days</span>
-              <span class="text-[10px] text-orange-600 font-black">2.5% / Day</span>
+              <span class="text-[10px] text-orange-600 font-black">1.5% / Day</span>
             </div>
             <span class="text-slate-500 text-xs block">Genesis Alpha</span>
-            <strong class="font-display text-2xl font-black text-slate-900 block my-1">+75.0%</strong>
+            <strong class="font-display text-2xl font-black text-slate-900 block my-1">+45.0%</strong>
             <span class="text-[11px] text-slate-400 block">Min. 50 MINA</span>
           </div>
 
-          <!-- 60 DAYS -->
+          <!-- 60 DAYS (%1.8 GÜNLÜK / +%108 TOPLAM) -->
           <div id="stake-plan-card-60" onclick="selectStakePlan(60)" class="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition text-left">
             <div class="flex justify-between items-center mb-2">
               <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">60 Days</span>
@@ -187,14 +187,14 @@
             <span class="text-[11px] text-slate-400 block">Min. 100 MINA</span>
           </div>
 
-          <!-- 90 DAYS -->
+          <!-- 90 DAYS (%2.0 GÜNLÜK / +%180 TOPLAM) -->
           <div id="stake-plan-card-90" onclick="selectStakePlan(90)" class="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition text-left">
             <div class="flex justify-between items-center mb-2">
               <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">90 Days</span>
-              <span class="text-[10px] text-indigo-600 font-black">1.5% / Day</span>
+              <span class="text-[10px] text-indigo-600 font-black">2.0% / Day</span>
             </div>
             <span class="text-slate-500 text-xs block">Samasika VIP</span>
-            <strong class="font-display text-2xl font-black text-slate-900 block my-1">+135.0%</strong>
+            <strong class="font-display text-2xl font-black text-slate-900 block my-1">+180.0%</strong>
             <span class="text-[11px] text-slate-400 block">Min. 250 MINA</span>
           </div>
 
@@ -222,11 +222,11 @@
             </div>
             <div class="bg-white p-3 rounded-xl border border-slate-200">
               <span class="text-slate-400 block">Daily Yield</span>
-              <strong id="calc-daily-return" class="font-bold text-emerald-600">+0.00 MINA / Day</strong>
+              <strong id="calc-daily-return" class="font-bold text-emerald-600">+0.00 MINA / Day (1.5%)</strong>
             </div>
             <div class="bg-white p-3 rounded-xl border border-slate-200">
               <span class="text-slate-400 block">Total Projected Profit</span>
-              <strong id="calc-total-return" class="font-bold text-orange-600">+0.00 MINA</strong>
+              <strong id="calc-total-return" class="font-bold text-orange-600">+0.00 MINA (+45%)</strong>
             </div>
           </div>
 
@@ -322,7 +322,7 @@
 
   </main>
 
-  <!-- YALNIZCA NATIVE MINA DEPOSIT MODAL (BEP-20 BUTONU KALDIRILDI) -->
+  <!-- YALNIZCA NATIVE MINA DEPOSIT MODAL -->
   <div id="depositModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
       <button onclick="closeModal('depositModal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
