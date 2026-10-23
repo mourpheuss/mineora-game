@@ -176,9 +176,26 @@
   <!-- TOAST BİLDİRİM -->
   <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
 
-  <!-- FIREBASE VE MOTOR BAĞLANTILARI -->
-  <script src="state.js"></script>
+  <!-- FIREBASE BAĞLANTISI VE MASTER SCRIPTLER -->
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
+      authDomain: "mineora-web.firebaseapp.com",
+      projectId: "mineora-web",
+      storageBucket: "mineora-web.firebasestorage.app",
+      messagingSenderId: "648898617395",
+      appId: "1:648898617395:web:23902a04f19da700010346",
+      databaseURL: "https://mineora-web-default-rtdb.firebaseio.com"
+    };
+
+    var fbDb = null;
+    if (typeof firebase !== 'undefined') {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      fbDb = firebase.database();
+    }
+
     let activeModUser = null;
 
     function showToast(msg) {
@@ -395,10 +412,6 @@
           document.getElementById('new-u-sponsor').value = "";
           showToast(`🎉 ${uname} hesabı ${mina} MINA bakiyesi ile oluşturuldu!`);
         });
-      } else {
-        localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(newUser));
-        document.getElementById('modal-admin-create-user').classList.add('hidden');
-        showToast(`🎉 ${uname} hesabı yerel olarak oluşturuldu!`);
       }
     }
 
@@ -409,7 +422,7 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      // 1. Ana sayfadan gelen şifre varsa otomatik Firebase yetkilendirmesi dene
+      // 1. Ana sayfadan gelen şifre varsa doğrudan Firebase yetkilendirmesi dene
       const cachedPass = sessionStorage.getItem('mineora_admin_direct_pass');
       if (cachedPass) {
         document.getElementById('admin-auth-pass').value = cachedPass;
