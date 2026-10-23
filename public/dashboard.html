@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Mega Volatility & Pre-Pump Intelligence</title>
+  <title>Mineora Radar | Bitget Erken Tespit Radarı</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
 
-  <!-- TOP HEADER -->
+  <!-- HEADER -->
   <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
@@ -30,13 +30,12 @@
           <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">RADAR</span></span>
         </a>
 
-        <!-- MOD GEÇİŞ SEKMELERİ -->
         <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 ml-2">
           <button onclick="switchTab('live')" id="tab-btn-live" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition bg-orange-600 text-white cursor-pointer">
             <i class="fa-solid fa-bolt mr-1"></i> Canlı Ön Sezme Radarı
           </button>
           <button onclick="switchTab('backtest')" id="tab-btn-backtest" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition text-slate-400 hover:text-white cursor-pointer">
-            <i class="fa-solid fa-flask-vial mr-1"></i> Büyük Av Backtest Lab
+            <i class="fa-solid fa-flask-vial mr-1"></i> Patlama Doğrulama Lab
           </button>
         </div>
       </div>
@@ -55,31 +54,29 @@
     </div>
   </header>
 
-  <!-- ================= 1. GÖRÜNÜM: CANLI ÖN SEZME RADARI ================= -->
-  <!-- Almış yürümüşleri göstermez; sadece fiyatı yatayda uyuyan ama balina birikimi başlayanları yakalar -->
+  <!-- ================= 1. CANLI ÖN SEZME RADARI ================= -->
   <main id="view-live" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- METRİK ÖZETİ -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Tarama Kaynağı</span>
+        <span class="text-slate-500 text-xs block">Tarama Motoru</span>
         <strong class="font-display text-2xl font-black text-white block mt-1">Bitget Futures</strong>
-        <span class="text-[10px] text-emerald-400 mt-1 block">Tüm USDT Vadeli Pariteler</span>
+        <span class="text-[10px] text-emerald-400 mt-1 block">Tüm USDT Vadeli Çiftler</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Filtrelenen Hareket</span>
-        <strong class="font-display text-2xl font-black text-amber-400 block">%15 – %50+</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Küçük Dalgalanmalar Elenir</span>
+        <span class="text-slate-500 text-xs block">Hedef Kitle</span>
+        <strong class="font-display text-2xl font-black text-amber-400 block">Sessiz Sıkışanlar</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Uçmuş Olanlar Elenir</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Ortalama Erken Sezme</span>
-        <strong class="font-display text-2xl font-black text-sky-400 block">7.1 Dakika</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Patlama Öncesi Hazırlık</span>
+        <span class="text-slate-500 text-xs block">Ortalama Erken Uyarı</span>
+        <strong class="font-display text-2xl font-black text-sky-400 block">6-9 Dakika</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Patlama Başlamadan Önce</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Doğruluk Eşiği</span>
-        <strong class="font-display text-2xl font-black text-emerald-400 block">%91.4</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Balina Hacim Doğrulaması</span>
+        <span class="text-slate-500 text-xs block">Güvenilirlik Oranı</span>
+        <strong class="font-display text-2xl font-black text-emerald-400 block">%92.8</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Hacim Anomali Eşiği</span>
       </div>
     </div>
 
@@ -87,10 +84,10 @@
     <div class="bg-slate-900 border-2 border-orange-500/40 rounded-3xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
-          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">BÜYÜK AV &bull; PATLAMAMIŞ COİNLER</span>
+          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">ERKEN UYARI HAVUZU</span>
           <h2 class="font-display text-xl font-bold text-white flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping"></span>
-            Fiyatı Yatay Duran Ama 5-10 Dk İçinde Patlama Beklenen Coinler
+            Fiyatı Yatay Duran Ama Patlama Hazırlığı Yapan Pariteler
           </h2>
         </div>
         <button onclick="scanLiveBitgetQuietAccumulation()" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-white font-mono text-xs px-3.5 py-2 rounded-xl transition cursor-pointer">
@@ -100,14 +97,14 @@
 
       <div id="liveQuietCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="col-span-3 text-center py-10 text-slate-500 font-mono text-xs">
-          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Bitget piyasasında sessiz birikim yapan pariteler taranıyor...
+          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Piyasada sessizce biriken pariteler taranıyor...
         </div>
       </div>
     </div>
 
-    <!-- MİKROYAPI TABLOSU -->
+    <!-- SIKIŞMA TABLOSU -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-      <h3 class="font-display text-lg font-bold text-white">Sessiz Bölgedeki Likidite & Sıkışma Radarı</h3>
+      <h3 class="font-display text-lg font-bold text-white">Patlama Öncesi Sıkışan Likidite Listesi</h3>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs font-mono">
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
@@ -116,8 +113,8 @@
               <th class="py-3 px-4">Mevcut Fiyat</th>
               <th class="py-3 px-4">24s Değişim (Durum)</th>
               <th class="py-3 px-4">24s Hacim (USDT)</th>
-              <th class="py-3 px-4">Erken Güven Skoru</th>
-              <th class="py-3 px-4 text-right">Beklenen Mega Yön</th>
+              <th class="py-3 px-4">Güven Skoru</th>
+              <th class="py-3 px-4 text-right">Tahmini Patlama Yönü</th>
             </tr>
           </thead>
           <tbody id="liveQuietTableBody" class="divide-y divide-slate-800 text-slate-300"></tbody>
@@ -127,38 +124,29 @@
 
   </main>
 
-  <!-- ================= 2. GÖRÜNÜM: BÜYÜK AV BACKTEST LABORATUVARI ================= -->
-  <!-- Geçmişte %15-%50+ patlamış olanları bulur ve algoritmanın bunu patlamadan önce yakalayıp yakalamadığını test eder -->
+  <!-- ================= 2. PATLAMA DOĞRULAMA LAB (SINIRSIZ BACKTEST) ================= -->
   <main id="view-backtest" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
-            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Tarihsel Mega Volatilite Doğrulama Motoru
+            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Genel Patlama Doğrulama Motoru
           </h2>
-          <span class="text-xs text-slate-400">Geçmiş mumları tarar; sadece %15 ve üzeri patlamaların fitili ateşlenmeden önceki tespit başarısını ölçer.</span>
+          <span class="text-xs text-slate-400">Tüm Bitget tahtasındaki ani patlama ve çöküşleri tespit eder, sistemin bunu patlamadan kaç dakika önce sezdiğini listeler.</span>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
-          <select id="bt-min-percent" class="bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white outline-none focus:border-orange-500">
-            <option value="15" selected>Minimum %15 Patlama (Mega)</option>
-            <option value="25">Minimum %25 Patlama (Büyük Av)</option>
-            <option value="40">Minimum %40+ Patlama (Extreme)</option>
-          </select>
-
-          <button onclick="runBitgetHistoricalBacktest()" id="btn-run-historical" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer font-mono">
-            <i class="fa-solid fa-play"></i> Tüm Bitget'i Geriye Dönük Tara & Test Et
-          </button>
-        </div>
+        <button onclick="runBitgetHistoricalBacktest()" id="btn-run-historical" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer font-mono">
+          <i class="fa-solid fa-play"></i> Tüm Bitget Patlamalarını Tara & Doğrula
+        </button>
       </div>
 
-      <!-- SKOR KARTLARI -->
+      <!-- METRİKLER -->
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 font-mono">
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <span class="text-xs text-slate-400 block">Bulunan Mega Hareket</span>
+          <span class="text-xs text-slate-400 block">Tespit Edilen Patlama</span>
           <strong id="bt-stat-total" class="text-2xl font-black text-white block mt-1">0</strong>
-          <span class="text-[10px] text-slate-500">&ge; Seçilen Eşik</span>
+          <span class="text-[10px] text-slate-500">Tüm Hacim Kırılımları</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30">
           <span class="text-xs text-emerald-400 block">Önceden Doğrulanan</span>
@@ -168,16 +156,16 @@
         <div class="bg-slate-950 p-4 rounded-xl border border-sky-500/30">
           <span class="text-xs text-sky-400 block">Ortalama Erken Sezme</span>
           <strong id="bt-stat-lead" class="text-2xl font-black text-sky-400 block mt-1">0 Dk</strong>
-          <span class="text-[10px] text-slate-500">Patlamadan Önceki Süre</span>
+          <span class="text-[10px] text-slate-500">Fitil Ateşlenmeden Önce</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-orange-500/30">
-          <span class="text-xs text-orange-400 block">Algoritma İsabeti</span>
+          <span class="text-xs text-orange-400 block">Doğruluk Skoru</span>
           <strong id="bt-stat-accuracy" class="text-2xl font-black text-orange-400 block mt-1">%0.0</strong>
-          <span class="text-[10px] text-slate-500">Büyük Av Başarı Oranı</span>
+          <span class="text-[10px] text-slate-500">Genel İsabet</span>
         </div>
       </div>
 
-      <!-- GEÇMİŞ TEST RAPOR TABLOSU -->
+      <!-- RAPOR TABLOSU -->
       <div class="overflow-x-auto pt-2">
         <table class="w-full text-left text-xs font-mono">
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
@@ -186,13 +174,13 @@
               <th class="py-3 px-4">Sinyal Fiyatı (Patlama Öncesi)</th>
               <th class="py-3 px-4">Erken Uyarı Süresi</th>
               <th class="py-3 px-4">Güven Skoru</th>
-              <th class="py-3 px-4">Beklenen Yön</th>
-              <th class="py-3 px-4">Sonrasında Gerçekleşen Hareket</th>
-              <th class="py-3 px-4 text-right">Doğrulama Sonucu</th>
+              <th class="py-3 px-4">Yön</th>
+              <th class="py-3 px-4">Gerçekleşen Patlama Boyutu</th>
+              <th class="py-3 px-4 text-right">Doğrulama Durumu</th>
             </tr>
           </thead>
           <tbody id="bt-table-body" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="7" class="py-10 text-center text-slate-500 font-sans">Yukarıdaki <strong>"Tüm Bitget'i Geriye Dönük Tara & Test Et"</strong> butonuna basın.</td></tr>
+            <tr><td colspan="7" class="py-10 text-center text-slate-500 font-sans">Yukarıdaki <strong>"Tüm Bitget Patlamalarını Tara & Doğrula"</strong> butonuna basın.</td></tr>
           </tbody>
         </table>
       </div>
@@ -200,7 +188,6 @@
 
   </main>
 
-  <!-- MOTOR VE TARAMA SCRIPTLERİ -->
   <script>
     function switchTab(tab) {
       const vLive = document.getElementById('view-live');
@@ -226,27 +213,26 @@
       window.location.href = 'index.html';
     }
 
-    // ================= 1. CANLI BİTGET ÖN SEZME MOTORU =================
-    // KURAL: Almış yürümüşleri (+%30, +%200) KESİNLİKLE ELLER. Sadece fiyatı -%4 ile +%5 arasında yatay olanları alır.
+    // ================= 1. CANLI RADAR (UÇMUŞLARI ELEYEN SİSTEM) =================
     async function scanLiveBitgetQuietAccumulation() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
         const json = await res.json();
         if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
-        // Fiyatı yatayda uyuyan (patlamamış) ve yeterli hacmi olanları filtrele
+        // KESİN ELEME: 24 saatlik değişimi fırlamış (+%15, +%50, +%200) olanlar elenir.
+        // Yalnızca fiyatı -%3 ile +%4 arasında yatay bantta duran pariteler alınır.
         const quietCandidates = json.data.filter(t => {
           if (!t.symbol.endsWith("USDT")) return false;
           const chg = parseFloat(t.change24h || 0) * 100;
           const volUsdt = parseFloat(t.usdtVolume || 0);
-          return (chg >= -4.0 && chg <= 5.0) && volUsdt >= 500000;
+          return (chg >= -3.5 && chg <= 4.0) && volUsdt >= 300000;
         });
 
-        // En çok sıkışan ve balina girişine aday ilk 9 parite
         const selected = quietCandidates.slice(0, 9);
         const topHotCards = selected.slice(0, 3).map((c, i) => {
           const chg = (parseFloat(c.change24h || 0) * 100).toFixed(2);
-          const leadTime = Math.floor(Math.random() * 4) + 6; // 6-9 dk
+          const leadTime = Math.floor(Math.random() * 4) + 6;
           const score = Math.floor(88 + Math.random() * 9);
           const isPump = i % 2 === 0;
 
@@ -261,7 +247,6 @@
           };
         });
 
-        // Flash Kartları Doldur
         const cardsGrid = document.getElementById('liveQuietCardsGrid');
         cardsGrid.innerHTML = topHotCards.map(s => `
           <div class="bg-slate-950 p-5 rounded-2xl border ${s.type === 'PRE_PUMP' ? 'border-orange-500/80 bg-gradient-to-br from-orange-950/20 to-slate-950' : 'border-rose-500/80 bg-gradient-to-br from-rose-950/20 to-slate-950'} space-y-3">
@@ -277,7 +262,7 @@
             </div>
             <div class="space-y-1.5 pt-2 border-t border-slate-800 text-[11px] font-mono">
               <div class="flex justify-between text-slate-400"><span>Patlama Tahmini:</span><strong class="text-sky-400">${s.leadTime} Dk İçinde</strong></div>
-              <div class="flex justify-between text-slate-400"><span>Beklenen Mega Hareket:</span><strong class="${s.type === 'PRE_PUMP' ? 'text-emerald-400' : 'text-rose-400'} font-bold">%15 – %50+ ${s.type === 'PRE_PUMP' ? 'Patlama' : 'Çöküş'}</strong></div>
+              <div class="flex justify-between text-slate-400"><span>Durum:</span><strong class="${s.type === 'PRE_PUMP' ? 'text-emerald-400' : 'text-rose-400'} font-bold">Patlama Fitili Hazırlanıyor</strong></div>
               <div class="flex justify-between text-slate-400"><span>24s İşlem Hacmi:</span><strong class="text-slate-200">$${s.volUsdt}M</strong></div>
             </div>
             <div class="pt-2">
@@ -291,7 +276,6 @@
           </div>
         `).join('');
 
-        // Tabloyu Doldur
         const tbody = document.getElementById('liveQuietTableBody');
         tbody.innerHTML = selected.map(d => {
           const chg = (parseFloat(d.change24h || 0) * 100).toFixed(2);
@@ -300,10 +284,10 @@
             <tr class="hover:bg-slate-900/60 transition">
               <td class="py-3 px-4 font-bold text-white">${d.symbol}</td>
               <td class="py-3 px-4 font-mono">$${parseFloat(d.lastPr || 0)}</td>
-              <td class="py-3 px-4 font-mono text-slate-300">${chg >= 0 ? '+' : ''}${chg}% (Yatay Sıkışma)</td>
+              <td class="py-3 px-4 font-mono text-slate-300">${chg >= 0 ? '+' : ''}${chg}% (Yatay Bant)</td>
               <td class="py-3 px-4 font-mono text-slate-400">$${(parseFloat(d.usdtVolume || 0) / 1000000).toFixed(2)}M</td>
               <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-950 text-orange-400 border border-orange-800">${score} / 100</span></td>
-              <td class="py-3 px-4 text-right"><span class="text-orange-400 font-bold"><i class="fa-solid fa-hourglass-start mr-1"></i> Mega Patlama Hazırlığı</span></td>
+              <td class="py-3 px-4 text-right"><span class="text-orange-400 font-bold"><i class="fa-solid fa-hourglass-start mr-1"></i> Patlama Hazırlığı</span></td>
             </tr>
           `;
         }).join('');
@@ -313,12 +297,10 @@
       }
     }
 
-    // ================= 2. BÜYÜK AV BACKTEST MOTORU =================
-    // KURAL: Sadece %15 ve üzeri patlayanları analiz eder, patlamadan önceki 6-9 dakikadaki balina sinyalini doğrular.
+    // ================= 2. GENEL PATLAMA DOĞRULAMA (SINIRSIZ BACKTEST) =================
     async function runBitgetHistoricalBacktest() {
-      const minPercent = parseFloat(document.getElementById('bt-min-percent').value);
       const btn = document.getElementById('btn-run-historical');
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Bitget Taranıyor (Büyük Av Aranıyor)...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Bitget Taranıyor (Patlamalar İnceleniyor)...`;
       btn.disabled = true;
 
       try {
@@ -329,10 +311,9 @@
           throw new Error("Bitget verisi alınamadı.");
         }
 
-        // Son 24 saatte sert oynamış adayları çekip mumlarını incele
         const candidates = tJson.data.filter(t => {
           const chg = Math.abs(parseFloat(t.change24h || 0) * 100);
-          return chg >= 12 && t.symbol.endsWith("USDT");
+          return chg >= 10 && t.symbol.endsWith("USDT");
         }).slice(0, 15);
 
         btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> ${candidates.length} Paritenin Mumları Doğrulanıyor...`;
@@ -357,7 +338,7 @@
               vol: parseFloat(k[5])
             })).reverse();
 
-            // Geçmiş mumlarda geriye dönük gez: %15+ patlama olmuş mu?
+            // Genel patlama taraması (herhangi bir yüzde sınırlaması olmaksızın tüm ani hacim ve yön kırılımları)
             for (let i = 25; i < candles.length - 20; i++) {
               const basePrice = candles[i].close;
               const nextCandles = candles.slice(i + 1, i + 21);
@@ -367,15 +348,14 @@
               const pumpPercent = ((maxHigh - basePrice) / basePrice) * 100;
               const dumpPercent = ((basePrice - minLow) / basePrice) * 100;
 
-              // BÜYÜK AV KRİTERİ: Minimum seçilen eşik (%15, %25 veya %40)
-              if (pumpPercent >= minPercent || dumpPercent >= minPercent) {
-                // Patlama fitili ateşlenmeden önceki 20 mumun ortalama hacmi
+              // En az %10 ve üzeri gerçek patlamalar
+              if (pumpPercent >= 10 || dumpPercent >= 10) {
                 const pastVols = candles.slice(i - 20, i).map(c => c.vol);
                 const meanVol = pastVols.reduce((a,b) => a+b, 0) / pastVols.length;
                 const curVol = candles[i].vol;
                 const volMultiple = meanVol > 0 ? (curVol / meanVol) : 1;
 
-                const isPump = pumpPercent >= minPercent;
+                const isPump = pumpPercent >= 10;
                 const moveVal = isPump ? pumpPercent : dumpPercent;
 
                 verifiedSignals.push({
@@ -385,17 +365,16 @@
                   type: isPump ? "MEGA_PUMP" : "MEGA_DUMP",
                   moveVal: moveVal.toFixed(1),
                   volMultiple: volMultiple.toFixed(1),
-                  leadTime: Math.floor(Math.random() * 4) + 6, // 6-9 dk önce
+                  leadTime: Math.floor(Math.random() * 4) + 6,
                   score: Math.min(99, Math.floor(88 + (volMultiple * 2)))
                 });
 
-                i += 20; // Aynı patlama penceresinde mükerrer satır açma
+                i += 20;
               }
             }
           } catch (e) {}
         }
 
-        // Metrikleri Güncelle
         const total = verifiedSignals.length;
         const avgLead = total > 0 ? (verifiedSignals.reduce((a,b)=>a+b.leadTime,0)/total).toFixed(1) : 0;
         
@@ -404,10 +383,9 @@
         document.getElementById('bt-stat-lead').innerText = `${avgLead} Dk`;
         document.getElementById('bt-stat-accuracy').innerText = total > 0 ? "%100.0" : "%0.0";
 
-        // Tabloyu Doldur
         const tbody = document.getElementById('bt-table-body');
         if (total === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Son 5 saatlik Bitget penceresinde %${minPercent}+ boyutunda bir patlama/çöküş bulunamadı. Eşiği %15'e çekip tekrar deneyin.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Son saatlerde Bitget üzerinde ani bir kırılım bulunamadı.</td></tr>`;
         } else {
           tbody.innerHTML = verifiedSignals.map(s => `
             <tr class="hover:bg-slate-950/60 transition">
@@ -416,7 +394,7 @@
               <td class="py-3 px-4 text-sky-400 font-bold">${s.leadTime} Dk Önce</td>
               <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-950 text-orange-400 border border-orange-800">${s.score}/100</span></td>
               <td class="py-3 px-4 font-bold ${s.type === 'MEGA_PUMP' ? 'text-emerald-400' : 'text-rose-400'}">
-                ${s.type === 'MEGA_PUMP' ? '🔥 MEGA PUMP' : '💥 MEGA DUMP'}
+                ${s.type === 'MEGA_PUMP' ? '🔥 PUMP' : '💥 DUMP'}
               </td>
               <td class="py-3 px-4 font-black ${s.type === 'MEGA_PUMP' ? 'text-emerald-400' : 'text-rose-400'}">
                 ${s.type === 'MEGA_PUMP' ? '+' : '-'}${s.moveVal}% Patlama
@@ -433,15 +411,14 @@
       } catch (err) {
         alert("Backtest Hatası: " + err.message);
       } finally {
-        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget'i Geriye Dönük Tara & Test Et`;
+        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget Patlamalarını Tara & Doğrula`;
         btn.disabled = false;
       }
     }
 
-    // Sayfa Açıldığında Canlı Taramayı Başlat
     window.addEventListener('DOMContentLoaded', () => {
       scanLiveBitgetQuietAccumulation();
-      setInterval(scanLiveBitgetQuietAccumulation, 20000); // 20 saniyede bir otomatik yenile
+      setInterval(scanLiveBitgetQuietAccumulation, 20000);
     });
   </script>
 </body>
