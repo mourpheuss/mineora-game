@@ -4,11 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MINA Protocol | Staking & Referral Dashboard</title>
+  <!-- Favicon 404 Koruması -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- QR Code Kütüphanesi -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -23,7 +30,7 @@
       <!-- LOGO & BRAND -->
       <div class="flex items-center gap-3">
         <a href="index.html" class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-sky-400 flex items-center justify-center text-white font-bold text-base shadow-sm">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-bold text-base shadow-sm">
             M
           </div>
           <span class="font-display font-black text-xl tracking-tight text-slate-900">MINA</span>
@@ -85,8 +92,8 @@
           <span class="text-xs text-slate-400 ml-1">MINA</span>
         </div>
         <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
-          <button onclick="openModal('depositModal')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-2 rounded-lg transition shadow-sm">
-            Deposit
+          <button onclick="openDepositModalWithQr()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-2 rounded-lg transition shadow-sm">
+            Deposit MINA
           </button>
           <button onclick="openModal('withdrawModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2 rounded-lg transition">
             Withdraw
@@ -238,7 +245,7 @@
             <h3 class="font-display text-lg font-bold text-slate-900">4-Tier Referral Program</h3>
           </div>
           <p class="text-slate-500 text-xs leading-relaxed">
-            Invite partners and earn instant direct commissions on every token staked in your network.
+            Invite partners and earn instant direct commissions on every token staked in your network[cite: 13].
           </p>
 
           <!-- TIER RATES -->
@@ -315,60 +322,70 @@
 
   </main>
 
-  <!-- DEPOSIT MODAL -->
-  <div id="depositModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-5">
+  <!-- YALNIZCA NATIVE MINA DEPOSIT MODAL (BEP-20 BUTONU KALDIRILDI) -->
+  <div id="depositModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
       <button onclick="closeModal('depositModal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
+      
       <div>
-        <h3 class="font-display text-xl font-bold text-slate-900">Deposit Assets</h3>
-        <p class="text-xs text-slate-500">Fund your account with native MINA or USDT to start staking.</p>
-      </div>
-
-      <div class="flex gap-2 p-1 bg-slate-100 rounded-xl">
-        <button id="dep-asset-btn-mina" onclick="setDepositAsset('MINA')" class="flex-1 py-2 rounded-lg bg-slate-900 text-white font-bold text-xs shadow-sm">
-          MINA (Native L1)
-        </button>
-        <button id="dep-asset-btn-usdt" onclick="setDepositAsset('USDT')" class="flex-1 py-2 rounded-lg bg-slate-100 text-slate-600 font-semibold text-xs hover:bg-slate-200">
-          USDT (BEP-20)
-        </button>
-      </div>
-
-      <div>
-        <label class="text-xs font-semibold text-slate-600 block mb-1">Official Deposit Vault Address</label>
-        <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <input type="text" id="deposit-address-display" readonly value="B62qjS5XoXN9Y2jHk1T4Q7mP8z3v6L2w9Y7x5A4b1c2D3e4F5g6H7i8" class="font-mono text-xs text-slate-800 bg-transparent flex-1 outline-none select-all" />
-          <button onclick="copyDepositAddress()" class="text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-1.5 rounded-lg">Copy</button>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-black">
+            M
+          </div>
+          <h3 class="font-display text-xl font-bold text-slate-900">Deposit MINA</h3>
         </div>
-        <span id="deposit-network-badge" class="text-[10px] text-slate-400 font-medium block mt-1">Network: Mina Protocol (Native L1)</span>
+        <p class="text-xs text-slate-500 mt-1">Send native MINA from Bitget or your Web3 wallet to your platform balance.</p>
       </div>
 
+      <!-- QR KOD ALANI -->
+      <div class="flex flex-col items-center justify-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
+        <div id="deposit-qrcode-box" class="p-2 bg-white rounded-xl shadow-sm border border-slate-200"></div>
+        <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 mt-3 flex items-center gap-1">
+          <i class="fa-solid fa-circle-check"></i> Network: Mina Protocol (Native L1)
+        </span>
+        <span class="text-[10px] text-slate-400 mt-1">No Memo / Tag Required</span>
+      </div>
+
+      <!-- RESMİ BITGET ADRESİN -->
+      <div>
+        <label class="text-[11px] font-bold text-slate-600 block mb-1">Official MINA Deposit Address</label>
+        <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <input type="text" id="deposit-address-display" readonly value="B62qogfXV8GznR474iXWfB1XVdbeQ6KzWUcjvVHzEhgKjixF8svw99V" class="font-mono text-xs text-slate-800 bg-transparent flex-1 outline-none select-all" />
+          <button onclick="copyPlatformMinaAddress()" class="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg shrink-0 transition">
+            <i class="fa-solid fa-copy mr-1"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- YATIRMA BİLDİRİM FORMU -->
       <div class="space-y-3 pt-2 border-t border-slate-100">
         <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-1">Sent Amount</label>
+          <label class="text-[11px] font-bold text-slate-700 block mb-1">Sent Amount (MINA)</label>
           <input type="number" id="dep-tx-amount" placeholder="e.g. 500" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500" />
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-1">Transaction Hash / TxID</label>
-          <input type="text" id="dep-tx-hash" placeholder="Paste hash from Bitget / Wallet" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500" />
+          <label class="text-[11px] font-bold text-slate-700 block mb-1">Transaction Hash / TxID</label>
+          <input type="text" id="dep-tx-hash" placeholder="Paste TxID from Bitget Withdrawal Record" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500 font-mono" />
         </div>
         <button onclick="submitDepositTransaction()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-3 rounded-xl shadow transition">
           Submit Deposit Confirmation &rarr;
         </button>
       </div>
+
     </div>
   </div>
 
   <!-- WITHDRAW MODAL -->
-  <div id="withdrawModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="withdrawModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
       <button onclick="closeModal('withdrawModal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
       <div>
         <h3 class="font-display text-xl font-bold text-slate-900">Withdraw Assets</h3>
-        <p class="text-xs text-slate-500">Transfer unlocked MINA back to your exchange or personal wallet.</p>
+        <p class="text-xs text-slate-500">Transfer unlocked MINA back to your Bitget or personal wallet.</p>
       </div>
       <div>
         <label class="text-xs font-semibold text-slate-700 block mb-1">Recipient MINA Address (B62q...)</label>
-        <input type="text" id="with-target-addr" placeholder="B62q..." class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500" />
+        <input type="text" id="with-target-addr" placeholder="B62q..." class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500 font-mono" />
       </div>
       <div>
         <label class="text-xs font-semibold text-slate-700 block mb-1">Withdraw Amount (MINA)</label>
@@ -402,6 +419,13 @@
 
     function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+    function openDepositModalWithQr() {
+      openModal('depositModal');
+      if (typeof renderDepositQrCode === 'function') {
+        renderDepositQrCode();
+      }
+    }
 
     // BITGET CANLI MINA/USDT FİYAT ÇEKİCİ
     async function fetchBitgetMinaTicker() {
@@ -463,7 +487,7 @@
                 }">Tier ${m.depth}</span>
               </td>
               <td class="py-3 px-4 font-mono text-slate-400">${m.sponsor}</td>
-              <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">${Number(m.ora || m.mina || 0).toFixed(2)} MINA</td>
+              <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">${Number(m.mina || m.ora || 0).toFixed(2)} MINA</td>
             </tr>
           `).join('');
         }
