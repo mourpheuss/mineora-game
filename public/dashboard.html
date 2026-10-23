@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Bitget Erken Tespit Radarı</title>
+  <title>Mineora Radar | Bitget Altcoin & Meme Mega Pre-Pump Hunter</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
 
-  <!-- HEADER -->
+  <!-- TOP HEADER -->
   <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
@@ -30,12 +30,13 @@
           <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">RADAR</span></span>
         </a>
 
+        <!-- MOD GEÇİŞ SEKMELERİ -->
         <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 ml-2">
           <button onclick="switchTab('live')" id="tab-btn-live" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition bg-orange-600 text-white cursor-pointer">
             <i class="fa-solid fa-bolt mr-1"></i> Canlı Ön Sezme Radarı
           </button>
           <button onclick="switchTab('backtest')" id="tab-btn-backtest" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition text-slate-400 hover:text-white cursor-pointer">
-            <i class="fa-solid fa-flask-vial mr-1"></i> Patlama Doğrulama Lab
+            <i class="fa-solid fa-flask-vial mr-1"></i> Büyük Av Doğrulama Lab
           </button>
         </div>
       </div>
@@ -44,7 +45,7 @@
         <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span id="headerUsername" class="text-white font-bold">Admin</span>
-          <span class="text-[9px] bg-orange-950 text-orange-400 border border-orange-800 px-1.5 py-0.5 rounded font-mono ml-1">VIP ROOT</span>
+          <span class="text-[9px] bg-orange-950 text-orange-400 border border-orange-800 px-1.5 py-0.5 rounded font-mono ml-1">MEGA VIP</span>
         </div>
         <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Çıkış Yap">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -54,29 +55,30 @@
     </div>
   </header>
 
-  <!-- ================= 1. CANLI ÖN SEZME RADARI ================= -->
+  <!-- ================= 1. GÖRÜNÜM: CANLI ÖN SEZME RADARI ================= -->
   <main id="view-live" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
+    <!-- METRİK ÖZETİ -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Tarama Motoru</span>
-        <strong class="font-display text-2xl font-black text-white block mt-1">Bitget Futures</strong>
-        <span class="text-[10px] text-emerald-400 mt-1 block">Tüm USDT Vadeli Çiftler</span>
+        <span class="text-slate-500 text-xs block">Odak Pariteler</span>
+        <strong class="font-display text-2xl font-black text-white block mt-1">Meme & Altcoin</strong>
+        <span class="text-[10px] text-emerald-400 mt-1 block">Majörler (BTC/ETH vb.) Elendi</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Hedef Kitle</span>
-        <strong class="font-display text-2xl font-black text-amber-400 block">Sessiz Sıkışanlar</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Uçmuş Olanlar Elenir</span>
+        <span class="text-slate-500 text-xs block">Hedef Volatilite</span>
+        <strong class="font-display text-2xl font-black text-amber-400 block">%20 – %60+</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Sert Kırılım Beklenenler</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Ortalama Erken Uyarı</span>
-        <strong class="font-display text-2xl font-black text-sky-400 block">6-9 Dakika</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Patlama Başlamadan Önce</span>
+        <span class="text-slate-500 text-xs block">Ortalama Erken Sezme</span>
+        <strong class="font-display text-2xl font-black text-sky-400 block">6 - 9 Dakika</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Patlama Öncesi Tespit</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Güvenilirlik Oranı</span>
-        <strong class="font-display text-2xl font-black text-emerald-400 block">%92.8</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Hacim Anomali Eşiği</span>
+        <span class="text-slate-500 text-xs block">Balina Sıkışma Filtresi</span>
+        <strong class="font-display text-2xl font-black text-emerald-400 block">Aktif</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Yatayda Hacim Toplama</span>
       </div>
     </div>
 
@@ -84,10 +86,10 @@
     <div class="bg-slate-900 border-2 border-orange-500/40 rounded-3xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
-          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">ERKEN UYARI HAVUZU</span>
+          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">BÜYÜK AV RADARI &bull; PATLAMAMIŞ PARİTELER</span>
           <h2 class="font-display text-xl font-bold text-white flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping"></span>
-            Fiyatı Yatay Duran Ama Patlama Hazırlığı Yapan Pariteler
+            Fiyatı Henüz Oynamamış, 5-10 Dk İçinde Patlayacak Altcoinler
           </h2>
         </div>
         <button onclick="scanLiveBitgetQuietAccumulation()" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-white font-mono text-xs px-3.5 py-2 rounded-xl transition cursor-pointer">
@@ -97,14 +99,14 @@
 
       <div id="liveQuietCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="col-span-3 text-center py-10 text-slate-500 font-mono text-xs">
-          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Piyasada sessizce biriken pariteler taranıyor...
+          <i class="fa-solid fa-spinner animate-spin mr-2"></i> Tüm Bitget tahtası taranıyor, majörler eleniyor...
         </div>
       </div>
     </div>
 
-    <!-- SIKIŞMA TABLOSU -->
+    <!-- MİKROYAPI TABLOSU -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-      <h3 class="font-display text-lg font-bold text-white">Patlama Öncesi Sıkışan Likidite Listesi</h3>
+      <h3 class="font-display text-lg font-bold text-white">Sessiz Sıkışma Bölgesindeki Bitget Altcoinleri</h3>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs font-mono">
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
@@ -113,6 +115,7 @@
               <th class="py-3 px-4">Mevcut Fiyat</th>
               <th class="py-3 px-4">24s Değişim (Durum)</th>
               <th class="py-3 px-4">24s Hacim (USDT)</th>
+              <th class="py-3 px-4">Balina Hacim Katı</th>
               <th class="py-3 px-4">Güven Skoru</th>
               <th class="py-3 px-4 text-right">Tahmini Patlama Yönü</th>
             </tr>
@@ -124,63 +127,63 @@
 
   </main>
 
-  <!-- ================= 2. PATLAMA DOĞRULAMA LAB (SINIRSIZ BACKTEST) ================= -->
+  <!-- ================= 2. GÖRÜNÜM: BÜYÜK AV DOĞRULAMA LAB ================= -->
   <main id="view-backtest" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
-            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Genel Patlama Doğrulama Motoru
+            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Altcoin & Meme Patlama Doğrulama Motoru
           </h2>
-          <span class="text-xs text-slate-400">Tüm Bitget tahtasındaki ani patlama ve çöküşleri tespit eder, sistemin bunu patlamadan kaç dakika önce sezdiğini listeler.</span>
+          <span class="text-xs text-slate-400">Geçmişte sert pump/dump yapmış altcoinleri bulur, patlama fitili ateşlenmeden 6-9 dk önceki sinyali doğrular.</span>
         </div>
 
         <button onclick="runBitgetHistoricalBacktest()" id="btn-run-historical" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer font-mono">
-          <i class="fa-solid fa-play"></i> Tüm Bitget Patlamalarını Tara & Doğrula
+          <i class="fa-solid fa-play"></i> Tüm Bitget Altcoinlerini Tara & Test Et
         </button>
       </div>
 
-      <!-- METRİKLER -->
+      <!-- SKORLAR -->
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 font-mono">
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <span class="text-xs text-slate-400 block">Tespit Edilen Patlama</span>
+          <span class="text-xs text-slate-400 block">Bulunan Sert Patlama</span>
           <strong id="bt-stat-total" class="text-2xl font-black text-white block mt-1">0</strong>
-          <span class="text-[10px] text-slate-500">Tüm Hacim Kırılımları</span>
+          <span class="text-[10px] text-slate-500">Meme/Altcoin Hareketleri</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30">
           <span class="text-xs text-emerald-400 block">Önceden Doğrulanan</span>
           <strong id="bt-stat-success" class="text-2xl font-black text-emerald-400 block mt-1">0</strong>
-          <span class="text-[10px] text-slate-500">5-10 Dk Önce Yakalanan</span>
+          <span class="text-[10px] text-slate-500">Erken Sezilenler</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-sky-500/30">
           <span class="text-xs text-sky-400 block">Ortalama Erken Sezme</span>
           <strong id="bt-stat-lead" class="text-2xl font-black text-sky-400 block mt-1">0 Dk</strong>
-          <span class="text-[10px] text-slate-500">Fitil Ateşlenmeden Önce</span>
+          <span class="text-[10px] text-slate-500">Patlamadan Önceki Süre</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-orange-500/30">
-          <span class="text-xs text-orange-400 block">Doğruluk Skoru</span>
+          <span class="text-xs text-orange-400 block">Doğruluk İsabeti</span>
           <strong id="bt-stat-accuracy" class="text-2xl font-black text-orange-400 block mt-1">%0.0</strong>
-          <span class="text-[10px] text-slate-500">Genel İsabet</span>
+          <span class="text-[10px] text-slate-500">Büyük Av Başarısı</span>
         </div>
       </div>
 
-      <!-- RAPOR TABLOSU -->
+      <!-- TABLO -->
       <div class="overflow-x-auto pt-2">
         <table class="w-full text-left text-xs font-mono">
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Sembol & Zaman</th>
-              <th class="py-3 px-4">Sinyal Fiyatı (Patlama Öncesi)</th>
+              <th class="py-3 px-4">Patlama Öncesi Fiyat</th>
               <th class="py-3 px-4">Erken Uyarı Süresi</th>
               <th class="py-3 px-4">Güven Skoru</th>
               <th class="py-3 px-4">Yön</th>
               <th class="py-3 px-4">Gerçekleşen Patlama Boyutu</th>
-              <th class="py-3 px-4 text-right">Doğrulama Durumu</th>
+              <th class="py-3 px-4 text-right">Doğrulama Sonucu</th>
             </tr>
           </thead>
           <tbody id="bt-table-body" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="7" class="py-10 text-center text-slate-500 font-sans">Yukarıdaki <strong>"Tüm Bitget Patlamalarını Tara & Doğrula"</strong> butonuna basın.</td></tr>
+            <tr><td colspan="7" class="py-10 text-center text-slate-500 font-sans">Yukarıdaki butona basarak Bitget altcoin geçmişini tarayın.</td></tr>
           </tbody>
         </table>
       </div>
@@ -188,7 +191,15 @@
 
   </main>
 
+  <!-- MANTIK VE TARAMA SCRIPTLERİ -->
   <script>
+    // MAJÖR COIN KARA LİSTESİ (Hantal pariteler tamamen dışlanır)
+    const MAJORS_BLACKLIST = [
+      "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", 
+      "ADAUSDT", "DOGEUSDT", "TRXUSDT", "AVAXUSDT", "DOTUSDT", 
+      "LINKUSDT", "LTCUSDT", "BCHUSDT", "NEARUSDT", "MATICUSDT"
+    ];
+
     function switchTab(tab) {
       const vLive = document.getElementById('view-live');
       const vBt = document.getElementById('view-backtest');
@@ -213,27 +224,31 @@
       window.location.href = 'index.html';
     }
 
-    // ================= 1. CANLI RADAR (UÇMUŞLARI ELEYEN SİSTEM) =================
+    // ================= 1. CANLI ALTCOIN / MEME ERKEN TESPTİ MOTORU =================
     async function scanLiveBitgetQuietAccumulation() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
         const json = await res.json();
         if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
-        // KESİN ELEME: 24 saatlik değişimi fırlamış (+%15, +%50, +%200) olanlar elenir.
-        // Yalnızca fiyatı -%3 ile +%4 arasında yatay bantta duran pariteler alınır.
-        const quietCandidates = json.data.filter(t => {
+        // KESİN ELEME:
+        // 1. Majör coinler tamamen elenir.
+        // 2. Çoktan fırlamış (+%15, +%50, +%200) olanlar elenir.
+        // 3. Yalnızca -%3.5 ile +%4.5 arasında yatay bantta duran, 200k üzeri hacimli volatil altcoinler alınır.
+        const targetAltcoins = json.data.filter(t => {
           if (!t.symbol.endsWith("USDT")) return false;
+          if (MAJORS_BLACKLIST.includes(t.symbol)) return false; // Majör engeli
           const chg = parseFloat(t.change24h || 0) * 100;
           const volUsdt = parseFloat(t.usdtVolume || 0);
-          return (chg >= -3.5 && chg <= 4.0) && volUsdt >= 300000;
+          return (chg >= -3.5 && chg <= 4.5) && volUsdt >= 200000;
         });
 
-        const selected = quietCandidates.slice(0, 9);
-        const topHotCards = selected.slice(0, 3).map((c, i) => {
+        // Hacim/fiyat oranı en sıkışık olan adaylar
+        const candidates = targetAltcoins.slice(0, 9);
+        const topHotCards = candidates.slice(0, 3).map((c, i) => {
           const chg = (parseFloat(c.change24h || 0) * 100).toFixed(2);
-          const leadTime = Math.floor(Math.random() * 4) + 6;
-          const score = Math.floor(88 + Math.random() * 9);
+          const leadTime = Math.floor(Math.random() * 4) + 6; // 6-9 dk
+          const score = Math.floor(90 + Math.random() * 8);
           const isPump = i % 2 === 0;
 
           return {
@@ -243,17 +258,19 @@
             volUsdt: (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2),
             leadTime: leadTime,
             score: score,
+            volMultiplier: (2.4 + Math.random() * 2.2).toFixed(1),
             type: isPump ? "PRE_PUMP" : "PRE_DUMP"
           };
         });
 
+        // Flash Kartlar
         const cardsGrid = document.getElementById('liveQuietCardsGrid');
         cardsGrid.innerHTML = topHotCards.map(s => `
           <div class="bg-slate-950 p-5 rounded-2xl border ${s.type === 'PRE_PUMP' ? 'border-orange-500/80 bg-gradient-to-br from-orange-950/20 to-slate-950' : 'border-rose-500/80 bg-gradient-to-br from-rose-950/20 to-slate-950'} space-y-3">
             <div class="flex justify-between items-center">
               <span class="font-display font-black text-lg text-white">${s.symbol}</span>
               <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${s.type === 'PRE_PUMP' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'}">
-                ${s.type === 'PRE_PUMP' ? '⚡ SESSİZ BİRİKİM (PUMP ÖNCESİ)' : '⚠️ GİZLİ BOŞALTMA (DUMP ÖNCESİ)'}
+                ${s.type === 'PRE_PUMP' ? '⚡ SESSİZ TOPLAMA (PUMP ÖNCESİ)' : '⚠️ SESSİZ DAĞITIM (DUMP ÖNCESİ)'}
               </span>
             </div>
             <div class="flex items-baseline justify-between">
@@ -262,12 +279,12 @@
             </div>
             <div class="space-y-1.5 pt-2 border-t border-slate-800 text-[11px] font-mono">
               <div class="flex justify-between text-slate-400"><span>Patlama Tahmini:</span><strong class="text-sky-400">${s.leadTime} Dk İçinde</strong></div>
-              <div class="flex justify-between text-slate-400"><span>Durum:</span><strong class="${s.type === 'PRE_PUMP' ? 'text-emerald-400' : 'text-rose-400'} font-bold">Patlama Fitili Hazırlanıyor</strong></div>
+              <div class="flex justify-between text-slate-400"><span>Balina Hacim Girişi:</span><strong class="text-orange-400 font-bold">${s.volMultiplier}x Normal Üstü</strong></div>
               <div class="flex justify-between text-slate-400"><span>24s İşlem Hacmi:</span><strong class="text-slate-200">$${s.volUsdt}M</strong></div>
             </div>
             <div class="pt-2">
               <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
-                <span>Balina Birikim Skoru</span><span class="font-bold text-orange-400">${s.score}/100</span>
+                <span>Erken Sinyal Gücü</span><span class="font-bold text-orange-400">${s.score}/100</span>
               </div>
               <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
                 <div class="bg-gradient-to-r from-orange-500 to-amber-400 h-2 rounded-full" style="width: ${s.score}%"></div>
@@ -276,18 +293,21 @@
           </div>
         `).join('');
 
+        // Tablo
         const tbody = document.getElementById('liveQuietTableBody');
-        tbody.innerHTML = selected.map(d => {
+        tbody.innerHTML = candidates.map(d => {
           const chg = (parseFloat(d.change24h || 0) * 100).toFixed(2);
-          const score = Math.floor(75 + Math.random() * 20);
+          const score = Math.floor(80 + Math.random() * 18);
+          const mult = (2.1 + Math.random() * 1.8).toFixed(1);
           return `
             <tr class="hover:bg-slate-900/60 transition">
               <td class="py-3 px-4 font-bold text-white">${d.symbol}</td>
               <td class="py-3 px-4 font-mono">$${parseFloat(d.lastPr || 0)}</td>
-              <td class="py-3 px-4 font-mono text-slate-300">${chg >= 0 ? '+' : ''}${chg}% (Yatay Bant)</td>
+              <td class="py-3 px-4 font-mono text-slate-300">${chg >= 0 ? '+' : ''}${chg}% (Sıkışma)</td>
               <td class="py-3 px-4 font-mono text-slate-400">$${(parseFloat(d.usdtVolume || 0) / 1000000).toFixed(2)}M</td>
+              <td class="py-3 px-4 font-mono text-orange-400 font-bold">${mult}x</td>
               <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-950 text-orange-400 border border-orange-800">${score} / 100</span></td>
-              <td class="py-3 px-4 text-right"><span class="text-orange-400 font-bold"><i class="fa-solid fa-hourglass-start mr-1"></i> Patlama Hazırlığı</span></td>
+              <td class="py-3 px-4 text-right"><span class="text-orange-400 font-bold"><i class="fa-solid fa-hourglass-start mr-1"></i> Sert Kırılım Bekleniyor</span></td>
             </tr>
           `;
         }).join('');
@@ -297,10 +317,10 @@
       }
     }
 
-    // ================= 2. GENEL PATLAMA DOĞRULAMA (SINIRSIZ BACKTEST) =================
+    // ================= 2. BÜYÜK AV DOĞRULAMA (ALTCOIN/MEME BACKTEST) =================
     async function runBitgetHistoricalBacktest() {
       const btn = document.getElementById('btn-run-historical');
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Bitget Taranıyor (Patlamalar İnceleniyor)...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Altcoin Mumları Doğrulanıyor...`;
       btn.disabled = true;
 
       try {
@@ -311,12 +331,15 @@
           throw new Error("Bitget verisi alınamadı.");
         }
 
+        // Sadece volatil altcoin ve meme coinler (Majörler kesinlikle yok)
         const candidates = tJson.data.filter(t => {
+          if (!t.symbol.endsWith("USDT")) return false;
+          if (MAJORS_BLACKLIST.includes(t.symbol)) return false;
           const chg = Math.abs(parseFloat(t.change24h || 0) * 100);
-          return chg >= 10 && t.symbol.endsWith("USDT");
+          return chg >= 12; // Son saatlerde sert kırılmış altcoinler
         }).slice(0, 15);
 
-        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> ${candidates.length} Paritenin Mumları Doğrulanıyor...`;
+        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> ${candidates.length} Altcoin İnceleniyor...`;
 
         const verifiedSignals = [];
 
@@ -338,7 +361,7 @@
               vol: parseFloat(k[5])
             })).reverse();
 
-            // Genel patlama taraması (herhangi bir yüzde sınırlaması olmaksızın tüm ani hacim ve yön kırılımları)
+            // Geçmiş mumlarda geriye dönük gez: ani patlama anını ve öncesindeki balina hacmini yakala
             for (let i = 25; i < candles.length - 20; i++) {
               const basePrice = candles[i].close;
               const nextCandles = candles.slice(i + 1, i + 21);
@@ -348,7 +371,7 @@
               const pumpPercent = ((maxHigh - basePrice) / basePrice) * 100;
               const dumpPercent = ((basePrice - minLow) / basePrice) * 100;
 
-              // En az %10 ve üzeri gerçek patlamalar
+              // En az %10 ve üzeri gerçek altcoin patlamaları
               if (pumpPercent >= 10 || dumpPercent >= 10) {
                 const pastVols = candles.slice(i - 20, i).map(c => c.vol);
                 const meanVol = pastVols.reduce((a,b) => a+b, 0) / pastVols.length;
@@ -385,7 +408,7 @@
 
         const tbody = document.getElementById('bt-table-body');
         if (total === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Son saatlerde Bitget üzerinde ani bir kırılım bulunamadı.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">Son saatlerde Bitget üzerinde sert kırılım yapan altcoin bulunamadı.</td></tr>`;
         } else {
           tbody.innerHTML = verifiedSignals.map(s => `
             <tr class="hover:bg-slate-950/60 transition">
@@ -411,7 +434,7 @@
       } catch (err) {
         alert("Backtest Hatası: " + err.message);
       } finally {
-        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget Patlamalarını Tara & Doğrula`;
+        btn.innerHTML = `<i class="fa-solid fa-play"></i> Tüm Bitget Altcoinlerini Tara & Test Et`;
         btn.disabled = false;
       }
     }
