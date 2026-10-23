@@ -370,12 +370,12 @@
     function closeModal(id) {
       document.getElementById(id).classList.add('hidden');
     }
-    function handleAuthSubmit(e, type) {
-      e.preventDefault();
-      alert(type === 'login' ? 'Authentication successful! Dashboard will load next.' : 'Account registered successfully!');
-      closeModal('loginModal');
-      closeModal('registerModal');
-    }
+   function handleAuthSubmit(e, type) {
+  e.preventDefault();
+  const username = (document.getElementById(type === 'login' ? 'loginUser' : 'regUser')?.value || 'user').trim();
+  sessionStorage.setItem('mineora_active_session', username);
+  window.location.href = 'dashboard.html';
+} 
   </script>
 </body>
 </html>
