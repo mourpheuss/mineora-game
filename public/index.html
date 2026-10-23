@@ -3,290 +3,214 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MINA Protocol | Root Admin Terminal</title>
-  <!-- Favicon -->
+  <title>MINA Protocol | Proof of Everything</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-4 sm:p-8">
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-orange-500 selection:text-white">
 
-  <!-- ================= GÜVENLİK DUVARI (LOGIN GATEKEEPER) ================= -->
-  <!-- Yetki doğrulanana kadar tüm ekranı kapatır -->
-  <div id="admin-gatekeeper-modal" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-8 space-y-6 text-center shadow-2xl">
-      <div class="w-16 h-16 rounded-2xl bg-orange-600/10 border border-orange-500/20 text-orange-500 flex items-center justify-center text-2xl mx-auto shadow-inner">
-        <i class="fa-solid fa-shield-halved"></i>
-      </div>
-      <div>
-        <h2 class="text-lg font-black text-white">Root Admin Doğrulaması</h2>
-        <p class="text-xs text-slate-400 mt-1">ersinulasduzyol@gmail.com hesabı için şifrenizi girin:</p>
-      </div>
+  <!-- TOP BANNER -->
+  <div class="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white text-center py-2 px-4 text-xs font-semibold flex items-center justify-center gap-2 shadow-sm">
+    <span>⚡ Staking Protocol V2 is now active on Mainnet.</span>
+    <button onclick="openModal('modal-register')" class="underline hover:text-slate-100 font-bold cursor-pointer">
+      Explore Pools & Yields &rarr;
+    </button>
+  </div>
 
-      <form onsubmit="handleGatekeeperLogin(event)" class="space-y-4">
-        <div>
-          <input type="password" id="gatekeeper-pass" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-sm text-white tracking-widest outline-none focus:border-orange-500 font-mono" />
+  <!-- NAVIGATION -->
+  <nav class="max-w-7xl mx-auto w-full px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white font-bold text-base shadow-sm">
+          M
         </div>
-        <button type="submit" id="btn-gatekeeper-submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3.5 rounded-xl transition shadow-lg shadow-orange-600/20">
-          Terminali Aç &rarr;
-        </button>
-      </form>
-
-      <a href="index.html" class="inline-block text-xs text-slate-500 hover:text-slate-300 transition">
-        &larr; Ana Sayfaya Dön
+        <span class="font-display font-black text-xl tracking-tight text-slate-900">MINA</span>
       </a>
+      <span class="text-xs bg-white text-slate-600 px-2.5 py-1 rounded-md border border-slate-200 font-semibold shadow-sm ml-2 hidden sm:inline-block">
+        Staking Portal
+      </span>
     </div>
-  </div>
 
-  <!-- ================= ADMİN ARAYÜZÜ (DOĞRULANMADAN GÖRÜNMEZ) ================= -->
-  <div id="admin-main-interface" class="hidden">
-    
-    <!-- ADMIN HEADER -->
-    <header class="max-w-7xl mx-auto flex flex-wrap justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 gap-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-black text-lg">
-          <i class="fa-solid fa-shield-halved"></i>
+    <div class="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-600">
+      <a href="#about" class="hover:text-orange-600 transition">About</a>
+      <a href="#whitepaper" class="hover:text-orange-600 transition">Whitepaper</a>
+      <a href="dashboard.html" class="hover:text-orange-600 transition">Staking Portal</a>
+      <a href="#roadmap" class="hover:text-orange-600 transition">Roadmap</a>
+      <a href="#tokenomics" class="hover:text-orange-600 transition">Tokenomics</a>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="openModal('modal-login')" class="text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition">
+        Sign In
+      </button>
+      <button onclick="openModal('modal-register')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+        Sign Up
+      </button>
+      <button onclick="openModal('modal-register')" class="hidden sm:inline-flex bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+        Launch Staking &rarr;
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <main class="max-w-5xl mx-auto px-6 py-12 sm:py-20 text-center space-y-6 flex-1 flex flex-col justify-center">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600 font-medium mx-auto shadow-sm">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      Listed on Bitget Global &bull; Zero-Knowledge Consensus
+    </div>
+
+    <h1 class="font-display text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-tight">
+      Proof of Everything.
+    </h1>
+
+    <p class="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+      The lightweight blockchain that preserves privacy, powers verifiable internet applications, and provides high-yield consensus staking through recursive zero-knowledge proofs.
+    </p>
+
+    <div class="flex flex-wrap justify-center items-center gap-3 pt-3">
+      <button onclick="openModal('modal-register')" class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm px-6 py-3.5 rounded-xl shadow-md transition">
+        Create Account & Stake &rarr;
+      </button>
+      <button onclick="openModal('modal-login')" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm px-6 py-3.5 rounded-xl shadow-sm transition">
+        Staker Login
+      </button>
+    </div>
+
+    <!-- STATS STRIP -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto pt-10 text-left">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block">Blockchain Size</span>
+        <strong class="font-display text-xl sm:text-2xl font-black text-slate-900 block mt-1">22 KB</strong>
+        <span class="text-[10px] text-emerald-600 font-bold mt-1 block">Constant Zero Proof</span>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block">Total Value Locked</span>
+        <strong class="font-display text-xl sm:text-2xl font-black text-slate-900 block mt-1">$48.2M+</strong>
+        <span class="text-[10px] text-slate-500 mt-1 block">Cumulative Staking</span>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block">Max Target APY</span>
+        <strong class="font-display text-xl sm:text-2xl font-black text-orange-500 block mt-1">Up to %180</strong>
+        <span class="text-[10px] text-slate-500 mt-1 block">Fixed Locked Pools</span>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block">Bitget Status</span>
+        <strong class="font-display text-xl sm:text-2xl font-black text-slate-900 block mt-1">Live Trading</strong>
+        <span class="text-[10px] text-emerald-600 font-bold mt-1 block">USDT Spot & Futures</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-200 py-6 text-center text-xs text-slate-500 bg-white">
+    &copy; 2026 MINA Protocol. Native Layer-1 Zero-Knowledge Staking Platform.
+  </footer>
+
+  <!-- ================= SIGN IN MODAL ================= -->
+  <div id="modal-login" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-200 relative">
+      <button onclick="closeModal('modal-login')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
+      
+      <div>
+        <h3 class="font-display text-xl font-bold text-slate-900">Sign In</h3>
+        <p class="text-xs text-slate-500 mt-1">Access your MINA staking balance & portfolio.</p>
+      </div>
+
+      <form onsubmit="handleUserLoginSubmit(event)" class="space-y-3 pt-1">
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Username</label>
+          <input type="text" id="login-username" required placeholder="Your username" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
         </div>
         <div>
-          <h1 class="text-lg font-black text-white flex items-center gap-2">
-            MINA Protocol &bull; Root Admin Terminal
-            <span class="text-xs bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono">ROOT</span>
-          </h1>
-          <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Üye Yönetimi, Kasa Taraması ve Bakiye Müdahalesi</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <button onclick="document.getElementById('modal-admin-create-user').classList.remove('hidden')" class="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2">
-          <i class="fa-solid fa-user-plus"></i> Yeni Üye Tanımla
-        </button>
-        <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition">
-          &larr; Staking Dashboard
-        </a>
-        <button onclick="handleAdminLogout()" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-xs px-4 py-2.5 rounded-xl transition">
-          Oturumu Kapat & Çıkış
-        </button>
-      </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto space-y-6">
-
-      <!-- 1. FİNANSAL KASA DENETİM KARTLARI & CANLI TARAMA BUTONU -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <i class="fa-solid fa-chart-pie text-orange-400"></i> Protokol Kasa Likiditesi & 24S Akış Denetimi
-            </h2>
-            <span class="text-xs text-slate-400">Tüm kullanıcı cüzdanları, kilitli stake havuzları ve son 24 saatlik onaylı hareketler</span>
-          </div>
-          <button id="btn-scan-vaults" onclick="scanAllUserVaultsFinancials()" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2">
-            <i class="fa-solid fa-rotate mr-1"></i> Kasaları Canlı Tara & Hesapla
-          </button>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Password</label>
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-          <!-- TOPLAM MINA KASASI -->
-          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
-            <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
-              <span class="font-semibold uppercase tracking-wider text-[11px]">Tüm Kasalardaki MINA</span>
-              <span class="p-1 rounded bg-orange-500/10 text-orange-400"><i class="fa-solid fa-vault"></i></span>
-            </div>
-            <div>
-              <strong id="stat-total-mina-vault" class="text-2xl font-black text-orange-400 font-mono">0.00</strong>
-              <span class="text-xs text-slate-500 ml-1">MINA</span>
-            </div>
-            <span class="text-[10px] text-slate-500 mt-2 block" id="stat-total-vault-sub">Boşta + Kilitli Havuzlar</span>
-          </div>
-
-          <!-- 24 SAATTE GİREN MINA -->
-          <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 flex flex-col justify-between">
-            <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
-              <span class="font-semibold uppercase tracking-wider text-[11px] text-emerald-400">Son 24 Saatte Giren</span>
-              <span class="p-1 rounded bg-emerald-500/10 text-emerald-400"><i class="fa-solid fa-arrow-down"></i></span>
-            </div>
-            <div>
-              <strong id="stat-24h-in-mina" class="text-2xl font-black text-emerald-400 font-mono">+0.00</strong>
-              <span class="text-xs text-slate-500 ml-1">MINA</span>
-            </div>
-            <span class="text-[10px] text-slate-500 mt-2 block" id="stat-24h-in-sub">Onaylı Yatırmalar</span>
-          </div>
-
-          <!-- 24 SAATTE ÇIKAN MINA -->
-          <div class="bg-slate-950 p-4 rounded-xl border border-rose-500/30 flex flex-col justify-between">
-            <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
-              <span class="font-semibold uppercase tracking-wider text-[11px] text-rose-400">Son 24 Saatte Çıkan</span>
-              <span class="p-1 rounded bg-rose-500/10 text-rose-400"><i class="fa-solid fa-arrow-up"></i></span>
-            </div>
-            <div>
-              <strong id="stat-24h-out-mina" class="text-2xl font-black text-rose-400 font-mono">-0.00</strong>
-              <span class="text-xs text-slate-500 ml-1">MINA</span>
-            </div>
-            <span class="text-[10px] text-slate-500 mt-2 block" id="stat-24h-out-sub">Onaylı Çekimler</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. BEKLEYEN YATIRMA VE ÇEKİM KUYRUKLARI -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        <!-- BEKLEYEN YATIRMALAR -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <h2 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Bekleyen Yatırma Bildirimleri (TxID)</h2>
-            </div>
-            <span id="deposit-count" class="text-xs font-mono text-slate-400">0 Bekleyen</span>
-          </div>
-          <div id="admin-deposit-queue-list" class="space-y-3 min-h-[160px]">
-            <div class="text-center py-10 text-slate-500 text-xs">Yükleniyor...</div>
-          </div>
-        </div>
-
-        <!-- BEKLEYEN ÇEKİMLER -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-              <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Bekleyen MINA Çekim Talepleri</h2>
-            </div>
-            <span id="withdraw-count" class="text-xs font-mono text-slate-400">0 Bekleyen</span>
-          </div>
-          <div id="admin-withdrawal-queue-list" class="space-y-3 min-h-[160px]">
-            <div class="text-center py-10 text-slate-500 text-xs">Yükleniyor...</div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- 3. KULLANICI LİSTESİ & GELİŞMİŞ MÜDAHALE MASASI -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-          <div>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Kayıtlı Staker & Kullanıcı Listesi</h2>
-            <span class="text-xs text-slate-400">Bakiye ekle/çıkar, hesap kilitleme ve kalıcı silme kontrolleri</span>
-          </div>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
-              <tr>
-                <th class="py-3 px-4">Kullanıcı</th>
-                <th class="py-3 px-4">Şifre</th>
-                <th class="py-3 px-4">Sponsor</th>
-                <th class="py-3 px-4">MINA Bakiyesi</th>
-                <th class="py-3 px-4">Havuzlar</th>
-                <th class="py-3 px-4">Kasa Durumu</th>
-                <th class="py-3 px-4 text-right">Yönetici Müdahalesi</th>
-              </tr>
-            </thead>
-            <tbody id="admin-user-table-body" class="divide-y divide-slate-800 text-slate-300">
-              <tr><td colspan="7" class="py-8 text-center text-slate-500">Kullanıcı verisi taranıyor...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </main>
-
-  </div>
-
-  <!-- YENİ ÜYE TANIMLAMA MODALI -->
-  <div id="modal-admin-create-user" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-user-plus text-orange-500"></i> Yeni Staker / Üye Tanımla
-        </h3>
-        <button onclick="document.getElementById('modal-admin-create-user').classList.add('hidden')" class="text-slate-400 text-xs hover:text-white">✕</button>
-      </div>
-
-      <form onsubmit="handleAdminDirectUserCreate(event)" class="space-y-3">
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Kullanıcı Adı</label>
-          <input type="text" id="new-u-username" required placeholder="ör: ahmet2026" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-orange-500" />
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Şifre</label>
-          <input type="text" id="new-u-pass" required value="123456" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-orange-500" />
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Başlangıç MINA Bakiyesi</label>
-          <input type="number" id="new-u-mina" value="0" step="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-emerald-400 font-bold outline-none focus:border-orange-500" />
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Sponsor (Referans Veren Kullanıcı Adı)</label>
-          <input type="text" id="new-u-sponsor" placeholder="Opsiyonel (ör: mourpheus)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 outline-none focus:border-orange-500" />
-        </div>
-
-        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-2">
-          Hesabı Oluştur & Veritabanına Yaz &rarr;
+        <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-1 cursor-pointer">
+          Sign In to Dashboard &rarr;
         </button>
       </form>
+
+      <div class="text-center pt-2">
+        <button onclick="closeModal('modal-login'); openModal('modal-register')" class="text-xs text-slate-500 hover:text-orange-600">
+          Don't have an account? <span class="font-bold underline text-slate-800">Create Account</span>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- BAKİYE EKLE / ÇIKAR MODAL -->
-  <div id="modal-mod-user" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-coins text-orange-400"></i> Bakiye Ekle / Çıkar
-        </h3>
-        <button onclick="document.getElementById('modal-mod-user').classList.add('hidden')" class="text-slate-400 text-xs hover:text-white">✕</button>
-      </div>
-
-      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-        <span class="text-xs text-slate-400 font-medium">Kullanıcı: <strong id="mod-user-target" class="text-white"></strong></span>
-        <span class="text-xs text-orange-400 font-mono font-bold" id="mod-user-current-mina">0.00 MINA</span>
-      </div>
-
+  <!-- ================= CREATE ACCOUNT MODAL ================= -->
+  <div id="modal-register" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-200 relative">
+      <button onclick="closeModal('modal-register')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
+      
       <div>
-        <label class="text-[11px] text-slate-400 block mb-1">Yeni MINA Bakiyesi Belirle</label>
-        <input type="number" id="mod-user-mina-input" step="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-base text-orange-400 font-bold outline-none focus:border-orange-500" />
+        <h3 class="font-display text-xl font-bold text-slate-900">Create Account</h3>
+        <p class="text-xs text-slate-500 mt-1">Start earning protocol staking rewards.</p>
       </div>
 
-      <div class="grid grid-cols-4 gap-2 pt-1 text-xs font-mono font-bold">
-        <button onclick="quickAdjustBalance(100)" class="bg-emerald-950 text-emerald-400 border border-emerald-800 py-1.5 rounded-lg hover:bg-emerald-900">+100</button>
-        <button onclick="quickAdjustBalance(500)" class="bg-emerald-950 text-emerald-400 border border-emerald-800 py-1.5 rounded-lg hover:bg-emerald-900">+500</button>
-        <button onclick="quickAdjustBalance(-100)" class="bg-rose-950 text-rose-400 border border-rose-800 py-1.5 rounded-lg hover:bg-rose-900">-100</button>
-        <button onclick="quickAdjustBalance(-500)" class="bg-rose-950 text-rose-400 border border-rose-800 py-1.5 rounded-lg hover:bg-rose-900">-500</button>
-      </div>
+      <form onsubmit="handleUserRegisterSubmit(event)" class="space-y-3 pt-1">
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Username *</label>
+          <input type="text" id="reg-username" required placeholder="Choose username" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+        </div>
 
-      <button onclick="saveUserMinaModification()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-2">
-        Bakiyeyi Güncelle & Kaydet &rarr;
-      </button>
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Email Address *</label>
+          <input type="email" id="reg-email" required placeholder="name@example.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1">Password *</label>
+            <input type="password" id="reg-password" required minlength="6" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1">Confirm Password *</label>
+            <input type="password" id="reg-password-confirm" required minlength="6" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-semibold text-slate-700">Sponsor / Referral Code</label>
+            <span class="text-[10px] text-slate-400">Optional</span>
+          </div>
+          <input type="text" id="reg-sponsor" placeholder="e.g. mourpheus or MINE-USER-777" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-orange-600 font-mono outline-none focus:border-orange-500" />
+        </div>
+
+        <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-3.5 rounded-xl shadow-md transition mt-2 cursor-pointer">
+          Register & Continue &rarr;
+        </button>
+      </form>
+
+      <div class="text-center pt-1">
+        <button onclick="closeModal('modal-register'); openModal('modal-login')" class="text-xs text-slate-500 hover:text-orange-600">
+          Already have an account? <span class="font-bold underline text-slate-800">Sign In</span>
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- TOAST BİLDİRİM -->
-  <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
+  <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
 
-  <!-- MASTER SCRIPTLER -->
+  <!-- FIREBASE VE OTURUM MOTORU -->
+  <script src="state.js"></script>
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCLyoK5TV3uCdUeN6nNOI2eQ5vm3Q-SS2w",
-      authDomain: "mineora-web.firebaseapp.com",
-      projectId: "mineora-web",
-      storageBucket: "mineora-web.firebasestorage.app",
-      messagingSenderId: "648898617395",
-      appId: "1:648898617395:web:23902a04f19da700010346",
-      databaseURL: "https://mineora-web-default-rtdb.firebaseio.com"
-    };
-
-    if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const fbDb = (typeof firebase !== 'undefined') ? firebase.database() : null;
-
-    let activeModUser = null;
-
     function showToast(msg) {
       const t = document.getElementById('toast');
       t.innerText = msg;
@@ -294,321 +218,128 @@
       setTimeout(() => t.classList.add('hidden'), 3500);
     }
 
-    // GİRİŞ DUVARI DOĞRULAMASI
-    async function handleGatekeeperLogin(e) {
+    function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+    // KAYIT MOTORU
+    async function handleUserRegisterSubmit(e) {
       e.preventDefault();
-      const pass = document.getElementById('gatekeeper-pass').value.trim();
-      const btn = document.getElementById('btn-gatekeeper-submit');
+      const username = document.getElementById('reg-username').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const pass = document.getElementById('reg-password').value.trim();
+      const passConfirm = document.getElementById('reg-password-confirm').value.trim();
+      const sponsorInput = document.getElementById('reg-sponsor').value.trim();
 
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Doğrulanıyor...`;
-
-      try {
-        await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", pass);
-        // Giriş başarılı: Duvarı kaldır, masaları aç
-        document.getElementById('admin-gatekeeper-modal').classList.add('hidden');
-        document.getElementById('admin-main-interface').classList.remove('hidden');
-        showToast("✅ Root Admin Terminali Başarıyla Açıldı!");
-        bindFirebaseQueues();
-        scanAllUserVaultsFinancials();
-      } catch (err) {
-        alert("Erişim Reddedildi! Şifre yanlış: " + err.message);
-        btn.innerHTML = "Terminali Aç &rarr;";
+      if (pass !== passConfirm) {
+        return alert("Şifreler uyuşmuyor! Lütfen kontrol edin.");
       }
-    }
 
-    function handleAdminLogout() {
-      if (typeof firebase !== 'undefined' && firebase.auth) {
-        firebase.auth().signOut();
+      const uKey = username.toLowerCase();
+
+      if (typeof fbDb !== 'undefined' && fbDb) {
+        const snap = await fbDb.ref(`users/${uKey}`).once('value');
+        if (snap.exists()) {
+          return alert("Bu kullanıcı adı zaten alınmış! Lütfen başka bir ad seçin.");
+        }
       }
-      sessionStorage.clear();
-      window.location.href = 'index.html';
-    }
 
-    // KASALARI TARAMA
-    function scanAllUserVaultsFinancials() {
-      if (!fbDb) return;
-      const btn = document.getElementById('btn-scan-vaults');
-      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1"></i> Taranıyor...`;
+      let realSponsorUsername = "";
+      let referralChain = [];
 
-      fbDb.ref('users').once('value').then(snap => {
-        const users = snap.val() || {};
-        let totalVaultMina = 0;
-        let totalLockedMina = 0;
-        let in24hMina = 0;
-        let out24hMina = 0;
+      if (sponsorInput && typeof fbDb !== 'undefined' && fbDb) {
+        const allSnap = await fbDb.ref('users').once('value');
+        const allUsers = allSnap.val() || {};
 
-        const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-
-        Object.values(users).forEach(u => {
+        let foundSponsor = null;
+        Object.values(allUsers).forEach(u => {
           if (!u) return;
-          const walletMina = Number(parseFloat(u.mina || u.ora || 0)) || 0;
-          totalVaultMina += walletMina;
-
-          if (Array.isArray(u.stakes)) {
-            u.stakes.forEach(s => {
-              if (s && !s.principalClaimed) {
-                const stakedAmt = Number(parseFloat(s.amount || 0)) || 0;
-                totalVaultMina += stakedAmt;
-                totalLockedMina += stakedAmt;
-              }
-            });
-          }
-
-          if (Array.isArray(u.logs)) {
-            u.logs.forEach(l => {
-              const logTime = l.id || l.timestamp || 0;
-              const isRecent = logTime >= oneDayAgo;
-              const txt = (l.amountText || "").toString();
-              const numMatch = txt.match(/[\d\.]+/);
-              const val = numMatch ? parseFloat(numMatch[0]) : 0;
-
-              if (isRecent && val > 0) {
-                if (txt.startsWith('+')) in24hMina += val;
-                else if (txt.startsWith('-')) out24hMina += val;
-              }
-            });
+          const uName = (u.username || '').toLowerCase();
+          const uRef = (u.refCode || '').toUpperCase();
+          if (uName === sponsorInput.toLowerCase() || uRef === sponsorInput.toUpperCase()) {
+            foundSponsor = u;
           }
         });
 
-        document.getElementById('stat-total-mina-vault').innerText = totalVaultMina.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        document.getElementById('stat-total-vault-sub').innerText = `Kilitli: ${totalLockedMina.toFixed(2)} MINA | Boşta: ${(totalVaultMina - totalLockedMina).toFixed(2)} MINA`;
-        document.getElementById('stat-24h-in-mina').innerText = `+${in24hMina.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        document.getElementById('stat-24h-out-mina').innerText = `-${out24hMina.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-        if (btn) btn.innerHTML = `<i class="fa-solid fa-rotate mr-1"></i> Kasaları Canlı Tara & Hesapla`;
-      });
-    }
-
-    // KUYRUKLARI BAĞLAMA
-    function bindFirebaseQueues() {
-      if (!fbDb) return;
-
-      // Yatırma Kuyruğu
-      fbDb.ref('depositQueue').on('value', snap => {
-        const data = snap.val();
-        const container = document.getElementById('admin-deposit-queue-list');
-        const countEl = document.getElementById('deposit-count');
-        container.innerHTML = "";
-
-        const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
-        if (countEl) countEl.innerText = `${items.length} Bekleyen`;
-
-        if (!items.length) {
-          container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Bekleyen yatırma bildirimi yok.</div>`;
-          return;
+        if (foundSponsor) {
+          realSponsorUsername = foundSponsor.username;
+          referralChain = [...(foundSponsor.referral_chain || []), foundSponsor.username];
+          if (referralChain.length > 4) {
+            referralChain = referralChain.slice(referralChain.length - 4);
+          }
         }
-
-        items.forEach(d => {
-          const card = document.createElement('div');
-          card.className = "p-3.5 rounded-xl bg-slate-950 border border-emerald-500/40 flex items-center justify-between text-xs";
-          card.innerHTML = `
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <strong class="text-white">${d.username}</strong>
-                <span class="text-emerald-400 font-mono font-bold">+${d.amount} ${d.asset || 'MINA'}</span>
-              </div>
-              <span class="text-[10px] text-slate-400 font-mono block break-all">TxHash: ${d.txHash || d.txid}</span>
-              <span class="text-[9px] text-slate-500">${d.date}</span>
-            </div>
-            <div class="flex gap-2 ml-2">
-              <button onclick="approveDepositOrder('${d.id}', '${d.username}', ${d.amount}, '${d.asset || 'MINA'}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">Onayla</button>
-              <button onclick="rejectDepositOrder('${d.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 text-xs transition">Reddet</button>
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      });
-
-      // Çekim Kuyruğu
-      fbDb.ref('withdrawalQueue').on('value', snap => {
-        const data = snap.val();
-        const container = document.getElementById('admin-withdrawal-queue-list');
-        const countEl = document.getElementById('withdraw-count');
-        container.innerHTML = "";
-
-        const items = data ? Object.values(data).filter(d => d.status === 'pending') : [];
-        if (countEl) countEl.innerText = `${items.length} Bekleyen`;
-
-        if (!items.length) {
-          container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">Bekleyen MINA çekim talebi yok.</div>`;
-          return;
-        }
-
-        items.forEach(d => {
-          const card = document.createElement('div');
-          card.className = "p-3.5 rounded-xl bg-slate-950 border border-amber-500/40 flex flex-col gap-2 text-xs";
-          card.innerHTML = `
-            <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
-              <strong class="text-white">${d.username}</strong>
-              <span class="text-amber-400 font-mono font-bold">-${d.amount} MINA</span>
-            </div>
-            <div class="font-mono text-[11px] text-slate-400 break-all select-all">
-              Alıcı: <span class="text-cyan-300">${d.targetAddress}</span>
-            </div>
-            <div class="flex justify-end gap-2 pt-1">
-              <button onclick="approveWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs">Gönderildi (Kapat)</button>
-              <button onclick="rejectWithdrawalOrder('${d.id}', '${d.username}', ${d.amount})" class="px-2.5 py-1.5 rounded-lg bg-rose-950 text-rose-300 text-xs">İade Et</button>
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      });
-
-      // Kullanıcı Masası
-      fbDb.ref('users').on('value', snap => {
-        const users = snap.val() || {};
-        const tbody = document.getElementById('admin-user-table-body');
-        tbody.innerHTML = "";
-
-        Object.keys(users).forEach(k => {
-          const u = users[k];
-          const stakesCount = (u.stakes || []).length;
-          const isLocked = !!u.isVaultLocked;
-          const isRoot = (u.username || '').toLowerCase() === 'mourpheus';
-
-          const tr = document.createElement('tr');
-          tr.className = isLocked ? "bg-rose-950/20 border-l-2 border-rose-500 transition" : "hover:bg-slate-950/60 transition";
-          tr.innerHTML = `
-            <td class="py-3 px-4 font-bold text-white flex items-center gap-1.5">
-              ${u.username}
-              ${isRoot ? '<span class="text-[9px] bg-rose-950 text-rose-300 border border-rose-800 px-1 rounded font-mono">ADMIN</span>' : ''}
-            </td>
-            <td class="py-3 px-4 font-mono text-slate-400">${u.pass || '••••••'}</td>
-            <td class="py-3 px-4 font-mono text-slate-400">${u.referredBy || '-'}</td>
-            <td class="py-3 px-4 font-mono text-orange-400 font-bold">${Number(u.mina || u.ora || 0).toFixed(2)} MINA</td>
-            <td class="py-3 px-4 font-mono text-cyan-300">${stakesCount} Havuz</td>
-            <td class="py-3 px-4 font-semibold">
-              ${isLocked ? '<span class="text-rose-400 text-[11px]"><i class="fa-solid fa-lock"></i> Kilitli</span>' : '<span class="text-emerald-400 text-[11px]"><i class="fa-solid fa-lock-open"></i> Açık</span>'}
-            </td>
-            <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-              <button onclick="openModUserModal('${u.username}', ${Number(u.mina || u.ora || 0)})" class="px-2.5 py-1 rounded-lg bg-orange-600/30 hover:bg-orange-600 text-orange-300 hover:text-white text-[11px] font-bold transition">
-                <i class="fa-solid fa-plus-minus mr-1"></i> Bakiye
-              </button>
-              ${!isRoot ? `
-                <button onclick="toggleUserVaultLock('${u.username}', ${isLocked})" class="px-2.5 py-1 rounded-lg ${isLocked ? 'bg-emerald-600/30 text-emerald-300' : 'bg-amber-600/30 text-amber-300'} text-[11px] font-bold transition">
-                  ${isLocked ? 'Kilidi Aç' : 'Kilitle'}
-                </button>
-                <button onclick="deleteUserPermanently('${u.username}')" class="px-2.5 py-1 rounded-lg bg-rose-600/20 text-rose-400 text-[11px] font-bold transition">
-                  Sil
-                </button>
-              ` : '<span class="text-[10px] text-slate-500 font-mono italic">Korumalı</span>'}
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      });
-    }
-
-    function approveDepositOrder(depId, username, amount, asset) {
-      const uKey = username.toLowerCase();
-      fbDb.ref(`users/${uKey}`).once('value').then(snap => {
-        const u = snap.val();
-        if (u) {
-          u.mina = Number(((u.mina || 0) + amount).toFixed(2));
-          fbDb.ref(`users/${uKey}`).set(u);
-          fbDb.ref(`depositQueue/${depId}`).remove();
-          showToast(`✅ ${username} hesabına ${amount} ${asset} aktarıldı!`);
-          scanAllUserVaultsFinancials();
-        }
-      });
-    }
-
-    function rejectDepositOrder(depId) {
-      fbDb.ref(`depositQueue/${depId}`).remove();
-      showToast("Bildirim reddedildi.");
-    }
-
-    function approveWithdrawalOrder(withId, username, amount) {
-      fbDb.ref(`withdrawalQueue/${withId}`).remove();
-      showToast(`✅ ${username} çekimi tamamlandı.`);
-      scanAllUserVaultsFinancials();
-    }
-
-    function rejectWithdrawalOrder(withId, username, amount) {
-      const uKey = username.toLowerCase();
-      fbDb.ref(`users/${uKey}`).once('value').then(snap => {
-        const u = snap.val();
-        if (u) {
-          u.mina = Number(((u.mina || 0) + amount).toFixed(2));
-          fbDb.ref(`users/${uKey}`).set(u);
-          fbDb.ref(`withdrawalQueue/${withId}`).remove();
-          showToast(`↩️ Çekim reddedildi, ${amount} MINA iade edildi.`);
-          scanAllUserVaultsFinancials();
-        }
-      });
-    }
-
-    function openModUserModal(username, curMina) {
-      activeModUser = username;
-      document.getElementById('mod-user-target').innerText = username;
-      document.getElementById('mod-user-current-mina').innerText = `${curMina.toFixed(2)} MINA`;
-      document.getElementById('mod-user-mina-input').value = curMina;
-      document.getElementById('modal-mod-user').classList.remove('hidden');
-    }
-
-    function quickAdjustBalance(delta) {
-      const input = document.getElementById('mod-user-mina-input');
-      const cur = parseFloat(input.value) || 0;
-      input.value = Math.max(0, cur + delta);
-    }
-
-    function saveUserMinaModification() {
-      if (!activeModUser) return;
-      const val = parseFloat(document.getElementById('mod-user-mina-input').value) || 0;
-      const uKey = activeModUser.toLowerCase();
-      fbDb.ref(`users/${uKey}/mina`).set(val).then(() => {
-        document.getElementById('modal-mod-user').classList.add('hidden');
-        showToast(`💾 ${activeModUser} bakiyesi güncellendi!`);
-        scanAllUserVaultsFinancials();
-      });
-    }
-
-    function toggleUserVaultLock(username, currentlyLocked) {
-      const uKey = username.toLowerCase();
-      fbDb.ref(`users/${uKey}/isVaultLocked`).set(!currentlyLocked).then(() => {
-        showToast(`🔒 ${username} kasası güncellendi.`);
-      });
-    }
-
-    function deleteUserPermanently(username) {
-      if (!confirm(`'${username}' kullanıcısını kalıcı olarak silmek istiyor musunuz?`)) return;
-      fbDb.ref(`users/${username.toLowerCase()}`).remove().then(() => {
-        showToast(`🗑️ ${username} silindi.`);
-        scanAllUserVaultsFinancials();
-      });
-    }
-
-    function handleAdminDirectUserCreate(e) {
-      e.preventDefault();
-      const uname = document.getElementById('new-u-username').value.trim();
-      const pass = document.getElementById('new-u-pass').value.trim();
-      const mina = parseFloat(document.getElementById('new-u-mina').value) || 0;
-      const sponsor = document.getElementById('new-u-sponsor').value.trim();
-
-      if (!uname || !pass) return alert("Kullanıcı adı ve şifre zorunludur!");
-      const uKey = uname.toLowerCase();
+      }
 
       const newUser = {
-        username: uname,
+        username: username,
+        email: email,
         pass: pass,
-        mina: mina,
+        mina: 0.00,
         role: "Verified Staker",
         isVaultLocked: false,
-        referredBy: sponsor || "",
-        referral_chain: sponsor ? [sponsor] : [],
-        refCode: `MINE-${uname.toUpperCase()}-777`,
+        referredBy: realSponsorUsername,
+        referral_chain: referralChain,
+        refCode: `MINE-${username.toUpperCase()}-777`,
         stakes: [],
         logs: []
       };
 
-      if (fbDb) {
-        fbDb.ref(`users/${uKey}`).set(newUser).then(() => {
-          document.getElementById('modal-admin-create-user').classList.add('hidden');
-          showToast(`🎉 ${uname} oluşturuldu!`);
-          scanAllUserVaultsFinancials();
-        });
+      if (typeof fbDb !== 'undefined' && fbDb) {
+        await fbDb.ref(`users/${uKey}`).set(newUser);
+      }
+      localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(newUser));
+      sessionStorage.setItem('mineora_active_session', username);
+
+      showToast("🎉 Hesabınız oluşturuldu! Yönlendiriliyorsunuz...");
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 800);
+    }
+
+    // GİRİŞ MOTORU
+    async function handleUserLoginSubmit(e) {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value.trim();
+      const pass = document.getElementById('login-password').value.trim();
+      const uKey = username.toLowerCase();
+
+      if (uKey === 'mourpheus' || uKey === 'admin') {
+        sessionStorage.setItem('mineora_admin_direct_pass', pass);
+      }
+
+      if (typeof fbDb !== 'undefined' && fbDb) {
+        const snap = await fbDb.ref(`users/${uKey}`).once('value');
+        const u = snap.val();
+
+        if (!u) {
+          return alert("Kullanıcı bulunamadı!");
+        }
+        if (u.pass !== pass) {
+          return alert("Hatalı şifre!");
+        }
+
+        sessionStorage.setItem('mineora_active_session', u.username);
+        
+        if (uKey === 'mourpheus' || uKey === 'admin') {
+          window.location.href = 'admin.html';
+        } else {
+          window.location.href = 'dashboard.html';
+        }
+      } else {
+        sessionStorage.setItem('mineora_active_session', username);
+        window.location.href = 'dashboard.html';
       }
     }
+
+    // URL'DEN SPONSOR KODU ALGILAMA (?ref=KOD)
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refParam = urlParams.get('ref') || urlParams.get('sponsor');
+      if (refParam) {
+        const field = document.getElementById('reg-sponsor');
+        if (field) field.value = refParam;
+        openModal('modal-register');
+      }
+    });
   </script>
 </body>
 </html>
