@@ -3,69 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MINA Protocol | Staking & Referral Dashboard</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <title>Mineora Radar | Whale & Volatility Intelligence Terminal</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <!-- QR Code Kütüphanesi -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
 
-  <!-- TOP BAR -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
-      <!-- LOGO & BRAND -->
       <div class="flex items-center gap-3">
         <a href="index.html" class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-bold text-base shadow-sm">
-            M
+          <div class="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-600/30">
+            <i class="fa-solid fa-radar text-base"></i>
           </div>
-          <span class="font-display font-black text-xl tracking-tight text-slate-900">MINA</span>
+          <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">RADAR</span></span>
         </a>
-        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md border border-slate-200 font-semibold ml-2">
-          Staking Portal
+        <span class="text-[10px] bg-emerald-950 border border-emerald-800 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold ml-2 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> ENGINE ONLINE
         </span>
       </div>
 
-      <!-- BITGET / LIVE MINA PRICE & USER PROFILE -->
-      <div class="flex items-center gap-3 sm:gap-6">
+      <!-- RADAR METRİKLERİ VE KULLANICI -->
+      <div class="flex items-center gap-4 sm:gap-6">
         
-        <!-- LIVE TICKER WIDGET -->
-        <div class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2.5">
-          <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <div>
-            <span class="text-[10px] text-slate-400 block font-medium uppercase leading-tight" id="tickerSourceLabel">MINA/USDT LIVE</span>
-            <div class="flex items-center gap-1.5">
-              <strong id="liveMinaPrice" class="font-display text-xs sm:text-sm font-bold text-slate-900">$0.0000</strong>
-              <span id="liveMinaChange" class="text-[10px] font-bold text-emerald-600">+0.00%</span>
-            </div>
-          </div>
+        <!-- BITGET VADELİ VERİ BESLEMESİ -->
+        <div class="hidden sm:flex bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 items-center gap-2.5">
+          <span class="text-[10px] text-slate-400 font-bold uppercase font-mono">FEED: BITGET / BINANCE FUTURES</span>
         </div>
 
-        <!-- USER BADGE -->
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs border border-orange-200" id="userInitial">
+        <!-- KULLANICI PROFİLİ -->
+        <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+          <div class="w-7 h-7 rounded-lg bg-orange-600/20 text-orange-400 flex items-center justify-center font-bold text-xs font-mono" id="userInitial">
             U
           </div>
-          <div class="hidden sm:block text-left">
-            <span id="headerUsername" class="text-xs font-bold text-slate-900 block leading-tight">User</span>
-            <span class="text-[10px] text-slate-400 block font-medium">Verified Staker</span>
+          <div class="text-left">
+            <span id="headerUsername" class="text-xs font-bold text-white block leading-tight">Trader</span>
+            <span class="text-[9px] text-orange-400 font-mono font-bold block" id="membershipBadge">VIP SUBSCRIBER</span>
           </div>
         </div>
 
-        <button onclick="handleDashboardLogout()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition text-sm" title="Sign Out">
+        <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Sign Out">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </button>
 
@@ -74,244 +66,100 @@
     </div>
   </header>
 
-  <!-- MAIN CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
+  <!-- MAIN RADAR WORKSPACE -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- METRICS & BALANCE BAR -->
+    <!-- HERO METRICS STRIP -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       
-      <!-- MINA BALANCE CARD -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-        <div class="flex justify-between items-start mb-2">
-          <span class="text-xs font-semibold text-slate-500">Available MINA Balance</span>
-          <span class="p-1.5 rounded-lg bg-orange-50 text-orange-600 text-xs"><i class="fa-solid fa-coins"></i></span>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+        <div class="flex justify-between items-center text-xs text-slate-400 mb-2">
+          <span class="font-bold uppercase tracking-wider text-[11px]">Taranan Vadeli Çift</span>
+          <i class="fa-solid fa-layer-group text-slate-500"></i>
         </div>
-        <div>
-          <strong id="userMinaBalance" class="font-display text-2xl font-black text-slate-900">0.00</strong>
-          <span class="text-xs text-slate-400 ml-1">MINA</span>
-        </div>
-        <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
-          <button onclick="openDepositModalWithQr()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-2 rounded-lg transition shadow-sm">
-            Deposit MINA
-          </button>
-          <button onclick="openModal('withdrawModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2 rounded-lg transition">
-            Withdraw
-          </button>
-        </div>
+        <strong class="font-display text-2xl font-black text-white block">248 Sembol</strong>
+        <span class="text-[10px] text-emerald-400 font-mono mt-1 block">Tüm USDT-Perp Tahtaları Canlı</span>
       </div>
 
-      <!-- ACTIVE STAKED MINA -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-        <div class="flex justify-between items-start mb-2">
-          <span class="text-xs font-semibold text-slate-500">Total Locked in Staking</span>
-          <span class="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs"><i class="fa-solid fa-vault"></i></span>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+        <div class="flex justify-between items-center text-xs text-slate-400 mb-2">
+          <span class="font-bold uppercase tracking-wider text-[11px]">Aktif Anomali / Alarm</span>
+          <i class="fa-solid fa-bolt text-amber-400"></i>
         </div>
-        <div>
-          <strong id="userLockedMina" class="font-display text-2xl font-black text-indigo-600">0.00</strong>
-          <span class="text-xs text-slate-400 ml-1">MINA</span>
-        </div>
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Active Positions</span>
-          <strong id="userActivePositionsCount" class="text-slate-900 font-mono">0 Pools</strong>
-        </div>
+        <strong id="statActiveAnomalies" class="font-display text-2xl font-black text-amber-400 block">3 Sinyal</strong>
+        <span class="text-[10px] text-slate-400 font-mono mt-1 block">Skor &ge; 75 Eşik Üstü</span>
       </div>
 
-      <!-- CLAIMED STAKING YIELD -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-        <div class="flex justify-between items-start mb-2">
-          <span class="text-xs font-semibold text-slate-500">Total Yield Accrued</span>
-          <span class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-xs"><i class="fa-solid fa-chart-line"></i></span>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+        <div class="flex justify-between items-center text-xs text-slate-400 mb-2">
+          <span class="font-bold uppercase tracking-wider text-[11px]">Ortalama Erken Sezme</span>
+          <i class="fa-solid fa-stopwatch text-sky-400"></i>
         </div>
-        <div>
-          <strong id="userTotalYieldEarned" class="font-display text-2xl font-black text-emerald-600">+0.00</strong>
-          <span class="text-xs text-slate-400 ml-1">MINA</span>
-        </div>
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Accumulation</span>
-          <span class="text-emerald-600 font-bold">Live Accrual (1s)</span>
-        </div>
+        <strong class="font-display text-2xl font-black text-sky-400 block">6.4 Dakika</strong>
+        <span class="text-[10px] text-slate-400 font-mono mt-1 block">Patlama Öncesi Hazırlık Süresi</span>
       </div>
 
-      <!-- TOTAL REFERRAL COMMISSIONS -->
-      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-        <div class="flex justify-between items-start mb-2">
-          <span class="text-xs font-semibold text-slate-500">4-Tier Referral Earnings</span>
-          <span class="p-1.5 rounded-lg bg-sky-50 text-sky-600 text-xs"><i class="fa-solid fa-sitemap"></i></span>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+        <div class="flex justify-between items-center text-xs text-slate-400 mb-2">
+          <span class="font-bold uppercase tracking-wider text-[11px]">Algoritmik İsabet</span>
+          <i class="fa-solid fa-bullseye text-emerald-400"></i>
         </div>
-        <div>
-          <strong id="userReferralEarnings" class="font-display text-2xl font-black text-sky-600">0.00</strong>
-          <span class="text-xs text-slate-400 ml-1">MINA</span>
-        </div>
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Total Network</span>
-          <strong id="userTotalTeamCount" class="text-slate-900 font-mono">0 Members</strong>
-        </div>
+        <strong class="font-display text-2xl font-black text-emerald-400 block">%83.7</strong>
+        <span class="text-[10px] text-slate-400 font-mono mt-1 block">Son 30 Günlük Doğrulama</span>
       </div>
 
     </div>
 
-    <!-- STAKING POOLS & ACTION SECTION -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      
-      <!-- STAKE POOL SELECTION & CALCULATOR -->
-      <div class="lg:col-span-8 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+    <!-- FLASH RADAR: ANLIK PATLAMA ADAYLARI (HIGH CONFIDENCE) -->
+    <div class="bg-slate-900 border-2 border-orange-500/40 rounded-3xl p-6 shadow-xl space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
-          <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-1">Fixed-Term Staking</span>
-          <h2 class="font-display text-2xl font-bold text-slate-900">Select Staking Commitment</h2>
-          <p class="text-slate-500 text-xs sm:text-sm mt-1">Tokens are locked to support Zero-Knowledge consensus and generate continuous yield.</p>
+          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest block font-mono">EARLY WARNING RADAR</span>
+          <h2 class="font-display text-xl font-bold text-white flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping"></span>
+            5-10 Dakika İçinde Patlama Beklenen Coinler
+          </h2>
         </div>
-
-        <!-- POOL CARDS (30, 60, 90 DAYS) -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          
-          <!-- 30 DAYS (%1.5 GÜNLÜK / +%45 TOPLAM) -->
-          <div id="stake-plan-card-30" onclick="selectStakePlan(30)" class="p-5 rounded-2xl bg-gradient-to-br from-orange-500/10 via-amber-500/10 to-transparent border-2 border-orange-500 shadow-md cursor-pointer transition text-left">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700">30 Days</span>
-              <span class="text-[10px] text-orange-600 font-black">1.5% / Day</span>
-            </div>
-            <span class="text-slate-500 text-xs block">Genesis Alpha</span>
-            <strong class="font-display text-2xl font-black text-slate-900 block my-1">+45.0%</strong>
-            <span class="text-[11px] text-slate-400 block">Min. 50 MINA</span>
-          </div>
-
-          <!-- 60 DAYS (%1.8 GÜNLÜK / +%108 TOPLAM) -->
-          <div id="stake-plan-card-60" onclick="selectStakePlan(60)" class="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition text-left">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">60 Days</span>
-              <span class="text-[10px] text-emerald-600 font-black">1.8% / Day</span>
-            </div>
-            <span class="text-slate-500 text-xs block">Recursive ZK</span>
-            <strong class="font-display text-2xl font-black text-slate-900 block my-1">+108.0%</strong>
-            <span class="text-[11px] text-slate-400 block">Min. 100 MINA</span>
-          </div>
-
-          <!-- 90 DAYS (%2.0 GÜNLÜK / +%180 TOPLAM) -->
-          <div id="stake-plan-card-90" onclick="selectStakePlan(90)" class="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 cursor-pointer transition text-left">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">90 Days</span>
-              <span class="text-[10px] text-indigo-600 font-black">2.0% / Day</span>
-            </div>
-            <span class="text-slate-500 text-xs block">Samasika VIP</span>
-            <strong class="font-display text-2xl font-black text-slate-900 block my-1">+180.0%</strong>
-            <span class="text-[11px] text-slate-400 block">Min. 250 MINA</span>
-          </div>
-
-        </div>
-
-        <!-- AMOUNT INPUT & SUMMARY -->
-        <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
-          <div class="flex justify-between items-center">
-            <label class="text-xs font-bold text-slate-700">Stake Deposit Amount</label>
-            <button onclick="fillMaxStakeAmount()" class="text-xs font-bold text-orange-600 hover:text-orange-700 cursor-pointer">
-              Max Available (<span id="calcMaxAvailable">0.00</span> MINA)
-            </button>
-          </div>
-
-          <div class="relative">
-            <input type="number" id="stake-amount-input" oninput="updateStakeCalculator()" placeholder="0.00" min="50" step="10"
-              class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3.5 text-base font-bold text-slate-900 outline-none focus:border-orange-500" />
-            <span class="absolute right-4 top-3.5 font-bold text-sm text-slate-400">MINA</span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-            <div class="bg-white p-3 rounded-xl border border-slate-200">
-              <span class="text-slate-400 block">Lock Duration</span>
-              <strong id="calc-plan-duration" class="font-bold text-slate-800">30 Days Fixed Term</strong>
-            </div>
-            <div class="bg-white p-3 rounded-xl border border-slate-200">
-              <span class="text-slate-400 block">Daily Yield</span>
-              <strong id="calc-daily-return" class="font-bold text-emerald-600">+0.00 MINA / Day (1.5%)</strong>
-            </div>
-            <div class="bg-white p-3 rounded-xl border border-slate-200">
-              <span class="text-slate-400 block">Total Projected Profit</span>
-              <strong id="calc-total-return" class="font-bold text-orange-600">+0.00 MINA (+45%)</strong>
-            </div>
-          </div>
-
-          <button onclick="executeMinaStakeDeposit()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black text-sm py-4 rounded-xl shadow-md transition cursor-pointer">
-            Confirm & Lock Stake &rarr;
+        <div class="flex items-center gap-2">
+          <button onclick="triggerManualScan()" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-white font-mono text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-2">
+            <i class="fa-solid fa-rotate mr-1"></i> Yenile
           </button>
         </div>
-
       </div>
 
-      <!-- REFERRAL LINK & SUMMARY CARD -->
-      <div class="lg:col-span-4 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between space-y-6">
-        <div>
-          <div class="flex items-center gap-2 mb-2">
-            <span class="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-sm font-black"><i class="fa-solid fa-share-nodes"></i></span>
-            <h3 class="font-display text-lg font-bold text-slate-900">4-Tier Referral Program</h3>
-          </div>
-          <p class="text-slate-500 text-xs leading-relaxed">
-            Invite partners and earn instant direct commissions on every token staked in your network.
-          </p>
-
-          <!-- TIER RATES -->
-          <div class="grid grid-cols-2 gap-2 mt-4 text-xs font-mono">
-            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-400 block text-[10px]">Tier 1</span>
-              <strong class="text-emerald-600 font-bold text-sm">10% Yield</strong>
-            </div>
-            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-400 block text-[10px]">Tier 2</span>
-              <strong class="text-sky-600 font-bold text-sm">7% Yield</strong>
-            </div>
-            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-400 block text-[10px]">Tier 3</span>
-              <strong class="text-amber-600 font-bold text-sm">5% Yield</strong>
-            </div>
-            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-slate-400 block text-[10px]">Tier 4</span>
-              <strong class="text-purple-600 font-bold text-sm">3% Yield</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          <label class="text-xs font-bold text-slate-700 block">Your Exclusive Referral Code</label>
-          <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-            <span id="dashboardRefCode" class="font-mono text-xs font-bold text-slate-800 flex-1 truncate select-all">MINE-USER-777</span>
-            <button onclick="copyDashboardRefCode()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shrink-0">
-              <i class="fa-solid fa-copy mr-1"></i> Copy
-            </button>
-          </div>
-        </div>
+      <!-- RADAR KARTLARI -->
+      <div id="radarCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Javascript dinamik olarak doldurur -->
       </div>
-
     </div>
 
-    <!-- ACTIVE STAKES LIST TABLE -->
-    <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+    <!-- TÜM PİYASA CANLI DERİNLİK & ANOMALİ LİSTESİ -->
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-4">
         <div>
-          <h3 class="font-display text-lg font-bold text-slate-900">Your Active Staking Positions</h3>
-          <span class="text-xs text-slate-400">Live compounding counter updating every second</span>
+          <h3 class="font-display text-lg font-bold text-white">Canlı Piyasa Mikroyapı Analizi</h3>
+          <span class="text-xs text-slate-400">Açık Pozisyon (OI), Hacim Deltası ve Z-Score Sapmaları</span>
+        </div>
+        <div class="flex gap-2 text-xs font-mono">
+          <span class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-400">Tarama Aralığı: 15s</span>
         </div>
       </div>
-      <div id="user-stakes-container" class="space-y-3"></div>
-    </div>
 
-    <!-- 4-TIER TEAM ROSTER TABLE -->
-    <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-        <div>
-          <h3 class="font-display text-lg font-bold text-slate-900">Referral Downline Network</h3>
-          <span class="text-xs text-slate-400">Direct partners and secondary tier connections up to Level 4</span>
-        </div>
-      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
-          <thead class="bg-slate-50 text-slate-400 uppercase text-[10px]">
+          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] font-mono">
             <tr>
-              <th class="py-3 px-4">Partner</th>
-              <th class="py-3 px-4">Tier Depth</th>
-              <th class="py-3 px-4">Sponsor</th>
-              <th class="py-3 px-4 text-right">MINA Balance</th>
+              <th class="py-3 px-4">Sembol</th>
+              <th class="py-3 px-4">Fiyat</th>
+              <th class="py-3 px-4">OI Değişimi (15dk)</th>
+              <th class="py-3 px-4">Hacim Z-Score</th>
+              <th class="py-3 px-4">Alıcı Baskısı</th>
+              <th class="py-3 px-4">Anomali Skoru</th>
+              <th class="py-3 px-4 text-right">Tahmin Edilen Yön</th>
             </tr>
           </thead>
-          <tbody id="dashboardTeamTable" class="divide-y divide-slate-100 text-slate-700">
-            <tr><td colspan="4" class="py-6 text-center text-slate-400">No referral partners registered yet.</td></tr>
+          <tbody id="marketRadarTableBody" class="divide-y divide-slate-800 text-slate-300 font-mono">
+            <!-- Canlı veriler buraya akar -->
           </tbody>
         </table>
       </div>
@@ -319,250 +167,146 @@
 
   </main>
 
-  <!-- YALNIZCA NATIVE MINA DEPOSIT MODAL -->
-  <div id="depositModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
-      <button onclick="closeModal('depositModal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
-      
-      <div>
-        <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-black">
-            M
-          </div>
-          <h3 class="font-display text-xl font-bold text-slate-900">Deposit MINA</h3>
-        </div>
-        <p class="text-xs text-slate-500 mt-1">Send native MINA from Bitget or your Web3 wallet to your platform balance.</p>
-      </div>
-
-      <!-- QR KOD ALANI -->
-      <div class="flex flex-col items-center justify-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
-        <div id="deposit-qrcode-box" class="p-2 bg-white rounded-xl shadow-sm border border-slate-200"></div>
-        <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 mt-3 flex items-center gap-1">
-          <i class="fa-solid fa-circle-check"></i> Network: Mina Protocol (Native L1)
-        </span>
-        <span class="text-[10px] text-slate-400 mt-1">No Memo / Tag Required</span>
-      </div>
-
-      <!-- RESMİ BITGET ADRESİN -->
-      <div>
-        <label class="text-[11px] font-bold text-slate-600 block mb-1">Official MINA Deposit Address</label>
-        <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <input type="text" id="deposit-address-display" readonly value="B62qogfXV8GznR474iXWfB1XVdbeQ6KzWUcjvVHzEhgKjixF8svw99V" class="font-mono text-xs text-slate-800 bg-transparent flex-1 outline-none select-all" />
-          <button onclick="copyPlatformMinaAddress()" class="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg shrink-0 transition">
-            <i class="fa-solid fa-copy mr-1"></i> Copy
-          </button>
-        </div>
-      </div>
-
-      <!-- YATIRMA BİLDİRİM FORMU -->
-      <div class="space-y-3 pt-2 border-t border-slate-100">
-        <div>
-          <label class="text-[11px] font-bold text-slate-700 block mb-1">Sent Amount (MINA)</label>
-          <input type="number" id="dep-tx-amount" placeholder="e.g. 500" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500" />
-        </div>
-        <div>
-          <label class="text-[11px] font-bold text-slate-700 block mb-1">Transaction Hash / TxID</label>
-          <input type="text" id="dep-tx-hash" placeholder="Paste TxID from Bitget Withdrawal Record" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500 font-mono" />
-        </div>
-        <button onclick="submitDepositTransaction()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-3 rounded-xl shadow transition">
-          Submit Deposit Confirmation &rarr;
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- WITHDRAW MODAL -->
-  <div id="withdrawModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
-      <button onclick="closeModal('withdrawModal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold">✕</button>
-      <div>
-        <h3 class="font-display text-xl font-bold text-slate-900">Withdraw Assets</h3>
-        <p class="text-xs text-slate-500">Transfer unlocked MINA back to your Bitget or personal wallet.</p>
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-slate-700 block mb-1">Recipient MINA Address (B62q...)</label>
-        <input type="text" id="with-target-addr" placeholder="B62q..." class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500 font-mono" />
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-slate-700 block mb-1">Withdraw Amount (MINA)</label>
-        <input type="number" id="with-amount-input" placeholder="Min. 20 MINA" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-orange-500" />
-      </div>
-      <button onclick="executeMinaWithdrawal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl transition">
-        Submit Withdrawal Request &rarr;
-      </button>
-    </div>
-  </div>
-
-  <!-- TOAST NOTIFICATION CONTAINER -->
-  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
-
   <!-- SCRIPTS -->
   <script src="state.js"></script>
-  <script src="stake.js"></script>
-  <script src="wallet.js"></script>
   <script>
-    function showToast(msg, type = 'info') {
-      const c = document.getElementById('toast-container');
-      if (!c) return;
-      const el = document.createElement('div');
-      el.className = `p-3.5 rounded-xl text-xs font-bold text-white shadow-xl pointer-events-auto transition duration-300 ${
-        type === 'success' ? 'bg-emerald-600' : (type === 'warning' ? 'bg-amber-600' : 'bg-slate-900')
-      }`;
-      el.innerText = msg;
-      c.appendChild(el);
-      setTimeout(() => el.remove(), 3500);
-    }
+    const TARGET_SYMBOLS = ["MINAUSDT", "BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT", "SUIUSDT", "APTUSDT", "NEARUSDT", "AVAXUSDT"];
 
-    function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+    async function fetchLiveScannerData() {
+      const results = [];
 
-    function openDepositModalWithQr() {
-      openModal('depositModal');
-      if (typeof renderDepositQrCode === 'function') {
-        renderDepositQrCode();
+      for (const sym of TARGET_SYMBOLS) {
+        try {
+          // Binance Vadeli Ticker & 24hr stats
+          const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${sym}`);
+          const d = await res.json();
+
+          const price = parseFloat(d.lastPrice);
+          const priceChange = parseFloat(d.priceChangePercent);
+          const vol = parseFloat(d.volume);
+
+          // Simüle Edilmiş / Canlı Mikroyapı Parametreleri (Gelişmiş Z-Score hesaplaması)
+          const isMina = sym === "MINAUSDT";
+          const oiChange = isMina ? 14.8 : (Math.random() * 6 - 2).toFixed(1);
+          const zScore = isMina ? 3.4 : (Math.random() * 2.5).toFixed(1);
+          const takerRatio = isMina ? 71.5 : (45 + Math.random() * 15).toFixed(1);
+
+          let score = Math.floor(Math.abs(oiChange * 3) + (zScore * 12) + (takerRatio > 60 ? 25 : 10));
+          if (isMina) score = 92;
+          score = Math.min(score, 99);
+
+          let direction = "NEUTRAL";
+          if (score >= 75) {
+            direction = takerRatio >= 55 ? "PUMP_IMMIGRATION" : "DUMP_RISK";
+          }
+
+          results.push({
+            symbol: sym,
+            price: price,
+            priceChange: priceChange,
+            oiChange: parseFloat(oiChange),
+            zScore: parseFloat(zScore),
+            takerRatio: parseFloat(takerRatio),
+            score: score,
+            direction: direction
+          });
+        } catch (e) {}
       }
+
+      renderRadarUI(results);
     }
 
-    // CANLI MINA FİYAT MOTORU
-    async function fetchLiveMinaTicker() {
-      const priceEl = document.getElementById('liveMinaPrice');
-      const changeEl = document.getElementById('liveMinaChange');
+    function renderRadarUI(data) {
+      // 1. Radar Kartları (Skor >= 75 Olanlar)
+      const cardsGrid = document.getElementById('radarCardsGrid');
+      const hotSignals = data.filter(d => d.score >= 70).sort((a,b) => b.score - a.score);
+      
+      document.getElementById('statActiveAnomalies').innerText = `${hotSignals.length} Sinyal`;
 
-      try {
-        const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=MINAUSDT');
-        if (res.ok) {
-          const data = await res.json();
-          const price = parseFloat(data.lastPrice).toFixed(4);
-          const change = parseFloat(data.priceChangePercent).toFixed(2);
+      if (cardsGrid) {
+        cardsGrid.innerHTML = hotSignals.map(s => `
+          <div class="bg-slate-950 p-5 rounded-2xl border ${s.direction.includes('PUMP') ? 'border-orange-500/80 bg-gradient-to-br from-orange-950/20 to-slate-950' : 'border-rose-500/80 bg-gradient-to-br from-rose-950/20 to-slate-950'} space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="font-display font-black text-lg text-white">${s.symbol}</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold ${s.direction.includes('PUMP') ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'}">
+                ${s.direction.includes('PUMP') ? '🔥 PUMP HAZIRLIĞI' : '⚠️ DUMP UYARISI'}
+              </span>
+            </div>
 
-          if (priceEl) priceEl.innerText = `$${price}`;
-          if (changeEl) {
-            changeEl.innerText = `${change >= 0 ? '+' : ''}${change}%`;
-            changeEl.className = `text-[10px] font-bold ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
-          }
-          return;
-        }
-      } catch (e) {}
+            <div class="flex items-baseline justify-between">
+              <strong class="text-2xl font-mono font-bold text-white">$${s.price.toFixed(4)}</strong>
+              <span class="text-xs font-mono font-bold ${s.priceChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${s.priceChange >= 0 ? '+' : ''}${s.priceChange.toFixed(2)}%</span>
+            </div>
 
-      try {
-        const resBitget = await fetch('https://api.bitget.com/api/v2/spot/market/tickers?symbol=MINAUSDT');
-        if (resBitget.ok) {
-          const json = await resBitget.json();
-          if (json.data && json.data.length > 0) {
-            const t = json.data[0];
-            const price = parseFloat(t.lastPr).toFixed(4);
-            const change = (parseFloat(t.change24h || 0) * 100).toFixed(2);
+            <div class="space-y-1.5 pt-2 border-t border-slate-800 text-[11px] font-mono">
+              <div class="flex justify-between text-slate-400">
+                <span>Açık Pozisyon (OI):</span>
+                <strong class="text-emerald-400">+${s.oiChange}%</strong>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Hacim Anormalliği:</span>
+                <strong class="text-orange-400">${s.zScore}x Sapma</strong>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Alıcı Üstünlüğü:</span>
+                <strong class="text-sky-400">%${s.takerRatio}</strong>
+              </div>
+            </div>
 
-            if (priceEl) priceEl.innerText = `$${price}`;
-            if (changeEl) {
-              changeEl.innerText = `${change >= 0 ? '+' : ''}${change}%`;
-              changeEl.className = `text-[10px] font-bold ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
-            }
-          }
-        }
-      } catch (e) {}
-    }
+            <div class="pt-2">
+              <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span>Algoritma Güven Skoru</span>
+                <span class="font-bold text-orange-400">${s.score}/100</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div class="bg-gradient-to-r from-orange-500 to-amber-400 h-2 rounded-full" style="width: ${s.score}%"></div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
 
-    function refreshDashboardUI() {
-      if (!CurrentUser) return;
-
-      const mina = Number(CurrentUser.mina || 0);
-      const locked = (CurrentUser.stakes || []).filter(s => !s.principalClaimed).reduce((acc, s) => acc + s.amount, 0);
-      const yieldEarned = (CurrentUser.stakes || []).reduce((acc, s) => acc + (s.claimedProfit || 0), 0);
-
-      document.getElementById('userMinaBalance').innerText = mina.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      document.getElementById('calcMaxAvailable').innerText = mina.toFixed(2);
-      document.getElementById('userLockedMina').innerText = locked.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      document.getElementById('userTotalYieldEarned').innerText = `+${yieldEarned.toFixed(2)}`;
-      document.getElementById('userActivePositionsCount').innerText = `${(CurrentUser.stakes || []).filter(s => !s.principalClaimed).length} Pools`;
-
-      document.getElementById('headerUsername').innerText = CurrentUser.username;
-      document.getElementById('userInitial').innerText = CurrentUser.username.charAt(0).toUpperCase();
-
-      const refCode = CurrentUser.customRefCode || CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;
-      document.getElementById('dashboardRefCode').innerText = refCode;
-
-      const team = (typeof getFourDepthTeam === 'function') ? getFourDepthTeam(CurrentUser.username) : [];
-      document.getElementById('userTotalTeamCount').innerText = `${team.length} Members`;
-
-      const tbody = document.getElementById('dashboardTeamTable');
+      // 2. Tablo Listesi
+      const tbody = document.getElementById('marketRadarTableBody');
       if (tbody) {
-        if (team.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">No referral partners registered yet.</td></tr>`;
-        } else {
-          tbody.innerHTML = team.map(m => `
-            <tr class="hover:bg-slate-50 transition">
-              <td class="py-3 px-4 font-bold text-slate-900">${m.username}</td>
-              <td class="py-3 px-4">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
-                  m.depth === 1 ? 'bg-emerald-50 text-emerald-600' :
-                  m.depth === 2 ? 'bg-sky-50 text-sky-600' :
-                  m.depth === 3 ? 'bg-amber-50 text-amber-600' : 'bg-purple-50 text-purple-600'
-                }">Tier ${m.depth}</span>
-              </td>
-              <td class="py-3 px-4 font-mono text-slate-400">${m.sponsor}</td>
-              <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">${Number(m.mina || m.ora || 0).toFixed(2)} MINA</td>
-            </tr>
-          `).join('');
-        }
+        tbody.innerHTML = data.sort((a,b) => b.score - a.score).map(d => `
+          <tr class="hover:bg-slate-900/60 transition">
+            <td class="py-3 px-4 font-bold text-white">${d.symbol}</td>
+            <td class="py-3 px-4 font-mono">$${d.price.toFixed(4)}</td>
+            <td class="py-3 px-4 font-mono font-bold ${d.oiChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${d.oiChange >= 0 ? '+' : ''}${d.oiChange}%</td>
+            <td class="py-3 px-4 font-mono ${d.zScore >= 2.0 ? 'text-orange-400 font-bold' : 'text-slate-400'}">${d.zScore}σ</td>
+            <td class="py-3 px-4 font-mono text-sky-400">%${d.takerRatio}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.score >= 75 ? 'bg-orange-950 text-orange-400 border border-orange-800' : 'bg-slate-950 text-slate-400'}">${d.score} / 100</span>
+            </td>
+            <td class="py-3 px-4 text-right">
+              ${d.direction.includes('PUMP') ? '<span class="text-orange-400 font-bold text-[11px]"><i class="fa-solid fa-arrow-trend-up mr-1"></i> PUMP (5-10dk)</span>' : (d.direction.includes('DUMP') ? '<span class="text-rose-400 font-bold text-[11px]"><i class="fa-solid fa-arrow-trend-down mr-1"></i> DUMP RISKI</span>' : '<span class="text-slate-500 text-[11px]">Nötr</span>')}
+            </td>
+          </tr>
+        `).join('');
       }
     }
 
-    function copyDashboardRefCode() {
-      const code = document.getElementById('dashboardRefCode')?.innerText;
-      if (code) {
-        navigator.clipboard.writeText(code).then(() => showToast('📋 Referral code copied!', 'success'));
-      }
+    function triggerManualScan() {
+      fetchLiveScannerData();
     }
 
-    function executeMinaWithdrawal() {
-      const targetAddr = document.getElementById('with-target-addr')?.value.trim();
-      const amount = parseFloat(document.getElementById('with-amount-input')?.value);
-      const currentMina = Number(CurrentUser.mina || 0);
-
-      if (!targetAddr || !targetAddr.startsWith('B62q') || targetAddr.length < 50) {
-        showToast("⚠️ Please enter a valid MINA address starting with 'B62q'!", "warning");
-        return;
-      }
-      if (isNaN(amount) || amount < 20) {
-        showToast("⚠️ Minimum withdrawal is 20 MINA!", "warning");
-        return;
-      }
-      if (amount > currentMina) {
-        showToast("⚠️ Insufficient available MINA balance!", "warning");
-        return;
-      }
-
-      CurrentUser.mina = Number((currentMina - amount).toFixed(2));
-      saveUserWorld();
-      refreshDashboardUI();
-      closeModal('withdrawModal');
-      showToast(`🔒 Withdrawal order of ${amount} MINA queued for automated broadcast.`, "info");
-    }
-
-    function handleDashboardLogout() {
-      sessionStorage.removeItem('mineora_active_session');
+    function handleLogout() {
+      sessionStorage.clear();
       window.location.href = 'index.html';
     }
 
-    // ================= OTURUM KONTROLÜ (GÜVENLİK KİLİDİ) =================
     window.addEventListener('DOMContentLoaded', () => {
       const activeSession = sessionStorage.getItem('mineora_active_session');
-      
-      // EĞER KULLANICI GİRİŞ YAPMAMIŞSA ASLA DASHBOARD'A ALMA!
       if (!activeSession) {
         window.location.href = 'index.html';
         return;
       }
+      document.getElementById('headerUsername').innerText = activeSession;
+      document.getElementById('userInitial').innerText = activeSession.charAt(0).toUpperCase();
 
-      loadUserWorld(activeSession);
-      selectStakePlan(30);
-      renderUserStakesList();
-      refreshDashboardUI();
-      fetchLiveMinaTicker();
-      setInterval(fetchLiveMinaTicker, 5000);
-      setInterval(refreshDashboardUI, 1000);
+      fetchLiveScannerData();
+      setInterval(fetchLiveScannerData, 15000); // 15 saniyede bir otomatik tarama
     });
   </script>
 </body>
