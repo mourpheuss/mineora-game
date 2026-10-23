@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MINA Protocol | Master Admin Operations</title>
+  <title>MINA Protocol | Root Admin Terminal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -24,11 +25,14 @@
           MINA Protocol &bull; Root Admin Terminal
           <span class="text-xs bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono">ROOT</span>
         </h1>
-        <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Bakiye Müdahalesi ve Protokol Kasası</p>
+        <p class="text-xs text-slate-400">Canlı Yatırma/Çekim Onayları, Üye Yönetimi ve Bakiye Tanımlama</p>
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
+      <button onclick="document.getElementById('modal-admin-create-user').classList.remove('hidden')" class="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2">
+        <i class="fa-solid fa-user-plus"></i> Yeni Üye Tanımla
+      </button>
       <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition">
         &larr; Staking Dashboard
       </a>
@@ -38,12 +42,12 @@
     </div>
   </header>
 
-  <!-- FIREBASE AUTH GİRİŞ KUTUSU (Giriş yapılmamışsa açılır) -->
+  <!-- FIREBASE AUTH GİRİŞ BARI -->
   <div id="admin-auth-box" class="max-w-7xl mx-auto mb-6 bg-slate-900 border-2 border-amber-500/50 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-3">
       <div class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></div>
       <div>
-        <strong class="text-sm text-amber-300 block">Firebase Root Admin Girişi</strong>
+        <strong class="text-sm text-amber-300 block">Firebase Root Admin Yetkisi Gerekli</strong>
         <span class="text-xs text-slate-400">ersinulasduzyol@gmail.com hesabı için şifrenizi girerek onay masalarını canlıya bağlayın:</span>
       </div>
     </div>
@@ -94,13 +98,14 @@
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
         <h2 class="text-sm font-bold text-white uppercase tracking-wider">Kayıtlı Staker & Kullanıcı Listesi</h2>
-        <span class="text-xs text-slate-400">Manuel MINA yükleme ve yetki kontrolü</span>
+        <span class="text-xs text-slate-400">Manuel MINA yükleme ve üyelik düzenleme</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Kullanıcı</th>
+              <th class="py-3 px-4">Şifre</th>
               <th class="py-3 px-4">Sponsor</th>
               <th class="py-3 px-4">MINA Bakiyesi</th>
               <th class="py-3 px-4">Kilitli Pozisyonlar</th>
@@ -108,13 +113,48 @@
             </tr>
           </thead>
           <tbody id="admin-user-table-body" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="5" class="py-8 text-center text-slate-500">Kullanıcı verisi taranıyor...</td></tr>
+            <tr><td colspan="6" class="py-8 text-center text-slate-500">Kullanıcı verisi taranıyor...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
   </main>
+
+  <!-- YENİ ÜYE TANIMLAMA MODALI -->
+  <div id="modal-admin-create-user" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-orange-500"></i> Yeni Staker / Üye Tanımla
+        </h3>
+        <button onclick="document.getElementById('modal-admin-create-user').classList.add('hidden')" class="text-slate-400 text-xs hover:text-white">✕</button>
+      </div>
+
+      <form onsubmit="handleAdminDirectUserCreate(event)" class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Kullanıcı Adı</label>
+          <input type="text" id="new-u-username" required placeholder="ör: ahmet2026" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Şifre</label>
+          <input type="text" id="new-u-pass" required value="123456" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Başlangıç MINA Bakiyesi</label>
+          <input type="number" id="new-u-mina" value="0" step="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-emerald-400 font-bold outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Sponsor (Referans Veren Kullanıcı Adı)</label>
+          <input type="text" id="new-u-sponsor" placeholder="Opsiyonel (ör: mourpheus)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 outline-none focus:border-orange-500" />
+        </div>
+
+        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-2">
+          Hesabı Oluştur & Veritabanına Yaz &rarr;
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- BAKİYE DÜZENLEME MODAL -->
   <div id="modal-mod-user" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -133,9 +173,10 @@
     </div>
   </div>
 
-  <!-- BİLDİRİM TOAST -->
+  <!-- TOAST BİLDİRİM -->
   <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
 
+  <!-- FIREBASE VE MOTOR BAĞLANTILARI -->
   <script src="state.js"></script>
   <script>
     let activeModUser = null;
@@ -147,16 +188,17 @@
       setTimeout(() => t.classList.add('hidden'), 3500);
     }
 
-    async function loginAdminFirebase() {
-      const pass = document.getElementById('admin-auth-pass').value.trim();
-      if (!pass) return alert("Lütfen Firebase şifrenizi girin.");
+    async function loginAdminFirebase(customPass = null) {
+      const pass = customPass || document.getElementById('admin-auth-pass').value.trim();
+      if (!pass) return;
+
       try {
         await firebase.auth().signInWithEmailAndPassword("ersinulasduzyol@gmail.com", pass);
-        document.getElementById('admin-auth-box').classList.add('hidden');
+        document.getElementById('admin-auth-box')?.classList.add('hidden');
         showToast("✅ Firebase Admin Yetkisi Onaylandı!");
         bindFirebaseQueues();
       } catch (e) {
-        alert("Giriş Hatası: " + e.message);
+        if (!customPass) alert("Giriş Hatası: " + e.message);
       }
     }
 
@@ -247,6 +289,7 @@
           tr.className = "hover:bg-slate-950/60 transition";
           tr.innerHTML = `
             <td class="py-3 px-4 font-bold text-white">${u.username}</td>
+            <td class="py-3 px-4 font-mono text-slate-400">${u.pass || '••••••'}</td>
             <td class="py-3 px-4 font-mono text-slate-400">${u.referredBy || '-'}</td>
             <td class="py-3 px-4 font-mono text-orange-400 font-bold">${Number(u.mina || u.ora || 0).toFixed(2)} MINA</td>
             <td class="py-3 px-4 font-mono text-cyan-300">${stakesCount} Havuz</td>
@@ -312,12 +355,68 @@
       });
     }
 
+    function handleAdminDirectUserCreate(e) {
+      e.preventDefault();
+      const uname = document.getElementById('new-u-username').value.trim();
+      const pass = document.getElementById('new-u-pass').value.trim();
+      const mina = parseFloat(document.getElementById('new-u-mina').value) || 0;
+      const sponsor = document.getElementById('new-u-sponsor').value.trim();
+
+      if (!uname || !pass) return alert("Kullanıcı adı ve şifre zorunludur!");
+      const uKey = uname.toLowerCase();
+
+      const newUser = {
+        username: uname,
+        pass: pass,
+        mina: mina,
+        role: "Verified Staker",
+        referredBy: sponsor || "",
+        referral_chain: sponsor ? [sponsor] : [],
+        refCode: `MINE-${uname.toUpperCase()}-777`,
+        stakes: [],
+        logs: [
+          {
+            id: Date.now(),
+            title: "Hesap Oluşturuldu",
+            desc: "Root Admin tarafından üyelik tanımlandı.",
+            amountText: `+${mina.toFixed(2)} MINA`,
+            type: "income",
+            time: new Date().toLocaleTimeString('tr-TR'),
+            date: new Date().toLocaleDateString('tr-TR')
+          }
+        ]
+      };
+
+      if (fbDb) {
+        fbDb.ref(`users/${uKey}`).set(newUser).then(() => {
+          document.getElementById('modal-admin-create-user').classList.add('hidden');
+          document.getElementById('new-u-username').value = "";
+          document.getElementById('new-u-mina').value = "0";
+          document.getElementById('new-u-sponsor').value = "";
+          showToast(`🎉 ${uname} hesabı ${mina} MINA bakiyesi ile oluşturuldu!`);
+        });
+      } else {
+        localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(newUser));
+        document.getElementById('modal-admin-create-user').classList.add('hidden');
+        showToast(`🎉 ${uname} hesabı yerel olarak oluşturuldu!`);
+      }
+    }
+
     function handleAdminLogout() {
       sessionStorage.removeItem('mineora_active_session');
+      sessionStorage.removeItem('mineora_admin_direct_pass');
       window.location.href = 'index.html';
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      // 1. Ana sayfadan gelen şifre varsa otomatik Firebase yetkilendirmesi dene
+      const cachedPass = sessionStorage.getItem('mineora_admin_direct_pass');
+      if (cachedPass) {
+        document.getElementById('admin-auth-pass').value = cachedPass;
+        loginAdminFirebase(cachedPass);
+      }
+
+      // 2. Firebase auth dinleyicisi
       if (typeof firebase !== 'undefined' && firebase.auth) {
         firebase.auth().onAuthStateChanged(user => {
           if (user) {
