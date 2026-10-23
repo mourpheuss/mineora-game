@@ -3,10 +3,10 @@
 const MINA_STAKE_PLANS = {
   30: { 
     days: 30, 
-    dailyRate: 2.5, 
-    totalProfitPercent: 75.0, 
+    dailyRate: 1.5, 
+    totalProfitPercent: 45.0, 
     title: "Genesis Alpha Pool", 
-    badge: "High Velocity (30 Days)", 
+    badge: "Flexible Term (30 Days)", 
     minDeposit: 50 
   },
   60: { 
@@ -19,8 +19,8 @@ const MINA_STAKE_PLANS = {
   },
   90: { 
     days: 90, 
-    dailyRate: 1.5, 
-    totalProfitPercent: 135.0, 
+    dailyRate: 2.0, 
+    totalProfitPercent: 180.0, 
     title: "Samasika Validator VIP", 
     badge: "Institutional VIP (90 Days)", 
     minDeposit: 250 
@@ -70,11 +70,10 @@ function fillMaxStakeAmount() {
   }
 }
 
-// 4 KADEMELİ REFERANS KOMİSYONU DAĞITIMI
+// 4 KADEMELİ REFERANS KOMİSYONU DAĞITIMI (%10 - %7 - %5 - %3)
 function distributeMinaStakingCommissions(stakerUser, stakeAmount) {
   if (!stakerUser || !stakerUser.referral_chain || !stakerUser.referral_chain.length) return;
   
-  // 1. Kademe %10, 2. Kademe %7, 3. Kademe %5, 4. Kademe %3
   const tierRates = [0.10, 0.07, 0.05, 0.03];
   const chain = stakerUser.referral_chain;
 
