@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MINA Protocol | Staking & Referral Dashboard</title>
-  <!-- Favicon 404 Koruması -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -425,12 +424,11 @@
       }
     }
 
-    // ================= KESİNTİSİZ ÇOKLU CANLI MINA FİYAT MOTORU =================
+    // CANLI MINA FİYAT MOTORU
     async function fetchLiveMinaTicker() {
       const priceEl = document.getElementById('liveMinaPrice');
       const changeEl = document.getElementById('liveMinaChange');
 
-      // 1. Birincil Kaynak: Binance Public Spot API (Tarayıcıda CORS engeli asla yoktur)
       try {
         const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=MINAUSDT');
         if (res.ok) {
@@ -447,7 +445,6 @@
         }
       } catch (e) {}
 
-      // 2. İkincil Kaynak: Bitget V2 Spot API
       try {
         const resBitget = await fetch('https://api.bitget.com/api/v2/spot/market/tickers?symbol=MINAUSDT');
         if (resBitget.ok) {
@@ -456,25 +453,6 @@
             const t = json.data[0];
             const price = parseFloat(t.lastPr).toFixed(4);
             const change = (parseFloat(t.change24h || 0) * 100).toFixed(2);
-
-            if (priceEl) priceEl.innerText = `$${price}`;
-            if (changeEl) {
-              changeEl.innerText = `${change >= 0 ? '+' : ''}${change}%`;
-              changeEl.className = `text-[10px] font-bold ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
-            }
-            return;
-          }
-        }
-      } catch (e) {}
-
-      // 3. Üçüncül Kaynak: Coingecko API
-      try {
-        const resCg = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=mina-protocol&vs_currencies=usd&include_24hr_change=true');
-        if (resCg.ok) {
-          const data = await resCg.json();
-          if (data['mina-protocol']) {
-            const price = parseFloat(data['mina-protocol'].usd).toFixed(4);
-            const change = parseFloat(data['mina-protocol'].usd_24h_change || 0).toFixed(2);
 
             if (priceEl) priceEl.innerText = `$${price}`;
             if (changeEl) {
@@ -505,7 +483,6 @@
       const refCode = CurrentUser.customRefCode || CurrentUser.refCode || `MINE-${CurrentUser.username.toUpperCase()}-777`;
       document.getElementById('dashboardRefCode').innerText = refCode;
 
-      // 4-Tier Takım Tablosunu Yenile
       const team = (typeof getFourDepthTeam === 'function') ? getFourDepthTeam(CurrentUser.username) : [];
       document.getElementById('userTotalTeamCount').innerText = `${team.length} Members`;
 
@@ -569,14 +546,20 @@
       window.location.href = 'index.html';
     }
 
+    // ================= OTURUM KONTROLÜ (GÜVENLİK KİLİDİ) =================
     window.addEventListener('DOMContentLoaded', () => {
-      const activeSession = sessionStorage.getItem('mineora_active_session') || 'admin';
+      const activeSession = sessionStorage.getItem('mineora_active_session');
+      
+      // EĞER KULLANICI GİRİŞ YAPMAMIŞSA ASLA DASHBOARD'A ALMA!
+      if (!activeSession) {
+        window.location.href = 'index.html';
+        return;
+      }
+
       loadUserWorld(activeSession);
       selectStakePlan(30);
       renderUserStakesList();
       refreshDashboardUI();
-      
-      // Canlı fiyatı anında çek ve 5 saniyede bir güncelle
       fetchLiveMinaTicker();
       setInterval(fetchLiveMinaTicker, 5000);
       setInterval(refreshDashboardUI, 1000);
