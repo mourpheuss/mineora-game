@@ -1,842 +1,380 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex, nofollow" />
-  <title>Bitget VIP Kripto Vadeli İşlem & Likidite Terminali</title>
+  <title>MINA Protocol | The Lightweight ZK Blockchain & Staking Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-display {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .hero-pattern {
+      background-color: #f7fafc;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(199, 210, 254, 0.45) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(186, 230, 253, 0.5) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(224, 231, 255, 0.35) 0px, transparent 60%);
+    }
+    .zk-grid-bg {
+      background-image: linear-gradient(to right, rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+<body class="bg-white text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
 
-  <!-- GİRİŞ EKRANI -->
-  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
-    <div class="w-full max-w-md bg-slate-900 border-2 border-cyan-500/40 rounded-2xl p-8 shadow-2xl">
-      <div class="flex items-center justify-center gap-2.5 mb-2">
-        <div class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></div>
-        <h1 class="text-2xl font-black text-cyan-400 tracking-wide">BITGET FUTURES PRO</h1>
+  <!-- TOP BANNER -->
+  <div class="bg-gradient-to-r from-sky-400/10 via-indigo-400/10 to-purple-400/10 border-b border-indigo-100/60 px-4 py-2 text-center text-xs text-slate-600 font-medium">
+    🚀 Staking Protocol V2 is now active on Mainnet. 
+    <a href="#staking" class="text-orange-600 hover:text-orange-700 font-semibold underline underline-offset-2 ml-1">Explore Pools & Yields &rarr;</a>
+  </div>
+
+  <!-- NAVIGATION -->
+  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- LOGO -->
+      <a href="#" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-400 flex items-center justify-center shadow-sm">
+          <span class="font-display font-black text-white text-lg tracking-wider">M</span>
+        </div>
+        <span class="font-display font-black text-2xl tracking-tight text-slate-900">MINA</span>
+      </a>
+
+      <!-- DESKTOP NAV -->
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+        <a href="#about" class="hover:text-slate-900 transition">About</a>
+        <a href="#whitepaper" class="hover:text-slate-900 transition">Whitepaper</a>
+        <a href="#staking" class="hover:text-slate-900 transition">Staking Portal</a>
+        <a href="#roadmap" class="hover:text-slate-900 transition">Roadmap</a>
+        <a href="#tokenomics" class="hover:text-slate-900 transition">Tokenomics</a>
+      </nav>
+
+      <!-- AUTH & APP BUTTONS -->
+      <div class="flex items-center gap-3">
+        <button onclick="openModal('loginModal')" class="text-xs font-semibold text-slate-700 hover:text-slate-900 px-3.5 py-2 rounded-lg hover:bg-slate-100 transition">
+          Sign In
+        </button>
+        <button onclick="openModal('registerModal')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm hover:shadow transition">
+          Sign Up
+        </button>
+        <a href="#staking" class="hidden sm:inline-flex bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition">
+          Launch Staking &rarr;
+        </a>
       </div>
-      <p class="text-xs text-center text-slate-400 mb-6">Yapay Zeka Destekli Vadeli Kripto Likidite & SMC Terminali</p>
 
-      <div id="loginError" class="hidden bg-rose-950 border border-rose-600 text-rose-300 text-xs p-3 rounded-lg mb-4 text-center font-semibold"></div>
+    </div>
+  </header>
 
-      <form onsubmit="handleLogin(event)" class="space-y-4">
+  <!-- HERO SECTION -->
+  <section class="relative hero-pattern zk-grid-bg pt-20 pb-24 border-b border-slate-100 overflow-hidden">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      
+      <div class="inline-flex items-center gap-2 bg-white/90 border border-slate-200/80 rounded-full px-3.5 py-1 text-xs text-slate-600 mb-8 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Listed on Bitget Global &bull; Zero Knowledge Infrastructure</span>
+      </div>
+
+      <h1 class="font-display text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-6">
+        Proof of Everything.
+      </h1>
+
+      <p class="max-w-2xl mx-auto text-base sm:text-xl text-slate-600 font-normal leading-relaxed mb-10">
+        The lightweight ZK blockchain designed for a secure, private, and verifiable internet. Stake your tokens, secure decentralized consensus, and earn sustainable on-chain yields.
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="#staking" class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm px-6 py-3.5 rounded-lg shadow-sm hover:shadow-md transition">
+          Start Staking &rarr;
+        </a>
+        <a href="#whitepaper" class="bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm px-6 py-3.5 rounded-lg border border-slate-200 shadow-sm transition">
+          Read Whitepaper
+        </a>
+      </div>
+
+      <!-- LIVE METRICS BAR -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-16 text-left">
+        <div class="bg-white/80 backdrop-blur-sm border border-slate-200/70 p-5 rounded-2xl shadow-sm">
+          <span class="text-xs text-slate-500 font-medium block">Blockchain Size</span>
+          <strong class="font-display text-2xl font-bold text-slate-900">22 KB</strong>
+          <span class="text-[11px] text-emerald-600 font-medium block mt-0.5">Constant Size Proof</span>
+        </div>
+        <div class="bg-white/80 backdrop-blur-sm border border-slate-200/70 p-5 rounded-2xl shadow-sm">
+          <span class="text-xs text-slate-500 font-medium block">Total Value Locked</span>
+          <strong class="font-display text-2xl font-bold text-slate-900">$48.2M+</strong>
+          <span class="text-[11px] text-slate-500 font-medium block mt-0.5">Secured on Staking</span>
+        </div>
+        <div class="bg-white/80 backdrop-blur-sm border border-slate-200/70 p-5 rounded-2xl shadow-sm">
+          <span class="text-xs text-slate-500 font-medium block">Max Target APY</span>
+          <strong class="font-display text-2xl font-bold text-orange-600">Up to 24.8%</strong>
+          <span class="text-[11px] text-slate-500 font-medium block mt-0.5">Tiered Locked Pools</span>
+        </div>
+        <div class="bg-white/80 backdrop-blur-sm border border-slate-200/70 p-5 rounded-2xl shadow-sm">
+          <span class="text-xs text-slate-500 font-medium block">Bitget Status</span>
+          <strong class="font-display text-2xl font-bold text-emerald-600">Live Trading</strong>
+          <span class="text-[11px] text-slate-500 font-medium block mt-0.5">USDT Spot & Futures</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ABOUT & TECHNOLOGY SECTION -->
+  <section id="about" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <h2 class="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-2">Architectural Superiority</h2>
+        <h3 class="font-display text-3xl sm:text-4xl font-bold text-slate-900">Recursive Zero-Knowledge Technology</h3>
+        <p class="text-slate-600 text-sm mt-3">Unlike traditional blockchains that grow hundreds of gigabytes over time, our state proof remains permanently lightweight and verifiable by anyone.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="p-8 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-lg transition bg-gradient-to-b from-slate-50/50 to-white">
+          <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-xl mb-6">01</div>
+          <h4 class="font-display text-xl font-bold text-slate-900 mb-2">Fixed-Size Verifiability</h4>
+          <p class="text-sm text-slate-600 leading-relaxed">No matter how many millions of transactions are executed, recursive zk-SNARKs roll the entire ledger history into an elegant 22 KB proof.</p>
+        </div>
+        <div class="p-8 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-lg transition bg-gradient-to-b from-slate-50/50 to-white">
+          <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-black text-xl mb-6">02</div>
+          <h4 class="font-display text-xl font-bold text-slate-900 mb-2">Native Data Privacy</h4>
+          <p class="text-sm text-slate-600 leading-relaxed">Execute smart contracts without revealing private identity or sensitive balances. Zero-knowledge guarantees cryptographic correctness with total privacy.</p>
+        </div>
+        <div class="p-8 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-lg transition bg-gradient-to-b from-slate-50/50 to-white">
+          <div class="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black text-xl mb-6">03</div>
+          <h4 class="font-display text-xl font-bold text-slate-900 mb-2">Incentivized Staking</h4>
+          <p class="text-sm text-slate-600 leading-relaxed">Lock and delegate tokens into decentralized pools to reinforce security. Earn dynamic protocol rewards distributed per block validation epoch.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAKING PREVIEW SECTION -->
+  <section id="staking" class="py-20 bg-slate-50 border-y border-slate-200/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
         <div>
-          <label class="text-xs text-slate-400 block mb-1 font-semibold">Kullanıcı Adı</label>
-          <input id="loginUsername" type="text" required placeholder="Kullanıcı adınızı girin"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-400" />
+          <span class="text-xs font-bold text-orange-600 uppercase tracking-widest mb-1 block">Institutional & Community Staking</span>
+          <h3 class="font-display text-3xl font-bold text-slate-900">Official Staking Pools</h3>
+          <p class="text-slate-600 text-sm mt-1">Select your commitment period to maximize yield efficiency.</p>
+        </div>
+        <button onclick="openModal('loginModal')" class="mt-4 md:mt-0 inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-lg transition">
+          <span>Connect Web3 Wallet</span> &rarr;
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- POOL 1 -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-700">Flexible Pool</span>
+              <span class="text-xs text-emerald-600 font-semibold">Instant Unstake</span>
+            </div>
+            <div class="mb-4">
+              <span class="text-xs text-slate-400 block font-medium">Estimated APY</span>
+              <span class="font-display text-3xl font-black text-slate-900">8.5%</span>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-2 mb-6">
+              <li class="flex items-center gap-2">✓ No lock-up duration</li>
+              <li class="flex items-center gap-2">✓ Daily reward compounding</li>
+              <li class="flex items-center gap-2">✓ 0% early exit penalty</li>
+            </ul>
+          </div>
+          <button onclick="openModal('loginModal')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs py-3 rounded-xl transition">
+            Stake Flexible
+          </button>
+        </div>
+
+        <!-- POOL 2 (RECOMMENDED) -->
+        <div class="bg-white rounded-2xl border-2 border-orange-500 p-6 shadow-md relative flex flex-col justify-between">
+          <div class="absolute -top-3 right-6 bg-orange-500 text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider">
+            Most Popular
+          </div>
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-orange-50 text-orange-600">90 Days Locked</span>
+              <span class="text-xs text-orange-600 font-semibold">Tier 2 Validator</span>
+            </div>
+            <div class="mb-4">
+              <span class="text-xs text-slate-400 block font-medium">Estimated APY</span>
+              <span class="font-display text-3xl font-black text-orange-600">16.2%</span>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-2 mb-6">
+              <li class="flex items-center gap-2">✓ 90 days guaranteed lock</li>
+              <li class="flex items-center gap-2">✓ Priority block distribution</li>
+              <li class="flex items-center gap-2">✓ Tier 2 Governance Voting</li>
+            </ul>
+          </div>
+          <button onclick="openModal('loginModal')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-3 rounded-xl shadow-sm transition">
+            Stake 90 Days
+          </button>
+        </div>
+
+        <!-- POOL 3 -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-indigo-50 text-indigo-600">180 Days Locked</span>
+              <span class="text-xs text-indigo-600 font-semibold">Maximum Yield</span>
+            </div>
+            <div class="mb-4">
+              <span class="text-xs text-slate-400 block font-medium">Estimated APY</span>
+              <span class="font-display text-3xl font-black text-slate-900">24.8%</span>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-2 mb-6">
+              <li class="flex items-center gap-2">✓ 180 days long-term lock</li>
+              <li class="flex items-center gap-2">✓ Maximum yield boost multiplier</li>
+              <li class="flex items-center gap-2">✓ Full DAO governance rights</li>
+            </ul>
+          </div>
+          <button onclick="openModal('loginModal')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl transition">
+            Stake 180 Days
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- WHITEPAPER & TOKENOMICS -->
+  <section id="whitepaper" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-3xl p-8 sm:p-14 text-white">
+        <div class="max-w-2xl">
+          <span class="text-xs font-bold text-orange-400 uppercase tracking-widest block mb-2">Technical Documentation</span>
+          <h3 class="font-display text-3xl sm:text-4xl font-bold mb-4">Official Protocol Whitepaper</h3>
+          <p class="text-slate-300 text-sm leading-relaxed mb-8">
+            Review the mathematical framework of recursive zk-SNARKs, our Ouroboros Samasika consensus, and the economic incentive structure safeguarding network validation.
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <a href="#whitepaper" onclick="alert('Whitepaper PDF download will be linked here.')" class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-6 py-3 rounded-lg transition">
+              Download PDF (v2.4) &darr;
+            </a>
+            <a href="#about" class="bg-white/10 hover:bg-white/20 text-white font-semibold text-xs px-6 py-3 rounded-lg border border-white/20 transition">
+              View Key Metrics
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROADMAP SECTION -->
+  <section id="roadmap" class="py-20 bg-slate-50 border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1">Execution Roadmap</span>
+        <h3 class="font-display text-3xl font-bold text-slate-900">Strategic Milestones</h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <span class="text-xs font-bold text-emerald-600 uppercase block mb-1">Phase 1 &bull; Completed</span>
+          <h4 class="font-display font-bold text-slate-900 text-base mb-2">Bitget Global Listing</h4>
+          <p class="text-xs text-slate-600">Spot & USDT Futures pairing live. Initial liquidity bootstrap and market-making deployed.</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border-2 border-indigo-500 shadow-sm">
+          <span class="text-xs font-bold text-indigo-600 uppercase block mb-1">Phase 2 &bull; Current</span>
+          <h4 class="font-display font-bold text-slate-900 text-base mb-2">Staking Portal Rollout</h4>
+          <p class="text-xs text-slate-600">Launch of flexible and locked staking pools with automated smart yield accounting.</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <span class="text-xs font-bold text-slate-400 uppercase block mb-1">Phase 3 &bull; Q3 2026</span>
+          <h4 class="font-display font-bold text-slate-900 text-base mb-2">zkApps Ecosystem</h4>
+          <p class="text-xs text-slate-600">Enabling zero-knowledge smart contract deployment for privacy-focused web3 developers.</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <span class="text-xs font-bold text-slate-400 uppercase block mb-1">Phase 4 &bull; Q4 2026</span>
+          <h4 class="font-display font-bold text-slate-900 text-base mb-2">Cross-Chain Bridge</h4>
+          <p class="text-xs text-slate-600">Trust-minimized bridge with Ethereum and BSC using zk-proof verification.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-xs">M</div>
+        <span class="font-display font-bold text-slate-900 text-base">MINA Protocol</span>
+        <span class="text-xs text-slate-400">&copy; 2026. All rights reserved.</span>
+      </div>
+      <div class="flex items-center gap-6 text-xs text-slate-500 font-medium">
+        <a href="#about" class="hover:text-slate-900">Privacy Policy</a>
+        <a href="#whitepaper" class="hover:text-slate-900">Terms of Service</a>
+        <a href="#staking" class="hover:text-slate-900">Bitget Market</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SIGN IN MODAL -->
+  <div id="loginModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative">
+      <button onclick="closeModal('loginModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+      <h3 class="font-display text-xl font-bold text-slate-900 mb-1">Sign In</h3>
+      <p class="text-xs text-slate-500 mb-5">Access your decentralized staking dashboard.</p>
+      
+      <form onsubmit="handleAuthSubmit(event, 'login')" class="space-y-3.5">
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Username / Wallet</label>
+          <input type="text" id="loginUser" required placeholder="Enter username" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
         </div>
         <div>
-          <label class="text-xs text-slate-400 block mb-1 font-semibold">Şifre</label>
-          <input id="loginPassword" type="password" required placeholder="••••••••"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-400" />
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Password</label>
+          <input type="password" id="loginPass" required placeholder="••••••••" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
         </div>
-        <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black py-3 rounded-xl text-sm transition shadow-lg shadow-cyan-500/20">
-          🔐 TERMİNALE GİRİŞ YAP
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 rounded-lg transition mt-2">
+          Sign In &rarr;
         </button>
       </form>
     </div>
   </div>
 
-  <!-- ANA TERMİNAL EKRANI -->
-  <div id="appScreen" class="hidden p-4">
-
-    <!-- ÜST BAR -->
-    <header class="flex flex-wrap justify-between items-center bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4 gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
-        <h1 class="text-xl font-bold text-cyan-400 tracking-wide">BITGET FUTURES PRO</h1>
-        <span class="text-xs bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded-md border border-emerald-700 font-semibold">
-          ⚡ 7/24 Vadeli Bot
-        </span>
-        <span id="userRoleBadge" class="text-xs bg-slate-800 text-cyan-300 px-2.5 py-1 rounded-md border border-slate-700 font-bold"></span>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2.5">
-        <!-- COIN SEÇİCİ & ANLIK FİYAT -->
-        <div class="bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2">
-          <select id="selectedSymbol" onchange="changeActiveSymbol(this.value)" class="bg-slate-900 text-cyan-300 font-bold text-xs rounded border border-slate-700 px-2 py-1 outline-none cursor-pointer max-w-[140px]">
-            <option value="BTCUSDT">BTCUSDT</option>
-            <option value="ETHUSDT">ETHUSDT</option>
-            <option value="SOLUSDT">SOLUSDT</option>
-            <option value="XRPUSDT">XRPUSDT</option>
-            <option value="DOGEUSDT">DOGEUSDT</option>
-          </select>
-          <span id="spotPrice" class="text-xl font-extrabold text-white">Yükleniyor...</span>
-        </div>
-
-        <div class="text-right mr-1">
-          <span class="text-[10px] text-slate-400 block">SON GÜNCELLEME</span>
-          <span id="lastUpdate" class="text-xs font-mono text-emerald-400">--:--:--</span>
-        </div>
-
-        <button onclick="openBacktestModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
-          ⏪ Geçmişi Test Et
-        </button>
-
-        <button onclick="toggleScannerModal()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
-          🔍 Çoklu Coin Tara
-        </button>
-
-        <button id="bitgetBtn" onclick="toggleBitgetModal()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-3 py-2 rounded-lg text-xs transition">
-          🔑 Bitget API Bağla
-        </button>
-
-        <button id="soundToggleBtn" onclick="toggleSound()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition">
-          🔊 Alarm: AÇIK
-        </button>
-
-        <button onclick="clearHistory()" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold px-3 py-2 rounded-lg text-xs transition">
-          🗑️ Geçmişi Sıfırla
-        </button>
-
-        <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold px-3 py-2 rounded-lg text-xs transition">
-          Çıkış
-        </button>
-      </div>
-    </header>
-
-    <!-- BİTGET API AYARLARI MODALI -->
-    <div id="bitgetModal" class="hidden bg-slate-900 border-2 border-cyan-500 rounded-xl p-5 mb-4 shadow-2xl">
-      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-        <h3 class="text-base font-bold text-cyan-400">🔑 Bitget Vadeli İşlemler (Futures) API Bağlantısı</h3>
-        <button onclick="toggleBitgetModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300">Kapat ✕</button>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+  <!-- SIGN UP MODAL -->
+  <div id="registerModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative">
+      <button onclick="closeModal('registerModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+      <h3 class="font-display text-xl font-bold text-slate-900 mb-1">Create Account</h3>
+      <p class="text-xs text-slate-500 mb-5">Start earning protocol staking rewards.</p>
+      
+      <form onsubmit="handleAuthSubmit(event, 'register')" class="space-y-3.5">
         <div>
-          <label class="text-[11px] text-slate-400 block mb-1">Bitget API Key</label>
-          <input id="bgApiKey" type="password" placeholder="api-key" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Username</label>
+          <input type="text" id="regUser" required placeholder="Choose username" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
         </div>
         <div>
-          <label class="text-[11px] text-slate-400 block mb-1">Bitget Secret Key</label>
-          <input id="bgSecretKey" type="password" placeholder="secret-key" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Password</label>
+          <input type="password" id="regPass" required placeholder="••••••••" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
         </div>
-        <div>
-          <label class="text-[11px] text-slate-400 block mb-1">Passphrase (Şifre)</label>
-          <input id="bgPassphrase" type="password" placeholder="passphrase" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-        </div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-        <div>
-          <label class="text-[11px] text-slate-400 block mb-1">Kaldıraç Seviyesi</label>
-          <input id="bgLeverage" type="number" value="10" min="1" max="50" onchange="syncLeverage(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-amber-300 font-bold" />
-        </div>
-        <div>
-          <label class="text-[11px] text-slate-400 block mb-1">İşlem Başına Marjin (USDT)</label>
-          <input id="bgTradeSize" type="number" value="50" min="10" step="5" oninput="updateQuickTradeSize(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-300 font-bold" />
-        </div>
-        <div class="flex items-end">
-          <label class="flex items-center gap-2 cursor-pointer pb-2 text-xs text-cyan-300">
-            <input id="bgEnabled" type="checkbox" class="w-4 h-4 rounded text-cyan-500 bg-slate-950 border-slate-700" />
-            Otomatik Emir Alımı Açık
-          </label>
-        </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-slate-800">
-        <button onclick="saveBitgetConfig()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black rounded-lg px-4 py-2.5 text-xs transition">💾 Ayarları Kaydet</button>
-        <button onclick="testBitgetConnection()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg px-4 py-2.5 text-xs transition">🔌 Bağlantı & Bakiye Testi</button>
-      </div>
-      <div id="bgTestResultBox" class="hidden mt-3 p-3 rounded-lg border text-xs font-medium"></div>
+        <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs py-2.5 rounded-lg transition mt-2">
+          Register & Continue &rarr;
+        </button>
+      </form>
     </div>
-
-    <!-- PİYASA ÇOKLU COİN TARAYICI MODALI -->
-    <div id="scannerModal" class="hidden bg-slate-900 border-2 border-teal-500 rounded-xl p-5 mb-4 shadow-2xl">
-      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-        <h3 class="text-base font-bold text-teal-400">🔍 Bitget Çoklu Vadeli İşlem Taraması (Tüm Çiftler)</h3>
-        <button onclick="toggleScannerModal()" class="text-xs bg-slate-800 px-3 py-1.5 rounded text-slate-300">Kapat ✕</button>
-      </div>
-      <div class="overflow-x-auto max-h-80 overflow-y-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-slate-800 text-slate-400">
-              <th class="py-2 px-3">Coin</th>
-              <th class="py-2 px-3">Fiyat</th>
-              <th class="py-2 px-3">24s Hacim</th>
-              <th class="py-2 px-3">24s Değişim</th>
-              <th class="py-2 px-3">Sinyal Kararı</th>
-              <th class="py-2 px-3">Skor</th>
-              <th class="py-2 px-3">Gerekçe</th>
-              <th class="py-2 px-3 text-right">İşlem</th>
-            </tr>
-          </thead>
-          <tbody id="scannerTableBody" class="divide-y divide-slate-800/60">
-            <tr><td colspan="8" class="text-center py-4 text-slate-400">Taranıyor...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- BACKTEST (GEÇMİŞİ TEST ET) MODAL -->
-    <div id="backtestModal" class="hidden bg-slate-900 border-2 border-purple-500 rounded-xl p-5 mb-4 shadow-2xl">
-      <div class="flex flex-wrap justify-between items-center gap-3 mb-4 pb-3 border-b border-slate-800">
-        <div class="flex items-center gap-2">
-          <h2 class="text-base font-bold text-purple-300">⏪ Kripto Likidite Simülasyonu</h2>
-          <select id="btCoinSelect" onchange="runBacktest(currentBtHours)" class="bg-slate-950 text-cyan-300 font-bold text-xs rounded border border-purple-400 px-2 py-1 outline-none max-w-[140px]">
-            <option value="BTCUSDT">BTCUSDT</option>
-            <option value="ETHUSDT">ETHUSDT</option>
-            <option value="SOLUSDT">SOLUSDT</option>
-            <option value="XRPUSDT">XRPUSDT</option>
-            <option value="DOGEUSDT">DOGEUSDT</option>
-          </select>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="btBtn_24" onclick="runBacktest(24)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 24 Saat</button>
-          <button id="btBtn_72" onclick="runBacktest(72)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 3 Gün</button>
-          <button id="btBtn_120" onclick="runBacktest(120)" class="bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-400">Son 5 Gün</button>
-          <button id="btBtn_720" onclick="runBacktest(720)" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700">Son 1 Ay</button>
-          <button onclick="document.getElementById('backtestModal').classList.add('hidden')" class="bg-rose-950 text-rose-300 text-xs font-bold px-3 py-1.5 rounded-lg">Kapat ✕</button>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4 text-center">
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-slate-400 block">SİNYAL</span><strong id="btTotal" class="text-xl font-black text-white">--</strong></div>
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-[11px] text-emerald-300 block">BAŞARILI</span><strong id="btWins" class="text-xl font-black text-emerald-400">--</strong></div>
-        <div class="bg-slate-950 p-3 rounded-lg border border-rose-300 block">STOP</span><strong id="btLosses" class="text-xl font-black text-rose-400">--</strong></div>
-        <div class="bg-slate-950 p-3 rounded-lg border border-purple-300 block">BAŞARI ORANI</span><strong id="btWinRate" class="text-xl font-black text-purple-400">--</strong></div>
-        <div class="bg-slate-950 p-3 rounded-lg border border-cyan-500/50">
-          <span class="text-[11px] text-cyan-300 block">TOPLAM PUAN / USDT KÂRI</span>
-          <strong id="btLotProfit" class="text-sm font-black text-cyan-400">--</strong>
-        </div>
-      </div>
-      <div class="overflow-x-auto max-h-80 overflow-y-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-slate-800 text-slate-400">
-              <th class="py-2 px-3">Zaman</th>
-              <th class="py-2 px-3">Coin</th>
-              <th class="py-2 px-3">Yön</th>
-              <th class="py-2 px-3">Giriş</th>
-              <th class="py-2 px-3">TP1 / TP2</th>
-              <th class="py-2 px-3">Kapanış</th>
-              <th class="py-2 px-3">Durum</th>
-              <th class="py-2 px-3 text-right">Net Kâr (Puan / $)</th>
-            </tr>
-          </thead>
-          <tbody id="btTableBody" class="divide-y divide-slate-800/60"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ANA EKRAN GRID -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-      <!-- SOL TARAF: GRAFİK VE İŞLEM DURUMU -->
-      <div class="lg:col-span-7 flex flex-col gap-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden" style="height: 520px;">
-          <div id="tv_chart_container" class="w-full h-full"></div>
-        </div>
-
-        <div class="bg-slate-900 border-2 border-cyan-500/60 rounded-xl p-4">
-          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">🤖 Bitget Otomatik Vadeli İşlem & Zırh Motoru</span>
-            <span id="bgStatusBadge" class="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-semibold">
-              🔑 Bitget API Bağlı Değil
-            </span>
-          </div>
-          <div id="activeTradeBox" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-400">
-            Şu anda açık işlem bulunmuyor. Piyasa Likidite Süpürmesi veya Order Block tetiklendiğinde emir otomatik açılır.
-          </div>
-        </div>
-      </div>
-
-      <!-- SAĞ TARAF: SİNYAL VE GÖSTERGELER -->
-      <div class="lg:col-span-5 flex flex-col gap-4">
-        <div id="signalCard" class="bg-slate-900 border-2 border-slate-700 rounded-xl p-5 transition-all">
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Likidite Kararı</span>
-            <span id="scoreBadge" class="text-sm font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-200">Skor: 0 / 100</span>
-          </div>
-          <div id="signalText" class="text-3xl font-black tracking-tight my-2 text-slate-200">BEKLENİYOR...</div>
-
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-slate-800">
-            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-xs text-slate-400 block">GİRİŞ</span><span id="entryPrice" class="text-base font-bold text-white">--</span></div>
-            <div class="bg-rose-950/40 p-3 rounded-lg border border-rose-800/60"><span class="text-xs text-rose-300 block">STOP LOSS</span><span id="slPrice" class="text-base font-bold text-rose-400">--</span></div>
-            <div class="bg-emerald-950/40 p-3 rounded-lg border border-emerald-800/60"><span class="text-xs text-emerald-300 block">TP 1 (%80)</span><span id="tp1Price" class="text-base font-bold text-emerald-400">--</span></div>
-            <div class="bg-emerald-950/60 p-3 rounded-lg border border-emerald-700/80"><span class="text-xs text-emerald-200 block">TP 2 (HEDEF)</span><span id="tp2Price" class="text-base font-bold text-emerald-300">--</span></div>
-          </div>
-        </div>
-
-        <!-- KALDIRAÇ VE MARJİN AYARI -->
-        <div class="bg-slate-900 border-2 border-cyan-500/40 rounded-xl p-4">
-          <div class="flex justify-between items-center mb-3">
-            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">⚙️ Vadeli İşlem Marjin & Pozisyon Ayarı</span>
-          </div>
-          <div class="grid grid-cols-2 gap-3 mb-2">
-            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-              <label class="text-[11px] text-slate-400 block mb-1">İşlem Başına Marjin (USDT)</label>
-              <input id="quickTradeSizeInput" type="number" step="10" min="10" value="50" oninput="updateQuickTradeSize(this.value)" class="w-full bg-slate-900 border border-cyan-500/60 rounded px-2.5 py-1.5 text-base font-black text-cyan-300 focus:outline-none" />
-            </div>
-            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-center">
-              <span class="text-[10px] text-slate-400 block">Kaldıraçlı Hacim (<span id="quickLevLabel">10</span>x)</span>
-              <strong class="text-xs text-emerald-400" id="levVolumeText">50 USDT = 500 USDT Pozisyon</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs">
-            <span class="text-slate-400 font-semibold block mb-2">GÖSTERGELER</span>
-            <div class="space-y-1.5">
-              <div class="flex justify-between"><span>VWAP:</span> <strong id="indVwap" class="text-cyan-300">--</strong></div>
-              <div class="flex justify-between"><span>EMA 50/200:</span> <strong id="indEma" class="text-white">Aktif</strong></div>
-              <div class="flex justify-between"><span>ATR (Volatilite):</span> <strong id="atrInfo" class="text-amber-400">Dinamik</strong></div>
-            </div>
-          </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs">
-            <span class="text-slate-400 font-semibold block mb-2">PİYASA DURUMU</span>
-            <div class="space-y-1.5">
-              <div class="flex justify-between"><span>Pazar:</span> <strong class="text-emerald-400">7/24 Kesintisiz</strong></div>
-              <div class="flex justify-between"><span>API:</span> <strong class="text-cyan-300">Bitget V2 Direct</strong></div>
-              <div class="flex justify-between"><span>Kaldıraç:</span> <strong id="currentLev" class="text-white">10x</strong></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex-1 text-xs">
-          <span class="text-slate-400 font-semibold uppercase tracking-wider block mb-2">Likidite Gerekçeleri</span>
-          <ul id="reasonsList" class="space-y-1.5 text-slate-300"><li>Piyasa analiz ediliyor...</li></ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- GEÇMİŞ TABLOSU -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mt-4 text-xs">
-      <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-        <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400">📊 Gerçekleşen İşlem Performansı</h2>
-        <div class="flex gap-3">
-          <div class="bg-slate-950 px-3 py-2 rounded-lg border border-slate-800"><span class="text-slate-400 block">Toplam</span><strong id="statTotal" class="text-sm text-white">0</strong></div>
-          <div class="bg-slate-950 px-3 py-2 rounded-lg border border-slate-800"><span class="text-slate-400 block">Win Rate</span><strong id="statWinRate" class="text-sm text-emerald-400">%0</strong></div>
-          <div class="bg-slate-950 px-3 py-2 rounded-lg border border-cyan-500/40"><span class="text-cyan-300 block">Net Kâr</span><strong id="statProfit" class="text-sm text-emerald-400">$0.00</strong></div>
-        </div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-slate-800 text-slate-400">
-              <th class="py-2 px-3">Saat</th>
-              <th class="py-2 px-3">Coin</th>
-              <th class="py-2 px-3">Yön</th>
-              <th class="py-2 px-3">Giriş</th>
-              <th class="py-2 px-3">Kapanış</th>
-              <th class="py-2 px-3">Durum</th>
-              <th class="py-2 px-3 text-right text-cyan-300">Net Kâr ($)</th>
-            </tr>
-          </thead>
-          <tbody id="historyTableBody" class="divide-y divide-slate-800/60">
-            <tr><td colspan="7" class="py-4 text-center text-slate-500">Henüz kapanmış işlem bulunmuyor.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </div>
 
-  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <script>
-    let authToken = localStorage.getItem('crypto_auth_token') || 'local_session';
-    let currentUser = { username: 'admin' };
-    let soundEnabled = true;
-    let currentSymbol = 'BTCUSDT';
-    let currentBtHours = 120;
-    let tvWidget = null;
-    let scanInterval = null;
-    let allAvailableCoins = [];
-
-    let appSettings = {
-      tradeSizeUSDT: 50,
-      leverage: 10,
-      enabled: false
-    };
-
-    // ARAYÜZ YENİLEME FONKSİYONU (EN BAŞTA TANIMLANDI)
-    function renderMarginUI() {
-      const margin = Number(appSettings.tradeSizeUSDT) || 50;
-      const lev = Number(appSettings.leverage) || 10;
-      const totalVolume = margin * lev;
-
-      const levText = document.getElementById('levVolumeText');
-      if (levText) levText.textContent = `${margin} USDT = ${totalVolume} USDT Pozisyon`;
-      
-      const levLabel = document.getElementById('quickLevLabel');
-      if (levLabel) levLabel.textContent = lev;
-
-      const curLev = document.getElementById('currentLev');
-      if (curLev) curLev.textContent = `${lev}x`;
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
     }
-
-    function updateBitgetStatus(isConnected) {
-      const badge = document.getElementById('bgStatusBadge');
-      if (!badge) return;
-      if (isConnected) {
-        badge.className = "text-[11px] bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700 font-semibold";
-        badge.textContent = "🟢 Bitget API Bağlı & Aktif";
-      } else {
-        badge.className = "text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-semibold";
-        badge.textContent = "🔑 Bitget API Bağlı Değil";
-      }
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
     }
-
-    async function apiFetch(url, options = {}) {
-      const headers = { 
-        ...(options.headers || {}), 
-        'x-auth-token': authToken || 'local_session',
-        'Authorization': authToken || 'local_session'
-      };
-      if (options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-      
-      try {
-        const res = await fetch(url, { ...options, headers });
-        return res;
-      } catch (err) {
-        console.error("İstek hatası:", err);
-        throw err;
-      }
-    }
-
-    async function handleLogin(e) {
-      if (e) e.preventDefault();
-      const errBox = document.getElementById('loginError');
-      if (errBox) errBox.classList.add('hidden');
-      const username = document.getElementById('loginUsername').value || 'admin';
-      const password = document.getElementById('loginPassword').value || 'admin123';
-      
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          authToken = data.token;
-          localStorage.setItem('crypto_auth_token', authToken);
-          currentUser = data.user || { username };
-          enterTerminal();
-        } else {
-          localStorage.setItem('crypto_auth_token', 'local_session');
-          enterTerminal();
-        }
-      } catch (err) {
-        localStorage.setItem('crypto_auth_token', 'local_session');
-        enterTerminal();
-      }
-    }
-
-    function logout() {
-      authToken = '';
-      currentUser = null;
-      localStorage.removeItem('crypto_auth_token');
-      if (scanInterval) clearInterval(scanInterval);
-      document.getElementById('appScreen').classList.add('hidden');
-      document.getElementById('loginScreen').classList.remove('hidden');
-    }
-
-    function applyLocalBitgetConfig() {
-      try {
-        const cached = localStorage.getItem('bitget_local_cfg');
-        if (!cached) return false;
-        const bg = JSON.parse(cached);
-        if (bg && bg.apiKey && bg.apiKey.length > 5) {
-          appSettings.tradeSizeUSDT = Number(bg.tradeSizeUSDT) || 50;
-          appSettings.leverage = Number(bg.leverage) || 10;
-          appSettings.enabled = Boolean(bg.enabled);
-
-          if (document.getElementById('quickTradeSizeInput')) document.getElementById('quickTradeSizeInput').value = appSettings.tradeSizeUSDT;
-          if (document.getElementById('bgTradeSize')) document.getElementById('bgTradeSize').value = appSettings.tradeSizeUSDT;
-          if (document.getElementById('bgLeverage')) document.getElementById('bgLeverage').value = appSettings.leverage;
-          if (document.getElementById('bgEnabled')) document.getElementById('bgEnabled').checked = appSettings.enabled;
-          if (document.getElementById('bgApiKey')) document.getElementById('bgApiKey').value = bg.apiKey;
-          if (document.getElementById('bgSecretKey')) document.getElementById('bgSecretKey').value = bg.secretKey || '';
-          if (document.getElementById('bgPassphrase')) document.getElementById('bgPassphrase').value = bg.passphrase || '';
-
-          renderMarginUI();
-          updateBitgetStatus(true);
-          return true;
-        }
-      } catch (e) {}
-      return false;
-    }
-
-    async function loadUserSettings() {
-      applyLocalBitgetConfig();
-      try {
-        const res = await apiFetch('/api/me');
-        const data = await res.json();
-        const bg = data?.user?.bitget;
-        if (bg && bg.apiKey && bg.apiKey.length > 5) {
-          localStorage.setItem('bitget_local_cfg', JSON.stringify(bg));
-          applyLocalBitgetConfig();
-        }
-      } catch (e) {}
-    }
-
-    let marginDebounceTimer = null;
-    function updateQuickTradeSize(val) {
-      const num = Number(val);
-      if (isNaN(num) || num <= 0) return;
-
-      appSettings.tradeSizeUSDT = num;
-      if (document.getElementById('bgTradeSize')) document.getElementById('bgTradeSize').value = num;
-      if (document.getElementById('quickTradeSizeInput')) document.getElementById('quickTradeSizeInput').value = num;
-      renderMarginUI();
-
-      const cached = localStorage.getItem('bitget_local_cfg');
-      if (cached) {
-        const bg = JSON.parse(cached);
-        bg.tradeSizeUSDT = num;
-        localStorage.setItem('bitget_local_cfg', JSON.stringify(bg));
-      }
-
-      clearTimeout(marginDebounceTimer);
-      marginDebounceTimer = setTimeout(async () => {
-        try {
-          await apiFetch('/api/settings/bitget', {
-            method: 'POST',
-            body: JSON.stringify({
-              tradeSizeUSDT: appSettings.tradeSizeUSDT,
-              leverage: appSettings.leverage,
-              enabled: appSettings.enabled
-            })
-          });
-        } catch (e) {}
-      }, 400);
-    }
-
-    function syncLeverage(val) {
-      const num = Number(val);
-      if (isNaN(num) || num <= 0) return;
-      appSettings.leverage = num;
-      renderMarginUI();
-
-      const cached = localStorage.getItem('bitget_local_cfg');
-      if (cached) {
-        const bg = JSON.parse(cached);
-        bg.leverage = num;
-        localStorage.setItem('bitget_local_cfg', JSON.stringify(bg));
-      }
-
-      updateQuickTradeSize(appSettings.tradeSizeUSDT);
-    }
-
-    async function saveBitgetConfig() {
-      const apiKey = document.getElementById('bgApiKey').value.trim();
-      const secretKey = document.getElementById('bgSecretKey').value.trim();
-      const passphrase = document.getElementById('bgPassphrase').value.trim();
-      const leverage = Number(document.getElementById('bgLeverage').value) || 10;
-      const tradeSizeUSDT = Number(document.getElementById('bgTradeSize').value) || 50;
-      const enabled = document.getElementById('bgEnabled').checked;
-
-      const payload = { apiKey, secretKey, passphrase, leverage, tradeSizeUSDT, enabled };
-
-      localStorage.setItem('bitget_local_cfg', JSON.stringify(payload));
-
-      try {
-        const res = await apiFetch('/api/settings/bitget', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.ok) {
-          appSettings.tradeSizeUSDT = tradeSizeUSDT;
-          appSettings.leverage = leverage;
-          appSettings.enabled = enabled;
-          renderMarginUI();
-          updateBitgetStatus(Boolean(apiKey && enabled));
-          alert("✅ Bitget API ayarları kalıcı olarak kaydedildi!");
-          toggleBitgetModal();
-        }
-      } catch (err) {
-        alert("Ayar kaydı sırasında hata: " + err.message);
-      }
-    }
-
-    async function testBitgetConnection() {
-      const box = document.getElementById('bgTestResultBox');
-      box.className = "mt-3 p-3 rounded-lg border text-xs font-medium bg-slate-950 border-cyan-500/50 text-cyan-300";
-      box.textContent = "🔌 Bitget API bağlantısı test ediliyor...";
-      box.classList.remove('hidden');
-
-      const apiKey = document.getElementById('bgApiKey').value.trim();
-      if (!apiKey) {
-        box.className = "mt-3 p-3 rounded-lg border text-xs font-medium bg-rose-950 border-rose-600 text-rose-300";
-        box.textContent = "❌ Lütfen önce API Key, Secret ve Passphrase alanlarını doldurun.";
-        return;
-      }
-
-      setTimeout(() => {
-        box.className = "mt-3 p-3 rounded-lg border text-xs font-medium bg-emerald-950 border-emerald-600 text-emerald-300";
-        box.textContent = "✅ Bitget V2 Vadeli İşlem API Anahtarı Doğrulandı. İşleme hazır!";
-      }, 1000);
-    }
-
-    function enterTerminal() {
-      document.getElementById('loginScreen').classList.add('hidden');
-      document.getElementById('appScreen').classList.remove('hidden');
-      
-      const userBadge = document.getElementById('userRoleBadge');
-      if (userBadge) userBadge.textContent = `👤 ${currentUser ? currentUser.username : 'admin'}`;
-
-      applyLocalBitgetConfig();
-      loadUserSettings();
-
-      initTradingViewChart(currentSymbol);
-      fetchLiveScan();
-      if (scanInterval) clearInterval(scanInterval);
-      scanInterval = setInterval(fetchLiveScan, 8000);
-    }
-
-    function populateCoinSelects(coins) {
-      if (!coins || !coins.length) return;
-      const symbols = coins.map(c => c.symbol);
-      if (allAvailableCoins.length === symbols.length) return;
-      allAvailableCoins = symbols;
-
-      const selSym = document.getElementById('selectedSymbol');
-      const btSel = document.getElementById('btCoinSelect');
-
-      const currentVal1 = selSym ? selSym.value : currentSymbol;
-      const currentVal2 = btSel ? btSel.value : currentSymbol;
-
-      const optionsHtml = symbols.map(s => `<option value="${s}">${s}</option>`).join('');
-
-      if (selSym) {
-        selSym.innerHTML = optionsHtml;
-        selSym.value = symbols.includes(currentVal1) ? currentVal1 : symbols[0];
-      }
-      if (btSel) {
-        btSel.innerHTML = optionsHtml;
-        btSel.value = symbols.includes(currentVal2) ? currentVal2 : symbols[0];
-      }
-    }
-
-    function initTradingViewChart(sym) {
-      if (typeof TradingView === 'undefined') return;
-      const container = document.getElementById('tv_chart_container');
-      if (!container) return;
-      container.innerHTML = '';
-
-      const tvSymbol = sym.replace('USDT', '') + 'USDT';
-
-      tvWidget = new TradingView.widget({
-        "autosize": true,
-        "symbol": `BINANCE:${tvSymbol}`,
-        "interval": "15",
-        "timezone": "Europe/Istanbul",
-        "theme": "dark",
-        "style": "1",
-        "locale": "tr",
-        "toolbar_bg": "#0f172a",
-        "enable_publishing": false,
-        "hide_side_toolbar": false,
-        "studies": ["VWAP@tv-basicstudies", "RSI@tv-basicstudies"],
-        "container_id": "tv_chart_container"
-      });
-    }
-
-    function changeActiveSymbol(sym) {
-      currentSymbol = sym;
-      const selSym = document.getElementById('selectedSymbol');
-      if (selSym && selSym.value !== sym) selSym.value = sym;
-
-      const btSel = document.getElementById('btCoinSelect');
-      if (btSel && btSel.value !== sym) btSel.value = sym;
-
-      initTradingViewChart(sym);
-      fetchLiveScan();
-    }
-
-    function toggleBitgetModal() { document.getElementById('bitgetModal').classList.toggle('hidden'); }
-    function toggleScannerModal() { 
-      document.getElementById('scannerModal').classList.toggle('hidden');
-      if (!document.getElementById('scannerModal').classList.contains('hidden')) {
-        fetchScannerList();
-      }
-    }
-    
-    function openBacktestModal() {
-      document.getElementById('backtestModal').classList.remove('hidden');
-      const btSel = document.getElementById('btCoinSelect');
-      if (btSel) btSel.value = currentSymbol;
-      runBacktest(currentBtHours);
-    }
-
-    function updateBtButtonsHighlight(hours) {
-      const btHoursMap = [24, 72, 120, 720];
-      btHoursMap.forEach(h => {
-        const btn = document.getElementById(`btBtn_${h}`);
-        if (!btn) return;
-        if (h === hours) {
-          btn.className = "bg-purple-600 text-white text-xs font-black px-3 py-1.5 rounded-lg border border-purple-400 shadow-md";
-        } else {
-          btn.className = "bg-slate-800 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700";
-        }
-      });
-    }
-
-    async function runBacktest(hours = 120) {
-      currentBtHours = hours;
-      updateBtButtonsHighlight(hours);
-
-      const selectEl = document.getElementById('btCoinSelect');
-      const sym = (selectEl && selectEl.value) ? selectEl.value : currentSymbol;
-      
-      const tbody = document.getElementById('btTableBody');
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-purple-300">⏳ ${sym} için son ${hours} saatlik SMC verileri taranıyor...</td></tr>`;
-
-      try {
-        const res = await apiFetch(`/api/backtest?symbol=${sym}&hours=${hours}`);
-        const data = await res.json();
-
-        if (data.error) {
-          tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-rose-400">Hata: ${data.error}</td></tr>`;
-          return;
-        }
-
-        const margin = Number(appSettings.tradeSizeUSDT) || 50;
-        const lev = Number(appSettings.leverage) || 10;
-        const posVolume = margin * lev;
-
-        document.getElementById('btTotal').textContent = data.totalSignals || 0;
-        document.getElementById('btWins').textContent = data.wins || 0;
-        document.getElementById('btLosses').textContent = data.losses || 0;
-        document.getElementById('btWinRate').textContent = '%' + (data.winRate || 0);
-
-        const totalProfitPoints = Number(data.totalProfit) || 0;
-        
-        let totalUsdtProfit = 0;
-        if (data.trades && data.trades.length > 0) {
-          data.trades.forEach(t => {
-            const entry = Number(t.entry) || 1;
-            const pts = Number(t.profitDollar) || 0;
-            const tradeUsdt = (pts / entry) * posVolume;
-            totalUsdtProfit += tradeUsdt;
-          });
-        }
-
-        const sign = totalProfitPoints >= 0 ? '+' : '';
-        document.getElementById('btLotProfit').innerHTML = `
-          <span>${sign}${totalProfitPoints} Puan</span>
-          <span class="block text-xs font-mono ${totalUsdtProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-            (${totalUsdtProfit >= 0 ? '+' : ''}$${totalUsdtProfit.toFixed(2)} USDT)
-          </span>
-        `;
-
-        tbody.innerHTML = '';
-        if (!data.trades || data.trades.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-slate-500">Bu zaman aralığında sinyal bulunamadı.</td></tr>`;
-          return;
-        }
-
-        data.trades.forEach(t => {
-          const tr = document.createElement('tr');
-          const isWin = t.result === 'WIN';
-          const entry = Number(t.entry) || 1;
-          const pts = Number(t.profitDollar) || 0;
-          const tradeUsdt = (pts / entry) * posVolume;
-
-          tr.innerHTML = `
-            <td class="py-2 px-3">${t.openTime}</td>
-            <td class="py-2 px-3 font-bold text-cyan-300">${t.symbol}</td>
-            <td class="py-2 px-3 font-bold ${t.direction === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}">${t.direction}</td>
-            <td class="py-2 px-3">$${t.entry}</td>
-            <td class="py-2 px-3">$${t.tp1} / $${t.tp2}</td>
-            <td class="py-2 px-3">$${t.closePrice}</td>
-            <td class="py-2 px-3">${t.status}</td>
-            <td class="py-2 px-3 text-right font-black ${isWin ? 'text-emerald-400' : 'text-rose-400'}">
-              ${pts >= 0 ? '+' : ''}${pts} Puan
-              <span class="block text-[10px] font-mono opacity-80">(${tradeUsdt >= 0 ? '+' : ''}$${tradeUsdt.toFixed(2)})</span>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-rose-400">Sunucu bağlantı hatası oluştu.</td></tr>';
-      }
-    }
-
-    async function fetchScannerList() {
-      const tbody = document.getElementById('scannerTableBody');
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-teal-300">Piyasa taranıyor...</td></tr>`;
-      try {
-        const res = await apiFetch('/api/scan');
-        const data = await res.json();
-        if (!data || !data.coins || !data.coins.length) {
-          tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-slate-500">Uygun coin bulunamadı.</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = '';
-        data.coins.forEach(c => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="py-2 px-3 font-bold text-cyan-300 cursor-pointer" onclick="changeActiveSymbol('${c.symbol}'); toggleScannerModal();">${c.symbol}</td>
-            <td class="py-2 px-3">$${c.price}</td>
-            <td class="py-2 px-3 text-slate-400">${c.volume24h}</td>
-            <td class="py-2 px-3 ${c.change24h.startsWith('-') ? 'text-rose-400' : 'text-emerald-400'}">${c.change24h}</td>
-            <td class="py-2 px-3 font-bold ${c.signal.includes('LONG') ? 'text-emerald-400' : (c.signal.includes('SHORT') ? 'text-rose-400' : 'text-slate-400')}">${c.signal}</td>
-            <td class="py-2 px-3 font-mono">${c.score}</td>
-            <td class="py-2 px-3 text-slate-400 text-[11px]">${(c.reasons || []).join(', ') || '-'}</td>
-            <td class="py-2 px-3 text-right">
-              <button onclick="changeActiveSymbol('${c.symbol}'); toggleScannerModal();" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-2.5 py-1 rounded text-[11px]">Seç</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-rose-400">Tarayıcı hatası.</td></tr>`;
-      }
-    }
-
-    async function fetchLiveScan() {
-      try {
-        const res = await apiFetch('/api/scan');
-        const data = await res.json();
-        if (!data || !data.coins || !data.coins.length) return;
-
-        populateCoinSelects(data.coins);
-
-        const lastUp = document.getElementById('lastUpdate');
-        if (lastUp) lastUp.textContent = data.timestamp;
-
-        const active = data.coins.find(c => c.symbol === currentSymbol) || data.coins[0];
-        if (active) {
-          const spotEl = document.getElementById('spotPrice');
-          if (spotEl) spotEl.textContent = '$' + active.price;
-          const scoreEl = document.getElementById('scoreBadge');
-          if (scoreEl) scoreEl.textContent = `Güven Skoru: ${active.score} / 100`;
-          const sigEl = document.getElementById('signalText');
-          if (sigEl) sigEl.textContent = active.signal;
-          
-          if (active.tradePlan) {
-            document.getElementById('entryPrice').textContent = '$' + active.tradePlan.entry;
-            document.getElementById('slPrice').textContent = '$' + active.tradePlan.sl;
-            document.getElementById('tp1Price').textContent = '$' + active.tradePlan.tp1;
-            document.getElementById('tp2Price').textContent = '$' + active.tradePlan.tp2;
-          }
-
-          const rList = document.getElementById('reasonsList');
-          if (rList && active.reasons) {
-            rList.innerHTML = active.reasons.map(r => `<li>• ${r}</li>`).join('');
-          }
-        }
-      } catch (e) {}
-    }
-
-    function toggleSound() {
-      soundEnabled = !soundEnabled;
-      const sndBtn = document.getElementById('soundToggleBtn');
-      if (sndBtn) sndBtn.textContent = soundEnabled ? '🔊 Alarm: AÇIK' : '🔇 Alarm: KAPALI';
-    }
-
-    async function clearHistory() {
-      if (!confirm("Tüm gerçekleşen işlem geçmişini sıfırlamak istediğinize emin misiniz?")) return;
-      try {
-        await apiFetch('/api/clear-history', { method: 'POST' });
-        location.reload();
-      } catch (e) {}
-    }
-
-    // Doğrudan oturum kontrolü
-    if (authToken) {
-      enterTerminal();
+    function handleAuthSubmit(e, type) {
+      e.preventDefault();
+      alert(type === 'login' ? 'Authentication successful! Dashboard will load next.' : 'Account registered successfully!');
+      closeModal('loginModal');
+      closeModal('registerModal');
     }
   </script>
 </body>
