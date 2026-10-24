@@ -38,7 +38,7 @@ async function bitgetRequest(apiKey, secret, passphrase, method, endpoint, param
   return await response.json();
 }
 
-// ÇİFT YÖNLÜ OTO-İŞLEM (side: 'buy' veya 'sell')
+// ÇİFT YÖNLÜ OTO-İŞLEM MOTORU (Long: 'buy', Short: 'sell')
 async function tradeForUser(apiKey, secret, passphrase, symbol, side) {
   try {
     const accountRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/account/account', {
@@ -53,7 +53,7 @@ async function tradeForUser(apiKey, secret, passphrase, symbol, side) {
     if (availableUsdt < 5) return { success: false, error: 'Yetersiz bakiye' };
 
     const marginToUse = availableUsdt * 0.30;
-    const leverage = parseFloat(side === 'buy' ? (accountRes.data.longLeverage || '10') : (accountRes.data.shortLeverage || '10'));
+    const leverage = parseFloat(side === 'buy' ? (accountRes.data.longLeverage || accountRes.data.fixedLeverage || '10') : (accountRes.data.shortLeverage || accountRes.data.fixedLeverage || '10'));
 
     const tickerRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/market/ticker', {
       symbol: symbol,
@@ -69,7 +69,7 @@ async function tradeForUser(apiKey, secret, passphrase, symbol, side) {
       symbol: symbol,
       marginMode: accountRes.data.marginMode || 'crossed',
       marginCoin: 'USDT',
-      side: side, // 'buy' (Long) veya 'sell' (Short)
+      side: side, // 'buy' veya 'sell'
       tradeSide: 'open',
       orderType: 'market',
       size: targetSize.toString()
@@ -84,12 +84,14 @@ async function tradeForUser(apiKey, secret, passphrase, symbol, side) {
 
 export default async function handler(req, res) {
   try {
+    // 1. Bitget Vadeli Tahtaları Çek
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
     const json = await tickersRes.json();
     if (json.code !== "00000" || !Array.isArray(json.data)) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
     }
 
+    // 2. Firebase'den Kalıcı Kilitleri Al
     let locks = {};
     try {
       const lockRes = await fetch(`${FIREBASE_BASE}/cron_locks.json`);
@@ -98,6 +100,7 @@ export default async function handler(req, res) {
       locks = {};
     }
 
+    // Likidite Filtresi: $800k ve üzeri, USDT vadeli pariteler
     const liquidPool = json.data.filter(t => {
       return t.symbol.endsWith("USDT") &&
              !EXCLUDED.includes(t.symbol) &&
@@ -106,37 +109,53 @@ export default async function handler(req, res) {
 
     const signalsToProcess = [];
 
-    // 1. LONG ADAYLARI: Negatif Fonlama + Henüz Fırlamamış Dip Tahtalar
+    // ==========================================
+    // 1. ORİJİNAL LONG ALGORİTMASI (Aynen Korundu)
+    // ==========================================
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
       return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
-    });
+    }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate));
+
     longCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'LONG' }));
 
-    // 2. SHORT ADAYLARI: Aşırı Pozitif Fonlama VEYA Aşırı Şişip Tepe Yapmış Dönüş Pariteleri
+    // ==========================================
+    // 2. GÜVENLİ SHORT ALGORİTMASI (Tepe & Şişme Radarı)
+    // ==========================================
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-      // Şart: Fonlama aşırı pozitif (küçük yatırımcı Long tarafında sıkışmış) VEYA 24s'de %25 üzeri fırlamış
-      return (funding >= 0.015) || (chg >= 25.0 && funding > 0);
-    });
+
+      // Kriter 1: %20 ve üzeri sert primlenmiş VE short baskısı kırılıp fonlaması artıya geçmiş tahtalar
+      const isExtremePumpWithPositiveFunding = chg >= 20.0 && funding >= 0.0002;
+
+      // Kriter 2: Yoğun Long kalabalığı birikmiş (+%0.08 fonlama) ve primli tahtalar
+      const isHeavyCrowdedLong = funding >= 0.0008 && chg >= 8.0;
+
+      return isExtremePumpWithPositiveFunding || isHeavyCrowdedLong;
+    }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
+
     shortCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'SHORT' }));
 
     const sentSymbols = [];
 
+    // ==========================================
+    // İŞLEM & SİNYAL DAĞITIM DÖNGÜSÜ
+    // ==========================================
     for (const signal of signalsToProcess) {
       const item = signal.item;
       const dir = signal.direction;
       const symbol = item.symbol;
       const lockKey = `${symbol}_${dir}`;
-      
+
       const lastSentTime = typeof locks[lockKey] === 'number' ? locks[lockKey] : 0;
       const minutesPassed = (Date.now() - lastSentTime) / (1000 * 60);
 
+      // 120 DAKİKA (2 SAAT) KİLİT KONTROLÜ
       if (minutesPassed < 120) continue;
 
-      // Kilidi Firebase'e kaydet
+      // Kilidi Firebase'e kalıcı olarak yaz
       const now = Date.now();
       locks[lockKey] = now;
       await fetch(`${FIREBASE_BASE}/cron_locks/${lockKey}.json`, {
@@ -149,16 +168,20 @@ export default async function handler(req, res) {
       const rawFunding = parseFloat(item.fundingRate || 0);
       const funding = (rawFunding * 100).toFixed(4);
 
-      let tp1, tp2, sl;
+      let tp1, tp2, sl, rr;
+
       if (dir === 'LONG') {
+        const isExtreme = rawFunding <= -0.005;
         tp1 = price * 1.018;
-        tp2 = rawFunding <= -0.005 ? price * 1.048 : price * 1.038;
+        tp2 = isExtreme ? price * 1.048 : price * 1.038;
         sl = price * 0.986;
+        rr = ((tp1 - price) / (price - sl)).toFixed(1);
       } else {
-        // SHORT HEDEFLERİ
-        tp1 = price * 0.982;
-        tp2 = price * 0.955;
-        sl = price * 1.015;
+        // SHORT LİKİDASYON HEDEFLERİ
+        tp1 = price * 0.982; // -%1.8
+        tp2 = price * 0.955; // -%4.5
+        sl = price * 1.015;  // +%1.5 Kesin Koruma Stopu
+        rr = ((price - tp1) / (sl - price)).toFixed(1);
       }
 
       const pEntry = price < 1 ? price.toFixed(6) : price.toFixed(4);
@@ -166,11 +189,11 @@ export default async function handler(req, res) {
       const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
       const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
 
-      // Otomatik Emri Aç (buy veya sell)
+      // Otomatik Pozisyonu Aç (buy / sell)
       const orderSide = dir === 'LONG' ? 'buy' : 'sell';
       await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol, orderSide);
 
-      // Telegram Mesajı
+      // Telegram VIP Mesajını Gönder
       const isLong = dir === 'LONG';
       const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
@@ -184,6 +207,7 @@ export default async function handler(req, res) {
                   `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (${isLong ? '-%1.4' : '+%1.5'})\n` +
                   `🎯 <b>TP 1:</b> <code>$${pTp1}</code> (${isLong ? '+%1.8' : '-%1.8'})\n` +
                   `🚀 <b>TP 2:</b> <code>$${pTp2}</code> (${isLong ? '+%3.8+' : '-%4.5+'})\n` +
+                  `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçilmeli, stop maliyete çekilmelidir.</i>`;
 
