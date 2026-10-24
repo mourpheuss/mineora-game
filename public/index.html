@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Proprietary Pre-Movement Intelligence</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
+  <title>Mineora Sentinel | Giriş & Kayıt</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
@@ -20,342 +19,201 @@
     .font-mono { font-family: 'JetBrains Mono', monospace; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col justify-between selection:bg-orange-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-orange-500 selection:text-white">
 
-  <!-- TOP STATUS BANNER -->
-  <div class="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 text-white text-center py-2 px-4 text-xs font-semibold flex items-center justify-center gap-2">
-    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-    <span>Mineora Core Motoru Aktif: Kripto Piyasaları 7/24 Kesintisiz Taranıyor.</span>
+  <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
+    
+    <!-- Logo ve Başlık -->
+    <div class="text-center space-y-2">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-2xl mx-auto shadow-lg shadow-orange-600/30">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h1 class="font-display font-black text-2xl tracking-tight text-white">MINEORA <span class="text-orange-500">SENTINEL</span></h1>
+      <p class="text-xs text-slate-400 font-mono">Kurumsal Kripto Anomali & VIP Radar Masası</p>
+    </div>
+
+    <!-- Tab Değiştirici -->
+    <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 font-mono text-xs">
+      <button id="tabLoginBtn" onclick="switchTab('login')" class="py-2.5 rounded-xl font-bold bg-orange-600 text-white transition">Giriş Yap</button>
+      <button id="tabRegisterBtn" onclick="switchTab('register')" class="py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition">Kayıt Ol</button>
+    </div>
+
+    <!-- GİRİŞ FORMU -->
+    <form id="formLogin" onsubmit="event.preventDefault(); submitLogin();" class="space-y-4 font-mono text-xs">
+      <div class="space-y-1.5">
+        <label class="text-slate-400 block font-bold">Kullanıcı Adı veya E-posta:</label>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+          <i class="fa-solid fa-user text-slate-500 text-sm"></i>
+          <input type="text" id="loginUsername" required placeholder="kullanici_adi" class="bg-transparent text-white w-full focus:outline-none" />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-slate-400 block font-bold">Şifre:</label>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+          <i class="fa-solid fa-lock text-slate-500 text-sm"></i>
+          <input type="password" id="loginPassword" required placeholder="••••••••" class="bg-transparent text-white w-full focus:outline-none" />
+        </div>
+      </div>
+
+      <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20">
+        Panele Giriş Yap
+      </button>
+    </form>
+
+    <!-- KAYIT FORMU -->
+    <form id="formRegister" onsubmit="event.preventDefault(); submitRegister();" class="hidden space-y-4 font-mono text-xs">
+      <div class="space-y-1.5">
+        <label class="text-slate-400 block font-bold">Kullanıcı Adı:</label>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+          <i class="fa-solid fa-user text-slate-500 text-sm"></i>
+          <input type="text" id="regUsername" required placeholder="Örn: TraderAli" class="bg-transparent text-white w-full focus:outline-none" />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-slate-400 block font-bold">E-Posta:</label>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+          <i class="fa-solid fa-envelope text-slate-500 text-sm"></i>
+          <input type="email" id="regEmail" required placeholder="ali@gmail.com" class="bg-transparent text-white w-full focus:outline-none" />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-slate-400 block font-bold">Şifre:</label>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+          <i class="fa-solid fa-lock text-slate-500 text-sm"></i>
+          <input type="password" id="regPassword" required placeholder="••••••••" class="bg-transparent text-white w-full focus:outline-none" />
+        </div>
+      </div>
+
+      <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">
+        Hesap Oluştur & Abonelik Adımına Geç
+      </button>
+    </form>
+
   </div>
 
-  <!-- NAVIGATION -->
-  <nav class="max-w-7xl mx-auto w-full px-6 py-5 flex items-center justify-between border-b border-slate-900">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-600/30">
-        <i class="fa-solid fa-radar text-base"></i>
-      </div>
-      <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">RADAR</span></span>
-    </div>
-
-    <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-300">
-      <a href="#sistem" class="hover:text-orange-400 transition">Sistem</a>
-      <a href="#fiyatlandirma" class="hover:text-orange-400 transition">VIP Erişim</a>
-      <button onclick="handleDashboardGo()" class="hover:text-orange-400 transition">Canlı Terminal</button>
-    </div>
-
-    <div class="flex items-center gap-3">
-      <button onclick="openModal('modal-login')" class="text-xs font-bold text-slate-300 hover:text-white px-3 py-2 transition">
-        Giriş Yap
-      </button>
-      <button onclick="openModal('modal-register')" class="bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-lg shadow-orange-600/30">
-        Kayıt Ol & Başla
-      </button>
-    </div>
-  </nav>
-
-  <!-- HERO SECTION -->
-  <main class="max-w-6xl mx-auto px-6 py-16 sm:py-24 text-center space-y-8 flex-1 flex flex-col justify-center">
-    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-orange-400 font-mono font-bold mx-auto">
-      <i class="fa-solid fa-shield-halved text-amber-400"></i> Özel Algoritmik İstihbarat: 5 - 10 Dakika Önceden Tespit
-    </div>
-
-    <h1 class="font-display text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight max-w-4xl mx-auto leading-tight">
-      Mumlar Patlamadan Önce,<br />
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500">
-        Sıradaki Hareketi Yakalayın.
-      </span>
-    </h1>
-
-    <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-      Gelişmiş kapalı devre analiz motorumuzla piyasadaki gizli sermaye hareketlerini anlık olarak izliyoruz. Ani volatilite patlamalarını fitil ateşlenmeden önce ekranınıza getiriyoruz.
-    </p>
-
-    <div class="flex flex-wrap justify-center items-center gap-4 pt-4">
-      <button onclick="openModal('modal-register')" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-black text-sm px-8 py-4 rounded-2xl shadow-xl transition flex items-center gap-2">
-        Hemen Abone Ol & Terminali Aç &rarr;
-      </button>
-      <a href="#fiyatlandirma" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white font-bold text-sm px-7 py-4 rounded-2xl transition">
-        VIP Planı İncele
-      </a>
-    </div>
-
-    <!-- METRICS STRIP -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-10 text-left font-mono">
-      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
-        <span class="text-slate-500 text-xs block">Taranan Parite</span>
-        <strong class="font-display text-2xl font-bold text-white block mt-1">248+ Çift</strong>
-        <span class="text-[10px] text-emerald-400">Canlı Piyasa Taraması</span>
-      </div>
-      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
-        <span class="text-slate-500 text-xs block">Erken Uyarı Süresi</span>
-        <strong class="font-display text-2xl font-bold text-orange-400 block mt-1">5 - 10 Dk</strong>
-        <span class="text-[10px] text-slate-400">Patlama Öncesi</span>
-      </div>
-      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
-        <span class="text-slate-500 text-xs block">İstihbarat Modeli</span>
-        <strong class="font-display text-2xl font-bold text-sky-400 block mt-1">Proprietary</strong>
-        <span class="text-[10px] text-slate-400">Özel Kapalı Kod</span>
-      </div>
-      <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
-        <span class="text-slate-500 text-xs block">Doğruluk Oranı</span>
-        <strong class="font-display text-2xl font-bold text-emerald-400 block mt-1">%83.7</strong>
-        <span class="text-[10px] text-slate-400">Doğrulanmış Başarı</span>
-      </div>
-    </div>
-  </main>
-
-  <!-- SİSTEM BÖLÜMÜ (SIR VERMEYEN KURUMSAL ANLATIM) -->
-  <section id="sistem" class="max-w-6xl mx-auto px-6 py-20 border-t border-slate-900 space-y-12">
-    <div class="text-center max-w-2xl mx-auto space-y-2">
-      <span class="text-xs font-bold text-orange-500 uppercase tracking-widest font-mono">MINEORA PROPRIETARY ENGINE</span>
-      <h2 class="font-display text-3xl font-black text-white">Neden Sıradan İndikatörler Değil?</h2>
-      <p class="text-slate-400 text-xs sm:text-sm">Standart grafik göstergeleri fiyat hareket ettikten sonra gecikmeli sinyal verir. Mineora ise hareketi doğuran gizli hazırlık evresini izler.</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-      <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-        <div class="w-10 h-10 rounded-xl bg-orange-600/20 text-orange-400 flex items-center justify-center font-bold text-base">
-          1
-        </div>
-        <h3 class="text-base font-bold text-white">Hazırlık Evresi Tespiti</h3>
-        <p class="text-xs text-slate-400 leading-relaxed">
-          Piyasa yatay görünürken arka planda gerçekleşen olağan dışı yoğunlaşmaları saniyeler içinde filtreler.
-        </p>
-      </div>
-
-      <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-        <div class="w-10 h-10 rounded-xl bg-sky-600/20 text-sky-400 flex items-center justify-center font-bold text-base">
-          2
-        </div>
-        <h3 class="text-base font-bold text-white">Sahte Sinyal Filtresi</h3>
-        <p class="text-xs text-slate-400 leading-relaxed">
-          Tuzak hareketleri ve manipülatif dalgalanmaları ayıklayarak yalnızca yüksek olasılıklı yön kırılımlarına odaklanır.
-        </p>
-      </div>
-
-      <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold text-base">
-          3
-        </div>
-        <h3 class="text-base font-bold text-white">Erken Alarm Çıktısı</h3>
-        <p class="text-xs text-slate-400 leading-relaxed">
-          Sistem 0-100 aralığında kesin bir güven skoru üretir; eşik aşıldığı an yön uyarısıyla birlikte alarm tetiklenir.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- FİYATLANDIRMA / ABONELİK BÖLÜMÜ -->
-  <section id="fiyatlandirma" class="max-w-4xl mx-auto px-6 py-20 border-t border-slate-900 space-y-12">
-    <div class="text-center max-w-2xl mx-auto space-y-2">
-      <span class="text-xs font-bold text-orange-500 uppercase tracking-widest font-mono">VIP ABONELİK PLANI</span>
-      <h2 class="font-display text-3xl font-black text-white">Profesyonel İstihbarat Terminali</h2>
-      <p class="text-slate-400 text-xs sm:text-sm">Tek bir doğru pozisyonda veya önlenen tek bir terste kalışta değerini kanıtlayan ayrıcalıklı veri akışı.</p>
-    </div>
-
-    <!-- 500$ USDT VIP KARTI -->
-    <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-orange-500 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden">
-      <div class="absolute -right-12 -top-12 w-48 h-48 bg-orange-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div class="flex flex-wrap justify-between items-start gap-4 border-b border-slate-800 pb-6">
-        <div>
-          <span class="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-[11px] font-mono font-bold border border-orange-500/30">VIP ACCESS</span>
-          <h3 class="font-display text-2xl font-black text-white mt-2">Aylık Tam Erişim</h3>
-          <p class="text-xs text-slate-400 mt-1">Tüm pariteler için gerçek zamanlı radar ve anlık erken uyarılar.</p>
-        </div>
-        <div class="text-right">
-          <strong class="font-display text-4xl font-black text-white">$500</strong>
-          <span class="text-xs text-slate-400 font-mono block">/ Aylık (USDT)</span>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6 text-xs text-slate-300">
-        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> 248+ Çiftte 7/24 Kesintisiz Erken Tarama</div>
-        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> 5-10 Dakika Önceden Yön ve Patlama Uyarısı</div>
-        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Özel Güven Skorlama Skalası (0-100)</div>
-        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Yüksek Frekanslı Veri Akışı ve Anlık Yenileme</div>
-        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> VIP Öncelikli Bildirim Ağı</div>
-        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Özel Sinyal Kanalı Entegrasyonu</div>
-      </div>
-
-      <button onclick="openModal('modal-register')" class="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-black text-sm py-4 rounded-xl shadow-lg transition">
-        Hemen Kaydol & Abone Ol &rarr;
-      </button>
-    </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer class="border-t border-slate-900 py-8 text-center text-xs text-slate-500">
-    &copy; 2026 Mineora Radar. Özel Algoritmik Piyasa İstihbarat Terminali.
-  </footer>
-
-  <!-- GİRİŞ YAP MODAL -->
-  <div id="modal-login" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
-      <button onclick="closeModal('modal-login')" class="absolute top-5 right-5 text-slate-400 hover:text-white">✕</button>
-      
-      <div>
-        <h3 class="font-display text-xl font-bold text-white">Giriş Yap</h3>
-        <p class="text-xs text-slate-400 mt-1">Radar terminaline erişin.</p>
-      </div>
-
-      <form onsubmit="handleUserLoginSubmit(event)" class="space-y-3 pt-1">
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Kullanıcı Adı</label>
-          <input type="text" id="login-username" required placeholder="Kullanıcı adınız" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">Şifre</label>
-          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
-        </div>
-
-        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow mt-1">
-          Terminale Gir &rarr;
-        </button>
-      </form>
-
-      <div class="text-center pt-2">
-        <button onclick="closeModal('modal-login'); openModal('modal-register')" class="text-xs text-slate-400 hover:text-orange-400">
-          Hesabınız yok mu? <span class="font-bold underline text-white">Kayıt Olun</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- KAYIT OL MODAL -->
-  <div id="modal-register" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
-      <button onclick="closeModal('modal-register')" class="absolute top-5 right-5 text-slate-400 hover:text-white">✕</button>
-      
-      <div>
-        <h3 class="font-display text-xl font-bold text-white">Hesap Oluştur</h3>
-        <p class="text-xs text-slate-400 mt-1">Özel erken uyarı terminaline katılın.</p>
-      </div>
-
-      <form onsubmit="handleUserRegisterSubmit(event)" class="space-y-3 pt-1">
-        <div>
-          <label class="text-[11px] font-semibold text-slate-300 block mb-1">Kullanıcı Adı *</label>
-          <input type="text" id="reg-username" required placeholder="Kullanıcı adı belirleyin" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
-        </div>
-
-        <div>
-          <label class="text-[11px] font-semibold text-slate-300 block mb-1">E-posta Adresi *</label>
-          <input type="email" id="reg-email" required placeholder="ornek@gmail.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="text-[11px] font-semibold text-slate-300 block mb-1">Şifre *</label>
-            <input type="password" id="reg-password" required minlength="6" placeholder="Min. 6 karakter" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
-          </div>
-          <div>
-            <label class="text-[11px] font-semibold text-slate-300 block mb-1">Şifre Tekrarı *</label>
-            <input type="password" id="reg-password-confirm" required minlength="6" placeholder="Şifrenizi doğrulayın" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-orange-500" />
-          </div>
-        </div>
-
-        <button type="submit" class="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs py-3.5 rounded-xl transition shadow mt-2">
-          Kayıt Ol & Devam Et &rarr;
-        </button>
-      </form>
-
-      <div class="text-center pt-1">
-        <button onclick="closeModal('modal-register'); openModal('modal-login')" class="text-xs text-slate-400 hover:text-orange-400">
-          Zaten hesabınız var mı? <span class="font-bold underline text-white">Giriş Yapın</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl text-xs font-bold text-white shadow-2xl"></div>
-
-  <!-- SCRIPTS -->
-  <script src="state.js"></script>
   <script>
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.innerText = msg;
-      t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 3500);
+    // Firebase Konfigürasyonu
+    const firebaseConfig = {
+      databaseURL: "https://analiz-sepeti-7ea73-default-rtdb.firebaseio.com"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
     }
+    const db = firebase.database();
 
-    function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+    function switchTab(tab) {
+      const formLogin = document.getElementById('formLogin');
+      const formRegister = document.getElementById('formRegister');
+      const btnLogin = document.getElementById('tabLoginBtn');
+      const btnRegister = document.getElementById('tabRegisterBtn');
 
-    function handleDashboardGo() {
-      const activeSession = sessionStorage.getItem('mineora_active_session');
-      if (activeSession) {
-        window.location.href = 'dashboard.html';
+      if (tab === 'login') {
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+        btnLogin.className = "py-2.5 rounded-xl font-bold bg-orange-600 text-white transition";
+        btnRegister.className = "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition";
       } else {
-        openModal('modal-login');
+        formLogin.classList.add('hidden');
+        formRegister.classList.remove('hidden');
+        btnRegister.className = "py-2.5 rounded-xl font-bold bg-orange-600 text-white transition";
+        btnLogin.className = "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition";
       }
     }
 
-    async function handleUserRegisterSubmit(e) {
-      e.preventDefault();
-      const username = document.getElementById('reg-username').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const pass = document.getElementById('reg-password').value.trim();
-      const passConfirm = document.getElementById('reg-password-confirm').value.trim();
+    async function submitRegister() {
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
 
-      if (pass !== passConfirm) {
-        return alert("Şifreler uyuşmuyor! Lütfen kontrol edin.");
+      if (!username || !email || !password) {
+        alert("Lütfen tüm alanları doldurun.");
+        return;
       }
 
-      const uKey = username.toLowerCase();
+      try {
+        const userRef = db.ref('users/' + username);
+        const snapshot = await userRef.once('value');
 
-      if (typeof fbDb !== 'undefined' && fbDb) {
-        const snap = await fbDb.ref(`users/${uKey}`).once('value');
-        if (snap.exists()) {
-          return alert("Bu kullanıcı adı zaten alınmış! Lütfen başka bir ad seçin.");
+        if (snapshot.exists()) {
+          alert("Bu kullanıcı adı zaten kullanımda. Lütfen başka bir isim seçin.");
+          return;
         }
-      }
 
-      const newUser = {
-        username: username,
-        email: email,
-        pass: pass,
-        role: "Trader",
-        isVipActive: false,
-        vipExpireDate: null,
-        registeredAt: new Date().toISOString()
-      };
+        // Güvenlik Kuralına Uygun: isVip ZORUNLU false olarak kaydolur
+        const newUser = {
+          username: username,
+          email: email,
+          password: password,
+          isVip: false,
+          status: "PAYMENT_PENDING",
+          createdAt: Date.now()
+        };
 
-      if (typeof fbDb !== 'undefined' && fbDb) {
-        await fbDb.ref(`users/${uKey}`).set(newUser);
-      }
-      localStorage.setItem(`mineora_user_${uKey}`, JSON.stringify(newUser));
-      sessionStorage.setItem('mineora_active_session', username);
+        await userRef.set(newUser);
 
-      showToast("🎉 Hesabınız oluşturuldu! Yönlendiriliyorsunuz...");
-      setTimeout(() => {
-        window.location.href = 'dashboard.html';
-      }, 800);
-    }
+        // Kullanıcıyı oturuma al ama VIP yapma
+        sessionStorage.setItem('currentUser', username);
+        sessionStorage.setItem('isVip', 'false');
 
-    async function handleUserLoginSubmit(e) {
-      e.preventDefault();
-      const username = document.getElementById('login-username').value.trim();
-      const pass = document.getElementById('login-password').value.trim();
-      const uKey = username.toLowerCase();
-
-      if (typeof fbDb !== 'undefined' && fbDb) {
-        const snap = await fbDb.ref(`users/${uKey}`).once('value');
-        const u = snap.val();
-
-        if (!u) return alert("Kullanıcı bulunamadı!");
-        if (u.pass !== pass) return alert("Hatalı şifre!");
-
-        sessionStorage.setItem('mineora_active_session', u.username);
+        alert("Hesabınız oluşturuldu! Radara erişmek için lütfen 500 USDT VIP abonelik ödemesini tamamlayın.");
         
-        if (uKey === 'mourpheus' || uKey === 'admin') {
-          window.location.href = 'admin.html';
-        } else {
-          window.location.href = 'dashboard.html';
+        // ASLA DİREKT RADARA ATMAZ, ÖDEME EKRANINA GÖNDERİR
+        window.location.href = 'payment.html';
+
+      } catch (err) {
+        console.error("Kayıt hatası:", err);
+        alert("Kayıt başarısız: " + err.message);
+      }
+    }
+
+    async function submitLogin() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (!username || !password) {
+        alert("Lütfen bilgilerinizi eksiksiz girin.");
+        return;
+      }
+
+      // Yönetici doğrudan geçiş kontrolü
+      if ((username === 'Masterpro' || username === 'eren@gmail.com') && password === '123456') {
+        sessionStorage.setItem('currentUser', 'Masterpro');
+        sessionStorage.setItem('isVip', 'true');
+        sessionStorage.setItem('isAdmin', 'true');
+        window.location.href = 'admin.html';
+        return;
+      }
+
+      try {
+        const userRef = db.ref('users/' + username);
+        const snapshot = await userRef.once('value');
+        const user = snapshot.val();
+
+        if (!user || user.password !== password) {
+          alert("Hatalı kullanıcı adı veya şifre!");
+          return;
         }
-      } else {
-        sessionStorage.setItem('mineora_active_session', username);
+
+        sessionStorage.setItem('currentUser', user.username);
+        sessionStorage.setItem('isVip', user.isVip ? 'true' : 'false');
+
+        // ÖDEME YAPMAMIŞ KULLANICIYI İÇERİ SOKMA
+        if (!user.isVip) {
+          alert("VIP aboneliğiniz henüz aktif değil. Lütfen ödemenizi yapın veya yöneticinin onaylamasını bekleyin.");
+          window.location.href = 'payment.html';
+          return;
+        }
+
+        // Sadece ödemesi onaylanmış VIP üyeler içeri girebilir
         window.location.href = 'dashboard.html';
+
+      } catch (err) {
+        console.error("Giriş hatası:", err);
+        alert("Giriş yapılırken hata oluştu: " + err.message);
       }
     }
   </script>
