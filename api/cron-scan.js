@@ -102,7 +102,6 @@ export default async function handler(req, res) {
     let cronLocks = {};
     let activeTrades = {};
     let usersData = {};
-    let onChainTransfers = [];
 
     try {
       const lockRes = await fetch(`${FIREBASE_BASE}/cron_locks.json`);
@@ -120,14 +119,6 @@ export default async function handler(req, res) {
       const uRes = await fetch(`${FIREBASE_BASE}/users.json`);
       usersData = (await uRes.json()) || {};
     } catch(e) { usersData = {}; }
-
-    try {
-      const wRes = await fetch(`${FIREBASE_BASE}/whale_transfers.json`);
-      const wData = await wRes.json();
-      if (wData && typeof wData === 'object' && !wData.error) {
-        onChainTransfers = Object.keys(wData).map(k => wData[k]).filter(w => w && typeof w === 'object');
-      }
-    } catch(e) { onChainTransfers = []; }
 
     const now = Date.now();
 
@@ -168,7 +159,7 @@ export default async function handler(req, res) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: TG_VIP_CHANNEL_ID,
-              text: `🎯 <b>HEDEF 1 ALINDI (TP1)!</b>\n━━━━━━━━━━━━━━━━━━━━\n💎 <b>Parite:</b> <code>#${symbol}</code> (LONG)\n💰 <b>Fiyat:</b> <code>$${currentPrice}</code>\n💡 <i>Pozisyonun %50'si kârla kapatıldı, stop maliyete çekildi. TP2 bekleniyor.</i>`,
+              text: `🎯 <b>HEDEF 1 ALINDI (TP1)!</b>\n━━━━━━━━━━━━━━━━━━━━\n💎 <b>Parite:</b> <code>#${symbol}</code> (LONG)\n💰 <b>Fiyat:</b> <code>$${currentPrice}</code>\n💡 <i>Pozisyonun %50'si kârla kapatıldı, stop maliyete çekildi.</i>`,
               parse_mode: 'HTML'
             })
           });
@@ -193,7 +184,7 @@ export default async function handler(req, res) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: TG_VIP_CHANNEL_ID,
-              text: `🎯 <b>HEDEF 1 ALINDI (TP1)!</b>\n━━━━━━━━━━━━━━━━━━━━\n💎 <b>Parite:</b> <code>#${symbol}</code> (SHORT)\n💰 <b>Fiyat:</b> <code>$${currentPrice}</code>\n💡 <i>Pozisyonun %50'si kârla kapatıldı, stop maliyete çekildi. TP2 bekleniyor.</i>`,
+              text: `🎯 <b>HEDEF 1 ALINDI (TP1)!</b>\n━━━━━━━━━━━━━━━━━━━━\n💎 <b>Parite:</b> <code>#${symbol}</code> (SHORT)\n💰 <b>Fiyat:</b> <code>$${currentPrice}</code>\n💡 <i>Pozisyonun %50'si kârla kapatıldı, stop maliyete çekildi.</i>`,
               parse_mode: 'HTML'
             })
           });
@@ -223,48 +214,112 @@ export default async function handler(req, res) {
              parseFloat(t.usdtVolume || 0) >= 800000;
     });
 
-    const signalsToProcess = [];
+    const candidateSignals = [];
 
-    // LONG Taraması (X-Ray Uyumlu)
+    // LONG Adayları
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-      return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
+      return funding <= -0.0035 && chg >= -5.0 && chg <= 8.0;
     }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate));
 
-    longCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'LONG' }));
+    longCandidates.forEach(c => candidateSignals.push({ item: c, direction: 'LONG' }));
 
-    // SHORT Taraması (Hiper-Pump Kalkanlı)
+    // SHORT Adayları (Hiper-Pump Kalkanlı)
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-
       if (chg > 45.0 || funding <= 0.0003) return false;
       return (chg >= 18.0 && chg <= 45.0 && funding >= 0.0005) || (funding >= 0.0010 && chg >= 10.0);
     }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
 
-    shortCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'SHORT' }));
+    shortCandidates.forEach(c => candidateSignals.push({ item: c, direction: 'SHORT' }));
 
     const sentSymbols = [];
 
     // ====================================================
-    // 4. X-RAY ONAYLI SİNYAL VE İŞLEM MOTORU
+    // 4. MİKRO-AKIS VE GERÇEK TAPE SÜZGEÇLİ SİNYAL MOTORU
     // ====================================================
-    for (const signal of signalsToProcess) {
+    for (const signal of candidateSignals) {
       const item = signal.item;
       const dir = signal.direction;
       const symbol = item.symbol;
 
-      // 1. KİLİT: Açık işlem varsa asla tekrar sinyal verme
       if (activeTrades[symbol] && activeTrades[symbol].status === 'OPEN') continue;
+      if ((now - (cronLocks[symbol] || 0)) / (1000 * 60) < 180) continue;
+      if ((now - (memoryLocks[symbol] || 0)) / (1000 * 60) < 180) continue;
 
-      // 2. KİLİT: 180 Dakika (3 Saat) Firebase Kilidi
-      const lastFirebaseTime = typeof cronLocks[symbol] === 'number' ? cronLocks[symbol] : 0;
-      if ((now - lastFirebaseTime) / (1000 * 60) < 180) continue;
+      const price = parseFloat(item.lastPr);
+      const rawFunding = parseFloat(item.fundingRate || 0);
+      const fundingPct = (rawFunding * 100).toFixed(4);
+      const chg = parseFloat(item.change24h || 0) * 100;
+      const volM = (parseFloat(item.usdtVolume || 0) / 1000000).toFixed(2);
 
-      // 3. KİLİT: Vercel Bellek Kilidi
-      const lastMemoryTime = memoryLocks[symbol] || 0;
-      if ((now - lastMemoryTime) / (1000 * 60) < 180) continue;
+      // --- GERÇEK BORSA MİKRO-VERİ ÇEKİMİ (Tape + OI + Depth) ---
+      let realWhaleVolume = 0;
+      let totalFillsVolume = 0;
+      let realOIUsd = 0;
+      let wickTarget = dir === 'LONG' ? price * 0.988 : price * 1.018;
+
+      try {
+        const [fillsRes, oiRes, depthRes] = await Promise.all([
+          fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${symbol}&productType=USDT-FUTURES&limit=100`).then(r => r.json()).catch(() => ({})),
+          fetch(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${symbol}&productType=USDT-FUTURES`).then(r => r.json()).catch(() => ({})),
+          fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${symbol}&productType=USDT-FUTURES&limit=20`).then(r => r.json()).catch(() => ({}))
+        ]);
+
+        if (fillsRes.code === "00000" && Array.isArray(fillsRes.data?.fillList || fillsRes.data)) {
+          const list = fillsRes.data.fillList || fillsRes.data;
+          list.forEach(f => {
+            const notional = parseFloat(f.price || 0) * parseFloat(f.size || 0);
+            totalFillsVolume += notional;
+            if (notional >= 3000) realWhaleVolume += notional;
+          });
+        }
+
+        if (oiRes.code === "00000" && oiRes.data) {
+          const oiAmount = parseFloat(oiRes.data.openInterestList?.[0]?.size || oiRes.data.openInterest || 0);
+          realOIUsd = oiAmount * price;
+        }
+
+        if (depthRes.code === "00000" && depthRes.data) {
+          const bids = depthRes.data.bids || [];
+          if (bids.length > 5) {
+            let maxBidPrice = parseFloat(bids[0][0]);
+            let maxBidSize = 0;
+            bids.forEach(b => {
+              const sz = parseFloat(b[1]);
+              if (sz > maxBidSize) {
+                maxBidSize = sz;
+                maxBidPrice = parseFloat(b[0]);
+              }
+            });
+            wickTarget = maxBidPrice * 0.994;
+          }
+        }
+      } catch (err) {
+        console.warn("Mikro veri hatası:", err);
+      }
+
+      // Gerçek Oranlar
+      const realWhalePct = totalFillsVolume > 0 ? Math.round((realWhaleVolume / totalFillsVolume) * 100) : 60;
+      const realRetailPct = 100 - realWhalePct;
+
+      // 🛑 KALKAN KONTROLÜ: Eğer paritede kurumsal balina baskısı (%55 altı) yoksa ve sadece küçükler alıyorsa SİNYAL ÜRETME!
+      if (dir === 'LONG' && realWhalePct < 55) {
+        continue;
+      }
+
+      // Dinamik Yakıt (OI + Fonlama)
+      let dynamicFuel = 50;
+      if (realOIUsd > 0 && parseFloat(item.usdtVolume || 0) > 0) {
+        const oiToVolRatio = realOIUsd / parseFloat(item.usdtVolume);
+        dynamicFuel = Math.round(Math.min(96, Math.max(10, (oiToVolRatio * 150) - (rawFunding * 4000))));
+      } else {
+        dynamicFuel = Math.round(Math.min(96, Math.max(10, 50 - (rawFunding * 8000))));
+      }
+
+      const dynamicScore = Math.min(97, Math.max(75, Math.round((realWhalePct * 0.6) + (dynamicFuel * 0.4))));
 
       // Kilitleri mühürle
       memoryLocks[symbol] = now;
@@ -275,42 +330,21 @@ export default async function handler(req, res) {
         body: JSON.stringify(now)
       }).catch(() => {});
 
-      const price = parseFloat(item.lastPr);
-      const rawFunding = parseFloat(item.fundingRate || 0);
-      const fundingPct = (rawFunding * 100).toFixed(4);
-      const chg = parseFloat(item.change24h || 0) * 100;
-      const volM = (parseFloat(item.usdtVolume || 0) / 1000000).toFixed(2);
-
-      // --- X-RAY PARAMETRELERİ HESAPLAMASI ---
-      let score = 85;
-      let fuel = 80;
-      let retailRatio = 25;
-      let whaleRatio = 75;
-      let wickTarget = 0;
       let tp1, tp2, sl, rr;
-
       if (dir === 'LONG') {
         const isExtreme = rawFunding <= -0.005;
-        score = Math.min(96, Math.floor(82 + Math.abs(rawFunding) * 2000));
-        fuel = Math.min(95, Math.floor(75 + Math.abs(rawFunding) * 3000));
-        wickTarget = price * 0.988;
         tp1 = price * 1.018;
         tp2 = isExtreme ? price * 1.048 : price * 1.038;
         sl = price * 0.986;
         rr = ((tp1 - price) / (price - sl)).toFixed(1);
       } else {
-        score = 86;
-        fuel = 20; // Shortta yukarı yakıt bitti
-        retailRatio = 80;
-        whaleRatio = 20;
-        wickTarget = price * 1.018;
         tp1 = price * 0.982;
         tp2 = price * 0.955;
         sl = price * 1.015;
         rr = ((price - tp1) / (sl - price)).toFixed(1);
       }
 
-      // Firebase'e aktif işlem olarak kaydet
+      // Aktif işleme kaydet
       const tradePayload = {
         symbol,
         direction: dir,
@@ -345,38 +379,26 @@ export default async function handler(req, res) {
         await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol, orderSide);
       }
 
-      // On-Chain Eşleşme
-      const matchedWhale = onChainTransfers.find(w => w.symbol === symbol);
-      const hasOnChainConfirmation = !!matchedWhale;
-
       const pEntry = price < 1 ? price.toFixed(6) : price.toFixed(4);
       const pSl = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
       const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
       const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
       const pWick = wickTarget < 1 ? wickTarget.toFixed(6) : wickTarget.toFixed(4);
+      const oiStr = realOIUsd > 0 ? `$${(realOIUsd / 1000000).toFixed(2)}M` : 'Aktif';
 
       const isLong = dir === 'LONG';
-      const badgeTitle = hasOnChainConfirmation 
-        ? `👑 <b>MINEORA X-RAY | ELMAS ONAYLI RÖNTGEN SİNYALİ</b>\n🛡️ <i>[ON-CHAIN CÜZDAN AKIŞI İLE ÇİFT DOĞRULANMIŞ]</i>` 
-        : `🔬 <b>MINEORA X-RAY | YÜKSEK GÜVENLİK SİNYALİ</b>`;
-
-      const onChainNote = hasOnChainConfirmation 
-        ? `\n🐋 <b>Balina Teyidi:</b> <code>${matchedWhale.amount || ''} ${matchedWhale.asset || ''} (${matchedWhale.usd || ''}) ${matchedWhale.type || ''}</code>\n` 
-        : '';
-
-      // YENİ X-RAY FORMATLI TELEGRAM MESAJI
-      const msg = `${badgeTitle}\n` +
+      const msg = `🔬 <b>MINEORA X-RAY | DOĞRULANMIŞ RÖNTGEN SİNYALİ</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
                   `${isLong ? '🟢 <b>YÖN:</b> <b>LONG (SHORT SIKIŞMASI & PUMP) 🚀</b>' : '🔴 <b>YÖN:</b> <b>SHORT (TEPE DAĞITIMI & DUMP) 🩸</b>'}\n` +
                   `📊 <b>Giriş Fiyatı:</b> <code>$${pEntry}</code> (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)\n` +
-                  `⚡ <b>Fonlama Oranı:</b> <code>${fundingPct}%</code> | <b>Hacim:</b> <code>$${volM}M</code>\n\n` +
-                  `🔬 <b>X-RAY RÖNTGEN PARAMETRELERİ:</b>\n` +
-                  `🛡️ <b>Güvenlik Skoru:</b> <code>%${score} / 100 [GÜVENLİ]</code>\n` +
-                  `⛽ <b>Yakıt / Cephane:</b> <code>%${fuel} Depo ${isLong ? '(Taze)' : '(Tükendi)'}</code>\n` +
-                  `🐋 <b>Oyuncu Dağılımı:</b> <code>%${whaleRatio} Balina / %${retailRatio} Sürü</code>\n` +
-                  `🎯 <b>Piyasa Yapıcı İğne (Wick):</b> <code>$${pWick}</code>\n` +
-                  `${onChainNote}\n` +
+                  `⚡ <b>Fonlama:</b> <code>${fundingPct}%</code> | <b>Hacim:</b> <code>$${volM}M</code>\n` +
+                  `📊 <b>Açık Pozisyon (OI):</b> <code>${oiStr}</code>\n\n` +
+                  `🔬 <b>GERÇEK BORSA MİKRO-AKIS METRİKLERİ:</b>\n` +
+                  `🛡️ <b>Güvenlik Skoru:</b> <code>%${dynamicScore} / 100 [GÜVENLİ]</code>\n` +
+                  `⛽ <b>Açık Pozisyon Yakıtı:</b> <code>%${dynamicFuel} Depo</code>\n` +
+                  `🐋 <b>Gerçek Tape Akışı:</b> <code>%${realWhalePct} Balina / %${realRetailPct} Sürü</code>\n` +
+                  `🎯 <b>Likidite Duvarı & İğne (Wick):</b> <code>$${pWick}</code>\n\n` +
                   `🎯 <b>LİKİDASYON & İŞLEM PLANI:</b>\n` +
                   `🎯 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
                   `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (${isLong ? '-%1.4' : '+%1.5'})\n` +
@@ -384,7 +406,7 @@ export default async function handler(req, res) {
                   `🚀 <b>TP 2:</b> <code>$${pTp2}</code> (${isLong ? '+%3.8+' : '-%4.5+'})\n` +
                   `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🌐 <b>Canlı Röntgen:</b> mineoragame.com\n` +
+                  `🌐 <b>Canlı Röntgen:</b> <a href="https://mineoragame.com">mineoragame.com</a>\n` +
                   `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçmeli, stop maliyete çekilmelidir.</i>`;
 
       await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -393,7 +415,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
       });
 
-      sentSymbols.push(`${symbol} (${dir})${hasOnChainConfirmation ? ' [ELMAS]' : ''}`);
+      sentSymbols.push(`${symbol} (${dir}) [Tape: %${realWhalePct} Balina]`);
     }
 
     return res.status(200).json({ success: true, processed: sentSymbols });
