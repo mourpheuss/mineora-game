@@ -334,17 +334,19 @@
     }
 
     // GİRİŞ YAPMA (mourpheuss, morpheus, Masterpro ve eren@gmail.com İÇİN TAM YETKİ)
+    // GİRİŞ YAPMA (SADECE SENİN İÇİN YÖNETİCİ GEÇİŞİ)
     async function submitLogin() {
       const u = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value.trim();
 
       if (!u || !p) { alert("Bilgileri girin."); return; }
 
-      const adminUsers = ['mourpheuss', 'morpheus', 'Masterpro', 'eren@gmail.com'];
+      // Senin admin kullanıcı adın ve e-postan
+      const adminUsers = ['mourpheus', 'ersinulasduzyol@gmail.com'];
       
-      // Admin Özel Geçişi
-      if (adminUsers.includes(u) && (p === '123456' || p === '12345678' || p.length >= 6)) {
-        sessionStorage.setItem('currentUser', u);
+      // Admin Özel Geçişi (Şifren 6 karakter veya üzeriyse direkt admin açar)
+      if (adminUsers.includes(u) && p.length >= 6) {
+        sessionStorage.setItem('currentUser', 'mourpheus');
         sessionStorage.setItem('isVip', 'true');
         sessionStorage.setItem('isAdmin', 'true');
         closeAuthModal();
