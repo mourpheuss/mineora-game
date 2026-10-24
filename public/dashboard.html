@@ -63,7 +63,7 @@
           <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
             <i class="fa-solid fa-radiation text-orange-500"></i> Mineora X-Ray | Parite İşlem & Tuzak Röntgeni
           </h2>
-          <p class="text-xs text-slate-400">Herhangi bir sinyal grubundan işlem almadan önce coini aratın; kucakta kalma riskini, yakıt durumunu ve balina yönünü test edin.</p>
+          <p class="text-xs text-slate-400">Herhangi bir sinyal grubundan işlem almadan önce coini aratın; kucakta kalma riskini, yakıt durumunu ve yön uygunluğunu test edin.</p>
         </div>
         <div class="flex items-center gap-2 w-full sm:w-auto">
           <input type="text" id="inputSearchSymbol" placeholder="Örn: TREE, SUI, AXIS..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-orange-500" />
@@ -126,48 +126,6 @@
         </div>
       </section>
 
-    </div>
-
-    <!-- 3. MASA: ON-CHAIN BALİNA VE USDT RADARI -->
-    <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/40 rounded-3xl p-6 space-y-4 shadow-2xl font-mono text-xs relative overflow-hidden">
-      <div class="absolute -right-12 -top-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-sm">
-            <i class="fa-solid fa-cubes-stacked"></i>
-          </div>
-          <div>
-            <h3 class="font-display text-base font-bold text-white flex items-center gap-2">
-              🐋 On-Chain Balina Cüzdan & Taze USDT Giriş Radarı
-              <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">ÇİFT TEYİT MOTORU</span>
-            </h3>
-            <p class="text-[11px] text-slate-400 font-normal">Borsalara son 12 saatte aktarılan yüklü USDT ve token transferleri (Giriş/Çıkış Akışı)</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="text-[11px] text-emerald-400 font-bold">CANLI ZİNCİR AKIŞI</span>
-        </div>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full text-left">
-          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
-            <tr>
-              <th class="py-2.5 px-3">Zaman</th>
-              <th class="py-2.5 px-3">Varlık / Miktar</th>
-              <th class="py-2.5 px-3">Dolar Karşılığı</th>
-              <th class="py-2.5 px-3">Transfer Yönü</th>
-              <th class="py-2.5 px-3">Hedef Borsa</th>
-              <th class="py-2.5 px-3 text-right">Eşgüdüm Durumu</th>
-            </tr>
-          </thead>
-          <tbody id="onChainWhaleTableBody" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="6" class="py-5 text-center text-slate-500 font-mono text-xs"><i class="fa-solid fa-radar mr-1.5 text-amber-400"></i> Son 12 saatte tespit edilen büyük blokzincir transferi bulunmuyor.</td></tr>
-          </tbody>
-        </table>
-      </div>
     </div>
 
     <!-- PİYASA TABLOSU -->
@@ -261,8 +219,7 @@
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
-    let cachedWhaleTransfers = [];
-    let lastGeneratedXRayText = ""; // Telegram metni kopyalama hafızası
+    let lastGeneratedXRayText = "";
 
     function canSendSignal(symbol) {
       const lastSent = localStorage.getItem(`mineora_signal_${symbol}`);
@@ -310,58 +267,6 @@
       console.log(`[RADAR TESPİTİ] ${symbol} paritesi ekranda listelendi.`);
     }
 
-    // ON-CHAIN BALİNA TRANSFERLERİ
-    async function fetchOnChainWhales() {
-      try {
-        const res = await fetch("https://mineora-web-default-rtdb.firebaseio.com/whale_transfers.json");
-        const data = await res.json();
-        
-        if (data && typeof data === 'object' && !data.error) {
-          cachedWhaleTransfers = Object.keys(data)
-            .map(k => data[k])
-            .filter(item => item && typeof item === 'object');
-        } else {
-          cachedWhaleTransfers = [];
-        }
-      } catch(e) {
-        cachedWhaleTransfers = [];
-      }
-      renderWhaleTable(cachedWhaleTransfers);
-    }
-
-    function renderWhaleTable(transfers) {
-      const tbody = document.getElementById('onChainWhaleTableBody');
-      if (!tbody) return;
-
-      if (!transfers || transfers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-5 text-center text-slate-500 font-mono text-xs"><i class="fa-solid fa-radar mr-1.5 text-amber-400"></i> Son 12 saatte tespit edilen büyük blokzincir transferi bulunmuyor.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = transfers.map(t => {
-        const safeType = String(t.type || 'INFLOW (Giriş)');
-        const isInflow = safeType.includes("INFLOW");
-        return `
-          <tr class="hover:bg-slate-900/60 transition">
-            <td class="py-2.5 px-3 text-slate-400 font-mono">${t.time || '-'}</td>
-            <td class="py-2.5 px-3 font-bold text-white">${t.amount || '0'} ${t.asset || ''}</td>
-            <td class="py-2.5 px-3 text-amber-400 font-black">${t.usd || '$0'}</td>
-            <td class="py-2.5 px-3">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isInflow ? 'bg-emerald-950 border border-emerald-800 text-emerald-400' : 'bg-sky-950 border border-sky-800 text-sky-400'}">
-                ${isInflow ? '📥 BORSA GİRİŞİ (Cephane)' : '📤 SOĞUK CÜZDAN (Arz Şoku)'}
-              </span>
-            </td>
-            <td class="py-2.5 px-3 text-slate-300 font-mono">${t.to || 'Borsa'}</td>
-            <td class="py-2.5 px-3 text-right">
-              <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
-                👑 ÇİFT TEYİT HAZIR
-              </span>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
     // ================= MINEORA X-RAY PARİTE RÖNTGEN MOTORU =================
     function analyzeSingleCoin() {
       const input = document.getElementById('inputSearchSymbol');
@@ -394,9 +299,15 @@
       let wickTarget = 0;
       let targets = null;
 
-      // 1. DURUM: SHORT SIKIŞMASI (GÜÇLÜ LONG ADAYI)
+      // Net Yön Kararları
+      let isLongSuitable = false;
+      let isShortSuitable = false;
+
+      // 1. DURUM: SHORT SIKIŞMASI (LONG UYGUN)
       if (rawFunding <= -0.0035 && chg >= -4.0 && chg <= 8.0) {
         status = "LONG_OPPORTUNITY";
+        isLongSuitable = true;
+        isShortSuitable = false;
         score = Math.min(96, Math.floor(82 + Math.abs(rawFunding) * 2000));
         fuel = Math.min(95, Math.floor(75 + Math.abs(rawFunding) * 3000));
         retailVsWhale = { retail: 22, whale: 78 };
@@ -405,9 +316,11 @@
         wickTarget = price * 0.988;
         targets = calculateLiquidationTargets(price, rawFunding, false);
       }
-      // 2. DURUM: HİPER-PUMP (TEHLİKELİ TUZAK - SHORT VEYA LONG YASAK)
+      // 2. DURUM: HİPER-PUMP (İKİSİ DE UYGUN DEĞİL)
       else if (chg > 45.0) {
         status = "HYPER_PUMP_DANGER";
+        isLongSuitable = false;
+        isShortSuitable = false;
         score = 15;
         fuel = 10;
         retailVsWhale = { retail: 88, whale: 12 };
@@ -415,9 +328,11 @@
         verdictDesc = `Parite kontrolden çıkmış (+${chg.toFixed(1)}%). Ne Long ne de Short girilmez! Balina spot malı küçük yatırımcının kucağına boşaltıyor. Çok yüksek tasfiye riski!`;
         wickTarget = price * 1.06;
       }
-      // 3. DURUM: KONTROLLÜ TEPE (SHORT FIRSATI)
+      // 3. DURUM: KONTROLLÜ TEPE (SHORT UYGUN)
       else if (chg >= 18.0 && chg <= 45.0 && rawFunding >= 0.0005) {
         status = "SHORT_OPPORTUNITY";
+        isLongSuitable = false;
+        isShortSuitable = true;
         score = 86;
         fuel = 20;
         retailVsWhale = { retail: 80, whale: 20 };
@@ -426,10 +341,12 @@
         wickTarget = price * 1.018;
         targets = calculateLiquidationTargets(price, rawFunding, true);
       }
-      // 4. DURUM: AŞIRI LONG TUZAĞI (ERKEN DUMP)
+      // 4. DURUM: AŞIRI LONG TUZAĞI (SHORT UYGUN)
       else if (rawFunding >= 0.0010 && chg >= 10.0) {
         status = "LONG_TRAP";
-        score = 25;
+        isLongSuitable = false;
+        isShortSuitable = true;
+        score = 80;
         fuel = 15;
         retailVsWhale = { retail: 85, whale: 15 };
         verdict = "⚠️ DİKKAT: AŞIRI LONG YIĞILMASI (DUMP KALKANI)";
@@ -437,9 +354,11 @@
         wickTarget = price * 0.965;
         targets = calculateLiquidationTargets(price, rawFunding, true);
       }
-      // 5. DURUM: DENGELİ / NÖTR TAHTA
+      // 5. DURUM: DENGELİ / NÖTR TAHTA (İKİSİ DE UYGUN DEĞİL)
       else {
         status = "NEUTRAL";
+        isLongSuitable = false;
+        isShortSuitable = false;
         score = 50;
         fuel = 50;
         retailVsWhale = { retail: 50, whale: 50 };
@@ -453,13 +372,17 @@
       const isSafe = score >= 75;
       const isDangerous = score < 40;
 
-      // TELEGRAM'A KOPYALANACAK FORMATLANMIŞ METİN OLUŞTUR
+      // TELEGRAM METNİ
       lastGeneratedXRayText = 
 `🔬 <b>MINEORA X-RAY | PARİTE RÖNTGEN RAPORU</b>
 ━━━━━━━━━━━━━━━━━━━━
 💎 <b>Parite:</b> <code>#${found.symbol}</code>
 💰 <b>Fiyat:</b> <code>$${pStr}</code> (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)
 ⚡ <b>Fonlama:</b> <code>${fundingPct}%</code> | <b>Hacim:</b> <code>$${volM}M</code>
+
+🎯 <b>YÖN KARARLARI:</b>
+${isLongSuitable ? '🟢 <b>LONG: UYGUN ✅</b>' : '❌ <b>LONG: UYGUN DEĞİL ⛔</b>'}
+${isShortSuitable ? '🔴 <b>SHORT: UYGUN ✅</b>' : '❌ <b>SHORT: UYGUN DEĞİL ⛔</b>'}
 
 🛡️ <b>Güvenlik Skoru:</b> %${score} / 100
 ⛽ <b>Yakıt / Cephane:</b> %${fuel} Depo
@@ -510,6 +433,27 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
                 <span class="text-slate-400 text-[10px] block">Mevcut Vadeli Fiyat</span>
                 <strong class="text-white text-lg font-bold font-mono">$${pStr}</strong>
                 <span class="text-[11px] ml-1.5 font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)</span>
+              </div>
+            </div>
+
+            <!-- ================= YENİ: NET YÖN UYGUNLUK ROZETLERİ ================= -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <!-- LONG KUTUSU -->
+              <div class="p-3 rounded-2xl border text-center transition flex flex-col justify-center items-center gap-1 ${isLongSuitable ? 'bg-emerald-950/60 border-emerald-500/80 text-emerald-300 shadow-lg shadow-emerald-950/50' : 'bg-slate-900/60 border-slate-800 text-slate-500'}">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">LONG POZİSYON</span>
+                <div class="flex items-center gap-1.5 font-black text-sm">
+                  <i class="fa-solid ${isLongSuitable ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark text-rose-500'}"></i>
+                  <span class="${isLongSuitable ? 'text-emerald-400' : 'text-slate-400'}">${isLongSuitable ? 'LONG UYGUN' : 'UYGUN DEĞİL'}</span>
+                </div>
+              </div>
+
+              <!-- SHORT KUTUSU -->
+              <div class="p-3 rounded-2xl border text-center transition flex flex-col justify-center items-center gap-1 ${isShortSuitable ? 'bg-rose-950/60 border-rose-500/80 text-rose-300 shadow-lg shadow-rose-950/50' : 'bg-slate-900/60 border-slate-800 text-slate-500'}">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">SHORT POZİSYON</span>
+                <div class="flex items-center gap-1.5 font-black text-sm">
+                  <i class="fa-solid ${isShortSuitable ? 'fa-circle-check text-rose-400' : 'fa-circle-xmark text-slate-600'}"></i>
+                  <span class="${isShortSuitable ? 'text-rose-400' : 'text-slate-400'}">${isShortSuitable ? 'SHORT UYGUN' : 'UYGUN DEĞİL'}</span>
+                </div>
               </div>
             </div>
 
@@ -635,8 +579,8 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
 
       try {
         const canvas = await html2canvas(card, {
-          backgroundColor: '#020617', // slate-950 arka plan
-          scale: 2, // Yüksek çözünürlük
+          backgroundColor: '#020617',
+          scale: 2,
           useCORS: true
         });
 
@@ -663,7 +607,6 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
       const btn = document.getElementById('btnCopyXRay');
       if (!lastGeneratedXRayText) return;
 
-      // HTML etiketlerini düz metne çevirip kopyala
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = lastGeneratedXRayText;
       const plainText = tempDiv.innerText;
@@ -704,7 +647,7 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
           triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
 
-        // 2. Erken Dump Adayları (cron-scan.js ile eşitlendi)
+        // 2. Erken Dump Adayları (cron-scan.js ile birebir eşitlendi)
         const dumpCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
@@ -746,29 +689,18 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
         const price = parseFloat(c.lastPr);
 
         const liq = calculateLiquidationTargets(price, rawFunding, false);
-        const hasOnChainMatch = cachedWhaleTransfers.some(w => w.symbol === c.symbol);
 
         return `
-          <div class="bg-slate-950 p-4 rounded-2xl border ${hasOnChainMatch ? 'border-2 border-amber-400 shadow-xl shadow-amber-500/20' : 'border border-emerald-500/60'} space-y-3 relative overflow-hidden">
-            ${hasOnChainMatch ? '<div class="absolute -right-8 -top-8 w-24 h-24 bg-amber-400/20 rounded-full blur-xl pointer-events-none"></div>' : ''}
-
+          <div class="bg-slate-950 p-4 rounded-2xl border border-emerald-500/60 space-y-3 relative overflow-hidden">
             <div class="flex justify-between items-center">
               <div>
                 <strong class="font-display text-base font-black text-white">${c.symbol}</strong>
                 <span class="text-slate-400 font-mono text-xs ml-2">$${liq.entry}</span>
                 <span class="text-[11px] font-mono font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'} ml-1.5">(${chg >= 0 ? '+' : ''}${chg.toFixed(1)}%)</span>
               </div>
-              <div class="flex items-center gap-1.5">
-                ${hasOnChainMatch ? `
-                  <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-black bg-amber-500 text-slate-950 shadow-md">
-                    👑 ELMAS ONAYLI (ON-CHAIN TEYİT)
-                  </span>
-                ` : `
-                  <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                    ⚡ ERKEN BALİNA SIKIŞTIRMASI
-                  </span>
-                `}
-              </div>
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                ⚡ ERKEN BALİNA SIKIŞTIRMASI
+              </span>
             </div>
             
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400 border-t border-slate-900">
@@ -803,10 +735,9 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
               </div>
             </div>
 
-            <div class="${hasOnChainMatch ? 'bg-amber-950/40 border border-amber-700/50 text-amber-200' : 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-300'} p-2.5 rounded-xl text-[11px]">
-              <i class="fa-solid ${hasOnChainMatch ? 'fa-crown text-amber-400' : 'fa-bolt'} mr-1"></i>
-              <strong>${hasOnChainMatch ? '👑 GARANTİ TEYİT:' : 'Erken Teşhis:'}</strong> 
-              ${hasOnChainMatch ? 'Bu pariteye hem zincir üstünden yüklü transfer gerçekleşti, hem de vadeli tahtada fonlama sıkışması var. En yüksek güvenilirlikli pozisyon!' : `Fiyat henüz patlamadı (${chg.toFixed(1)}%). Short pozisyonlar negatif fonlamada sıkışmış. Balina alttan topluyor, Long patlaması (Pump) bekleniyor!`}
+            <div class="bg-emerald-950/30 border border-emerald-900/50 text-emerald-300 p-2.5 rounded-xl text-[11px]">
+              <i class="fa-solid fa-bolt mr-1"></i>
+              <strong>Erken Teşhis:</strong> Fiyat henüz patlamadı (${chg.toFixed(1)}%). Short pozisyonlar negatif fonlamada sıkışmış. Balina alttan topluyor, Long patlaması (Pump) bekleniyor!
             </div>
           </div>
         `;
@@ -969,10 +900,8 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      fetchOnChainWhales();
       scanSentinelMarket();
       setInterval(scanSentinelMarket, 25000);
-      setInterval(fetchOnChainWhales, 60000);
     });
   </script>
 </body>
