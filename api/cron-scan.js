@@ -3,7 +3,7 @@ const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
 const TG_CHAT_ID = "-1004404988937";
 const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
 
-// Global nesne üzerinde kalıcı zaman kilidi (Sunucusuz ortam için)
+// Sunucusuz ortamda bellek takibi
 if (!global._sentTracker) {
   global._sentTracker = {};
 }
@@ -14,7 +14,7 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
   const now = Date.now();
   const alertKey = `${coin.symbol}_${type}`;
 
-  // 4 saatlik kilit kontrolü (4 * 60 * 60 * 1000 ms)
+  // 4 saatlik kilit kontrolü (14.400.000 ms)
   if (global._sentTracker[alertKey] && (now - global._sentTracker[alertKey] < 14400000)) {
     return;
   }
@@ -30,7 +30,7 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
     title = 'AŞIRI KALDIRAÇ (ÇÖKÜŞ KALKANI)';
   }
 
-  const text = `${icon} <b>MINEORA VIP SENTINEL RADAR</b>\n<b>${title}</b>\n\n🪙 <b>Parite:</b> #${coin.symbol}\n💵 <b>Mevcut Fiyat:</b> $${coin.lastPr} (${chgFormatted ? (chgFormatted >= 0 ? '+' : '') + chgFormatted + '%' : ''})\n📊 <b>Fonlama Oranı:</b> %${fundingFormatted}\n💰 <b>24s Vadeli Hacim:</b> $${volFormatted}M USDT\n\n📌 <b>Radar Analizi:</b>\n${desc}\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}\n🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını Görüntüle</a>`;
+  const text = `${icon} <b>MINEORA VIP SENTINEL RADAR</b>\n<b>${title}</b>\n\n🪙 <b>Parite:</b> #${coin.symbol}\n💵 <b>Mevcut Fiyat:</b> $${coin.lastPr} (${chgFormatted ? (chgFormatted >= 0 ? '+' : '') + chgFormatted + '%' : ''})\n📊 <b>Fonlama Oranı:</b> %${fundingFormatted}\n💰 <b>24s Vadeli Hacim:</b> $${volFormatted}M USDT\n\n📌 <b>Radar Analizi:</b>\n${desc}\n\n⏰ <b>Zaman:</b>${new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}\n🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını Görüntüle</a>`;
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -46,7 +46,7 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
     const data = await res.json();
     if (data.ok) {
       global._sentTracker[alertKey] = now;
-      console.log(`[VIP ALERT] ${coin.symbol} (${type}) iletildi.`);
+      console.log(`[VIP ALERT] ${coin.symbol} (${type}) kanala iletildi.`);
     }
   } catch (err) {
     console.error("Cron Telegram hatası:", err);
@@ -65,19 +65,18 @@ async function performSingleScan() {
              parseFloat(t.usdtVolume || 0) >= 1200000;
     });
 
-    // 1. Squeeze Adayları (<= -0.015)
+    // Squeeze Adayları (<= -0.015)
     const pumpCandidates = liquidPool.filter(t => {
       return parseFloat(t.fundingRate || 0) <= -0.015;
     });
 
-    // 2. Dump Adayları (>= 0.020 veya +20% & >= 0.010)
+    // Dump Adayları (>= 0.020 veya +20% & >= 0.010)
     const dumpCandidates = liquidPool.filter(t => {
       const funding = parseFloat(t.fundingRate || 0);
       const chg = parseFloat(t.change24h || 0) * 100;
       return funding >= 0.020 || (chg >= 20 && funding >= 0.010);
     });
 
-    // Pump sinyallerini tara
     for (const c of pumpCandidates) {
       const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
       const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
@@ -104,7 +103,6 @@ async function performSingleScan() {
       }
     }
 
-    // Dump sinyallerini tara
     for (const c of dumpCandidates) {
       const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
       const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
