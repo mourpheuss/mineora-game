@@ -215,15 +215,9 @@
       window.location.href = 'index.html';
     }
 
-    // TELEGRAM VE KANAL AYARLARI
-    const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_VIP_CHANNEL_ID = "-1004404988937";
-    const TG_MY_ADMIN_ID = "6457294906";
-
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
 
-    // KALICI DİSK KİLİDİ (Sinyal Tekrarını Engeller)
     function canSendSignal(symbol) {
       const lastSent = localStorage.getItem(`mineora_signal_${symbol}`);
       if (!lastSent) return true;
@@ -235,20 +229,6 @@
       localStorage.setItem(`mineora_signal_${symbol}`, Date.now().toString());
     }
 
-    // AKTİF TAKİPTEKİ COINLER (TP1, TP2 İÇİN)
-    function getActiveTrackingCoins() {
-      try {
-        return JSON.parse(localStorage.getItem('mineora_active_tracking') || '{}');
-      } catch(e) {
-        return {};
-      }
-    }
-
-    function saveActiveTrackingCoins(obj) {
-      localStorage.setItem('mineora_active_tracking', JSON.stringify(obj));
-    }
-
-    // LİKİDASYON VE SEVİYE HESAPLAMA MOTORU
     function calculateLiquidationTargets(price, fundingRate) {
       const isExtreme = fundingRate <= -0.005;
 
@@ -259,10 +239,6 @@
       const riskReward = ((tp1 - price) / (price - sl)).toFixed(1);
 
       return {
-        entryNum: price,
-        tp1Num: tp1,
-        tp2Num: tp2,
-        slNum: sl,
         entry: price < 1 ? price.toFixed(6) : price.toFixed(4),
         sl: sl < 1 ? sl.toFixed(6) : sl.toFixed(4),
         tp1: tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4),
@@ -271,135 +247,11 @@
       };
     }
 
-    // SİNYALİ DOĞRUDAN VIP KANALA GÖNDEREN VE OTO-İŞLEM AÇAN FONKSİYON
+    // SPAM ÖNLEYİCİ: Sayfa içi sinyal tespit logu (Telegram iletimini ve emir açmayı 7/24 arkadaki cron-scan yapar)
     async function triggerVipChannelSignal(symbol, price, rawFunding) {
       if (!canSendSignal(symbol)) return;
-
-      // 1. OTOMATİK İŞLEMİ TETİKLE (Arka Planda %30 Marjin)
-      fetch('/api/auto-trade', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: symbol })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          console.log(`✅ [OTO-İŞLEM] ${symbol} pozisyonu basariyla iletildi:`, data.processed);
-        } else {
-          console.warn(`⚠️ [OTO-İŞLEM UYARISI] ${symbol}:`, data.error);
-        }
-      })
-      .catch(err => console.error("[OTO-İŞLEM BAĞLANTI HATASI]:", err));
-
-      // 2. VIP TELEGRAM KANALINA SİNYALİ GÖNDER (YÖN / BEKLENTİ İLE)
-      const funding = (rawFunding * 100).toFixed(4);
-      const liq = calculateLiquidationTargets(price, rawFunding);
-
-      const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
-                  `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
-                  `🟢 <b>YÖN / BEKLENTİ:</b> <b>LONG (PUMP / YUKARI PATLAMA) 🚀</b>\n` +
-                  `📊 <b>Giriş Fiyatı:</b> <code>$${liq.entry}</code>\n` +
-                  `⚡ <b>Fonlama Oranı:</b> <code>${funding}%</code>\n` +
-                  `⚠️ <b>Teşhis:</b> Negatif Fonlama & Yoğun Short Sıkışması\n\n` +
-                  `🎯 <b>LİKİDASYON İŞLEM PLANI:</b>\n` +
-                  `🟢 <b>Giriş:</b> <code>$${liq.entry}</code>\n` +
-                  `🛑 <b>Stop-Loss (SL):</b> <code>$${liq.sl}</code> (-%1.4)\n` +
-                  `🎯 <b>TP 1 (50x Tasfiye):</b> <code>$${liq.tp1}</code> (+%1.8)\n` +
-                  `🚀 <b>TP 2 (20x Tasfiye):</b> <code>$${liq.tp2}</code> (+%4.2+)\n` +
-                  `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${liq.rr}</code>\n` +
-                  `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçilmeli, stop maliyete çekilmelidir.</i>`;
-
-      markSignalAsSent(symbol); 
-
-      // Canlı Hedef Takip Listesine Ekle
-      const tracking = getActiveTrackingCoins();
-      tracking[symbol] = {
-        entry: liq.entryNum,
-        tp1: liq.tp1Num,
-        tp2: liq.tp2Num,
-        sl: liq.slNum,
-        tp1Hit: false,
-        tp2Hit: false,
-        time: Date.now()
-      };
-      saveActiveTrackingCoins(tracking);
-
-      try {
-        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
-        });
-      } catch(e) {
-        console.error("VIP Kanal iletim hatası:", e);
-      }
-    }
-
-    // CANLI TP1 VE TP2 HEDEF KONTROL MOTORU
-    async function checkActiveSignalsProgress(allTickers) {
-      const tracking = getActiveTrackingCoins();
-      const symbols = Object.keys(tracking);
-      if (symbols.length === 0) return;
-
-      for (const sym of symbols) {
-        const item = tracking[sym];
-        // 24 saatten eski sinyalleri takipten çıkar
-        if ((Date.now() - item.time) > 24 * 60 * 60 * 1000) {
-          delete tracking[sym];
-          continue;
-        }
-
-        const currentTicker = allTickers.find(t => t.symbol === sym);
-        if (!currentTicker) continue;
-
-        const curPrice = parseFloat(currentTicker.lastPr || 0);
-        if (curPrice <= 0) continue;
-
-        // 1. TP1 Kontrolü (+1.8%)
-        if (!item.tp1Hit && curPrice >= item.tp1) {
-          item.tp1Hit = true;
-          saveActiveTrackingCoins(tracking);
-
-          const tp1Msg = `🎯 <b>HEDEF TAM İSABET! | #TP1 ALINDI!</b> 🎯\n` +
-                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `💎 <b>Parite:</b> <code>#${sym}</code>\n` +
-                         `✅ <b>TP 1 Seviyesi:</b> <code>$${curPrice}</code>\n` +
-                         `🔥 <b>Kâr:</b> <b>+1.8% Spot (+%18 10x Kaldıraç)</b>\n\n` +
-                         `💡 <b>Strateji:</b> Kasanın %50'sini nakde çekin, Stop seviyenizi giriş maliyetine çekerek riski sıfırlayın! 🚀`;
-
-          try {
-            await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: tp1Msg, parse_mode: 'HTML' })
-            });
-          } catch(e){}
-        }
-
-        // 2. TP2 Kontrolü (+4.2%+)
-        if (item.tp1Hit && !item.tp2Hit && curPrice >= item.tp2) {
-          item.tp2Hit = true;
-          delete tracking[sym]; // TP2 de tamamlanınca takipten çıkar
-          saveActiveTrackingCoins(tracking);
-
-          const tp2Msg = `🚀 <b>ANA HEDEF PATLADI! | #TP2 TAMAMLANDI!</b> 🚀\n` +
-                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `💎 <b>Parite:</b> <code>#${sym}</code>\n` +
-                         `🌟 <b>Zirve Fiyatı:</b> <code>$${curPrice}</code>\n` +
-                         `💰 <b>Kâr:</b> <b>+%4.2+ Spot (+%42+ 10x Kaldıraç)</b>\n\n` +
-                         `🏆 <i>Mineora Sentinel Avcı Radarı bir balina sıkışmasını daha başarıyla tamamladı. Kâr alan üyelerimizi tebrik ederiz!</i>`;
-
-          try {
-            await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: tp2Msg, parse_mode: 'HTML' })
-            });
-          } catch(e){}
-        }
-      }
+      markSignalAsSent(symbol);
+      console.log(`[RADAR TESPİTİ] ${symbol} paritesi ekranda listelendi.`);
     }
 
     async function scanSentinelMarket() {
@@ -409,9 +261,6 @@
         if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
         cachedTickers = json.data;
-
-        // Canlı TP takibini yap
-        checkActiveSignalsProgress(cachedTickers);
 
         const liquidPool = json.data.filter(t => {
           return t.symbol.endsWith("USDT") &&
@@ -426,7 +275,6 @@
           return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 6);
 
-        // Yakalanan pariteleri tetikle
         earlySqueezeCandidates.forEach(item => {
           triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
@@ -669,7 +517,7 @@
       `;
     }
 
-    // ================= KULLANICI BİTGET API MODAL FONKSİYONLARI =================
+    // API MODAL AYARLARI
     function openApiSettingsModal() {
       document.getElementById('apiSettingsModal').classList.remove('hidden');
       const u = sessionStorage.getItem('currentUser');
