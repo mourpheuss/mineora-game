@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-// Admin Yedek Bilgileri
+// Bitget API Bilgilerin
 const ADMIN_API_KEY = "bg_f73437198f37d20e56939b82041041d0";
 const ADMIN_SECRET = "fe44b9c347eb5d9dd0e624876809102bb3ec8bab9481ad7bdb5ddf4d8d332ecd";
 const ADMIN_PASSPHRASE = "Ers4834754";
@@ -38,7 +38,6 @@ async function bitgetRequest(apiKey, secret, passphrase, method, endpoint, param
   return await response.json();
 }
 
-// ÇİFT YÖNLÜ OTO-İŞLEM MOTORU (Long: 'buy', Short: 'sell')
 async function tradeForUser(apiKey, secret, passphrase, symbol, side) {
   try {
     const accountRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/account/account', {
@@ -91,30 +90,117 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
     }
 
-    // 2. Firebase Kilitleri, Kullanıcıları ve On-Chain Transferlerini Oku
-    let locks = {};
+    const priceMap = {};
+    json.data.forEach(t => {
+      priceMap[t.symbol] = parseFloat(t.lastPr || '0');
+    });
+
+    // 2. Firebase'den Aktif İşlemleri, Kullanıcıları ve Balina Transferlerini Çek
+    let activeTrades = {};
     let usersData = {};
     let onChainTransfers = [];
-    
-    try {
-      const lockRes = await fetch(`${FIREBASE_BASE}/cron_locks.json`);
-      locks = (await lockRes.json()) || {};
-    } catch(e) { locks = {}; }
 
     try {
-      const usersRes = await fetch(`${FIREBASE_BASE}/users.json`);
-      usersData = (await usersRes.json()) || {};
+      const atRes = await fetch(`${FIREBASE_BASE}/active_trades.json`);
+      activeTrades = (await atRes.json()) || {};
+    } catch(e) { activeTrades = {}; }
+
+    try {
+      const uRes = await fetch(`${FIREBASE_BASE}/users.json`);
+      usersData = (await uRes.json()) || {};
     } catch(e) { usersData = {}; }
 
     try {
-      const whaleRes = await fetch(`${FIREBASE_BASE}/whale_transfers.json`);
-      const whaleData = await whaleRes.json();
-      if (whaleData && typeof whaleData === 'object' && !whaleData.error) {
-        onChainTransfers = Object.keys(whaleData).map(k => whaleData[k]).filter(w => w && typeof w === 'object');
+      const wRes = await fetch(`${FIREBASE_BASE}/whale_transfers.json`);
+      const wData = await wRes.json();
+      if (wData && typeof wData === 'object' && !wData.error) {
+        onChainTransfers = Object.keys(wData).map(k => wData[k]).filter(w => w && typeof w === 'object');
       }
     } catch(e) { onChainTransfers = []; }
 
-    // Likidite Filtresi: $800k ve üzeri, USDT vadeli pariteler
+    // ==========================================
+    // 3. AKTİF İŞLEMLERİN TP / SL TAKİBİ
+    // ==========================================
+    for (const symbol of Object.keys(activeTrades)) {
+      const trade = activeTrades[symbol];
+      if (!trade || trade.status !== 'OPEN') continue;
+
+      const currentPrice = priceMap[symbol];
+      if (!currentPrice) continue;
+
+      const isLong = trade.direction === 'LONG';
+      let isClosed = false;
+      let closeReason = '';
+
+      if (isLong) {
+        if (currentPrice <= trade.sl) {
+          isClosed = true;
+          closeReason = 'STOP-LOSS (SL)';
+        } else if (currentPrice >= trade.tp2) {
+          isClosed = true;
+          closeReason = 'HEDEF 2 (TP2 - TÜM KÂR ALINDI)';
+        } else if (currentPrice >= trade.tp1 && !trade.tp1Hit) {
+          trade.tp1Hit = true;
+          await fetch(`${FIREBASE_BASE}/active_trades/${symbol}/tp1Hit.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(true)
+          });
+          // Telegram'a TP1 Bildirimi
+          await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: TG_VIP_CHANNEL_ID,
+              text: `🎯 <b>HEDEF 1 ALINDI (TP1)!</b>\n━━━━━━━━━━━━━━━━━━━━\n💎 <b>Parite:</b> <code>#${symbol}</code> (LONG)\n💰 <b>Fiyat:</b> <code>$${currentPrice}</code>\n💡 <i>Pozisyonun %50'si kârla kapatıldı, stop maliyete çekildi. TP2 bekleniyor.</i>`,
+              parse_mode: 'HTML'
+            })
+          });
+        }
+      } else {
+        // Short Kontrolleri
+        if (currentPrice >= trade.sl) {
+          isClosed = true;
+          closeReason = 'STOP-LOSS (SL)';
+        } else if (currentPrice <= trade.tp2) {
+          isClosed = true;
+          closeReason = 'HEDEF 2 (TP2 - TÜM KÂR ALINDI)';
+        } else if (currentPrice <= trade.tp1 && !trade.tp1Hit) {
+          trade.tp1Hit = true;
+          await fetch(`${FIREBASE_BASE}/active_trades/${symbol}/tp1Hit.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(true)
+          });
+          await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: TG_VIP_CHANNEL_ID,
+              text: `🎯 <b>HEDEF 1 ALINDI (TP1)!</b>\n━━━━━━━━━━━━━━━━━━━━\n💎 <b>Parite:</b> <code>#${symbol}</code> (SHORT)\n💰 <b>Fiyat:</b> <code>$${currentPrice}</code>\n💡 <i>Pozisyonun %50'si kârla kapatıldı, stop maliyete çekildi. TP2 bekleniyor.</i>`,
+              parse_mode: 'HTML'
+            })
+          });
+        }
+      }
+
+      // İşlem TP2 veya SL ile tamamen bittiyse kaydı kaldır ve kanala duyur
+      if (isClosed) {
+        await fetch(`${FIREBASE_BASE}/active_trades/${symbol}.json`, { method: 'DELETE' });
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: TG_VIP_CHANNEL_ID,
+            text: `${closeReason.includes('STOP') ? '🛑' : '🚀'} <b>POZİSYON KAPANDI: ${closeReason}</b>\n━━━━━━━━━━━━━━━━━━━━\n💎 <b>Parite:</b> <code>#${symbol}</code>\n📊 <b>Giriş:</b> <code>$${trade.entryPrice}</code> ➔ <b>Çıkış:</b> <code>$${currentPrice}</code>\n🔓 <i>Parite kilidi açıldı. Yeni formasyonlar takip ediliyor.</i>`,
+            parse_mode: 'HTML'
+          })
+        });
+        delete activeTrades[symbol];
+      }
+    }
+
+    // Likidite Filtresi ($800k ve üzeri)
     const liquidPool = json.data.filter(t => {
       return t.symbol.endsWith("USDT") &&
              !EXCLUDED.includes(t.symbol) &&
@@ -124,7 +210,7 @@ export default async function handler(req, res) {
     const signalsToProcess = [];
 
     // ==========================================
-    // 1. LONG ALGORİTMASI (Erken Sıkışma)
+    // 4. LONG ALGORİTMASI
     // ==========================================
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
@@ -135,22 +221,16 @@ export default async function handler(req, res) {
     longCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'LONG' }));
 
     // ==========================================
-    // 2. GÜVENLİ SHORT ALGORİTMASI (Hiper-Pump Kalkanı)
+    // 5. GÜVENLİ SHORT ALGORİTMASI (Hiper-Pump Kalkanlı)
     // ==========================================
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
 
-      // KALKAN 1: %45'in üzerindeki kontrolden çıkmış hiper pump tahtalarına ASLA dokunma!
       if (chg > 45.0) return false;
-
-      // KALKAN 2: Fonlama eksi veya nötr ise dokunma (Short squeeze sürüyordur)
       if (funding <= 0.0003) return false;
 
-      // Kriter A: %18 ile %45 arasında şişmiş ve fonlaması belirgin artıya geçmiş tahtalar
       const isControlledTop = chg >= 18.0 && chg <= 45.0 && funding >= 0.0005;
-
-      // Kriter B: Aşırı Long birikmiş (+%0.10 fonlama) ve primli tahtalar
       const isExtremeLongTrap = funding >= 0.0010 && chg >= 10.0;
 
       return isControlledTop || isExtremeLongTrap;
@@ -161,32 +241,17 @@ export default async function handler(req, res) {
     const sentSymbols = [];
 
     // ==========================================
-    // İŞLEM & SİNYAL DAĞITIM DÖNGÜSÜ
+    // 6. SİNYAL DAĞITIMI VE İŞLEM AÇMA
     // ==========================================
     for (const signal of signalsToProcess) {
       const item = signal.item;
       const dir = signal.direction;
       const symbol = item.symbol;
-      const lockKey = `${symbol}_${dir}`;
 
-      const lastSentTime = typeof locks[lockKey] === 'number' ? locks[lockKey] : 0;
-      const minutesPassed = (Date.now() - lastSentTime) / (1000 * 60);
-
-      // 120 DAKİKA KİLİT KONTROLÜ
-      if (minutesPassed < 120) continue;
-
-      // On-Chain Eşleşme Kontrolü
-      const matchedWhale = onChainTransfers.find(w => w.symbol === symbol);
-      const hasOnChainConfirmation = !!matchedWhale;
-
-      // Kilidi Firebase'e kaydet
-      const now = Date.now();
-      locks[lockKey] = now;
-      await fetch(`${FIREBASE_BASE}/cron_locks/${lockKey}.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(now)
-      });
+      // 🛡️ KESİN KİLİT KURALI: Bu coinde hâlâ açık (TP2 veya SL olmamış) bir işlem varsa ASLA TEKRAR SİNYAL VERME!
+      if (activeTrades[symbol] && activeTrades[symbol].status === 'OPEN') {
+        continue;
+      }
 
       const price = parseFloat(item.lastPr);
       const rawFunding = parseFloat(item.fundingRate || 0);
@@ -203,35 +268,56 @@ export default async function handler(req, res) {
       } else {
         tp1 = price * 0.982;
         tp2 = price * 0.955;
-        sl = price * 1.015; // +%1.5 Kesin Stop
+        sl = price * 1.015;
         rr = ((price - tp1) / (sl - price)).toFixed(1);
       }
 
-      const pEntry = price < 1 ? price.toFixed(6) : price.toFixed(4);
-      const pSl = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
-      const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
-      const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
+      // Pariteyi Firebase'e AKTİF İŞLEM olarak kaydet (KİLİTLE)
+      const tradePayload = {
+        symbol: symbol,
+        direction: dir,
+        entryPrice: price,
+        tp1: tp1,
+        tp2: tp2,
+        sl: sl,
+        status: 'OPEN',
+        tp1Hit: false,
+        openedAt: Date.now()
+      };
 
-      // TÜM AKTİF VIP KULLANICILARDA İŞLEM AÇ
+      await fetch(`${FIREBASE_BASE}/active_trades/${symbol}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tradePayload)
+      });
+      activeTrades[symbol] = tradePayload;
+
+      // Bitget Oto-İşlem (Kullanıcılar ve Admin)
       const orderSide = dir === 'LONG' ? 'buy' : 'sell';
       let executionCount = 0;
 
       if (usersData && typeof usersData === 'object') {
         for (const uKey of Object.keys(usersData)) {
           const u = usersData[uKey];
-          if (u.autoTradeEnabled && u.bitgetApi && u.bitgetApi.key && u.bitgetApi.secret && u.bitgetApi.passphrase) {
+          if (u.autoTradeEnabled && u.bitgetApi?.key && u.bitgetApi?.secret && u.bitgetApi?.passphrase) {
             await tradeForUser(u.bitgetApi.key, u.bitgetApi.secret, u.bitgetApi.passphrase, symbol, orderSide);
             executionCount++;
           }
         }
       }
-
-      // Kullanıcı listesi boşsa en azından Admin hesabında aç
       if (executionCount === 0) {
         await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol, orderSide);
       }
 
-      // Telegram Mesajı Formatı
+      // On-Chain Balina Eşleşme Kontrolü
+      const matchedWhale = onChainTransfers.find(w => w.symbol === symbol);
+      const hasOnChainConfirmation = !!matchedWhale;
+
+      const pEntry = price < 1 ? price.toFixed(6) : price.toFixed(4);
+      const pSl = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
+      const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
+      const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
+
       const isLong = dir === 'LONG';
       const badgeTitle = hasOnChainConfirmation 
         ? `👑 <b>MINEORA VIP SENTINEL | ELMAS BALİNA SİNYALİ</b>\n🛡️ <i>[ON-CHAIN CÜZDAN HAREKETİ İLE ÇİFT TEYİTLİ]</i>` 
@@ -244,7 +330,7 @@ export default async function handler(req, res) {
       const msg = `${badgeTitle}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
-                  `${isLong ? '🟢 <b>YÖN / BEKLENTİ:</b> <b>LONG (PUMP / YUKARI PATLAMA) 🚀</b>' : '🔴 <b>YÖN / BEKLENTİ:</b> <b>SHORT (DUMP / TEPE ÇÖKÜŞÜ) 🩸</b>'}\n` +
+                  `${isLong ? '🟢 <b>YÖN:</b> <b>LONG (PUMP BEKLENTİSİ) 🚀</b>' : '🔴 <b>YÖN:</b> <b>SHORT (DUMP BEKLENTİSİ) 🩸</b>'}\n` +
                   `📊 <b>Giriş Fiyatı:</b> <code>$${pEntry}</code>\n` +
                   `⚡ <b>Fonlama Oranı:</b> <code>${funding}%</code>\n` +
                   `⚠️ <b>Teşhis:</b> ${isLong ? 'Negatif Fonlama & Short Sıkışması' : 'Aşırı Şişme / Long Tasfiye Riski'}\n` +
@@ -256,7 +342,7 @@ export default async function handler(req, res) {
                   `🚀 <b>TP 2:</b> <code>$${pTp2}</code> (${isLong ? '+%3.8+' : '-%4.5+'})\n` +
                   `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçilmeli, stop maliyete çekilmelidir.</i>`;
+                  `🔒 <i>Bu pozisyon TP2 veya SL olana kadar yeni giriş sinyali verilmeyecektir.</i>`;
 
       await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
