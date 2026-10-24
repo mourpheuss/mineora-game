@@ -10,10 +10,7 @@ const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
 const TG_VIP_CHANNEL_ID = "-1004404988937";
 const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
 
-// SUNUCU HAFIZASINDA KALICI KİLİT (Firebase bozulsa bile spam yapamaz)
-if (!global.SENT_COINS_LOCK) {
-  global.SENT_COINS_LOCK = {};
-}
+const FIREBASE_BASE = "https://mineora-web-default-rtdb.firebaseio.com";
 
 function getBitgetSign(timestamp, method, requestPath, secret, queryString = '', body = '') {
   const message = timestamp + method.toUpperCase() + requestPath + (queryString ? '?' + queryString : '') + body;
@@ -87,10 +84,20 @@ async function tradeForUser(apiKey, secret, passphrase, symbol) {
 
 export default async function handler(req, res) {
   try {
+    // 1. Bitget Ticker Verilerini Al
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
     const json = await tickersRes.json();
     if (json.code !== "00000" || !Array.isArray(json.data)) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
+    }
+
+    // 2. Firebase'den KALICI Kilit Verisini Çek
+    let locks = {};
+    try {
+      const lockRes = await fetch(`${FIREBASE_BASE}/cron_locks.json`);
+      locks = (await lockRes.json()) || {};
+    } catch(e) {
+      locks = {};
     }
 
     const liquidPool = json.data.filter(t => {
@@ -109,16 +116,22 @@ export default async function handler(req, res) {
 
     for (const item of candidates) {
       const symbol = item.symbol;
-      const lastSentTime = global.SENT_COINS_LOCK[symbol] || 0;
+      const lastSentTime = typeof locks[symbol] === 'number' ? locks[symbol] : 0;
       const minutesPassed = (Date.now() - lastSentTime) / (1000 * 60);
 
-      // 120 DAKİKA KİLİT (Hafızada tutulur)
+      // 120 DAKİKA (2 SAAT) GEÇMEDİYSE KESİNLİKLE PAS GEÇ
       if (minutesPassed < 120) {
         continue;
       }
 
-      // KİLİDİ ANINDA ÇAK
-      global.SENT_COINS_LOCK[symbol] = Date.now();
+      // KİLİDİ ANINDA FİREBASE'E KALICI YAZ (Bekletmeden)
+      const now = Date.now();
+      locks[symbol] = now;
+      await fetch(`${FIREBASE_BASE}/cron_locks/${symbol}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(now)
+      });
 
       const price = parseFloat(item.lastPr);
       const rawFunding = parseFloat(item.fundingRate || 0);
@@ -135,10 +148,10 @@ export default async function handler(req, res) {
       const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
       const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
 
-      // Otomatik İşlem
+      // Otomatik İşlem Aç
       await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol);
 
-      // Telegram Mesajı
+      // Telegram VIP Bildirimi Gönder
       const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
