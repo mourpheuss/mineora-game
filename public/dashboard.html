@@ -126,7 +126,7 @@
 
     </div>
 
-    <!-- ================= 3. YENİ EKLENEN MASA: ON-CHAIN BALİNA VE USDT RADARI ================= -->
+    <!-- 3. MASA: ON-CHAIN BALİNA VE USDT RADARI -->
     <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/40 rounded-3xl p-6 space-y-4 shadow-2xl font-mono text-xs relative overflow-hidden">
       <div class="absolute -right-12 -top-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -162,7 +162,7 @@
             </tr>
           </thead>
           <tbody id="onChainWhaleTableBody" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="6" class="py-5 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Blokzincir transferleri okunuyor...</td></tr>
+            <tr><td colspan="6" class="py-5 text-center text-slate-500 font-mono text-xs"><i class="fa-solid fa-radar mr-1.5 text-amber-400"></i> Son 12 saatte tespit edilen büyük blokzincir transferi bulunmuyor.</td></tr>
           </tbody>
         </table>
       </div>
@@ -259,7 +259,7 @@
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
-    let cachedWhaleTransfers = []; // On-chain balina hareketleri belleği
+    let cachedWhaleTransfers = [];
 
     function canSendSignal(symbol) {
       const lastSent = localStorage.getItem(`mineora_signal_${symbol}`);
@@ -272,22 +272,33 @@
       localStorage.setItem(`mineora_signal_${symbol}`, Date.now().toString());
     }
 
-    function calculateLiquidationTargets(price, fundingRate) {
-      const isExtreme = fundingRate <= -0.005;
-
-      const tp1 = price * 1.018; 
-      const tp2 = isExtreme ? price * 1.048 : price * 1.038; 
-      const sl = price * 0.986; 
-
-      const riskReward = ((tp1 - price) / (price - sl)).toFixed(1);
-
-      return {
-        entry: price < 1 ? price.toFixed(6) : price.toFixed(4),
-        sl: sl < 1 ? sl.toFixed(6) : sl.toFixed(4),
-        tp1: tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4),
-        tp2: tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4),
-        rr: riskReward
-      };
+    function calculateLiquidationTargets(price, fundingRate, isShort = false) {
+      if (isShort) {
+        const tp1 = price * 0.982;
+        const tp2 = price * 0.955;
+        const sl = price * 1.015;
+        const rr = ((price - tp1) / (sl - price)).toFixed(1);
+        return {
+          entry: price < 1 ? price.toFixed(6) : price.toFixed(4),
+          sl: sl < 1 ? sl.toFixed(6) : sl.toFixed(4),
+          tp1: tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4),
+          tp2: tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4),
+          rr: rr
+        };
+      } else {
+        const isExtreme = fundingRate <= -0.005;
+        const tp1 = price * 1.018; 
+        const tp2 = isExtreme ? price * 1.048 : price * 1.038; 
+        const sl = price * 0.986; 
+        const rr = ((tp1 - price) / (price - sl)).toFixed(1);
+        return {
+          entry: price < 1 ? price.toFixed(6) : price.toFixed(4),
+          sl: sl < 1 ? sl.toFixed(6) : sl.toFixed(4),
+          tp1: tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4),
+          tp2: tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4),
+          rr: rr
+        };
+      }
     }
 
     async function triggerVipChannelSignal(symbol, price, rawFunding) {
@@ -296,7 +307,7 @@
       console.log(`[RADAR TESPİTİ] ${symbol} paritesi ekranda listelendi.`);
     }
 
-    // ================= ON-CHAIN BALİNA CÜZDAN VERİSİ ÇEKİCİ =================
+    // ON-CHAIN BALİNA TRANSFERLERİ
     async function fetchOnChainWhales() {
       try {
         const res = await fetch("https://mineora-web-default-rtdb.firebaseio.com/whale_transfers.json");
@@ -310,7 +321,6 @@
           cachedWhaleTransfers = [];
         }
       } catch(e) {
-        console.error("Whale API okuma hatası:", e);
         cachedWhaleTransfers = [];
       }
       renderWhaleTable(cachedWhaleTransfers);
@@ -349,7 +359,7 @@
       }).join('');
     }
 
-    // ================= ANA VADELİ PİYASA RADARI =================
+    // ANA PİYASA TARAMASI
     async function scanSentinelMarket() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
@@ -375,12 +385,13 @@
           triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
 
-        // 2. Erken Dump Adayları
+        // 2. Erken Dump Adayları (cron-scan.js ile eşitlendi)
         const dumpCandidates = liquidPool.filter(t => {
-          const funding = parseFloat(t.fundingRate || 0);
           const chg = parseFloat(t.change24h || 0) * 100;
-          return (funding >= 0.015) || (chg >= 20.0 && funding >= 0.0002);
-        }).sort((a, b) => parseFloat(b.fundingRate) - parseFloat(a.fundingRate)).slice(0, 6);
+          const funding = parseFloat(t.fundingRate || 0);
+          if (chg > 45.0 || funding <= 0.0003) return false;
+          return (chg >= 18.0 && chg <= 45.0 && funding >= 0.0005) || (funding >= 0.0010 && chg >= 10.0);
+        }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h)).slice(0, 6);
 
         const earlyTableList = liquidPool
           .filter(t => (parseFloat(t.change24h || 0) * 100) <= 8.0)
@@ -415,9 +426,7 @@
         const chg = parseFloat(c.change24h || 0) * 100;
         const price = parseFloat(c.lastPr);
 
-        const liq = calculateLiquidationTargets(price, rawFunding);
-
-        // ÇİFT TEYİT KONTROLÜ: On-chain balina hareketinde bu parite var mı?
+        const liq = calculateLiquidationTargets(price, rawFunding, false);
         const hasOnChainMatch = cachedWhaleTransfers.some(w => w.symbol === c.symbol);
 
         return `
@@ -478,7 +487,7 @@
             <div class="${hasOnChainMatch ? 'bg-amber-950/40 border border-amber-700/50 text-amber-200' : 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-300'} p-2.5 rounded-xl text-[11px]">
               <i class="fa-solid ${hasOnChainMatch ? 'fa-crown text-amber-400' : 'fa-bolt'} mr-1"></i>
               <strong>${hasOnChainMatch ? '👑 GARANTİ TEYİT:' : 'Erken Teşhis:'}</strong> 
-              ${hasOnChainMatch ? 'Bu pariteye hem zincir üstünden yüklü cüzdan akışı gerçekleşti, hem de vadeli tahtada negatif fonlama sıkışması yaşanıyor. En yüksek güven skorlu pozisyon!' : `Fiyat henüz patlamadı (${chg.toFixed(1)}%). Short pozisyonlar negatif fonlamada sıkışmış. Balina alttan topluyor, Long patlaması (Pump) bekleniyor!`}
+              ${hasOnChainMatch ? 'Bu pariteye hem zincir üstünden yüklü transfer gerçekleşti, hem de vadeli tahtada fonlama sıkışması var. En yüksek güvenilirlikli pozisyon!' : `Fiyat henüz patlamadı (${chg.toFixed(1)}%). Short pozisyonlar negatif fonlamada sıkışmış. Balina alttan topluyor, Long patlaması (Pump) bekleniyor!`}
             </div>
           </div>
         `;
@@ -498,17 +507,19 @@
       }
 
       container.innerHTML = items.map(c => {
-        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+        const rawFunding = parseFloat(c.fundingRate || 0);
+        const funding = (rawFunding * 100).toFixed(4);
         const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
         const price = parseFloat(c.lastPr);
         const chg = parseFloat(c.change24h || 0) * 100;
+        const liq = calculateLiquidationTargets(price, rawFunding, true);
 
         return `
           <div class="bg-slate-950 p-4 rounded-2xl border border-rose-500/50 space-y-2.5">
             <div class="flex justify-between items-center">
               <div>
                 <strong class="font-display text-base font-black text-white">${c.symbol}</strong>
-                <span class="text-slate-400 font-mono text-xs ml-2">$${price < 1 ? price.toFixed(6) : price.toFixed(4)}</span>
+                <span class="text-slate-400 font-mono text-xs ml-2">$${liq.entry}</span>
                 <span class="text-[11px] font-mono font-bold text-rose-400 ml-1.5">(+${chg.toFixed(1)}%)</span>
               </div>
               <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
@@ -516,9 +527,37 @@
               </span>
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400 border-t border-slate-900">
-              <div>Fonlama: <strong class="text-rose-400">${funding}%</strong></div>
+              <div>Fonlama: <strong class="text-rose-400">+${funding}%</strong></div>
               <div>24s Hacim: <strong class="text-slate-200">$${vol}M</strong></div>
             </div>
+
+            <div class="bg-slate-900/90 border border-rose-500/30 rounded-xl p-3 font-mono space-y-2">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-rose-400 font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-crosshairs"></i> SHORT İŞLEM HEDEFLERİ
+                </span>
+                <span class="text-slate-400 text-[10px]">R:R: <strong class="text-white">1 : ${liq.rr}</strong></span>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                <div class="bg-slate-950 p-1.5 rounded-lg border border-slate-800">
+                  <div class="text-slate-500 text-[9px]">GİRİŞ</div>
+                  <strong class="text-slate-200">$${liq.entry}</strong>
+                </div>
+                <div class="bg-rose-950/40 p-1.5 rounded-lg border border-rose-900/50">
+                  <div class="text-rose-400 text-[9px]">STOP (+%1.5)</div>
+                  <strong class="text-rose-300">$${liq.sl}</strong>
+                </div>
+                <div class="bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-900/50">
+                  <div class="text-emerald-400 text-[9px]">TP 1 (-%1.8)</div>
+                  <strong class="text-emerald-300">$${liq.tp1}</strong>
+                </div>
+                <div class="bg-amber-950/40 p-1.5 rounded-lg border border-amber-900/50">
+                  <div class="text-amber-400 text-[9px]">TP 2 (-%4.5)</div>
+                  <strong class="text-amber-300">$${liq.tp2}</strong>
+                </div>
+              </div>
+            </div>
+
             <div class="bg-rose-950/30 border border-rose-900/50 p-2.5 rounded-xl text-[11px] text-rose-300">
               <i class="fa-solid fa-triangle-exclamation mr-1"></i>
               <strong>Kalkan Uyarısı:</strong> Tepeye oturmuş veya aşırı Long birikimi olan tahta. Zincirleme tasfiye çöküşü (Dump) riski yüksek.
@@ -578,10 +617,10 @@
       const funding = (rawFunding * 100).toFixed(4);
       const vol = (parseFloat(found.usdtVolume || 0) / 1000000).toFixed(2);
       const chg = (parseFloat(found.change24h || 0) * 100).toFixed(2);
-      const isDangerous = rawFunding >= 0.015;
+      const isDangerous = rawFunding >= 0.0005 && parseFloat(chg) >= 18.0;
       const isSqueeze = rawFunding <= -0.0035;
       const price = parseFloat(found.lastPr);
-      const liq = calculateLiquidationTargets(price, rawFunding);
+      const liq = calculateLiquidationTargets(price, rawFunding, isDangerous);
 
       area.innerHTML = `
         <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs">
@@ -595,10 +634,10 @@
             <div>24s Değişim: <strong class="${parseFloat(chg) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${parseFloat(chg) >= 0 ? '+' : ''}${chg}%</strong></div>
           </div>
           
-          ${isSqueeze ? `
-            <div class="bg-slate-900/90 border border-emerald-500/30 rounded-xl p-3 space-y-2">
+          ${(isSqueeze || isDangerous) ? `
+            <div class="bg-slate-900/90 border ${isDangerous ? 'border-rose-500/30' : 'border-emerald-500/30'} rounded-xl p-3 space-y-2">
               <div class="flex items-center justify-between text-[11px]">
-                <span class="text-emerald-400 font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> Hesaplanmış Likidasyon Hedefleri</span>
+                <span class="${isDangerous ? 'text-rose-400' : 'text-emerald-400'} font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> Hesaplanmış ${isDangerous ? 'Short' : 'Long'} Likidasyon Hedefleri</span>
                 <span class="text-slate-400 text-[10px]">R:R: <strong class="text-white">1 : ${liq.rr}</strong></span>
               </div>
               <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
@@ -611,11 +650,11 @@
                   <strong class="text-rose-300">$${liq.sl}</strong>
                 </div>
                 <div class="bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-900/50">
-                  <div class="text-emerald-400 text-[9px]">TP 1 (50x)</div>
+                  <div class="text-emerald-400 text-[9px]">TP 1</div>
                   <strong class="text-emerald-300">$${liq.tp1}</strong>
                 </div>
                 <div class="bg-amber-950/40 p-1.5 rounded-lg border border-amber-900/50">
-                  <div class="text-amber-400 text-[9px]">TP 2 (20x)</div>
+                  <div class="text-amber-400 text-[9px]">TP 2</div>
                   <strong class="text-amber-300">$${liq.tp2}</strong>
                 </div>
               </div>
@@ -623,7 +662,7 @@
           ` : ''}
 
           <div class="p-3 rounded-xl ${isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-300' : isSqueeze ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-300' : 'bg-slate-900 border border-slate-800 text-slate-300'}">
-            ${isDangerous ? '🚨 <strong>TEHLİKE UYARISI:</strong> Aşırı pozitif fonlama birikimi. Kaldıraçlı Long girmek yüksek risk taşır.' : isSqueeze ? '⚡ <strong>ERKEN PATLAMA POTANSİYELİ:</strong> Short pozisyonlar negatif fonlamada sıkışmış. Hedefler yukarıdaki tasfiye bantlarıdır.' : '⚖️ <strong>DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı tespit edilmedi.'}
+            ${isDangerous ? '🚨 <strong>TEHLİKE UYARISI:</strong> Aşırı pozitif fonlama ve tepe şişmesi. Short fırsatı veya Long tuzağı barındırır.' : isSqueeze ? '⚡ <strong>ERKEN PATLAMA POTANSİYELİ:</strong> Short pozisyonlar negatif fonlamada sıkışmış. Hedefler yukarıdaki tasfiye bantlarıdır.' : '⚖️ <strong>DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı tespit edilmedi.'}
           </div>
         </div>
       `;
@@ -684,7 +723,7 @@
       fetchOnChainWhales();
       scanSentinelMarket();
       setInterval(scanSentinelMarket, 25000);
-      setInterval(fetchOnChainWhales, 60000); // 1 dakikada bir balina akışını tazele
+      setInterval(fetchOnChainWhales, 60000);
     });
   </script>
 </body>
