@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Balina Avcısı Erken Sinyal Masası</title>
+  <title>Mineora Radar | Balina Avcısı Erken Sinyal Masası & X-Ray</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,8 +27,8 @@
           <i class="fa-solid fa-shield-halved"></i>
         </div>
         <div>
-          <span class="font-display font-black text-xl tracking-tight text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs">AVCI</span></span>
-          <span class="text-[10px] text-slate-400 font-mono">Balina Akümülasyonu & Patlama Öncesi Radarı</span>
+          <span class="font-display font-black text-xl tracking-tight text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs">AVCI & X-RAY</span></span>
+          <span class="text-[10px] text-slate-400 font-mono">Balina Akümülasyonu, İşlem Röntgeni & Erken Radar</span>
         </div>
       </div>
 
@@ -54,19 +54,19 @@
   <!-- ANA ALAN -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- COIN RISK & BALİNA ARAMA MOTORU -->
+    <!-- ================= MINEORA X-RAY PARİTE RÖNTGEN DEDEKTÖRÜ ================= -->
     <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-magnifying-glass-chart text-orange-500"></i> Parite Balina Dedektörü
+            <i class="fa-solid fa-radiation text-orange-500"></i> Mineora X-Ray | Parite İşlem & Tuzak Röntgeni
           </h2>
-          <p class="text-xs text-slate-400">İşlem açmayı düşündüğünüz coinin henüz fitili ateşlenmeden önceki durumunu test edin.</p>
+          <p class="text-xs text-slate-400">Herhangi bir sinyal grubundan işlem almadan önce coini aratın; kucakta kalma riskini, yakıt durumunu ve balina yönünü test edin.</p>
         </div>
         <div class="flex items-center gap-2 w-full sm:w-auto">
-          <input type="text" id="inputSearchSymbol" placeholder="Örn: TREE, SUI, DOGE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-orange-500" />
-          <button onclick="analyzeSingleCoin()" class="bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer shrink-0">
-            Analiz Et
+          <input type="text" id="inputSearchSymbol" placeholder="Örn: TREE, SUI, AXIS..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-orange-500" />
+          <button onclick="analyzeSingleCoin()" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer shrink-0 shadow-lg shadow-orange-600/30">
+            Röntgen Çek
           </button>
         </div>
       </div>
@@ -359,6 +359,208 @@
       }).join('');
     }
 
+    // ================= MINEORA X-RAY PARİTE RÖNTGEN MOTORU =================
+    function analyzeSingleCoin() {
+      const input = document.getElementById('inputSearchSymbol');
+      const area = document.getElementById('searchResultArea');
+      let query = input.value.trim().toUpperCase();
+      if (!query) return;
+      if (!query.endsWith("USDT")) query += "USDT";
+
+      const found = cachedTickers.find(t => t.symbol === query);
+      area.classList.remove('hidden');
+
+      if (!found) {
+        area.innerHTML = `<div class="p-4 bg-slate-950 rounded-2xl border border-rose-900/50 text-xs font-mono text-rose-400"><i class="fa-solid fa-triangle-exclamation mr-2"></i><b>${query}</b> bulunamadı veya Bitget vadeli tahtasında yeterli likiditeye sahip değil.</div>`;
+        return;
+      }
+
+      const price = parseFloat(found.lastPr);
+      const rawFunding = parseFloat(found.fundingRate || 0);
+      const fundingPct = (rawFunding * 100).toFixed(4);
+      const chg = parseFloat(found.change24h || 0) * 100;
+      const volM = (parseFloat(found.usdtVolume || 0) / 1000000).toFixed(2);
+
+      // --- X-RAY ALGORİTMİK HESAPLAMA MOTORU ---
+      let status = "NEUTRAL";
+      let score = 50;
+      let fuel = 50;
+      let retailVsWhale = { retail: 50, whale: 50 };
+      let verdict = "";
+      let verdictDesc = "";
+      let wickTarget = 0;
+      let targets = null;
+
+      // 1. DURUM: SHORT SIKIŞMASI (GÜÇLÜ LONG ADAYI)
+      if (rawFunding <= -0.0035 && chg >= -4.0 && chg <= 8.0) {
+        status = "LONG_OPPORTUNITY";
+        score = Math.min(96, Math.floor(82 + Math.abs(rawFunding) * 2000));
+        fuel = Math.min(95, Math.floor(75 + Math.abs(rawFunding) * 3000));
+        retailVsWhale = { retail: 22, whale: 78 };
+        verdict = "🟢 GÜVENLİ LONG GİRİŞİ (BALİNA İLE BİRLİKTE)";
+        verdictDesc = `Fiyat henüz sakin (+${chg.toFixed(1)}%). Fonlama sert eksiye batmış (${fundingPct}%). Short'lar sıkışmış durumda, balina alttan topluyor. Sert yukarı patlama bekleniyor!`;
+        wickTarget = price * 0.988; // Aşağı doğru olası fake stop avı
+        targets = calculateLiquidationTargets(price, rawFunding, false);
+      }
+      // 2. DURUM: HİPER-PUMP (TEHLİKELİ TUZAK - SHORT VEYA LONG YASAK)
+      else if (chg > 45.0) {
+        status = "HYPER_PUMP_DANGER";
+        score = 15;
+        fuel = 10;
+        retailVsWhale = { retail: 88, whale: 12 };
+        verdict = "🛑 İŞLEME GİRİŞ YASAK! (KONTROLSÜZ HİPER-PUMP)";
+        verdictDesc = `Parite kontrolden çıkmış (+${chg.toFixed(1)}%). Ne Long ne de Short girilmez! Balina spot malı küçük yatırımcının kucağına boşaltıyor. Çok yüksek tasfiye riski!`;
+        wickTarget = price * 1.06;
+      }
+      // 3. DURUM: KONTROLLÜ TEPE (SHORT FIRSATI)
+      else if (chg >= 18.0 && chg <= 45.0 && rawFunding >= 0.0005) {
+        status = "SHORT_OPPORTUNITY";
+        score = 86;
+        fuel = 20;
+        retailVsWhale = { retail: 80, whale: 20 };
+        verdict = "🔴 DUMP TUZAĞI TESPİT EDİLDİ (SHORT FIRSATI)";
+        verdictDesc = `Fiyat tepeye oturmuş (+${chg.toFixed(1)}%) ve fonlama artıya geçmiş (+${fundingPct}%). Küçük yatırımcı coşkuyla alırken balina dağıtıma geçmiş. Tepe çöküşü bekleniyor.`;
+        wickTarget = price * 1.018; // Yukarı fake iğne atıp dönecek seviye
+        targets = calculateLiquidationTargets(price, rawFunding, true);
+      }
+      // 4. DURUM: AŞIRI LONG TUZAĞI (ERKEN DUMP)
+      else if (rawFunding >= 0.0010 && chg >= 10.0) {
+        status = "LONG_TRAP";
+        score = 25;
+        fuel = 15;
+        retailVsWhale = { retail: 85, whale: 15 };
+        verdict = "⚠️ DİKKAT: AŞIRI LONG YIĞILMASI (DUMP KALKANI)";
+        verdictDesc = `Tahtada kontrolsüz biçimde Long birikmiş (+${fundingPct}%). Piyasa yapıcı bu kalabalığı taşımak istemez, sert bir düzeltme ile dökecektir.`;
+        wickTarget = price * 0.965;
+        targets = calculateLiquidationTargets(price, rawFunding, true);
+      }
+      // 5. DURUM: DENGELİ / NÖTR TAHTA
+      else {
+        status = "NEUTRAL";
+        score = 50;
+        fuel = 50;
+        retailVsWhale = { retail: 50, whale: 50 };
+        verdict = "⚖️ DENGELİ TAHTA (NET ANOMALİ YOK)";
+        verdictDesc = "Tahtada anormal bir fonlama sıkışması veya kurumsal balina baskısı tespit edilmedi. Sinyal üretmek için uygun volatilite yok.";
+        wickTarget = price * 0.99;
+      }
+
+      // X-Ray Rapor Arayüz Çıktısı
+      const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
+      const wickStr = wickTarget < 1 ? wickTarget.toFixed(6) : wickTarget.toFixed(4);
+      const isSafe = score >= 75;
+      const isDangerous = score < 40;
+
+      area.innerHTML = `
+        <div class="bg-slate-950 p-5 rounded-3xl border-2 ${isSafe ? 'border-emerald-500/60 shadow-xl shadow-emerald-500/10' : isDangerous ? 'border-rose-500/60 shadow-xl shadow-rose-500/10' : 'border-slate-800'} space-y-4 font-mono text-xs">
+          
+          <!-- BAŞLIK & FİYAT -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900 pb-3">
+            <div>
+              <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                🔬 MINEORA X-RAY RÖNTGEN RAPORU
+              </span>
+              <h3 class="font-display text-xl font-black text-white mt-1">#${found.symbol}</h3>
+            </div>
+            <div class="text-left sm:text-right">
+              <span class="text-slate-400 text-[11px] block">Anlık Vadeli Fiyat</span>
+              <strong class="text-white text-base font-bold">$${pStr}</strong>
+              <span class="text-[11px] ml-1.5 font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)</span>
+            </div>
+          </div>
+
+          <!-- 4 KATMANLI X-RAY PANELİ -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            
+            <!-- 1. GÜVENLİK SKORU -->
+            <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+              <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-400">🛡️ Güvenlik Skoru</span>
+                <strong class="${isSafe ? 'text-emerald-400' : isDangerous ? 'text-rose-400' : 'text-amber-400'} text-sm">%${score} / 100</strong>
+              </div>
+              <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                <div class="h-full ${isSafe ? 'bg-emerald-500' : isDangerous ? 'bg-rose-500' : 'bg-amber-500'}" style="width: ${score}%"></div>
+              </div>
+              <span class="text-[10px] text-slate-400 block">${isSafe ? 'İşlem için yüksek güvenilirlik' : isDangerous ? 'Yüksek sermaye kaybı riski' : 'Beklemede kal'}</span>
+            </div>
+
+            <!-- 2. YAKIT / CEPHANE DEPOSU -->
+            <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+              <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-400">⛽ Yükseliş Yakıtı (OI/Fonlama)</span>
+                <strong class="${fuel > 60 ? 'text-emerald-400' : 'text-rose-400'} text-sm">%${fuel} Depo</strong>
+              </div>
+              <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                <div class="h-full ${fuel > 60 ? 'bg-emerald-500' : 'bg-rose-500'}" style="width: ${fuel}%"></div>
+              </div>
+              <span class="text-[10px] text-slate-400 block">${fuel > 60 ? 'Short sıkışması taze, yakıt dolu' : 'Likidasyon tükendi, motor durabilir'}</span>
+            </div>
+
+            <!-- 3. KİM ALIYOR? (OYUNCU DAĞILIMI) -->
+            <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+              <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-400">🐋 Oyuncu Dağılımı</span>
+                <span class="text-[10px] font-bold text-amber-400">${retailVsWhale.whale >= 60 ? 'Balina Hakimiyeti' : 'Bireysel Sürü'}</span>
+              </div>
+              <div class="flex text-[10px] justify-between text-slate-300">
+                <span>🐑 Sürü: %${retailVsWhale.retail}</span>
+                <span>🐋 Balina: %${retailVsWhale.whale}</span>
+              </div>
+              <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden flex">
+                <div class="bg-rose-500 h-full" style="width: ${retailVsWhale.retail}%"></div>
+                <div class="bg-emerald-500 h-full" style="width: ${retailVsWhale.whale}%"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- NİHAİ KARAR VE İĞNE TUZAĞI -->
+          <div class="p-3.5 rounded-2xl ${isSafe ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-200' : isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-200' : 'bg-slate-900 border border-slate-800 text-slate-300'} space-y-1.5">
+            <div class="flex items-center gap-2 font-bold text-xs">
+              <i class="fa-solid ${isSafe ? 'fa-circle-check text-emerald-400' : isDangerous ? 'fa-triangle-exclamation text-rose-400' : 'fa-info text-amber-400'}"></i>
+              <span>${verdict}</span>
+            </div>
+            <p class="text-[11px] leading-relaxed opacity-90">${verdictDesc}</p>
+            <div class="pt-2 border-t border-slate-800/80 text-[10px] flex items-center justify-between text-slate-400">
+              <span>🎯 <b>Piyasa Yapıcı İğne (Wick) Hedefi:</b> <code class="text-amber-400">$${wickStr}</code> (Stoplar burada patlatılabilir)</span>
+              <span>24s Likidite: <strong class="text-white">$${volM}M</strong></span>
+            </div>
+          </div>
+
+          <!-- EĞER HEDEFLER HESAPLANDIYSA TP/SL KUTUSU -->
+          ${targets ? `
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-white font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-crosshairs text-orange-500"></i> HESAPLANMIŞ İŞLEM SEVİYELERİ
+                </span>
+                <span class="text-slate-400 text-[10px]">R:R: <strong class="text-white">1 : ${targets.rr}</strong></span>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                  <div class="text-slate-500 text-[9px]">GİRİŞ</div>
+                  <strong class="text-slate-200">$${targets.entry}</strong>
+                </div>
+                <div class="bg-rose-950/50 p-2 rounded-xl border border-rose-900/60">
+                  <div class="text-rose-400 text-[9px]">STOP (SL)</div>
+                  <strong class="text-rose-300">$${targets.sl}</strong>
+                </div>
+                <div class="bg-emerald-950/50 p-2 rounded-xl border border-emerald-900/60">
+                  <div class="text-emerald-400 text-[9px]">TP 1</div>
+                  <strong class="text-emerald-300">$${targets.tp1}</strong>
+                </div>
+                <div class="bg-amber-950/50 p-2 rounded-xl border border-amber-900/60">
+                  <div class="text-amber-400 text-[9px]">TP 2</div>
+                  <strong class="text-amber-300">$${targets.tp2}</strong>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
+        </div>
+      `;
+    }
+
     // ANA PİYASA TARAMASI
     async function scanSentinelMarket() {
       try {
@@ -385,7 +587,7 @@
           triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
 
-        // 2. Erken Dump Adayları (cron-scan.js ile eşitlendi)
+        // 2. Erken Dump Adayları (cron-scan.js ile birebir eşitlendi)
         const dumpCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
@@ -596,76 +798,6 @@
           </tr>
         `;
       }).join('');
-    }
-
-    function analyzeSingleCoin() {
-      const input = document.getElementById('inputSearchSymbol');
-      const area = document.getElementById('searchResultArea');
-      let query = input.value.trim().toUpperCase();
-      if (!query) return;
-      if (!query.endsWith("USDT")) query += "USDT";
-
-      const found = cachedTickers.find(t => t.symbol === query);
-      area.classList.remove('hidden');
-
-      if (!found) {
-        area.innerHTML = `<div class="p-3 bg-slate-950 rounded-xl text-xs font-mono text-rose-400">Parite bulunamadı.</div>`;
-        return;
-      }
-
-      const rawFunding = parseFloat(found.fundingRate || 0);
-      const funding = (rawFunding * 100).toFixed(4);
-      const vol = (parseFloat(found.usdtVolume || 0) / 1000000).toFixed(2);
-      const chg = (parseFloat(found.change24h || 0) * 100).toFixed(2);
-      const isDangerous = rawFunding >= 0.0005 && parseFloat(chg) >= 18.0;
-      const isSqueeze = rawFunding <= -0.0035;
-      const price = parseFloat(found.lastPr);
-      const liq = calculateLiquidationTargets(price, rawFunding, isDangerous);
-
-      area.innerHTML = `
-        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs">
-          <div class="flex justify-between items-center">
-            <strong class="text-base text-white font-display font-black">${found.symbol} Analiz & Likidasyon Durumu</strong>
-            <span class="text-slate-400">$${found.lastPr}</span>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-900 text-slate-300">
-            <div>Fonlama: <strong class="${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-100'}">${funding}%</strong></div>
-            <div>24s Likidite: <strong class="text-slate-100">$${vol}M USDT</strong></div>
-            <div>24s Değişim: <strong class="${parseFloat(chg) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${parseFloat(chg) >= 0 ? '+' : ''}${chg}%</strong></div>
-          </div>
-          
-          ${(isSqueeze || isDangerous) ? `
-            <div class="bg-slate-900/90 border ${isDangerous ? 'border-rose-500/30' : 'border-emerald-500/30'} rounded-xl p-3 space-y-2">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="${isDangerous ? 'text-rose-400' : 'text-emerald-400'} font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> Hesaplanmış ${isDangerous ? 'Short' : 'Long'} Likidasyon Hedefleri</span>
-                <span class="text-slate-400 text-[10px]">R:R: <strong class="text-white">1 : ${liq.rr}</strong></span>
-              </div>
-              <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
-                <div class="bg-slate-950 p-1.5 rounded-lg border border-slate-800">
-                  <div class="text-slate-500 text-[9px]">GİRİŞ</div>
-                  <strong class="text-slate-200">$${liq.entry}</strong>
-                </div>
-                <div class="bg-rose-950/40 p-1.5 rounded-lg border border-rose-900/50">
-                  <div class="text-rose-400 text-[9px]">STOP</div>
-                  <strong class="text-rose-300">$${liq.sl}</strong>
-                </div>
-                <div class="bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-900/50">
-                  <div class="text-emerald-400 text-[9px]">TP 1</div>
-                  <strong class="text-emerald-300">$${liq.tp1}</strong>
-                </div>
-                <div class="bg-amber-950/40 p-1.5 rounded-lg border border-amber-900/50">
-                  <div class="text-amber-400 text-[9px]">TP 2</div>
-                  <strong class="text-amber-300">$${liq.tp2}</strong>
-                </div>
-              </div>
-            </div>
-          ` : ''}
-
-          <div class="p-3 rounded-xl ${isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-300' : isSqueeze ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-300' : 'bg-slate-900 border border-slate-800 text-slate-300'}">
-            ${isDangerous ? '🚨 <strong>TEHLİKE UYARISI:</strong> Aşırı pozitif fonlama ve tepe şişmesi. Short fırsatı veya Long tuzağı barındırır.' : isSqueeze ? '⚡ <strong>ERKEN PATLAMA POTANSİYELİ:</strong> Short pozisyonlar negatif fonlamada sıkışmış. Hedefler yukarıdaki tasfiye bantlarıdır.' : '⚖️ <strong>DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı tespit edilmedi.'}
-          </div>
-        </div>
-      `;
     }
 
     // API MODAL AYARLARI
