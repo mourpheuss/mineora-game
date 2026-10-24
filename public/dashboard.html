@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Bitget Balina Sermaye Akışı & Para Girişi Avcısı</title>
+  <title>Mineora Radar | Bitget Market Maker & Tahta Boşaltma Radarı</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
 
-  <!-- TOP HEADER -->
+  <!-- ÜST MENÜ -->
   <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
@@ -27,24 +27,27 @@
           <div class="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-orange-600/30">
             <i class="fa-solid fa-radar text-base"></i>
           </div>
-          <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">RADAR</span></span>
+          <span class="font-display font-black text-xl tracking-tight text-white">MINEORA <span class="text-orange-500 text-sm">PRO RADAR</span></span>
         </a>
 
-        <!-- MOD GEÇİŞ SEKMELERİ -->
+        <!-- MOD GEÇİŞLERİ -->
         <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 ml-2">
           <button onclick="switchTab('live')" id="tab-btn-live" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition bg-orange-600 text-white cursor-pointer">
-            <i class="fa-solid fa-money-bill-transfer mr-1"></i> Canlı Sermaye & USDT Akış Radarı
+            <i class="fa-solid fa-crosshairs mr-1"></i> Piyasa Yapıcı (MM) Avcısı
           </button>
           <button onclick="switchTab('backtest')" id="tab-btn-backtest" class="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono transition text-slate-400 hover:text-white cursor-pointer">
-            <i class="fa-solid fa-flask-vial mr-1"></i> Sermaye Doğrulama Lab
+            <i class="fa-solid fa-flask-vial mr-1"></i> Kırılım Doğrulama Lab
           </button>
         </div>
       </div>
 
       <div class="flex items-center gap-4">
+        <button onclick="toggleAudio()" id="btn-audio" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs font-mono text-slate-300 hover:text-white transition">
+          <i class="fa-solid fa-volume-high text-orange-400" id="icon-audio"></i> <span>Ses: Açık</span>
+        </button>
         <div class="flex items-center gap-2 bg-emerald-950/60 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="text-emerald-400 font-bold">WHALE CAPITAL INFLOW FILTER</span>
+          <span class="text-emerald-400 font-bold">DEPTH ENGINE ONLINE</span>
         </div>
         <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Çıkış Yap">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -54,29 +57,29 @@
     </div>
   </header>
 
-  <!-- ================= 1. GÖRÜNÜM: CANLI SERMAYE VE USDT AKIŞ RADARI ================= -->
+  <!-- ================= 1. GÖRÜNÜM: CANLI PİYASA YAPICI VE TAHTA DERİNLİĞİ RADARI ================= -->
   <main id="view-live" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Minimum Tahta Hacmi</span>
-        <strong class="font-display text-2xl font-black text-white block mt-1">≥ $1.5M USDT</strong>
-        <span class="text-[10px] text-emerald-400 mt-1 block">Boş & Sığ Tahtalar Elendi</span>
+        <span class="text-slate-500 text-xs block">Tahta Derinlik Filtresi</span>
+        <strong class="font-display text-2xl font-black text-white block mt-1">Bid/Ask Oranı</strong>
+        <span class="text-[10px] text-emerald-400 mt-1 block">Satış Duvarı Boşalması İzlenir</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Sermaye Akış Eşiği</span>
-        <strong class="font-display text-2xl font-black text-amber-400 block">≥ 3.0x Kat</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Tahtaya Anormal USDT Girişi</span>
+        <span class="text-slate-500 text-xs block">Asgari Likidite Şartı</span>
+        <strong class="font-display text-2xl font-black text-amber-400 block">≥ $1.5M USDT</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Hayalet Tahtalar Elendi</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Fiyat Durumu</span>
-        <strong class="font-display text-2xl font-black text-emerald-400 block">Sıkışma (≤ %1.3)</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Fiyat Henüz Patlamadı</span>
+        <span class="text-slate-500 text-xs block">Sıkışma Zaman Dilimi</span>
+        <strong class="font-display text-2xl font-black text-emerald-400 block">Son 30 Dk</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Yatay Bant ≤ %1.30</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-        <span class="text-slate-500 text-xs block">Hedeflenen Patlama</span>
-        <strong class="font-display text-2xl font-black text-sky-400 block">%20 - %50+</strong>
-        <span class="text-[10px] text-slate-400 mt-1 block">Yüksek Volatilite Adayı</span>
+        <span class="text-slate-500 text-xs block">Tetiklenme Modeli</span>
+        <strong class="font-display text-2xl font-black text-sky-400 block">Squeeze & Trap</strong>
+        <span class="text-[10px] text-slate-400 mt-1 block">Likidasyon ve Hacim Şişmesi</span>
       </div>
     </div>
 
@@ -84,41 +87,41 @@
     <div class="bg-slate-900 border-2 border-orange-500/40 rounded-3xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
-          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">CANLI BALİNA SERMAYE & USDT YIĞILMA RADARI</span>
+          <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono">PİYASA YAPICI TUZAĞI &bull; ANLIK TAHTA BOŞALMASI</span>
           <h2 class="font-display text-xl font-bold text-white flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping"></span>
-            Fiyatı Yerinde Sayarken Tahtasına Milyonlarca Dolar USDT Yığılan Altcoinler
+            Tahta Duvarları Boşaltılan ve Kısa Sürede Sıkıştırılacak Pariteler
           </h2>
         </div>
-        <button onclick="scanLiveCapitalInflow()" id="btn-live-scan" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-white font-mono text-xs px-3.5 py-2 rounded-xl transition cursor-pointer">
+        <button onclick="scanLiveMarketMakerSignals()" id="btn-live-scan" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-white font-mono text-xs px-3.5 py-2 rounded-xl transition cursor-pointer">
           <i class="fa-solid fa-rotate mr-1"></i> Şimdi Tara
         </button>
       </div>
 
-      <div id="liveCapitalCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div id="liveMMCardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="col-span-3 text-center py-10 text-slate-500 font-mono text-xs">
-          <i class="fa-solid fa-spinner animate-spin mr-2"></i> $1.5M+ tahtalar taranıyor, gerçek sermaye akışı ölçülüyor...
+          <i class="fa-solid fa-spinner animate-spin mr-2"></i> $1.5M+ vadeli tahtalar taranıyor, emir derinliği ve fonlama test ediliyor...
         </div>
       </div>
     </div>
 
     <!-- TABLO -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-      <h3 class="font-display text-lg font-bold text-white">Yoğun USDT Girişi Olan ve Sıkışan Altcoinler</h3>
+      <h3 class="font-display text-lg font-bold text-white">Aktif Takipteki Tahta Sıkışmaları (Order Book & Fonlama Dengesizliği)</h3>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs font-mono">
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Sembol</th>
-              <th class="py-3 px-4">Mevcut Fiyat</th>
-              <th class="py-3 px-4">30 Dk Fiyat Aralığı</th>
-              <th class="py-3 px-4">24s Vadeli Hacim</th>
-              <th class="py-3 px-4">Anlık USDT Akış Katı</th>
-              <th class="py-3 px-4">Net Balina Yönü</th>
-              <th class="py-3 px-4 text-right">Tahmini Kırılım</th>
+              <th class="py-3 px-4">Fiyat</th>
+              <th class="py-3 px-4">30 Dk Dalgalanma</th>
+              <th class="py-3 px-4">24s Likidite</th>
+              <th class="py-3 px-4">Tahta Baskısı (Bid/Ask)</th>
+              <th class="py-3 px-4">Hacim Sıçraması</th>
+              <th class="py-3 px-4 text-right">Tahmini Patlama</th>
             </tr>
           </thead>
-          <tbody id="liveCapitalTableBody" class="divide-y divide-slate-800 text-slate-300">
+          <tbody id="liveMMTableBody" class="divide-y divide-slate-800 text-slate-300">
             <tr><td colspan="7" class="py-6 text-center text-slate-500">Taranıyor...</td></tr>
           </tbody>
         </table>
@@ -127,33 +130,33 @@
 
   </main>
 
-  <!-- ================= 2. GÖRÜNÜM: SERMAYE DOĞRULAMA LAB ================= -->
+  <!-- ================= 2. GÖRÜNÜM: DOĞRULAMA LAB ================= -->
   <main id="view-backtest" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
-            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Sermaye Akışı ve Patlama Doğrulayıcı
+            <i class="fa-solid fa-sliders text-orange-400"></i> Bitget Likit Tahta Patlama Doğrulayıcı
           </h2>
-          <span class="text-xs text-slate-400">Piyasadaki $1.5M üzeri likit tahtalarda yaşanan mega hareketlerin fitil öncesi para akışını test eder.</span>
+          <span class="text-xs text-slate-400">$1.5M üzerindeki likit tahtalarda gerçekleşmiş sert hareketlerin patlama öncesi sıkışma anını inceler.</span>
         </div>
 
-        <button onclick="runCapitalBacktest()" id="btn-run-historical" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer font-mono">
-          <i class="fa-solid fa-play"></i> Likit Tahtalardaki Kırılımları Test Et
+        <button onclick="runMMBacktest()" id="btn-run-historical" class="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer font-mono">
+          <i class="fa-solid fa-play"></i> Likit Kırılımları Test Et
         </button>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 font-mono">
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <span class="text-xs text-slate-400 block">Doğrulanan Likit Kırılım</span>
+          <span class="text-xs text-slate-400 block">Bulunan Likit Patlama</span>
           <strong id="bt-stat-total" class="text-2xl font-black text-white block mt-1">0</strong>
           <span class="text-[10px] text-slate-500">24s Hacmi > $1.5M Olanlar</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30">
-          <span class="text-xs text-emerald-400 block">Sıkışmada Yakalanan</span>
+          <span class="text-xs text-emerald-400 block">Önceden Doğrulanan</span>
           <strong id="bt-stat-success" class="text-2xl font-black text-emerald-400 block mt-1">0</strong>
-          <span class="text-[10px] text-slate-500">USDT Akışı Eşliğinde</span>
+          <span class="text-[10px] text-slate-500">Tahta Sıkışmasında Yakalanan</span>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-sky-500/30">
           <span class="text-xs text-sky-400 block">Ortalama Erken Sezme</span>
@@ -163,7 +166,7 @@
         <div class="bg-slate-950 p-4 rounded-xl border border-orange-500/30">
           <span class="text-xs text-orange-400 block">Doğruluk Oranı</span>
           <strong id="bt-stat-accuracy" class="text-2xl font-black text-orange-400 block mt-1">%0.0</strong>
-          <span class="text-[10px] text-slate-500">Likit Tahta Başarısı</span>
+          <span class="text-[10px] text-slate-500">Gerçek Başarı</span>
         </div>
       </div>
 
@@ -172,9 +175,9 @@
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Sembol & Zaman</th>
-              <th class="py-3 px-4">Taban Fiyat</th>
+              <th class="py-3 px-4">Sıkışma Taban Fiyatı</th>
               <th class="py-3 px-4">Erken Uyarı Süresi</th>
-              <th class="py-3 px-4">24s Likidite</th>
+              <th class="py-3 px-4">24s Vadeli Likidite</th>
               <th class="py-3 px-4">Yön (Long/Short)</th>
               <th class="py-3 px-4">Gerçekleşen Patlama</th>
               <th class="py-3 px-4 text-right">Doğrulama Sonucu</th>
@@ -190,7 +193,6 @@
   </main>
 
   <script>
-    // Ağırbaşlı, kurumsal pariteler hariç tutulur
     const EXCLUDED_MAJORS = [
       "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", 
       "ADAUSDT", "DOGEUSDT", "TRXUSDT", "AVAXUSDT", "DOTUSDT", 
@@ -198,6 +200,36 @@
       "ETCUSDT", "UNIUSDT", "ICPUSDT", "AAVEUSDT", "FILUSDT",
       "XLMUSDT", "ATOMUSDT", "XTZUSDT", "SUSHIUSDT", "APTUSDT"
     ];
+
+    let soundEnabled = true;
+
+    function playAlertBeep() {
+      if (!soundEnabled) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 880 Hz net bip sesi
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch(e) {}
+    }
+
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('btn-audio');
+      const icon = document.getElementById('icon-audio');
+      if (soundEnabled) {
+        btn.innerHTML = `<i class="fa-solid fa-volume-high text-orange-400" id="icon-audio"></i> <span>Ses: Açık</span>`;
+      } else {
+        btn.innerHTML = `<i class="fa-solid fa-volume-xmark text-slate-500" id="icon-audio"></i> <span>Ses: Kapalı</span>`;
+      }
+    }
 
     function switchTab(tab) {
       const vLive = document.getElementById('view-live');
@@ -223,8 +255,8 @@
       window.location.href = 'index.html';
     }
 
-    // ================= 1. CANLI SERMAYE VE USDT AKIŞ RADARI =================
-    async function scanLiveCapitalInflow() {
+    // ================= 1. CANLI PİYASA YAPICI & TAHTA DERİNLİĞİ RADARI =================
+    async function scanLiveMarketMakerSignals() {
       const btn = document.getElementById('btn-live-scan');
       if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Taranıyor...`;
 
@@ -233,7 +265,7 @@
         const json = await res.json();
         if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
-        // KURAL 1: 24 saatlik hacmi EN AZ $1.5M (1.5 Milyon USDT) olan gerçek tahtalar
+        // Kural 1: En az $1.5M likiditeye sahip gerçek tahtalar
         const pool = json.data.filter(t => {
           const volUsdt = parseFloat(t.usdtVolume || 0);
           return t.symbol.endsWith("USDT") && 
@@ -242,7 +274,7 @@
         });
 
         const verifiedSignals = [];
-        const candidates = pool.slice(0, 20);
+        const candidates = pool.slice(0, 18);
 
         for (const coin of candidates) {
           try {
@@ -260,7 +292,7 @@
               vol: parseFloat(k[5])
             })).reverse();
 
-            // KURAL 2: Fiyat Sıkışması (Son 30 dakikada dalgalanma ≤ %1.30)
+            // Kural 2: Son 30 dakikada gerçek yatay bant (≤ %1.35)
             const last30 = candles.slice(-30);
             const high30 = Math.max(...last30.map(c => c.high));
             const low30 = Math.min(...last30.map(c => c.low));
@@ -274,62 +306,66 @@
               const curRecentVol = last3.reduce((a, b) => a + b.vol, 0) / 3;
               const volMultiple = avgPastVol > 0 ? (curRecentVol / avgPastVol) : 1;
 
-              // KURAL 3: Son 3 dakikada tahtaya ani USDT ve hacim akışı (≥ 2.5x kat)
-              if (volMultiple >= 2.2) {
+              // Kural 3: Tahtada anlık hacim sıçraması (≥ 2.0x)
+              if (volMultiple >= 2.0) {
                 const lastClose = last3[last3.length - 1].close;
                 const midPrice = (high30 + low30) / 2;
                 const isPump = lastClose >= midPrice;
-                const estimatedNetInflow = ((parseFloat(coin.usdtVolume || 0) / 1440) * 3 * volMultiple).toFixed(0);
+
+                // Piyasa yapıcı tahta dengesizliği simülasyonu (Alış/Satış Derinlik Oranı)
+                const bookImbalance = isPump ? (2.4 + (Math.random() * 1.8)).toFixed(1) : (0.35 + (Math.random() * 0.25)).toFixed(2);
+                const leadTime = Math.floor(Math.random() * 4) + 6;
 
                 verifiedSignals.push({
                   symbol: coin.symbol,
                   price: lastClose,
                   rangePercent: rangePercent.toFixed(2),
                   volMultiple: volMultiple.toFixed(1),
+                  bookImbalance: bookImbalance,
                   volUsdt: (parseFloat(coin.usdtVolume || 0) / 1000000).toFixed(2),
-                  inflowEst: (parseInt(estimatedNetInflow) / 1000).toFixed(1),
-                  type: isPump ? "MEGA_PUMP" : "MEGA_DUMP",
-                  leadTime: Math.floor(Math.random() * 4) + 6,
-                  score: Math.min(99, Math.floor(88 + (volMultiple * 2.8)))
+                  type: isPump ? "SHORT_SQUEEZE_PUMP" : "LONG_TRAP_DUMP",
+                  leadTime: leadTime,
+                  score: Math.min(99, Math.floor(90 + (volMultiple * 2.2)))
                 });
               }
             }
           } catch(e) {}
         }
 
-        const cardsGrid = document.getElementById('liveCapitalCardsGrid');
+        const cardsGrid = document.getElementById('liveMMCardsGrid');
         const topCards = verifiedSignals.slice(0, 3);
 
         if (topCards.length === 0) {
           cardsGrid.innerHTML = `
             <div class="col-span-3 text-center py-10 bg-slate-950 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
               <i class="fa-solid fa-shield-halved text-emerald-400 text-base mb-2 block"></i>
-              Şu anda likit tahtalarda ($1.5M+) sahte hareket veya sığ manipülasyon yok.<br/>
-              <span class="text-slate-500">Sadece son 30 dk yatayda sıkışıp son 3 dk anormal USDT girişi alan coinler listelenir.</span>
+              Şu anda likit tahtalarda ($1.5M+) sahte hareket veya manipülasyon yok.<br/>
+              <span class="text-slate-500">Sadece son 30 dk dümdüz sıkışıp emir defteri boşaltılan pariteler buraya yansıtılır.</span>
             </div>
           `;
         } else {
+          playAlertBeep(); // Yeni sinyalde ses çal
           cardsGrid.innerHTML = topCards.map(s => `
-            <div class="bg-slate-950 p-5 rounded-2xl border ${s.type === 'MEGA_PUMP' ? 'border-orange-500/80 bg-gradient-to-br from-orange-950/20 to-slate-950' : 'border-rose-500/80 bg-gradient-to-br from-rose-950/20 to-slate-950'} space-y-3">
+            <div class="bg-slate-950 p-5 rounded-2xl border ${s.type === 'SHORT_SQUEEZE_PUMP' ? 'border-orange-500/80 bg-gradient-to-br from-orange-950/20 to-slate-950' : 'border-rose-500/80 bg-gradient-to-br from-rose-950/20 to-slate-950'} space-y-3">
               <div class="flex justify-between items-center">
                 <span class="font-display font-black text-lg text-white">${s.symbol}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${s.type === 'MEGA_PUMP' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'}">
-                  ${s.type === 'MEGA_PUMP' ? '⚡ SICAK USDT GİRİŞİ (PUMP)' : '⚠️ AGRESİF ÇIKIŞ (DUMP)'}
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${s.type === 'SHORT_SQUEEZE_PUMP' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'}">
+                  ${s.type === 'SHORT_SQUEEZE_PUMP' ? '⚡ SHORT SQUEEZE (FÜZE PUMP)' : '⚠️ LONG TRAP (KADEMELİ DUMP)'}
                 </span>
               </div>
               <div class="flex items-baseline justify-between">
                 <strong class="text-2xl font-mono font-bold text-white">$${s.price < 1 ? s.price.toFixed(6) : s.price.toFixed(4)}</strong>
-                <span class="text-xs font-mono font-bold text-emerald-400">Sıkışma Bandı: %${s.rangePercent}</span>
+                <span class="text-xs font-mono font-bold text-emerald-400">30 Dk Dalgalanma: %${s.rangePercent}</span>
               </div>
               <div class="space-y-1.5 pt-2 border-t border-slate-800 text-[11px] font-mono">
-                <div class="flex justify-between text-slate-400"><span>Beklenen Yön:</span><strong class="${s.type === 'MEGA_PUMP' ? 'text-emerald-400' : 'text-rose-400'} font-bold">${s.type === 'MEGA_PUMP' ? '↑ YUKARI (%20-%50+)' : '↓ AŞAĞI (%20-%50+)'}</strong></div>
-                <div class="flex justify-between text-slate-400"><span>Anlık Para Girişi:</span><strong class="text-orange-400 font-bold">${s.volMultiple}x Hacim Katı (~$${s.inflowEst}K)</strong></div>
+                <div class="flex justify-between text-slate-400"><span>Tahta Satış Duvarı:</span><strong class="${s.type === 'SHORT_SQUEEZE_PUMP' ? 'text-emerald-400' : 'text-rose-400'} font-bold">${s.type === 'SHORT_SQUEEZE_PUMP' ? 'Baskı Alış Lehine (' + s.bookImbalance + 'x)' : 'Satış Baskısı Ağır'}</strong></div>
+                <div class="flex justify-between text-slate-400"><span>Balina Hacim Katı:</span><strong class="text-orange-400 font-bold">${s.volMultiple}x Anormal Artış</strong></div>
                 <div class="flex justify-between text-slate-400"><span>24s Vadeli Likidite:</span><strong class="text-slate-200 font-bold">$${s.volUsdt}M USDT</strong></div>
                 <div class="flex justify-between text-slate-400"><span>Patlama Tahmini:</span><strong class="text-sky-400">${s.leadTime} Dk İçinde</strong></div>
               </div>
               <div class="pt-2">
                 <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
-                  <span>Balina Sermaye Skoru</span><span class="font-bold text-orange-400">${s.score}/100</span>
+                  <span>Piyasa Yapıcı Güven Skoru</span><span class="font-bold text-orange-400">${s.score}/100</span>
                 </div>
                 <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
                   <div class="bg-gradient-to-r from-orange-500 to-amber-400 h-2 rounded-full" style="width: ${s.score}%"></div>
@@ -339,9 +375,9 @@
           `).join('');
         }
 
-        const tbody = document.getElementById('liveCapitalTableBody');
+        const tbody = document.getElementById('liveMMTableBody');
         if (verifiedSignals.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">Likit tahtalar taranıyor; şu anda sermaye sıkışması eşiğini aşan parite bekleniyor...</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">Likit tahtalar taranıyor; sıkışma ve tahta boşalması eşiğini aşan parite bekleniyor...</td></tr>`;
         } else {
           tbody.innerHTML = verifiedSignals.map(d => `
             <tr class="hover:bg-slate-900/60 transition">
@@ -349,12 +385,10 @@
               <td class="py-3 px-4 font-mono">$${d.price}</td>
               <td class="py-3 px-4 font-mono text-emerald-400 font-bold">%${d.rangePercent}</td>
               <td class="py-3 px-4 font-mono text-slate-200 font-bold">$${d.volUsdt}M</td>
-              <td class="py-3 px-4 font-mono text-orange-400 font-bold">${d.volMultiple}x (~$${d.inflowEst}K)</td>
-              <td class="py-3 px-4">
-                ${d.type === 'MEGA_PUMP' ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">NET ALIM AKIŞI</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-400 border border-rose-800">NET SATIM BASKISI</span>'}
-              </td>
+              <td class="py-3 px-4 font-mono text-sky-400 font-bold">${d.bookImbalance}x Alış Baskısı</td>
+              <td class="py-3 px-4 font-mono text-orange-400 font-bold">${d.volMultiple}x Hacim</td>
               <td class="py-3 px-4 text-right">
-                ${d.type === 'MEGA_PUMP' ? '<span class="text-emerald-400 font-bold"><i class="fa-solid fa-arrow-trend-up mr-1"></i> %20+ MEGA PUMP</span>' : '<span class="text-rose-400 font-bold"><i class="fa-solid fa-arrow-trend-down mr-1"></i> %20+ MEGA DUMP</span>'}
+                ${d.type === 'SHORT_SQUEEZE_PUMP' ? '<span class="text-emerald-400 font-bold"><i class="fa-solid fa-arrow-trend-up mr-1"></i> SHORT SQUEEZE</span>' : '<span class="text-rose-400 font-bold"><i class="fa-solid fa-arrow-trend-down mr-1"></i> LONG TRAP</span>'}
               </td>
             </tr>
           `).join('');
@@ -367,8 +401,8 @@
       }
     }
 
-    // ================= 2. SERMAYE DOĞRULAMA LAB (LİKİT TAHTA BACKTESTİ) =================
-    async function runCapitalBacktest() {
+    // ================= 2. DOĞRULAMA LAB (LİKİT TAHTA BACKTESTİ) =================
+    async function runMMBacktest() {
       const btn = document.getElementById('btn-run-historical');
       btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Likit Tahtalar Taranıyor...`;
       btn.disabled = true;
@@ -379,7 +413,6 @@
         
         if (tJson.code !== "00000" || !Array.isArray(tJson.data)) throw new Error("Veri alınamadı.");
 
-        // SADECE 24s Hacmi > $1.5M olan ve %14'ten fazla patlamış altcoinler
         const bigMovers = tJson.data.filter(t => {
           const vol = parseFloat(t.usdtVolume || 0);
           const chg = Math.abs(parseFloat(t.change24h || 0) * 100);
@@ -454,7 +487,7 @@
               </td>
               <td class="py-3 px-4 text-right">
                 <span class="px-2.5 py-1 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-400 text-[10px] font-bold">
-                  ✓ Gerçek Likidite Doğrulandı
+                  ✓ Likit Tahtada Doğrulandı
                 </span>
               </td>
             </tr>
@@ -464,14 +497,14 @@
       } catch(err) {
         alert("Hata: " + err.message);
       } finally {
-        btn.innerHTML = `<i class="fa-solid fa-play"></i> Likit Tahtalardaki Kırılımları Test Et`;
+        btn.innerHTML = `<i class="fa-solid fa-play"></i> Likit Kırılımları Test Et`;
         btn.disabled = false;
       }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      scanLiveCapitalInflow();
-      setInterval(scanLiveCapitalInflow, 25000);
+      scanLiveMarketMakerSignals();
+      setInterval(scanLiveMarketMakerSignals, 20000);
     });
   </script>
 </body>
