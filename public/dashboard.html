@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Çekirdek Sıkışma & Hacim Radarı</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
+  <title>Mineora Radar | Kripto Erken Uyarı & Mega Patlama İstasyonu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
     body { font-family: 'Inter', sans-serif; }
@@ -18,28 +18,26 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
 
-  <!-- ÜST BAR -->
-  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30">
+  <!-- ÜST HEADER -->
+  <header class="bg-slate-900/95 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black text-lg">
-          <i class="fa-solid fa-bolt"></i>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-600/30">
+          <i class="fa-solid fa-shield-halved"></i>
         </div>
         <div>
-          <span class="font-display font-black text-lg text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs">CORE RADAR</span></span>
-          <span class="text-[10px] text-slate-400 font-mono">15 Dk Sıkışma + Anlık Hacim Sıçraması</span>
+          <span class="font-display font-black text-xl tracking-tight text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs">SENTINEL</span></span>
+          <span class="text-[10px] text-slate-400 font-mono">Mega Patlama & Çöküş Erken Uyarı Radarı</span>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <button onclick="toggleAudio()" id="btn-audio" class="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-xs font-mono text-slate-300 hover:text-white transition">
-          <i class="fa-solid fa-volume-high text-orange-400" id="icon-audio"></i> <span>Ses: Açık</span>
-        </button>
-        <button onclick="clearSignals()" class="px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-950 text-xs font-mono text-slate-400 hover:text-rose-400 transition">
-          <i class="fa-solid fa-trash-can mr-1"></i> Temizle
-        </button>
-        <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition">
+        <div class="flex items-center gap-2 bg-emerald-950/70 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-emerald-400 font-bold">WHALE ANOMALY RADAR ACTIVE</span>
+        </div>
+        <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Çıkış Yap">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </button>
       </div>
@@ -50,66 +48,98 @@
   <!-- ANA ALAN -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- BASİT KURAL BİLGİLENDİRMESİ -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-        <span class="text-slate-400 block mb-1">Kural 1: Ölü Tahta</span>
-        <strong class="text-white text-sm block">Son 15 Dk Dalgalanma ≤ %1.0</strong>
-        <span class="text-[10px] text-slate-500 mt-1 block">Fiyatın uyuduğu kesinleşir.</span>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-        <span class="text-slate-400 block mb-1">Kural 2: Hacim Fitili</span>
-        <strong class="text-amber-400 text-sm block">Son 2 Dk Hacmi ≥ 3.0x Kat</strong>
-        <span class="text-[10px] text-slate-500 mt-1 block">Anormal para girişi yakalanır.</span>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-        <span class="text-slate-400 block mb-1">Kural 3: Likidite Şartı</span>
-        <strong class="text-emerald-400 text-sm block">24s Hacim ≥ $1,000,000</strong>
-        <span class="text-[10px] text-slate-500 mt-1 block">Boş tahtalardaki sahte fitiller elenir.</span>
-      </div>
-    </div>
-
-    <!-- RADAR KARTLARI -->
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+    <!-- COIN RISK ARAMA MOTORU -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping"></span>
-            Hacim Ateşlenen Pariteler (10 Dakika Masada Kalır)
+            <i class="fa-solid fa-magnifying-glass-chart text-orange-500"></i> Parite Risk & Fırsat Dedektörü
           </h2>
-          <span class="text-xs text-slate-400 font-mono">Fiyatı uyurken son 2 dakikada anormal hacim yiyen canlı sinyaller.</span>
+          <p class="text-xs text-slate-400">İşlem açmayı düşündüğünüz coinin kaldıraç tuzağında olup olmadığını tek tuşla anında test edin.</p>
         </div>
-        <button onclick="scanCoreSignals()" id="btn-scan" class="bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs px-4 py-2 rounded-xl transition font-bold shadow-lg shadow-orange-600/20">
-          <i class="fa-solid fa-rotate mr-1"></i> Şimdi Tara
-        </button>
-      </div>
-
-      <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="col-span-3 text-center py-12 text-slate-500 font-mono text-xs">
-          <i class="fa-solid fa-spinner animate-spin text-orange-500 text-lg mb-2 block"></i>
-          Vadeli tahtalar taranıyor...
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <input type="text" id="inputSearchSymbol" placeholder="Örn: SUI, IOST, PEPE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-orange-500" />
+          <button onclick="analyzeSingleCoin()" class="bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer shrink-0">
+            Analiz Et
+          </button>
         </div>
       </div>
+      <div id="searchResultArea" class="hidden pt-3 border-t border-slate-800/80"></div>
     </div>
 
-    <!-- TABLO -->
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-      <h3 class="font-display text-base font-bold text-white">Sinyal Takip Listesi</h3>
+    <!-- 2 BÜYÜK MASADAN OLUŞAN ÇİFT RADAR SİSTEMİ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- ================= 1. MASAL: ÇÖKÜŞ & DUMP KALKANI (İNSANLARI KORUYAN) ================= -->
+      <section class="bg-slate-900 border-2 border-rose-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-36 h-36 bg-rose-600/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+              <h3 class="font-display text-lg font-bold text-white">🚨 Çöküş / Dump Erken Uyarıları</h3>
+            </div>
+            <p class="text-[11px] text-rose-300 font-mono mt-0.5">Aşırı kaldıraç yığılmış, sert tasfiye ve çöküş riski yüksek coinler</p>
+          </div>
+          <button onclick="scanSentinelMarket()" class="text-slate-400 hover:text-white text-xs font-mono transition">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <div id="dumpWarningCards" class="space-y-3">
+          <div class="text-center py-10 text-slate-500 font-mono text-xs">
+            <i class="fa-solid fa-spinner animate-spin mr-1"></i> Vadeli tahtalardaki aşırı kaldıraç tuzakları taranıyor...
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. MASA: MEGA PATLAMA RADARI (SHORT SQUEEZE AVCI) ================= -->
+      <section class="bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-36 h-36 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+              <h3 class="font-display text-lg font-bold text-white">🚀 Mega Patlama / Squeeze Fırsatları</h3>
+            </div>
+            <p class="text-[11px] text-emerald-300 font-mono mt-0.5">Aşırı negatif fonlama ve Short yığılması olan, yukarı patlamaya hazır pariteler</p>
+          </div>
+          <button onclick="scanSentinelMarket()" class="text-slate-400 hover:text-white text-xs font-mono transition">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <div id="pumpOpportunityCards" class="space-y-3">
+          <div class="text-center py-10 text-slate-500 font-mono text-xs">
+            <i class="fa-solid fa-spinner animate-spin mr-1"></i> Negatif fonlama sıkışması yaşayan coinler taranıyor...
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- PİYASA GENEL DURUM ÖZETİ -->
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 font-mono text-xs">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-bold text-white">📊 Bitget Vadeli Tahta Risk Sıralaması (Canlı)</h3>
+        <span class="text-slate-500 text-[11px]">Sadece Likit Pariteler (≥ $1M Hacim)</span>
+      </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs font-mono">
+        <table class="w-full text-left">
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Sembol</th>
-              <th class="py-3 px-4">Tespit Fiyatı</th>
-              <th class="py-3 px-4">Anlık Fiyat</th>
-              <th class="py-3 px-4">15 Dk Dalgalanma</th>
-              <th class="py-3 px-4">Hacim Artışı</th>
-              <th class="py-3 px-4">Kalan Süre</th>
-              <th class="py-3 px-4 text-right">Kırılım Yönü</th>
+              <th class="py-3 px-4">Mevcut Fiyat</th>
+              <th class="py-3 px-4">Fonlama Oranı (Funding)</th>
+              <th class="py-3 px-4">24s Vadeli Likidite</th>
+              <th class="py-3 px-4">Piyasa Teşhisi</th>
+              <th class="py-3 px-4 text-right">Öneri / Aksiyon</th>
             </tr>
           </thead>
-          <tbody id="tableBody" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="7" class="py-6 text-center text-slate-500">Henüz sinyal yok...</td></tr>
+          <tbody id="generalMarketTableBody" class="divide-y divide-slate-800 text-slate-300">
+            <tr><td colspan="6" class="py-6 text-center text-slate-500">Veriler çekiliyor...</td></tr>
           </tbody>
         </table>
       </div>
@@ -118,232 +148,209 @@
   </main>
 
   <script>
-    // Majör ağır coinler hariç
     const EXCLUDED = [
-      "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", 
-      "ADAUSDT", "DOGEUSDT", "TRXUSDT", "AVAXUSDT", "DOTUSDT", 
-      "LINKUSDT", "LTCUSDT", "BCHUSDT", "NEARUSDT", "MATICUSDT"
+      "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"
     ];
 
-    let soundActive = true;
-    let signalList = JSON.parse(sessionStorage.getItem('core_radar_signals') || '{}');
-
-    function saveSignals() {
-      sessionStorage.setItem('core_radar_signals', JSON.stringify(signalList));
-    }
-
-    function clearSignals() {
-      signalList = {};
-      saveSignals();
-      renderUI();
-    }
-
-    function playBeep() {
-      if (!soundActive) return;
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.setValueAtTime(800, ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      } catch(e) {}
-    }
-
-    function toggleAudio() {
-      soundActive = !soundActive;
-      const btn = document.getElementById('btn-audio');
-      btn.innerHTML = soundActive 
-        ? `<i class="fa-solid fa-volume-high text-orange-400" id="icon-audio"></i> <span>Ses: Açık</span>`
-        : `<i class="fa-solid fa-volume-xmark text-slate-500" id="icon-audio"></i> <span>Ses: Kapalı</span>`;
-    }
+    let cachedTickers = [];
 
     function handleLogout() {
       sessionStorage.clear();
       window.location.href = 'index.html';
     }
 
-    // ================= EKRANA BASMA (UI) =================
-    function renderUI() {
-      const now = Date.now();
-      const keys = Object.keys(signalList);
-      const active = [];
+    // ================= CANLI PİYASA VE ANOMALİ TARAMASI =================
+    async function scanSentinelMarket() {
+      try {
+        const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
+        const json = await res.json();
+        if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
-      // 10 dakika (600.000 ms) süresi dolanları kaldır
-      for (const k of keys) {
-        if (now - signalList[k].time < 600000) {
-          active.push(signalList[k]);
-        } else {
-          delete signalList[k];
-        }
+        cachedTickers = json.data;
+
+        // Likit pariteleri al
+        const liquidPool = json.data.filter(t => {
+          return t.symbol.endsWith("USDT") &&
+                 !EXCLUDED.includes(t.symbol) &&
+                 parseFloat(t.usdtVolume || 0) >= 1200000;
+        });
+
+        // 1. Kural: Negatif Fonlama Sıkışması (SHORT SQUEEZE - MEGA PUMP)
+        const pumpCandidates = liquidPool.filter(t => {
+          const funding = parseFloat(t.fundingRate || 0);
+          return funding <= -0.015; // Negatif fonlama eşiği
+        }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 4);
+
+        // 2. Kural: Aşırı Pozitif Fonlama & Şişme (DUMP & LİKİDASYON RİSKİ)
+        const dumpCandidates = liquidPool.filter(t => {
+          const funding = parseFloat(t.fundingRate || 0);
+          const chg = parseFloat(t.change24h || 0) * 100;
+          return funding >= 0.020 || (chg >= 20 && funding >= 0.010);
+        }).sort((a, b) => parseFloat(b.fundingRate) - parseFloat(a.fundingRate)).slice(0, 4);
+
+        renderDumpCards(dumpCandidates);
+        renderPumpCards(pumpCandidates);
+        renderTable(liquidPool.slice(0, 15));
+
+      } catch(e) {
+        console.error("Sentinel tarama hatası:", e);
       }
-      saveSignals();
+    }
 
-      const grid = document.getElementById('cardsGrid');
-      const tbody = document.getElementById('tableBody');
-
-      if (active.length === 0) {
-        grid.innerHTML = `
-          <div class="col-span-3 text-center py-10 bg-slate-950 rounded-2xl border border-slate-800 text-slate-500 font-mono text-xs">
-            Şu an 15 dk sıkışıp son 2 dakikada 3 kat hacim alan parite yok. Taranıyor...
+    // DUMP UYARI KARTLARI
+    function renderDumpCards(items) {
+      const container = document.getElementById('dumpWarningCards');
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-base mb-2 block"></i>
+            Şu anda aşırı kaldıraç şişmesi yaşayan tehlikeli bir parite yok. Tahtalar dengeli.
           </div>
         `;
-        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">Masa boş; sinyal bekleniyor...</td></tr>`;
         return;
       }
 
-      grid.innerHTML = active.map(s => {
-        const remSec = Math.max(0, Math.floor((600000 - (now - s.time)) / 1000));
-        const remM = Math.floor(remSec / 60);
-        const remS = remSec % 60;
-        const timeStr = `${remM}:${remS < 10 ? '0' : ''}${remS}`;
-        const isPump = s.direction === 'PUMP';
+      container.innerHTML = items.map(c => {
+        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+        const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+        const price = parseFloat(c.lastPr);
 
         return `
-          <div class="bg-slate-950 p-5 rounded-2xl border ${isPump ? 'border-emerald-500/80' : 'border-rose-500/80'} space-y-3">
+          <div class="bg-slate-950 p-4 rounded-2xl border border-rose-500/50 space-y-2.5">
             <div class="flex justify-between items-center">
-              <span class="font-display font-black text-lg text-white">${s.symbol}</span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isPump ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
-                ${isPump ? '⚡ YUKARI KIRILIM (PUMP)' : '⚠️ AŞAĞI KIRILIM (DUMP)'}
+              <div>
+                <strong class="font-display text-base font-black text-white">${c.symbol}</strong>
+                <span class="text-slate-400 font-mono text-xs ml-2">$${price < 1 ? price.toFixed(6) : price.toFixed(4)}</span>
+              </div>
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                ⚠️ ÇÖKÜŞ RİSKİ: YÜKSEK
               </span>
             </div>
-            <div class="flex items-baseline justify-between font-mono">
-              <strong class="text-2xl font-bold text-white">$${s.currentPrice}</strong>
-              <span class="text-xs text-amber-400"><i class="fa-solid fa-clock mr-1"></i> ${timeStr} Kalan</span>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400 border-t border-slate-900">
+              <div>Fonlama: <strong class="text-rose-400">+${funding}% (Aşırı Long)</strong></div>
+              <div>24s Hacim: <strong class="text-slate-200">$${vol}M</strong></div>
             </div>
-            <div class="space-y-1 pt-2 border-t border-slate-800 text-xs font-mono text-slate-400">
-              <div class="flex justify-between"><span>Giriş Fiyatı:</span><strong class="text-slate-200">$${s.entryPrice}</strong></div>
-              <div class="flex justify-between"><span>15 Dk Aralık:</span><strong class="text-emerald-400">%${s.range} (Sıkışık)</strong></div>
-              <div class="flex justify-between"><span>Hacim Sıçraması:</span><strong class="text-orange-400 font-bold">${s.volRatio}x Kat</strong></div>
+            <div class="bg-rose-950/30 border border-rose-900/50 p-2.5 rounded-xl text-[11px] text-rose-300">
+              <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+              <strong>Kalkan Uyarısı:</strong> Küçük yatırımcı Long tarafına yığılmış. Balina satışı vurduğu an zincirleme likidasyon çöküşü yaşanabilir. <strong>Kaldıraçlı Long girmeyin!</strong>
             </div>
           </div>
         `;
       }).join('');
+    }
 
-      tbody.innerHTML = active.map(s => {
-        const remSec = Math.max(0, Math.floor((600000 - (now - s.time)) / 1000));
-        const remM = Math.floor(remSec / 60);
-        const remS = remSec % 60;
-        const timeStr = `${remM}:${remS < 10 ? '0' : ''}${remS}`;
-        const isPump = s.direction === 'PUMP';
+    // PUMP FIRSAT KARTLARI
+    function renderPumpCards(items) {
+      const container = document.getElementById('pumpOpportunityCards');
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
+            <i class="fa-solid fa-radar text-orange-400 text-base mb-2 block"></i>
+            Şu anda aşırı negatif fonlama eşiğini aşmış parite taranıyor...
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = items.map(c => {
+        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+        const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+        const price = parseFloat(c.lastPr);
+
+        return `
+          <div class="bg-slate-950 p-4 rounded-2xl border border-emerald-500/50 space-y-2.5">
+            <div class="flex justify-between items-center">
+              <div>
+                <strong class="font-display text-base font-black text-white">${c.symbol}</strong>
+                <span class="text-slate-400 font-mono text-xs ml-2">$${price < 1 ? price.toFixed(6) : price.toFixed(4)}</span>
+              </div>
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                🚀 SQUEEZE POTANSİYELİ
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400 border-t border-slate-900">
+              <div>Fonlama: <strong class="text-emerald-400">${funding}% (Aşırı Short)</strong></div>
+              <div>24s Hacim: <strong class="text-slate-200">$${vol}M</strong></div>
+            </div>
+            <div class="bg-emerald-950/30 border border-emerald-900/50 p-2.5 rounded-xl text-[11px] text-emerald-300">
+              <i class="fa-solid fa-bolt mr-1"></i>
+              <strong>Fırsat Analizi:</strong> Piyasa Short tarafında sıkışmış durumda. Tahtadaki satış duvarı çekildiği an zorunlu tasfiyelerle sert bir yukarı patlama gelebilir.
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // TABLO
+    function renderTable(list) {
+      const tbody = document.getElementById('generalMarketTableBody');
+      tbody.innerHTML = list.map(c => {
+        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+        const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+        const isDangerous = parseFloat(c.fundingRate) >= 0.02;
+        const isSqueeze = parseFloat(c.fundingRate) <= -0.015;
 
         return `
           <tr class="hover:bg-slate-900/60 transition">
-            <td class="py-3 px-4 font-bold text-white">${s.symbol}</td>
-            <td class="py-3 px-4 font-mono text-slate-400">$${s.entryPrice}</td>
-            <td class="py-3 px-4 font-mono ${isPump ? 'text-emerald-400' : 'text-rose-400'} font-bold">$${s.currentPrice}</td>
-            <td class="py-3 px-4 font-mono text-emerald-400">%${s.range}</td>
-            <td class="py-3 px-4 font-mono text-orange-400 font-bold">${s.volRatio}x</td>
-            <td class="py-3 px-4 font-mono text-amber-400">${timeStr}</td>
+            <td class="py-3 px-4 font-bold text-white">${c.symbol}</td>
+            <td class="py-3 px-4 font-mono">$${c.lastPr}</td>
+            <td class="py-3 px-4 font-mono font-bold ${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-300'}">
+              ${funding}%
+            </td>
+            <td class="py-3 px-4 font-mono text-slate-400">$${vol}M</td>
+            <td class="py-3 px-4">
+              ${isDangerous ? '<span class="text-rose-400 font-bold">⚠️ Aşırı Şişkin (Dump Riski)</span>' : isSqueeze ? '<span class="text-emerald-400 font-bold">⚡ Short Sıkışması (Patlama)</span>' : '<span class="text-slate-400">Dengeli</span>'}
+            </td>
             <td class="py-3 px-4 text-right">
-              ${isPump ? '<span class="text-emerald-400 font-bold">⚡ PUMP</span>' : '<span class="text-rose-400 font-bold">⚠️ DUMP</span>'}
+              ${isDangerous ? '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">Long Açma</span>' : isSqueeze ? '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">Pumplanabilir</span>' : '<span class="text-slate-500 text-[10px]">Nötr</span>'}
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    // ================= TARAMA MOTORU =================
-    async function scanCoreSignals() {
-      const btn = document.getElementById('btn-scan');
-      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Taranıyor...`;
+    // ================= TEK COİN ANALİZ ARAMASI =================
+    function analyzeSingleCoin() {
+      const input = document.getElementById('inputSearchSymbol');
+      const area = document.getElementById('searchResultArea');
+      let query = input.value.trim().toUpperCase();
+      if (!query) return;
+      if (!query.endsWith("USDT")) query += "USDT";
 
-      try {
-        const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
-        const json = await res.json();
-        if (json.code !== "00000" || !Array.isArray(json.data)) return;
+      const found = cachedTickers.find(t => t.symbol === query);
+      area.classList.remove('hidden');
 
-        // Fiyatları anlık güncelle
-        json.data.forEach(t => {
-          if (signalList[t.symbol]) {
-            signalList[t.symbol].currentPrice = parseFloat(t.lastPr || signalList[t.symbol].currentPrice);
-          }
-        });
-
-        // Hacmi en az $1M olan pariteleri al
-        const pool = json.data.filter(t => {
-          return t.symbol.endsWith("USDT") &&
-                 !EXCLUDED.includes(t.symbol) &&
-                 parseFloat(t.usdtVolume || 0) >= 1000000;
-        });
-
-        let newSignalAdded = false;
-
-        // İlk 15 adayın mumlarını kontrol et
-        for (const coin of pool.slice(0, 15)) {
-          if (signalList[coin.symbol]) continue;
-
-          try {
-            const kUrl = `https://api.bitget.com/api/v2/mix/market/candles?symbol=${coin.symbol}&granularity=1m&productType=USDT-FUTURES&limit=20`;
-            const kRes = await fetch(kUrl);
-            const kJson = await kRes.json();
-
-            if (kJson.code !== "00000" || !Array.isArray(kJson.data) || kJson.data.length < 17) continue;
-
-            const candles = kJson.data.map(k => ({
-              open: parseFloat(k[1]),
-              high: parseFloat(k[2]),
-              low: parseFloat(k[3]),
-              close: parseFloat(k[4]),
-              vol: parseFloat(k[5])
-            })).reverse();
-
-            // 1. Kural: Son 15 dakikalık mumlar (Fiyat aralığı ≤ %1.0)
-            const past15 = candles.slice(-17, -2);
-            const high15 = Math.max(...past15.map(c => c.high));
-            const low15 = Math.min(...past15.map(c => c.low));
-            const range = ((high15 - low15) / low15) * 100;
-
-            if (range <= 1.05) {
-              // 2. Kural: Son 2 dakikalık hacim sıçraması (≥ 2.8x)
-              const pastAvgVol = past15.reduce((a, b) => a + b.vol, 0) / past15.length;
-              const recent2 = candles.slice(-2);
-              const recentAvgVol = (recent2[0].vol + recent2[1].vol) / 2;
-              const ratio = pastAvgVol > 0 ? (recentAvgVol / pastAvgVol) : 1;
-
-              if (ratio >= 2.8) {
-                const lastClose = recent2[1].close;
-                const isPump = lastClose >= recent2[1].open;
-
-                signalList[coin.symbol] = {
-                  symbol: coin.symbol,
-                  entryPrice: lastClose,
-                  currentPrice: lastClose,
-                  range: range.toFixed(2),
-                  volRatio: ratio.toFixed(1),
-                  direction: isPump ? 'PUMP' : 'DUMP',
-                  time: Date.now()
-                };
-
-                newSignalAdded = true;
-              }
-            }
-          } catch(e) {}
-        }
-
-        saveSignals();
-        renderUI();
-
-        if (newSignalAdded) {
-          playBeep();
-        }
-
-      } catch(e) {
-        console.error("Tarama hatası:", e);
-      } finally {
-        if (btn) btn.innerHTML = `<i class="fa-solid fa-rotate mr-1"></i> Şimdi Tara`;
+      if (!found) {
+        area.innerHTML = `<div class="p-3 bg-slate-950 rounded-xl text-xs font-mono text-rose-400">Bitget Vadeli piyasasında '${query}' bulunamadı.</div>`;
+        return;
       }
+
+      const funding = (parseFloat(found.fundingRate || 0) * 100).toFixed(4);
+      const vol = (parseFloat(found.usdtVolume || 0) / 1000000).toFixed(2);
+      const isDangerous = parseFloat(found.fundingRate) >= 0.02;
+      const isSqueeze = parseFloat(found.fundingRate) <= -0.015;
+
+      area.innerHTML = `
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 font-mono text-xs">
+          <div class="flex justify-between items-center">
+            <strong class="text-base text-white font-display font-black">${found.symbol} Analiz Raporu</strong>
+            <span class="text-slate-400">Fiyat: $${found.lastPr}</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-900 text-slate-300">
+            <div>Fonlama Oranı: <strong class="${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-100'}">${funding}%</strong></div>
+            <div>24s Likidite: <strong class="text-slate-100">$${vol}M USDT</strong></div>
+            <div>24s Değişim: <strong class="${parseFloat(found.change24h) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${(parseFloat(found.change24h)*100).toFixed(2)}%</strong></div>
+          </div>
+          <div class="p-3 rounded-xl ${isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-300' : isSqueeze ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-300' : 'bg-slate-900 border border-slate-800 text-slate-300'}">
+            ${isDangerous ? '<strong>🚨 TEHLİKE UYARISI:</strong> Bu paritede aşırı Long ağırlığı ve pozitif fonlama var. Küçük yatırımcı ters ayakta yakalanabilir, dikkatli olun!' : isSqueeze ? '<strong>🚀 PATLAMA POTANSİYELİ:</strong> Paritede yüksek oranda Short birikimi var. Negatif fonlama her an yukarı sert bir sıkıştırmayı tetikleyebilir.' : '<strong>⚖️ DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı veya tasfiye tehdidi tespit edilmedi.'}
+          </div>
+        </div>
+      `;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      renderUI();
-      scanCoreSignals();
-      setInterval(scanCoreSignals, 15000); // 15 saniyede bir tara
-      setInterval(renderUI, 1000); // Sayaçları güncelle
+      scanSentinelMarket();
+      setInterval(scanSentinelMarket, 25000);
     });
   </script>
 </body>
