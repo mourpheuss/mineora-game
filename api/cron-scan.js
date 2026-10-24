@@ -2,28 +2,41 @@
 const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
 const TG_CHAT_ID = "-1004404988937";
 const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
+const FIREBASE_DB_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Kanala son gönderilen mesajları çekip aynı paritenin atılıp atılmadığını kontrol eder
-async function hasRecentAlert(symbol, type) {
+// Firebase REST API üzerinden son gönderim zamanını kontrol etme
+async function isAlertOnCooldown(symbol, type) {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates?offset=-10`);
-    // Not: Kanallarda getUpdates yerine gönderilen son mesajların yerel zaman kontrolü yapılır
-  } catch(e) {}
+    const res = await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`);
+    const lastSentTime = await res.json();
+    if (lastSentTime && (Date.now() - lastSentTime < 14400000)) { // 4 Saatlik Kilit (14.400.000 ms)
+      return true;
+    }
+  } catch (err) {
+    console.error("Firebase kontrol hatası:", err);
+  }
   return false;
 }
 
-// Kalıcı bellek için harici basit KV mantığı (Vercel container bazlı)
-let lastSentCache = global._lastSentCache || {};
-global._lastSentCache = lastSentCache;
+// Gönderilen mesajın zamanını Firebase'e kaydetme
+async function markAlertAsSent(symbol, type) {
+  try {
+    await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Date.now())
+    });
+  } catch (err) {
+    console.error("Firebase kayıt hatası:", err);
+  }
+}
 
 async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, desc, chgFormatted) {
-  const now = Date.now();
-  const alertKey = `${coin.symbol}_${type}`;
-
-  // 4 saatlik (14.400.000 ms) kilit
-  if (lastSentCache[alertKey] && (now - lastSentCache[alertKey] < 14400000)) {
+  // 1. Kilit kontrolü: 4 saat dolmadıysa gönderme
+  const onCooldown = await isAlertOnCooldown(coin.symbol, type);
+  if (onCooldown) {
     return;
   }
 
@@ -53,11 +66,12 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
     });
     const data = await res.json();
     if (data.ok) {
-      lastSentCache[alertKey] = now;
-      console.log(`[VIP ALERT BAŞARILI] ${coin.symbol} (${type})`);
+      // 2. Mesaj başarıyla gittiyse veritabanına mühürle
+      await markAlertAsSent(coin.symbol, type);
+      console.log(`[VIP ALERT GÖNDERİLDİ] ${coin.symbol} (${type})`);
     }
   } catch (err) {
-    console.error("Cron Telegram hatası:", err);
+    console.error("Telegram gönderme hatası:", err);
   }
 }
 
@@ -73,18 +87,17 @@ async function performSingleScan() {
              parseFloat(t.usdtVolume || 0) >= 1200000;
     });
 
-    // 1. Squeeze Adayları (<= -0.015)
     const pumpCandidates = liquidPool.filter(t => {
       return parseFloat(t.fundingRate || 0) <= -0.015;
     });
 
-    // 2. Dump Adayları (>= 0.020 veya +20% & >= 0.010)
     const dumpCandidates = liquidPool.filter(t => {
       const funding = parseFloat(t.fundingRate || 0);
       const chg = parseFloat(t.change24h || 0) * 100;
       return funding >= 0.020 || (chg >= 20 && funding >= 0.010);
     });
 
+    // Pump / Squeeze Taraması
     for (const c of pumpCandidates) {
       const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
       const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
@@ -111,6 +124,7 @@ async function performSingleScan() {
       }
     }
 
+    // Dump Taraması
     for (const c of dumpCandidates) {
       const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
       const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
@@ -130,6 +144,8 @@ async function performSingleScan() {
 }
 
 export default async function handler(req, res) {
+  await performSingleScan();
+  await sleep(25000);
   await performSingleScan();
   return res.status(200).json({ success: true, timestamp: Date.now() });
 }
