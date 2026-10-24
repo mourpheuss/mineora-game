@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Kripto Balina Ayak İzi & Erken Sinyal Masası</title>
+  <title>Mineora Radar | Balina Avcısı Erken Sinyal Masası</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,15 +27,15 @@
           <i class="fa-solid fa-shield-halved"></i>
         </div>
         <div>
-          <span class="font-display font-black text-xl tracking-tight text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs">SENTINEL</span></span>
-          <span class="text-[10px] text-slate-400 font-mono">Erken Balina Tespiti & Anomali Masası</span>
+          <span class="font-display font-black text-xl tracking-tight text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs">AVCI</span></span>
+          <span class="text-[10px] text-slate-400 font-mono">Balina Akümülasyonu & Patlama Öncesi Radarı</span>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-2 bg-emerald-950/70 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="text-emerald-400 font-bold tracking-wide">CANLI ERKEN RADAR</span>
+          <span class="text-emerald-400 font-bold tracking-wide">CANLI AVCI AKTİF</span>
         </div>
 
         <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Çıkış Yap">
@@ -49,14 +49,14 @@
   <!-- ANA ALAN -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- COIN RISK & FIRSAT ARAMA MOTORU -->
+    <!-- COIN RISK & BALİNA ARAMA MOTORU -->
     <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
             <i class="fa-solid fa-magnifying-glass-chart text-orange-500"></i> Parite Balina Dedektörü
           </h2>
-          <p class="text-xs text-slate-400">İşlem açmayı düşündüğünüz coinin henüz patlamadan önceki gizli sıkışmasını sorgulayın.</p>
+          <p class="text-xs text-slate-400">İşlem açmayı düşündüğünüz coinin henüz fitili ateşlenmeden önceki durumunu test edin.</p>
         </div>
         <div class="flex items-center gap-2 w-full sm:w-auto">
           <input type="text" id="inputSearchSymbol" placeholder="Örn: TREE, SUI, DOGE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-orange-500" />
@@ -68,10 +68,10 @@
       <div id="searchResultArea" class="hidden pt-3 border-t border-slate-800/80"></div>
     </div>
 
-    <!-- 2 BÜYÜK ERKEN UYARI MASASI -->
+    <!-- 2 BÜYÜK MASALI AVCI GÖRÜNÜMÜ -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      <!-- 1. MASA: PATLAMAYA HAZIRLANANLAR (FİYAT HENÜZ UÇMAMIŞ SIKIŞMALAR) -->
+      <!-- 1. MASA: PATLAMAYA HAZIRLANANLAR (FİYAT ≤ +8%) -->
       <section class="bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-36 h-36 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -79,9 +79,9 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
-              <h3 class="font-display text-lg font-bold text-white">⚡ Erken Short Squeeze (Fitil Ateşlenmek Üzere)</h3>
+              <h3 class="font-display text-lg font-bold text-white">⚡ Erken Balina Sıkıştırması (Fitil Ateşlenmek Üzere)</h3>
             </div>
-            <p class="text-[11px] text-emerald-300 font-mono mt-0.5">Fiyat henüz sakin (≤ +10%) ama negatif fonlama birikmiş patlama adayları</p>
+            <p class="text-[11px] text-emerald-300 font-mono mt-0.5">Fiyat henüz sakin (≤ +8%), negatif fonlama ve açık pozisyon kilitli</p>
           </div>
           <button onclick="scanSentinelMarket()" class="text-slate-400 hover:text-white text-xs font-mono transition">
             <i class="fa-solid fa-rotate"></i>
@@ -105,7 +105,7 @@
               <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
               <h3 class="font-display text-lg font-bold text-white">🚨 Erken Dump / Tuzak Kalkanı</h3>
             </div>
-            <p class="text-[11px] text-rose-300 font-mono mt-0.5">Aşırı pozitif fonlama ve kontrolsüz Long yığılması olan riskli tahtalar</p>
+            <p class="text-[11px] text-rose-300 font-mono mt-0.5">Aşırı pozitif fonlama ve kontrolsüz Long yığılması olan tahtalar</p>
           </div>
           <button onclick="scanSentinelMarket()" class="text-slate-400 hover:text-white text-xs font-mono transition">
             <i class="fa-solid fa-rotate"></i>
@@ -125,7 +125,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 font-mono text-xs">
       <div class="flex items-center justify-between">
         <h3 class="font-display text-base font-bold text-white">📊 Bitget Erken Fırsat Sıralaması</h3>
-        <span class="text-slate-500 text-[11px]">Sadece Henüz Patlamamış Pariteler (≤ +12%)</span>
+        <span class="text-slate-500 text-[11px]">Sadece Henüz Kopup Gitmemiş Pariteler (≤ +8%)</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left">
@@ -135,8 +135,8 @@
               <th class="py-3 px-4">Mevcut Fiyat</th>
               <th class="py-3 px-4">24s Değişim</th>
               <th class="py-3 px-4">Fonlama Oranı</th>
-              <th class="py-3 px-4">24s Hacim</th>
-              <th class="py-3 px-4">Erken Teşhis</th>
+              <th class="py-3 px-4">24s Vadeli Likidite</th>
+              <th class="py-3 px-4">Avcı Teşhisi</th>
               <th class="py-3 px-4 text-right">Potansiyel</th>
             </tr>
           </thead>
@@ -173,30 +173,30 @@
 
         cachedTickers = json.data;
 
-        // Likit Havuz (>= 800K USDT)
+        // Likit Havuz (En az 800K USDT hacim)
         const liquidPool = json.data.filter(t => {
           return t.symbol.endsWith("USDT") &&
                  !EXCLUDED.includes(t.symbol) &&
                  parseFloat(t.usdtVolume || 0) >= 800000;
         });
 
-        // 1. ERKEN SHORT SQUEEZE ADAYLARI: Fiyat henüz sakin (<= +10%), fonlama negatif (<= -0.0035)
+        // 1. ERKEN SHORT SQUEEZE: Fiyat henüz sakin (<= +8%), fonlama negatif (<= -0.0035)
         const earlySqueezeCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
-          return funding <= -0.0035 && chg >= -4.0 && chg <= 10.0;
+          return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 6);
 
-        // 2. ERKEN DUMP ADAYLARI: Fonlama aşırı şişmiş (>= +0.015)
+        // 2. ERKEN DUMP ADAYLARI: Fonlama aşırı şişmiş (>= +0.015) ve fiyat <= +10%
         const dumpCandidates = liquidPool.filter(t => {
           const funding = parseFloat(t.fundingRate || 0);
           const chg = parseFloat(t.change24h || 0) * 100;
-          return funding >= 0.015 && chg <= 12.0;
+          return funding >= 0.015 && chg <= 10.0;
         }).sort((a, b) => parseFloat(b.fundingRate) - parseFloat(a.fundingRate)).slice(0, 6);
 
-        // Tablo için: Henüz fırlamamış (<= +12%) pariteler arasından fonlaması en negatif olanlar
+        // Tablo: Henüz kopup gitmemiş (<= +8%) pariteler arasından fonlaması en negatif olanlar
         const earlyTableList = liquidPool
-          .filter(t => (parseFloat(t.change24h || 0) * 100) <= 12.0)
+          .filter(t => (parseFloat(t.change24h || 0) * 100) <= 8.0)
           .sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate))
           .slice(0, 15);
 
@@ -215,7 +215,7 @@
         container.innerHTML = `
           <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
             <i class="fa-solid fa-radar text-emerald-400 text-base mb-2 block"></i>
-            Şu anda erken sıkışma yaşayan parite taranıyor. Tahtalarda sakinlik hakim.
+            Şu anda erken sıkışma yaşayan parite taranıyor. Tahtalarda sessiz birikim bekleniyor.
           </div>
         `;
         return;
@@ -245,7 +245,7 @@
             </div>
             <div class="bg-emerald-950/30 border border-emerald-900/50 text-emerald-300 p-2.5 rounded-xl text-[11px]">
               <i class="fa-solid fa-bolt mr-1"></i>
-              <strong>Erken Uyarı:</strong> Fiyat henüz patlamadı (${chg.toFixed(1)}%). Short pozisyonlar negatif fonlamada kilitli. Fitil ateşlendiğinde yukarı sert sıçrama bekleniyor!
+              <strong>Erken Teşhis:</strong> Fiyat henüz patlamadı (${chg.toFixed(1)}%). Short pozisyonlar negatif fonlamada sıkışmış. Balina alttan topluyor, fitil ateşlenmek üzere!
             </div>
           </div>
         `;
@@ -258,7 +258,7 @@
         container.innerHTML = `
           <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
             <i class="fa-solid fa-circle-check text-emerald-400 text-base mb-2 block"></i>
-            Aşırı long yığılması olan tehlikeli tahta yok.
+            Aşırı Long yığılması olan tuzak tahta yok.
           </div>
         `;
         return;
@@ -286,7 +286,7 @@
             </div>
             <div class="bg-rose-950/30 border border-rose-900/50 p-2.5 rounded-xl text-[11px] text-rose-300">
               <i class="fa-solid fa-triangle-exclamation mr-1"></i>
-              <strong>Kalkan Uyarısı:</strong> Küçük yatırımcı Long tarafına yığılmış. Ani bir satışta zincirleme tasfiye çöküşü yaşanabilir. Kaldıraçlı Long açmayın!
+              <strong>Kalkan Uyarısı:</strong> Küçük yatırımcı Long tarafına yığılmış. Ani bir balina satışında zincirleme tasfiye çöküşü gelebilir. Long girmeyin!
             </div>
           </div>
         `;
