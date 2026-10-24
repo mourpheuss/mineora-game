@@ -1,11 +1,11 @@
 {
-  "name": "xauusd-sinyal",
+  "name": "mineora-flash-bot",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "flash_bot.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node flash_bot.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "axios": "^1.7.0"
   }
 }
