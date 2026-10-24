@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Görsel Üretici Kütüphane (HTML -> PNG Dönüştürücü) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -260,6 +262,7 @@
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
     let cachedWhaleTransfers = [];
+    let lastGeneratedXRayText = ""; // Telegram metni kopyalama hafızası
 
     function canSendSignal(symbol) {
       const lastSent = localStorage.getItem(`mineora_signal_${symbol}`);
@@ -399,7 +402,7 @@
         retailVsWhale = { retail: 22, whale: 78 };
         verdict = "🟢 GÜVENLİ LONG GİRİŞİ (BALİNA İLE BİRLİKTE)";
         verdictDesc = `Fiyat henüz sakin (+${chg.toFixed(1)}%). Fonlama sert eksiye batmış (${fundingPct}%). Short'lar sıkışmış durumda, balina alttan topluyor. Sert yukarı patlama bekleniyor!`;
-        wickTarget = price * 0.988; // Aşağı doğru olası fake stop avı
+        wickTarget = price * 0.988;
         targets = calculateLiquidationTargets(price, rawFunding, false);
       }
       // 2. DURUM: HİPER-PUMP (TEHLİKELİ TUZAK - SHORT VEYA LONG YASAK)
@@ -420,7 +423,7 @@
         retailVsWhale = { retail: 80, whale: 20 };
         verdict = "🔴 DUMP TUZAĞI TESPİT EDİLDİ (SHORT FIRSATI)";
         verdictDesc = `Fiyat tepeye oturmuş (+${chg.toFixed(1)}%) ve fonlama artıya geçmiş (+${fundingPct}%). Küçük yatırımcı coşkuyla alırken balina dağıtıma geçmiş. Tepe çöküşü bekleniyor.`;
-        wickTarget = price * 1.018; // Yukarı fake iğne atıp dönecek seviye
+        wickTarget = price * 1.018;
         targets = calculateLiquidationTargets(price, rawFunding, true);
       }
       // 4. DURUM: AŞIRI LONG TUZAĞI (ERKEN DUMP)
@@ -445,120 +448,234 @@
         wickTarget = price * 0.99;
       }
 
-      // X-Ray Rapor Arayüz Çıktısı
       const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
       const wickStr = wickTarget < 1 ? wickTarget.toFixed(6) : wickTarget.toFixed(4);
       const isSafe = score >= 75;
       const isDangerous = score < 40;
 
+      // TELEGRAM'A KOPYALANACAK FORMATLANMIŞ METİN OLUŞTUR
+      lastGeneratedXRayText = 
+`🔬 <b>MINEORA X-RAY | PARİTE RÖNTGEN RAPORU</b>
+━━━━━━━━━━━━━━━━━━━━
+💎 <b>Parite:</b> <code>#${found.symbol}</code>
+💰 <b>Fiyat:</b> <code>$${pStr}</code> (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)
+⚡ <b>Fonlama:</b> <code>${fundingPct}%</code> | <b>Hacim:</b> <code>$${volM}M</code>
+
+🛡️ <b>Güvenlik Skoru:</b> %${score} / 100
+⛽ <b>Yakıt / Cephane:</b> %${fuel} Depo
+🐋 <b>Oyuncu Dağılımı:</b> %${retailVsWhale.whale} Balina / %${retailVsWhale.retail} Sürü
+
+📢 <b>TEŞHİS:</b> ${verdict}
+ℹ️ <i>${verdictDesc}</i>
+🎯 <b>Piyasa Yapıcı İğne (Wick):</b> <code>$${wickStr}</code>
+${targets ? `
+🎯 <b>HEDEFLER:</b>
+Giriş: $${targets.entry} | SL: $${targets.sl}
+TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
+━━━━━━━━━━━━━━━━━━━━
+🌐 <b>Canlı Röntgen:</b> <a href="https://mineoragame.com">mineoragame.com</a>
+🛡️ <i>Sinyale girmeden önce Mineora X-Ray ile kontrol edin.</i>`;
+
       area.innerHTML = `
-        <div class="bg-slate-950 p-5 rounded-3xl border-2 ${isSafe ? 'border-emerald-500/60 shadow-xl shadow-emerald-500/10' : isDangerous ? 'border-rose-500/60 shadow-xl shadow-rose-500/10' : 'border-slate-800'} space-y-4 font-mono text-xs">
+        <div class="space-y-3">
           
-          <!-- BAŞLIK & FİYAT -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900 pb-3">
-            <div>
-              <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                🔬 MINEORA X-RAY RÖNTGEN RAPORU
-              </span>
-              <h3 class="font-display text-xl font-black text-white mt-1">#${found.symbol}</h3>
-            </div>
-            <div class="text-left sm:text-right">
-              <span class="text-slate-400 text-[11px] block">Anlık Vadeli Fiyat</span>
-              <strong class="text-white text-base font-bold">$${pStr}</strong>
-              <span class="text-[11px] ml-1.5 font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)</span>
-            </div>
-          </div>
-
-          <!-- 4 KATMANLI X-RAY PANELİ -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <!-- RESİM OLARAK İNDİRİLECEK RÖNTGEN KARTI -->
+          <div id="xrayCardToExport" class="bg-slate-950 p-6 rounded-3xl border-2 ${isSafe ? 'border-emerald-500/70 shadow-2xl shadow-emerald-500/10' : isDangerous ? 'border-rose-500/70 shadow-2xl shadow-rose-500/10' : 'border-slate-800'} space-y-4 font-mono text-xs relative overflow-hidden">
             
-            <!-- 1. GÜVENLİK SKORU -->
-            <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-2">
-              <div class="flex justify-between items-center text-[11px]">
-                <span class="text-slate-400">🛡️ Güvenlik Skoru</span>
-                <strong class="${isSafe ? 'text-emerald-400' : isDangerous ? 'text-rose-400' : 'text-amber-400'} text-sm">%${score} / 100</strong>
+            <!-- GÖRSEL DAMGASI (FİLİGRAN / LOGO) -->
+            <div class="flex items-center justify-between border-b border-slate-900 pb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-orange-600 flex items-center justify-center text-white font-black text-sm">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                  <span class="font-display font-black text-sm tracking-tight text-white block">MINEORA <span class="text-orange-500">X-RAY</span></span>
+                  <span class="text-[9px] text-slate-400 font-mono">Piyasa Röntgeni & Güvenlik Kalkanı</span>
+                </div>
               </div>
-              <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                <div class="h-full ${isSafe ? 'bg-emerald-500' : isDangerous ? 'bg-rose-500' : 'bg-amber-500'}" style="width: ${score}%"></div>
-              </div>
-              <span class="text-[10px] text-slate-400 block">${isSafe ? 'İşlem için yüksek güvenilirlik' : isDangerous ? 'Yüksek sermaye kaybı riski' : 'Beklemede kal'}</span>
-            </div>
-
-            <!-- 2. YAKIT / CEPHANE DEPOSU -->
-            <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-2">
-              <div class="flex justify-between items-center text-[11px]">
-                <span class="text-slate-400">⛽ Yükseliş Yakıtı (OI/Fonlama)</span>
-                <strong class="${fuel > 60 ? 'text-emerald-400' : 'text-rose-400'} text-sm">%${fuel} Depo</strong>
-              </div>
-              <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                <div class="h-full ${fuel > 60 ? 'bg-emerald-500' : 'bg-rose-500'}" style="width: ${fuel}%"></div>
-              </div>
-              <span class="text-[10px] text-slate-400 block">${fuel > 60 ? 'Short sıkışması taze, yakıt dolu' : 'Likidasyon tükendi, motor durabilir'}</span>
-            </div>
-
-            <!-- 3. KİM ALIYOR? (OYUNCU DAĞILIMI) -->
-            <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-2">
-              <div class="flex justify-between items-center text-[11px]">
-                <span class="text-slate-400">🐋 Oyuncu Dağılımı</span>
-                <span class="text-[10px] font-bold text-amber-400">${retailVsWhale.whale >= 60 ? 'Balina Hakimiyeti' : 'Bireysel Sürü'}</span>
-              </div>
-              <div class="flex text-[10px] justify-between text-slate-300">
-                <span>🐑 Sürü: %${retailVsWhale.retail}</span>
-                <span>🐋 Balina: %${retailVsWhale.whale}</span>
-              </div>
-              <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden flex">
-                <div class="bg-rose-500 h-full" style="width: ${retailVsWhale.retail}%"></div>
-                <div class="bg-emerald-500 h-full" style="width: ${retailVsWhale.whale}%"></div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- NİHAİ KARAR VE İĞNE TUZAĞI -->
-          <div class="p-3.5 rounded-2xl ${isSafe ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-200' : isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-200' : 'bg-slate-900 border border-slate-800 text-slate-300'} space-y-1.5">
-            <div class="flex items-center gap-2 font-bold text-xs">
-              <i class="fa-solid ${isSafe ? 'fa-circle-check text-emerald-400' : isDangerous ? 'fa-triangle-exclamation text-rose-400' : 'fa-info text-amber-400'}"></i>
-              <span>${verdict}</span>
-            </div>
-            <p class="text-[11px] leading-relaxed opacity-90">${verdictDesc}</p>
-            <div class="pt-2 border-t border-slate-800/80 text-[10px] flex items-center justify-between text-slate-400">
-              <span>🎯 <b>Piyasa Yapıcı İğne (Wick) Hedefi:</b> <code class="text-amber-400">$${wickStr}</code> (Stoplar burada patlatılabilir)</span>
-              <span>24s Likidite: <strong class="text-white">$${volM}M</strong></span>
-            </div>
-          </div>
-
-          <!-- EĞER HEDEFLER HESAPLANDIYSA TP/SL KUTUSU -->
-          ${targets ? `
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-white font-bold flex items-center gap-1.5">
-                  <i class="fa-solid fa-crosshairs text-orange-500"></i> HESAPLANMIŞ İŞLEM SEVİYELERİ
+              <div class="text-right">
+                <span class="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/40 font-bold">
+                  mineoragame.com
                 </span>
-                <span class="text-slate-400 text-[10px]">R:R: <strong class="text-white">1 : ${targets.rr}</strong></span>
-              </div>
-              <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
-                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
-                  <div class="text-slate-500 text-[9px]">GİRİŞ</div>
-                  <strong class="text-slate-200">$${targets.entry}</strong>
-                </div>
-                <div class="bg-rose-950/50 p-2 rounded-xl border border-rose-900/60">
-                  <div class="text-rose-400 text-[9px]">STOP (SL)</div>
-                  <strong class="text-rose-300">$${targets.sl}</strong>
-                </div>
-                <div class="bg-emerald-950/50 p-2 rounded-xl border border-emerald-900/60">
-                  <div class="text-emerald-400 text-[9px]">TP 1</div>
-                  <strong class="text-emerald-300">$${targets.tp1}</strong>
-                </div>
-                <div class="bg-amber-950/50 p-2 rounded-xl border border-amber-900/60">
-                  <div class="text-amber-400 text-[9px]">TP 2</div>
-                  <strong class="text-amber-300">$${targets.tp2}</strong>
-                </div>
               </div>
             </div>
-          ` : ''}
+
+            <!-- BAŞLIK & FİYAT -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span class="text-[10px] text-slate-400">ANALİZ EDİLEN PARİTE</span>
+                <h3 class="font-display text-2xl font-black text-white">#${found.symbol}</h3>
+              </div>
+              <div class="text-left sm:text-right">
+                <span class="text-slate-400 text-[10px] block">Mevcut Vadeli Fiyat</span>
+                <strong class="text-white text-lg font-bold font-mono">$${pStr}</strong>
+                <span class="text-[11px] ml-1.5 font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)</span>
+              </div>
+            </div>
+
+            <!-- 3 METRİK KUTUSU -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              
+              <!-- 1. GÜVENLİK SKORU -->
+              <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1.5">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="text-slate-400">🛡️ Güvenlik Skoru</span>
+                  <strong class="${isSafe ? 'text-emerald-400' : isDangerous ? 'text-rose-400' : 'text-amber-400'}">%${score}/100</strong>
+                </div>
+                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                  <div class="h-full ${isSafe ? 'bg-emerald-500' : isDangerous ? 'bg-rose-500' : 'bg-amber-500'}" style="width: ${score}%"></div>
+                </div>
+                <span class="text-[9px] text-slate-400 block">${isSafe ? 'İşlem için yüksek güven' : isDangerous ? 'Yüksek risk (Girilmez)' : 'Beklemede kal'}</span>
+              </div>
+
+              <!-- 2. YAKIT / CEPHANE DEPOSU -->
+              <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1.5">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="text-slate-400">⛽ İvme Yakıtı (OI/Fonlama)</span>
+                  <strong class="${fuel > 60 ? 'text-emerald-400' : 'text-rose-400'}">%${fuel} Depo</strong>
+                </div>
+                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                  <div class="h-full ${fuel > 60 ? 'bg-emerald-500' : 'bg-rose-500'}" style="width: ${fuel}%"></div>
+                </div>
+                <span class="text-[9px] text-slate-400 block">${fuel > 60 ? 'Short sıkışması taze' : 'Yakıt bitti (Dönüş riski)'}</span>
+              </div>
+
+              <!-- 3. KİM ALIYOR? (OYUNCU DAĞILIMI) -->
+              <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1.5">
+                <div class="flex justify-between items-center text-[11px]">
+                  <span class="text-slate-400">🐋 Oyuncu Dağılımı</span>
+                  <span class="text-[10px] font-bold text-amber-400">${retailVsWhale.whale >= 60 ? 'Balina Hakimiyeti' : 'Bireysel Sürü'}</span>
+                </div>
+                <div class="flex text-[10px] justify-between text-slate-300">
+                  <span>🐑 Sürü: %${retailVsWhale.retail}</span>
+                  <span>🐋 Balina: %${retailVsWhale.whale}</span>
+                </div>
+                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden flex">
+                  <div class="bg-rose-500 h-full" style="width: ${retailVsWhale.retail}%"></div>
+                  <div class="bg-emerald-500 h-full" style="width: ${retailVsWhale.whale}%"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- NİHAİ KARAR VE İĞNE TUZAĞI -->
+            <div class="p-3.5 rounded-2xl ${isSafe ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-200' : isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-200' : 'bg-slate-900 border border-slate-800 text-slate-300'} space-y-1">
+              <div class="flex items-center gap-2 font-bold text-xs">
+                <i class="fa-solid ${isSafe ? 'fa-circle-check text-emerald-400' : isDangerous ? 'fa-triangle-exclamation text-rose-400' : 'fa-info text-amber-400'}"></i>
+                <span>${verdict}</span>
+              </div>
+              <p class="text-[11px] leading-relaxed opacity-90">${verdictDesc}</p>
+              <div class="pt-2 border-t border-slate-800/80 text-[10px] flex items-center justify-between text-slate-400">
+                <span>🎯 <b>Piyasa Yapıcı İğne (Wick):</b> <code class="text-amber-400 font-bold">$${wickStr}</code></span>
+                <span>24s Vadeli Likidite: <strong class="text-white">$${volM}M</strong></span>
+              </div>
+            </div>
+
+            <!-- EĞER HEDEFLER HESAPLANDIYSA TP/SL KUTUSU -->
+            ${targets ? `
+              <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 space-y-1.5">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-white font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-crosshairs text-orange-500"></i> HESAPLANMIŞ İŞLEM SEVİYELERİ
+                  </span>
+                  <span class="text-slate-400 text-[10px]">R:R: <strong class="text-white">1 : ${targets.rr}</strong></span>
+                </div>
+                <div class="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                  <div class="bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                    <div class="text-slate-500 text-[9px]">GİRİŞ</div>
+                    <strong class="text-slate-200">$${targets.entry}</strong>
+                  </div>
+                  <div class="bg-rose-950/50 p-1.5 rounded-xl border border-rose-900/60">
+                    <div class="text-rose-400 text-[9px]">STOP (SL)</div>
+                    <strong class="text-rose-300">$${targets.sl}</strong>
+                  </div>
+                  <div class="bg-emerald-950/50 p-1.5 rounded-xl border border-emerald-900/60">
+                    <div class="text-emerald-400 text-[9px]">TP 1</div>
+                    <strong class="text-emerald-300">$${targets.tp1}</strong>
+                  </div>
+                  <div class="bg-amber-950/50 p-1.5 rounded-xl border border-amber-900/60">
+                    <div class="text-amber-400 text-[9px]">TP 2</div>
+                    <strong class="text-amber-300">$${targets.tp2}</strong>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- ALT FİLİGRAN VE DOĞRULAMA -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-900 text-[10px] text-slate-500">
+              <span>Mineora Sentinel X-Ray Güvenlik Radarı</span>
+              <span class="text-orange-400/80 font-bold">🔒 Doğrulanmış Gerçek Veri | mineoragame.com</span>
+            </div>
+
+          </div>
+
+          <!-- ================= PAYLAŞIM VE İNDİRME BUTONLARI ================= -->
+          <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
+            <button onclick="downloadXRayImage('${found.symbol}')" id="btnDownloadXRay" class="w-full sm:w-1/2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-xs font-bold py-3 rounded-2xl transition shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-camera"></i> Röntgen Görselini İndir (PNG)
+            </button>
+            <button onclick="copyTelegramXRayText()" id="btnCopyXRay" class="w-full sm:w-1/2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-mono text-xs font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2">
+              <i class="fa-brands fa-telegram text-sky-400"></i> Telegram Metni Olarak Kopyala
+            </button>
+          </div>
 
         </div>
       `;
+    }
+
+    // ================= X-RAY RAPORUNU GÖRSEL (PNG) OLARAK İNDİR =================
+    async function downloadXRayImage(symbol) {
+      const card = document.getElementById('xrayCardToExport');
+      const btn = document.getElementById('btnDownloadXRay');
+      if (!card) return;
+
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Görsel Hazırlanıyor...`;
+      btn.disabled = true;
+
+      try {
+        const canvas = await html2canvas(card, {
+          backgroundColor: '#020617', // slate-950 arka plan
+          scale: 2, // Yüksek çözünürlük
+          useCORS: true
+        });
+
+        const image = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = image;
+        a.download = `Mineora_XRay_${symbol}_${Date.now()}.png`;
+        a.click();
+
+        btn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Görsel İndirildi!`;
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }, 2500);
+      } catch (err) {
+        alert("Görsel oluşturulamadı: " + err.message);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // ================= TELEGRAM METNİNİ KOPYALA =================
+    function copyTelegramXRayText() {
+      const btn = document.getElementById('btnCopyXRay');
+      if (!lastGeneratedXRayText) return;
+
+      // HTML etiketlerini düz metne çevirip kopyala
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = lastGeneratedXRayText;
+      const plainText = tempDiv.innerText;
+
+      navigator.clipboard.writeText(plainText).then(() => {
+        btn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Telegram Metni Kopyalandı!`;
+        btn.classList.add('border-emerald-500', 'text-emerald-400');
+        setTimeout(() => {
+          btn.innerHTML = `<i class="fa-brands fa-telegram text-sky-400"></i> Telegram Metni Olarak Kopyala`;
+          btn.classList.remove('border-emerald-500', 'text-emerald-400');
+        }, 2500);
+      });
     }
 
     // ANA PİYASA TARAMASI
@@ -587,7 +704,7 @@
           triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
 
-        // 2. Erken Dump Adayları (cron-scan.js ile birebir eşitlendi)
+        // 2. Erken Dump Adayları (cron-scan.js ile eşitlendi)
         const dumpCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
