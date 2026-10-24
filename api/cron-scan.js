@@ -46,18 +46,28 @@ async function fetchOpenInterest(symbol) {
 }
 
 // Bitget Fonlama Sayacı (Funding Countdown) Çekme
+// Bitget Fonlama Sayacı (Funding Countdown) Çekme - Düzeltilmiş
 async function fetchFundingCountdown(symbol) {
   try {
     const res = await fetch(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${symbol}&productType=USDT-FUTURES`);
     const json = await res.json();
     if (json.code === "00000" && Array.isArray(json.data) && json.data[0]) {
-      const nextTime = Number(json.data[0].fundingTime);
-      const diffMs = nextTime - Date.now();
-      if (diffMs > 0) {
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        return `${hours}s ${minutes}dk`;
+      // Bitget bazen 'fundingTime' bazen 'nextFundingTime' olarak döner
+      const nextTime = Number(json.data[0].fundingTime || json.data[0].nextFundingTime || 0);
+      if (nextTime > 0) {
+        const diffMs = nextTime - Date.now();
+        if (diffMs > 0) {
+          const hours = Math.floor(diffMs / (1000 * 60 * 60));
+          const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          return `${hours}s ${minutes}dk`;
+        }
       }
+    }
+  } catch (e) {
+    console.error("Sayaç hatası:", symbol, e);
+  }
+  return "~2 saat"; // API anlık yanıt vermezse standart 4 saatlik döngü tahmini
+}
     }
   } catch (e) {
     console.error("Sayaç hatası:", symbol, e);
