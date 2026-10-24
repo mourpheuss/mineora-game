@@ -33,18 +33,15 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Canlı Durum -->
         <div class="flex items-center gap-2 bg-emerald-950/70 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="text-emerald-400 font-bold tracking-wide">CANLI RADAR AKTİF</span>
         </div>
 
-        <!-- VIP Satın Al Butonu -->
         <button onclick="openVipModal()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-mono text-xs font-black px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-orange-500/20">
           <i class="fa-solid fa-crown text-slate-950"></i> VIP Satın Al ($500)
         </button>
 
-        <!-- Çıkış -->
         <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Çıkış Yap">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </button>
@@ -56,14 +53,14 @@
   <!-- ANA ALAN -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- COIN RISK ARAMA MOTORU -->
+    <!-- RISK ARAMA MOTORU -->
     <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
             <i class="fa-solid fa-magnifying-glass-chart text-orange-500"></i> Parite Risk & Fırsat Dedektörü
           </h2>
-          <p class="text-xs text-slate-400">İşlem açmayı düşündüğünüz coinin kaldıraç tuzağında olup olmadığını tek tuşla anında test edin.</p>
+          <p class="text-xs text-slate-400">İşlem açmayı düşündüğünüz coinin kaldıraç tuzağında olup olmadığını test edin.</p>
         </div>
         <div class="flex items-center gap-2 w-full sm:w-auto">
           <input type="text" id="inputSearchSymbol" placeholder="Örn: SUI, IOST, PEPE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-orange-500" />
@@ -78,7 +75,7 @@
     <!-- 2 BÜYÜK MASA -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      <!-- ================= 1. MASA: ÇÖKÜŞ & DUMP KALKANI ================= -->
+      <!-- ================= 1. MASA: ÇÖKÜŞ KALKANI ================= -->
       <section class="bg-slate-900 border-2 border-rose-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-36 h-36 bg-rose-600/10 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -102,7 +99,7 @@
         </div>
       </section>
 
-      <!-- ================= 2. MASA: MEGA PATLAMA RADARI ================= -->
+      <!-- ================= 2. MASA: PATLAMA RADARI ================= -->
       <section class="bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-36 h-36 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -159,12 +156,10 @@
   <div id="vipPaymentModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
       
-      <!-- Kapatma -->
       <button onclick="closeVipModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
         <i class="fa-solid fa-xmark text-lg"></i>
       </button>
 
-      <!-- Başlık -->
       <div class="text-center space-y-1">
         <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-xl mb-2">
           <i class="fa-solid fa-crown"></i>
@@ -173,13 +168,11 @@
         <p class="text-xs text-slate-400 font-mono">30 Günlük Sınırsız Radar & Telegram VIP Kanal Erişimi</p>
       </div>
 
-      <!-- Tutar -->
       <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex justify-between items-center font-mono">
         <span class="text-xs text-slate-400">Abonelik Bedeli:</span>
         <span class="text-base font-black text-emerald-400">500 USDT</span>
       </div>
 
-      <!-- Cüzdan Adresi -->
       <div class="space-y-2 font-mono text-xs">
         <div class="flex justify-between items-center">
           <label class="text-slate-300 font-bold">USDT (TRC-20) Yatırma Adresi:</label>
@@ -196,13 +189,11 @@
         </p>
       </div>
 
-      <!-- TxID Girişi -->
       <div class="space-y-2 font-mono text-xs">
         <label class="text-slate-300 font-bold block">İşlem Kodu (TxID / TxHash):</label>
         <input type="text" id="inputTxHash" placeholder="Örn: 4f8b9... (Transfer detayındaki hash)" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-2.5 w-full focus:outline-none focus:border-orange-500" />
       </div>
 
-      <!-- Bildir Butonu -->
       <button onclick="submitVipPayment()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
         <i class="fa-solid fa-paper-plane"></i> Ödemeyi Bildir & Onaya Gönder
       </button>
@@ -212,7 +203,7 @@
 
   <script>
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_ADMIN_ID = "6457294906"; // SADECE SİZE ÖZEL TELEGRAM BİLDİRİMİ
+    const TG_MY_USER_ID = "6457294906"; // SADECE VE SADECE SİZE GELEN ÖZEL SOHBET
 
     function openVipModal() {
       document.getElementById('vipPaymentModal').classList.remove('hidden');
@@ -237,7 +228,7 @@
       });
     }
 
-    // VIP Ödeme Bildirimi (Doğrudan sizin özel Telegram ID'nize gider)
+    // VIP Ödeme Bildirimi -> KESİNLİKLE KANALA GİTMEZ, SADECE 6457294906'YA GİDER
     async function submitVipPayment() {
       const txHash = document.getElementById('inputTxHash').value.trim();
       if (!txHash) {
@@ -247,14 +238,14 @@
 
       const user = sessionStorage.getItem('currentUser') || 'Web Ziyaretçisi';
       
-      const text = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID (Hash):</b> <code>${txHash}</code>\n\n🔍 <b>Tronscan Kontrol:</b>\nhttps://tronscan.org/#/transaction/${txHash}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden VIP üyeliğini açabilirsiniz.`;
+      const text = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${txHash}</code>\n\n🔍 <b>Tronscan Kontrol:</b>\nhttps://tronscan.org/#/transaction/${txHash}\n\n✅ Doğruladıktan sonra Admin panelinden üyeliği açın.`;
 
       try {
         const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chat_id: TG_ADMIN_ID,
+            chat_id: TG_MY_USER_ID, // Sadece senin ID'n
             text: text,
             parse_mode: 'HTML'
           })
@@ -262,18 +253,18 @@
 
         const data = await res.json();
         if (data.ok) {
-          alert("Ödeme bildiriminiz başarıyla iletildi. Transfer doğrulandıktan sonra VIP üyeliğiniz aktif edilecektir.");
+          alert("Ödeme bildiriminiz iletildi. Kontrol edildikten sonra VIP erişiminiz aktif edilecektir.");
           document.getElementById('inputTxHash').value = '';
           closeVipModal();
         } else {
-          alert("Bildirim iletilemedi. Lütfen Telegram'da botunuza gidip /start verdiğinizden emin olun.");
+          alert("Hata: Botla henüz özel sohbet başlatmamış olabilirsiniz. Telegram'da botunuza /start gönderin.");
         }
       } catch(e) {
         alert("Bağlantı hatası oluştu.");
       }
     }
 
-    // ================= RADAR MOTORU =================
+    // ================= SADECE EKRANI GÜNCELLEYEN RADAR (KANALA MESAJ ATMAZ) =================
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
 
@@ -311,7 +302,7 @@
         renderTable(liquidPool.slice(0, 15));
 
       } catch(e) {
-        console.error("Sentinel tarama hatası:", e);
+        console.error("Radar tarama hatası:", e);
       }
     }
 
@@ -321,7 +312,7 @@
         container.innerHTML = `
           <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
             <i class="fa-solid fa-circle-check text-emerald-400 text-base mb-2 block"></i>
-            Şu anda aşırı kaldıraç şişmesi yaşayan tehlikeli bir parite yok. Tahtalar dengeli.
+            Şu anda aşırı kaldıraç şişmesi yaşayan tehlikeli bir parite yok.
           </div>
         `;
         return;
@@ -349,7 +340,7 @@
             </div>
             <div class="bg-rose-950/30 border border-rose-900/50 p-2.5 rounded-xl text-[11px] text-rose-300">
               <i class="fa-solid fa-triangle-exclamation mr-1"></i>
-              <strong>Kalkan Uyarısı:</strong> Küçük yatırımcı Long tarafına yığılmış. Balina satışı vurduğu an zincirleme likidasyon çöküşü yaşanabilir. <strong>Kaldıraçlı Long girmeyin!</strong>
+              <strong>Kalkan Uyarısı:</strong> Küçük yatırımcı Long tarafına yığılmış. Kaldıraçlı Long girmeyin!
             </div>
           </div>
         `;
@@ -362,7 +353,7 @@
         container.innerHTML = `
           <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
             <i class="fa-solid fa-radar text-orange-400 text-base mb-2 block"></i>
-            Şu anda aşırı negatif fonlama eşiğini aşmış parite taranıyor...
+            Aşırı negatif fonlama eşiğini aşmış parite taranıyor...
           </div>
         `;
         return;
@@ -394,10 +385,10 @@
             <div class="${isCompleted ? 'bg-amber-950/30 border border-amber-900/50 text-amber-300' : 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-300'} p-2.5 rounded-xl text-[11px]">
               ${isCompleted ? `
                 <i class="fa-solid fa-flag-checkered mr-1"></i>
-                <strong>Hedef Tamamlandı:</strong> Short squeeze patlaması yaşandı (+${chg.toFixed(1)}% sıçradı). <strong>Yeni pozisyon açmak risklidir, kâr alma / izleme bölgesi.</strong>
+                <strong>Hedef Tamamlandı:</strong> Short squeeze gerçekleşti (+${chg.toFixed(1)}%). Kâr alma ve izleme bölgesi.
               ` : `
                 <i class="fa-solid fa-bolt mr-1"></i>
-                <strong>Erken Uyarı:</strong> Piyasa Short tarafında sıkışmış durumda. Fiyat henüz patlamadı, sert bir yukarı sıçrama kapıda olabilir.
+                <strong>Erken Uyarı:</strong> Negatif fonlama birikimi. Yukarı sert sıçrama bekleniyor.
               `}
             </div>
           </div>
@@ -422,7 +413,7 @@
             </td>
             <td class="py-3 px-4 font-mono text-slate-400">$${vol}M</td>
             <td class="py-3 px-4">
-              ${isDangerous ? '<span class="text-rose-400 font-bold">⚠️ Aşırı Şişkin (Dump Riski)</span>' : isSqueeze ? '<span class="text-emerald-400 font-bold">⚡ Short Sıkışması (Patlama)</span>' : '<span class="text-slate-400">Dengeli</span>'}
+              ${isDangerous ? '<span class="text-rose-400 font-bold">⚠️ Aşırı Şişkin (Dump Riski)</span>' : isSqueeze ? '<span class="text-emerald-400 font-bold">⚡ Short Sıkışması</span>' : '<span class="text-slate-400">Dengeli</span>'}
             </td>
             <td class="py-3 px-4 text-right">
               ${isDangerous ? '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">Long Açma</span>' : isSqueeze ? '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">Pumplanabilir</span>' : '<span class="text-slate-500 text-[10px]">Nötr</span>'}
@@ -443,7 +434,7 @@
       area.classList.remove('hidden');
 
       if (!found) {
-        area.innerHTML = `<div class="p-3 bg-slate-950 rounded-xl text-xs font-mono text-rose-400">Bitget Vadeli piyasasında '${query}' bulunamadı.</div>`;
+        area.innerHTML = `<div class="p-3 bg-slate-950 rounded-xl text-xs font-mono text-rose-400">Parite bulunamadı.</div>`;
         return;
       }
 
@@ -455,16 +446,13 @@
       area.innerHTML = `
         <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 font-mono text-xs">
           <div class="flex justify-between items-center">
-            <strong class="text-base text-white font-display font-black">${found.symbol} Analiz Raporu</strong>
-            <span class="text-slate-400">Fiyat: $${found.lastPr}</span>
+            <strong class="text-base text-white font-display font-black">${found.symbol}</strong>
+            <span class="text-slate-400">$${found.lastPr}</span>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-900 text-slate-300">
-            <div>Fonlama Oranı: <strong class="${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-100'}">${funding}%</strong></div>
-            <div>24s Likidite: <strong class="text-slate-100">$${vol}M USDT</strong></div>
+            <div>Fonlama: <strong class="${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-100'}">${funding}%</strong></div>
+            <div>24s Likidite: <strong class="text-slate-100">$${vol}M</strong></div>
             <div>24s Değişim: <strong class="${parseFloat(found.change24h) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${(parseFloat(found.change24h)*100).toFixed(2)}%</strong></div>
-          </div>
-          <div class="p-3 rounded-xl ${isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-300' : isSqueeze ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-300' : 'bg-slate-900 border border-slate-800 text-slate-300'}">
-            ${isDangerous ? '<strong>🚨 TEHLİKE UYARISI:</strong> Bu paritede aşırı Long ağırlığı ve pozitif fonlama var. Küçük yatırımcı ters ayakta yakalanabilir!' : isSqueeze ? '<strong>🚀 PATLAMA POTANSİYELİ:</strong> Paritede yüksek oranda Short birikimi var. Negatif fonlama her an yukarı sert bir sıkıştırmayı tetikleyebilir.' : '<strong>⚖️ DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı veya tasfiye tehdidi tespit edilmedi.'}
           </div>
         </div>
       `;
