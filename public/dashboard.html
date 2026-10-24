@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Radar | Flash 5M Kıvılcım & X-Ray Odası</title>
+  <title>Mineora Radar | Flash 5M & X-Ray Terminali</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -28,8 +27,8 @@
           <i class="fa-solid fa-bolt"></i>
         </div>
         <div>
-          <span class="font-display font-black text-lg tracking-tight text-white block leading-tight">MINEORA <span class="text-amber-400">FLASH 5M</span></span>
-          <span class="text-[10px] text-slate-400 font-mono">Borsa & Balina Kıvılcım Muhbiri</span>
+          <span class="font-display font-black text-lg tracking-tight text-white block leading-tight">MINEORA <span class="text-amber-400">RADAR</span></span>
+          <span class="text-[10px] text-slate-400 font-mono">Borsa Manipülasyon & Balina Terminali</span>
         </div>
       </div>
 
@@ -52,7 +51,7 @@
   </header>
 
   <!-- ANA ALAN -->
-  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-8">
 
     <!-- 1. MERKEZİ FLASH 5M KIVILCIM KARTI -->
     <section class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
@@ -81,23 +80,27 @@
       </div>
     </section>
 
-    <!-- 2. MINEORA X-RAY ARAMA DEDEKTÖRÜ -->
-    <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+    <!-- 2. GERÇEK MATEMATİKSEL X-RAY İSTİHBARAT RÖNTGENİ -->
+    <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
         <div>
-          <h3 class="font-display text-base font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-radiation text-orange-500"></i> X-Ray İstihbarat Röntgeni
+          <h3 class="font-display text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-radiation text-amber-500"></i> X-Ray Canlı İstihbarat Röntgeni
           </h3>
-          <p class="text-xs text-slate-400">Merak ettiğin herhangi bir coinin son 100 işlemini ve emir defteri tuzağını gör.</p>
+          <p class="text-xs text-slate-400">Merak ettiğin herhangi bir coinin derin tahtasını, balina/sürü oranını ve borsa tuzağını analiz et.</p>
         </div>
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <input type="text" id="inputSearchSymbol" placeholder="Örn: TREE, SUI, DOGE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-amber-500" />
-          <button onclick="analyzeSingleCoin()" id="btnSearchSubmit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer shrink-0 shadow flex items-center gap-1.5">
-            <span>Röntgen Çek</span>
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <div class="relative flex-1 md:w-56">
+            <input type="text" id="inputSearchSymbol" placeholder="Örn: TREE, SUI, DOGE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full focus:outline-none focus:border-amber-500" onkeydown="if(event.key==='Enter') analyzeSingleCoin()" />
+          </div>
+          <button onclick="analyzeSingleCoin()" id="btnSearchSubmit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer shrink-0 shadow flex items-center gap-2">
+            <i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>
           </button>
         </div>
       </div>
-      <div id="searchResultArea" class="hidden pt-3 border-t border-slate-800"></div>
+
+      <!-- ANALİZ SONUÇ ALANI -->
+      <div id="searchResultArea" class="hidden"></div>
     </section>
 
   </main>
@@ -279,7 +282,7 @@
       activeSignalTimer = setInterval(update, 1000);
     }
 
-    // ================= X-RAY TEKİL COIN SORGUSU =================
+    // ================= GERÇEK X-RAY MATEMATİKSEL MOTORU =================
     async function loadTickers() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
@@ -293,38 +296,215 @@
     async function analyzeSingleCoin() {
       const input = document.getElementById('inputSearchSymbol');
       const area = document.getElementById('searchResultArea');
+      const btn = document.getElementById('btnSearchSubmit');
+      
       let query = input.value.trim().toUpperCase();
       if (!query) return;
       if (!query.endsWith("USDT")) query += "USDT";
 
-      const found = cachedTickers.find(t => t.symbol === query);
       area.classList.remove('hidden');
-
-      if (!found) {
-        area.innerHTML = `<div class="p-4 bg-slate-950 rounded-2xl border border-rose-900/50 text-xs font-mono text-rose-400"><b>${query}</b> bulunamadı veya Bitget vadeli tahtasında listeli değil.</div>`;
-        return;
-      }
-
-      const price = parseFloat(found.lastPr);
-      const funding = (parseFloat(found.fundingRate || 0) * 100).toFixed(4);
-      const chg = (parseFloat(found.change24h || 0) * 100).toFixed(2);
-      const volM = (parseFloat(found.usdtVolume || 0) / 1000000).toFixed(2);
-
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Taranıyor...`;
       area.innerHTML = `
-        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs">
-          <div class="flex justify-between items-center">
-            <strong class="text-white text-base font-display">#${found.symbol}</strong>
-            <span class="text-white font-bold">$${price} <span class="${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${chg >= 0 ? '+' : ''}${chg}%)</span></span>
-          </div>
-          <div class="grid grid-cols-2 gap-2 text-slate-400 pt-2 border-t border-slate-900">
-            <div>Fonlama Oranı: <strong class="${funding <= 0 ? 'text-emerald-400' : 'text-rose-400'}">${funding}%</strong></div>
-            <div>24s Hacim: <strong class="text-slate-200">$${volM}M</strong></div>
-          </div>
-          <p class="text-[11px] text-slate-400 pt-1">
-            🔍 <b>X-Ray Özeti:</b> Fonlama ${funding <= -0.003 ? 'aşırı negatif (Sıkışma potansiyeli yüksek)' : 'dengeli'}. Hızlı aksiyon için yukarıdaki canlı Flash 5M odasını takip edin.
-          </p>
+        <div class="text-center py-12 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-slate-400 space-y-3">
+          <i class="fa-solid fa-circle-notch fa-spin text-amber-400 text-2xl"></i>
+          <div><b>${query}</b> için emir defteri, son 100 tape işlemi ve açık pozisyon derinliği taranıyor...</div>
+          <div class="text-[10px] text-slate-600">Bitget v2 Orderbook & Fills REST Pipeline</div>
         </div>
       `;
+
+      try {
+        // 1. Ticker ve Temel Piyasa Verisi
+        let ticker = cachedTickers.find(t => t.symbol === query);
+        if (!ticker) {
+          const tRes = await fetch(`https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES&symbol=${query}`);
+          const tData = await tRes.json();
+          if (tData.code === "00000" && tData.data && tData.data.length > 0) ticker = tData.data[0];
+        }
+
+        if (!ticker) {
+          area.innerHTML = `<div class="p-5 bg-rose-950/40 rounded-2xl border border-rose-900/60 text-xs font-mono text-rose-300"><b>${query}</b> vadeli tahtada bulunamadı veya parite ismi hatalı.</div>`;
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>`;
+          return;
+        }
+
+        const price = parseFloat(ticker.lastPr);
+        const fundingRate = parseFloat(ticker.fundingRate || 0) * 100;
+        const vol24h = (parseFloat(ticker.usdtVolume || 0) / 1000000).toFixed(2);
+        const change24h = (parseFloat(ticker.change24h || 0) * 100).toFixed(2);
+        const openInterestUsdt = ticker.openInterest ? (parseFloat(ticker.openInterest) * price / 1000000).toFixed(2) : "0.00";
+
+        // 2. Tape Akışı: Son 100 Gerçekleşen Emir (Büyük Balina vs Küçük Yatırımcı)
+        const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${query}&productType=USDT-FUTURES&limit=100`);
+        const fillsData = await fillsRes.json();
+        const fills = fillsData.data?.fillList || fillsData.data || [];
+
+        let retailBuyVol = 0, retailSellVol = 0;
+        let whaleBuyVol = 0, whaleSellVol = 0;
+        const WHALE_CUTOFF = 3000; // $3,000 üzeri anlık işlemler balina/kurumsal sayılır
+
+        fills.forEach(f => {
+          const notional = parseFloat(f.price) * parseFloat(f.size);
+          if (f.side === 'buy') {
+            if (notional >= WHALE_CUTOFF) whaleBuyVol += notional;
+            else retailBuyVol += notional;
+          } else {
+            if (notional >= WHALE_CUTOFF) whaleSellVol += notional;
+            else retailSellVol += notional;
+          }
+        });
+
+        const totalBuyVol = retailBuyVol + whaleBuyVol;
+        const totalSellVol = retailSellVol + whaleSellVol;
+        const tapeTotal = totalBuyVol + totalSellVol || 1;
+
+        const buyPressure = Math.round((totalBuyVol / tapeTotal) * 100);
+        const sellPressure = 100 - buyPressure;
+        const whaleDominance = Math.round(((whaleBuyVol + whaleSellVol) / tapeTotal) * 100);
+        const retailDominance = 100 - whaleDominance;
+
+        // 3. Emir Defteri Derinliği (Orderbook Asymmetry)
+        const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${query}&productType=USDT-FUTURES&limit=25`);
+        const depthData = await depthRes.json();
+        const asks = depthData.data?.asks || [];
+        const bids = depthData.data?.bids || [];
+
+        let totalBidDepthUsdt = 0;
+        let totalAskDepthUsdt = 0;
+        bids.slice(0, 20).forEach(b => totalBidDepthUsdt += (parseFloat(b[0]) * parseFloat(b[1])));
+        asks.slice(0, 20).forEach(a => totalAskDepthUsdt += (parseFloat(a[0]) * parseFloat(a[1])));
+
+        const bookImbalance = totalAskDepthUsdt > 0 ? (totalBidDepthUsdt / totalAskDepthUsdt).toFixed(2) : "1.00";
+
+        // 4. Matematiksel Güvenlik & Manipülasyon Skoru (0 - 100)
+        let mathScore = 50;
+        let statusTitle = "NÖTR & DENGELİ PİYASA";
+        let badgeColor = "bg-slate-800 text-slate-300 border-slate-700";
+        let statusNarrative = "Tahtada tek taraflı bir manipülasyon veya aşırı sıkışma yok. Borsa genel trende göre hareket ediyor.";
+
+        // SHORT SQUEEZE SENARYOSU (Fonlama eksi + Tape alıcı dolu)
+        if (fundingRate < -0.02 && buyPressure >= 60) {
+          mathScore = 85 + Math.min(10, Math.round(Math.abs(fundingRate) * 100));
+          statusTitle = "🚨 SHORT SIKIŞMASI (SHORT SQUEEZE POTANSİYELİ)";
+          badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-700";
+          statusNarrative = `Fonlama oranı negatif (%${fundingRate.toFixed(4)}), yani piyasa short açmış bekliyor. Ancak Tape'de balinalar son 100 işlemde %${buyPressure} oranında agresif alım yapıyor! Borsa short pozisyonları tasfiye etmek için yukarı patlatabilir.`;
+        }
+        // LONG TASFİYE TUZAĞI (Sürü Long'da ama tahtadan mal boşaltılıyor)
+        else if (fundingRate > 0.03 && sellPressure >= 60) {
+          mathScore = 20;
+          statusTitle = "💀 LONG TUZAĞI (TASFİYE SÜPÜRMESİ RİSKİ)";
+          badgeColor = "bg-rose-950/80 text-rose-300 border-rose-700";
+          statusNarrative = `Bireysel yatırımcılar (%${retailDominance} Sürü) Long yönlü birikmiş, fonlama pozitif. Buna karşın tahtada satış baskısı %${sellPressure} seviyesinde. Borsa Long kütlesini patlatmak için sert bir alt iğne bırakabilir; Long girmek tehlikeli!`;
+        }
+        // BALİNA AKÜMÜLASYONU (Fiyat sabit, dev blok alımlar)
+        else if (whaleDominance >= 55 && Math.abs(parseFloat(change24h)) < 3) {
+          mathScore = 78;
+          statusTitle = "🐋 SESSİZ BALİNA AKÜMÜLASYONU";
+          badgeColor = "bg-cyan-950/80 text-cyan-300 border-cyan-700";
+          statusNarrative = `Fiyat son 24 saatte sakin duruyor ancak tahtadaki hacmin %${whaleDominance}'i tek seferlik $3,000+ blok kurumsal emirlerden oluşuyor. Fiyatı kımıldatmadan kademelerden mal toplanıyor.`;
+        }
+        // HAVA BOŞLUĞU (Satış kademeleri ince)
+        else if (parseFloat(bookImbalance) >= 2.0) {
+          mathScore = 82;
+          statusTitle = "💨 TAHTADA SATIŞ HAVA BOŞLUĞU";
+          badgeColor = "bg-amber-950/80 text-amber-300 border-amber-700";
+          statusNarrative = `Satış kademeleri (Ask) boşaltılmış durumda. Alış derinliği satışın ${bookImbalance} katı. Ufak bir market alımıyla fiyatın hızla sıçraması muhtemel.`;
+        }
+
+        const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
+
+        // KARTI BAS
+        area.innerHTML = `
+          <div class="bg-slate-950 p-6 sm:p-7 rounded-2xl border-2 border-slate-800 space-y-6 font-mono text-xs">
+            
+            <!-- PARİTE VE BAŞLIK -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-5">
+              <div>
+                <div class="flex items-center gap-3">
+                  <h4 class="font-display font-black text-2xl text-white">#${ticker.symbol}</h4>
+                  <span class="text-[10px] px-2.5 py-0.5 rounded-lg border font-bold ${badgeColor}">
+                    ${statusTitle}
+                  </span>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-1">Bitget USDT-Margined Vadeli Tahtası</div>
+              </div>
+              <div class="text-left sm:text-right">
+                <div class="font-display text-3xl font-black text-white">$${pStr}</div>
+                <span class="text-xs font-bold ${change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${change24h >= 0 ? '+' : ''}${change24h}% (24s)
+                </span>
+              </div>
+            </div>
+
+            <!-- 4'LÜ MATEMATİKSEL METRİK TABLOSU -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-center">
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">GÜVENLİK SKORU</span>
+                <strong class="font-display text-2xl font-bold ${mathScore >= 70 ? 'text-emerald-400' : mathScore <= 40 ? 'text-rose-400' : 'text-amber-400'}">%${mathScore}</strong>
+                <span class="text-[9px] text-slate-500 block mt-0.5">Tahta Güven Endeksi</span>
+              </div>
+              
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">FONLAMA ORANI</span>
+                <strong class="font-display text-2xl font-bold ${fundingRate <= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fundingRate.toFixed(4)}%</strong>
+                <span class="text-[9px] text-slate-500 block mt-0.5">${fundingRate <= 0 ? 'Short Ağırlıklı' : 'Long Yığılması'}</span>
+              </div>
+
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">BALİNA DOMİNANSI</span>
+                <strong class="font-display text-2xl font-bold text-cyan-400">%${whaleDominance}</strong>
+                <span class="text-[9px] text-slate-500 block mt-0.5">Sürü Oranı: %${retailDominance}</span>
+              </div>
+
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">TAHTA BASKI ORANI</span>
+                <strong class="font-display text-2xl font-bold text-amber-400">${bookImbalance}x</strong>
+                <span class="text-[9px] text-slate-500 block mt-0.5">Alış/Satış Derinlik Oranı</span>
+              </div>
+            </div>
+
+            <!-- TAPE AKIŞI ALICI / SATICI GÜÇ ÇUBUĞU -->
+            <div class="bg-slate-900/70 p-4 rounded-xl border border-slate-800/80 space-y-2.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-emerald-400 font-bold"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Piyasa Alıcıları: %${buyPressure}</span>
+                <span class="text-rose-400 font-bold">Piyasa Satıcıları: %${sellPressure} <i class="fa-solid fa-arrow-trend-down ml-1"></i></span>
+              </div>
+              
+              <div class="w-full bg-rose-950/70 h-3 rounded-full overflow-hidden flex border border-slate-800">
+                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${buyPressure}%"></div>
+              </div>
+
+              <div class="flex justify-between text-[11px] text-slate-400 pt-1">
+                <span>🐋 Balina Alımı: <b>$${Math.round(whaleBuyVol/1000)}K</b> | Bireysel: $${Math.round(retailBuyVol/1000)}K</span>
+                <span>🐋 Balina Satışı: <b>$${Math.round(whaleSellVol/1000)}K</b> | Bireysel: $${Math.round(retailSellVol/1000)}K</span>
+              </div>
+            </div>
+
+            <!-- DERİN TEŞHİS VE STRATEJİ RAPORU -->
+            <div class="p-4 bg-slate-900 rounded-xl border-l-4 ${mathScore >= 70 ? 'border-emerald-500' : mathScore <= 40 ? 'border-rose-500' : 'border-amber-500'} space-y-2">
+              <div class="flex items-center gap-2 text-white font-bold text-xs">
+                <i class="fa-solid fa-microscope text-amber-400"></i> X-RAY STRATEJİ VE TEŞHİS RAPORU
+              </div>
+              <p class="text-slate-300 text-[11px] leading-relaxed">
+                ${statusNarrative}
+              </p>
+              <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/80 flex flex-wrap gap-4">
+                <span>24s Vadeli Hacim: <b>$${vol24h}M</b></span>
+                <span>Aktif Açık Pozisyon: <b>$${openInterestUsdt}M</b></span>
+                <span>İncelenen Son Emir Sayısı: <b>100 İşlem</b></span>
+              </div>
+            </div>
+
+          </div>
+        `;
+      } catch (err) {
+        console.error("X-Ray Hatası:", err);
+        area.innerHTML = `<div class="p-4 bg-rose-950/40 rounded-2xl border border-rose-900 text-xs font-mono text-rose-300">Tahta verileri çekilirken bir hata oluştu: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>`;
+      }
     }
 
     // API Modal Fonksiyonları
