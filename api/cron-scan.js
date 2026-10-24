@@ -6,12 +6,13 @@ const FIREBASE_DB_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// 4 saatlik mükerrer bildirim kilidi
 async function isAlertOnCooldown(symbol, type) {
   try {
     const res = await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`);
     if (!res.ok) return false;
     const lastSentTime = await res.json();
-    if (lastSentTime && (Date.now() - Number(lastSentTime) < 14400000)) { // 4 saat kilit
+    if (lastSentTime && (Date.now() - Number(lastSentTime) < 14400000)) {
       return true;
     }
   } catch (err) {
@@ -32,12 +33,26 @@ async function markAlertAsSent(symbol, type) {
   }
 }
 
-async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, desc, chgFormatted) {
+// Paritenin Açık Pozisyon (Open Interest) verisini Bitget'ten anlık çeker
+async function fetchOpenInterest(symbol) {
+  try {
+    const res = await fetch(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${symbol}&productType=USDT-FUTURES`);
+    const json = await res.json();
+    if (json.code === "00000" && json.data && json.data.openInterestList && json.data.openInterestList[0]) {
+      return parseFloat(json.data.openInterestList[0].size || 0);
+    }
+  } catch (e) {
+    console.error("OI çekme hatası:", symbol, e);
+  }
+  return 0;
+}
+
+async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, oiFormatted, desc, chgFormatted) {
   const onCooldown = await isAlertOnCooldown(coin.symbol, type);
   if (onCooldown) return;
 
   let icon = '⚡';
-  let title = 'BALİNA SIKIŞTIRMA RADARI (PATLAMA ÖNCESİ)';
+  let title = 'BALİNA AKÜMÜLASYONU (PATLAMA ÖNCESİ SIKIŞMA)';
 
   if (type === 'DUMP_RISK') {
     icon = '🚨';
@@ -45,7 +60,7 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
   }
 
   const chgStr = (parseFloat(chgFormatted) >= 0 ? '+' : '') + chgFormatted + '%';
-  const text = `${icon} <b>MINEORA VIP SENTINEL RADAR</b>\n<b>${title}</b>\n\n🪙 <b>Parite:</b> #${coin.symbol}\n💵 <b>Mevcut Fiyat:</b> $${coin.lastPr} (${chgStr})\n📊 <b>Fonlama Oranı:</b> %${fundingFormatted}\n💰 <b>24s Vadeli Hacim:</b> $${volFormatted}M USDT\n\n📌 <b>Balina Ayak İzi Teşhisi:</b>\n${desc}\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}\n🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını İncele</a>`;
+  const text = `${icon} <b>MINEORA VIP SENTINEL AVCI RADARI</b>\n<b>${title}</b>\n\n🪙 <b>Parite:</b> #${coin.symbol}\n💵 <b>Mevcut Fiyat:</b> $${coin.lastPr} (${chgStr})\n📊 <b>Fonlama Oranı:</b> %${fundingFormatted}\n📈 <b>Açık Pozisyon (OI):</b> $${oiFormatted}M USDT\n💰 <b>24s Vadeli Hacim:</b> $${volFormatted}M USDT\n\n📌 <b>Balina Ayak İzi Teşhisi:</b>\n${desc}\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}\n🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını İncele</a>`;
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -61,7 +76,7 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
     const data = await res.json();
     if (data.ok) {
       await markAlertAsSent(coin.symbol, type);
-      console.log(`[ERKEN SİNYAL GÖNDERİLDİ] ${coin.symbol} (${type})`);
+      console.log(`[AVCI SİNYALİ ATILDI] ${coin.symbol} (${type})`);
     }
   } catch (err) {
     console.error("Telegram gönderme hatası:", err);
@@ -74,7 +89,7 @@ async function performSingleScan() {
     const json = await res.json();
     if (json.code !== "00000" || !Array.isArray(json.data)) return;
 
-    // Likidite Havuzu (800K hacim üzeri)
+    // Likidite Barajı (En az 800K USDT hacim)
     const liquidPool = json.data.filter(t => {
       return t.symbol.endsWith("USDT") &&
              !EXCLUDED.includes(t.symbol) &&
@@ -88,41 +103,50 @@ async function performSingleScan() {
       const fundingPct = (funding * 100).toFixed(4);
       const chgFormatted = chg.toFixed(1);
 
-      // KURAL 1: UÇMUŞ COINLERİ TAMAMEN ENGELLE (+12% üzeri kesinlikle erken sinyal DEĞİLDİR)
-      if (chg > 12.0) {
-        continue; // Zaten fırlamış, arkasından kovalamıyoruz!
+      // 1. KURAL: TRENİ KAÇMIŞ COINLERİ ANINDA ELE (Zirveye oturmuş coinleri almayız)
+      if (chg > 8.0) {
+        continue;
       }
 
-      // KURAL 2: ERKEN PUMP / SHORT SQUEEZE (Fiyat henüz tabanda ama fonlama negatif sıkışmış)
-      // Şart: Fiyat -4% ile +10% arasında, Fonlama <= -0.0035 (-%0.35)
-      if (funding <= -0.0035 && chg >= -4.0 && chg <= 10.0) {
+      // 2. KURAL: GERÇEK BALİNA SIKIŞTIRMASI (SHORT SQUEEZE HAZIRLIĞI)
+      // Fiyat henüz yatay/sakin (-4% ile +8% arası) VE Fonlama Negatif (<= -0.0035 yani % -0.35)
+      if (funding <= -0.0035 && chg >= -4.0 && chg <= 8.0) {
+        // Balinanın tahtaya soktuğu Açık Pozisyonu (OI) kontrol et
+        const oiRaw = await fetchOpenInterest(c.symbol);
+        const oiValM = ((oiRaw * parseFloat(c.lastPr)) / 1000000).toFixed(2);
+
         await sendTelegramAlert(
           c,
-          'EARLY_SQUEEZE',
+          'EARLY_ACCUMULATION',
           fundingPct,
           volM,
-          `Fiyat henüz fırlamadı (${chgFormatted}%). Tahtada Short pozisyonlar negatif fonlamada sıkışmış durumda. Balina fitili ateşlediğinde yukarı sert patlama potansiyeli yüksek!`,
+          oiValM,
+          `Fiyat henüz patlamadı (${chgFormatted}%). Tahtaya $${oiValM}M açık pozisyon girmiş ve Short'lar negatif fonlamada sıkışmış. Balina alttan topluyor; yukarı yönlü patlama an meselesi!`,
           chgFormatted
         );
         continue;
       }
 
-      // KURAL 3: ERKEN DUMP / TASFİYE KALKANI (Fiyat tepede veya yatay, fonlama aşırı şişmiş)
-      // Şart: Fonlama >= 0.015 (+%1.50)
-      if (funding >= 0.015 && chg >= -5.0 && chg <= 12.0) {
+      // 3. KURAL: DUMP & TASFİYE KALKANI (Aşırı Şişkin Long Tuzağı)
+      // Fiyat sakin/tepede ama fonlama aşırı şişmiş (>= +0.015 yani % +1.50)
+      if (funding >= 0.015 && chg >= -5.0 && chg <= 10.0) {
+        const oiRaw = await fetchOpenInterest(c.symbol);
+        const oiValM = ((oiRaw * parseFloat(c.lastPr)) / 1000000).toFixed(2);
+
         await sendTelegramAlert(
           c,
           'DUMP_RISK',
           fundingPct,
           volM,
-          `Tahtada kontrolsüz Long yığılması var. Fiyat henüz çökmedi ancak ters bir balina satışında seri likidasyon çöküşü yaşanabilir. Kaldıraçlı Long girmeyin!`,
+          oiValM,
+          `Fiyat henüz çökmedi ancak tahtada küçük yatırımcı Long tarafına yığılmış (+%${fundingPct} fonlama). Ani balina satışında seri likidasyon çöküşü gelebilir!`,
           chgFormatted
         );
         continue;
       }
     }
   } catch (err) {
-    console.error("Tarama hatası:", err);
+    console.error("Avcı tarama hatası:", err);
   }
 }
 
