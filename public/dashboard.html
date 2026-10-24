@@ -162,13 +162,14 @@
       window.location.href = 'index.html';
     }
 
-    // TELEGRAM AYARLARI
+    // TELEGRAM VE KANAL AYARLARI
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_ADMIN_ID = "6457294906";
+    const TG_VIP_CHANNEL_ID = "-1004404988937"; // SİNYALLERİN GİDECEĞİ VIP KANAL
+    const TG_MY_ADMIN_ID = "6457294906";        // SADECE ÖDEME VE ÜYELİK ONAYININ GELECEĞİ ŞAHSİ HESABIN
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
-    const sentSignals = new Set(); // Tekrar eden bildirimleri engelleme önbelleği
+    const sentSignals = new Set(); // Tekrar eden sinyal spamını engelleme listesi
 
     // LİKİDASYON VE SEVİYE HESAPLAMA MOTORU
     function calculateLiquidationTargets(price, fundingRate) {
@@ -189,14 +190,14 @@
       };
     }
 
-    // SİNYAL GELDİĞİNDE OTOMATİK TELEGRAM'A İLETEN MOTOR
-    async function triggerTelegramAlert(symbol, price, rawFunding) {
+    // SİNYALİ DOĞRUDAN VIP KANALA GÖNDEREN FONKSİYON
+    async function triggerVipChannelSignal(symbol, price, rawFunding) {
       if (sentSignals.has(symbol)) return;
 
       const funding = (rawFunding * 100).toFixed(4);
       const liq = calculateLiquidationTargets(price, rawFunding);
 
-      const msg = `⚡ <b>MINEORA SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
+      const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
                   `📊 <b>Giriş Fiyatı:</b> <code>$${liq.entry}</code>\n` +
@@ -215,12 +216,32 @@
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: msg, parse_mode: 'HTML' })
+          body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
         });
         sentSignals.add(symbol);
-        setTimeout(() => sentSignals.delete(symbol), 45 * 60 * 1000); // 45 dakika spam koruması
+        setTimeout(() => sentSignals.delete(symbol), 45 * 60 * 1000); // 45 dakika sonra tekrar izin ver
       } catch(e) {
-        console.error("Telegram bildirim iletim hatası:", e);
+        console.error("VIP Kanal iletim hatası:", e);
+      }
+    }
+
+    // YENİ ÜYE ÖDEME YAPTIĞINDA SADECE ŞAHSİ HESABINA GİDECEK BİLDİRİM FONKSİYONU
+    async function notifyOwnerForPayment(userName, network, txId, amount = "500") {
+      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($${amount} USDT)</b>\n\n` +
+                  `👤 <b>Kullanıcı:</b> ${userName}\n` +
+                  `🌐 <b>Ağ:</b> ${network}\n` +
+                  `🔗 <b>TxID:</b> <code>${txId}</code>\n\n` +
+                  `🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${txId}\n\n` +
+                  `✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz.`;
+
+      try {
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: TG_MY_ADMIN_ID, text: msg, parse_mode: 'HTML' })
+        });
+      } catch(e) {
+        console.error("Ödeme onay bildirim hatası:", e);
       }
     }
 
@@ -239,16 +260,16 @@
                  parseFloat(t.usdtVolume || 0) >= 800000;
         });
 
-        // 1. ERKEN SHORT SQUEEZE: Fiyat henüz sakin (<= +8%), fonlama negatif (<= -0.0035)
+        // 1. ERKEN SHORT SQUEEZE: Fiyat sakin (<= +8%), fonlama negatif (<= -0.0035)
         const earlySqueezeCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
           return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 6);
 
-        // Yakalanan pariteleri otomatik Telegram kanalına fırlat
+        // Yakalanan sinyalleri SADECE VIP KANALA fırlat
         earlySqueezeCandidates.forEach(item => {
-          triggerTelegramAlert(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
+          triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
 
         // 2. ERKEN DUMP ADAYLARI: Fonlama aşırı şişmiş (>= +0.015) ve fiyat <= +10%
