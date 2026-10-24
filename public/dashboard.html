@@ -168,6 +168,7 @@
 
     let activeSignalTimer = null;
     let cachedTickers = [];
+    let lastRenderedTimestamp = 0;
 
     // ================= FLASH 5M CANLI İZLEME MOTORU =================
     async function checkActiveFlashSignal() {
@@ -177,7 +178,7 @@
         const container = document.getElementById('flashSignalContainer');
         const badge = document.getElementById('flashTimerBadge');
 
-        if (!signal || !signal.symbol) return;
+        if (!signal || !signal.symbol || !signal.detectedAt) return;
 
         const ageSeconds = Math.floor((Date.now() - signal.detectedAt) / 1000);
         const remainingSeconds = 480 - ageSeconds; // 8 Dakika (480 Sn)
@@ -197,67 +198,71 @@
         badge.classList.add('flex');
         startFlashCountdown(remainingSeconds);
 
-        const pStr = signal.price < 1 ? signal.price.toFixed(6) : signal.price.toFixed(4);
-        const tpStr = signal.tp < 1 ? signal.tp.toFixed(6) : signal.tp.toFixed(4);
-        const slStr = signal.sl < 1 ? signal.sl.toFixed(6) : signal.sl.toFixed(4);
+        if (signal.detectedAt !== lastRenderedTimestamp) {
+          lastRenderedTimestamp = signal.detectedAt;
 
-        container.innerHTML = `
-          <div class="bg-slate-950 p-6 rounded-2xl border-2 border-amber-500/80 space-y-4 font-mono">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">BORSA HAVA BOŞLUĞU & TAPE KIVILCIMI</span>
-                <strong class="font-display text-2xl font-black text-white">#${signal.symbol} (LONG)</strong>
-              </div>
-              <div class="text-left sm:text-right">
-                <span class="text-slate-400 text-xs block">Giriş Fiyatı</span>
-                <strong class="text-white text-xl font-bold">$${pStr}</strong>
-              </div>
-            </div>
+          const pStr = signal.price < 1 ? signal.price.toFixed(6) : signal.price.toFixed(4);
+          const tpStr = signal.tp < 1 ? signal.tp.toFixed(6) : signal.tp.toFixed(4);
+          const slStr = signal.sl < 1 ? signal.sl.toFixed(6) : signal.sl.toFixed(4);
 
-            <!-- ANLIK METRİKLER -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-              <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <span class="text-slate-400 block text-[10px]">TAPE ALICI BASKISI</span>
-                <strong class="text-emerald-400 text-sm">%${signal.buyRatio} Boğa Akışı</strong>
-              </div>
-              <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <span class="text-slate-400 block text-[10px]">ANLIK SÜPÜRME HACMİ</span>
-                <strong class="text-amber-400 text-sm">~$${signal.volK}K Piyasa Emri</strong>
-              </div>
-              <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <span class="text-slate-400 block text-[10px]">TAHTA DURUMU</span>
-                <strong class="text-emerald-400 text-sm">Satış Kademeleri Boş</strong>
-              </div>
-            </div>
-
-            <!-- HEDEFLER -->
-            <div class="bg-slate-900/90 border border-amber-500/30 rounded-xl p-4 space-y-2">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-amber-400 font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> 8 DAKİKALIK SCALP HEDEFLERİ</span>
-                <span class="text-slate-400 text-[11px]">Hedef Süre: <strong>3-8 Dakika</strong></span>
-              </div>
-              <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
-                  <div class="text-slate-500 text-[10px]">GİRİŞ</div>
-                  <strong class="text-slate-200">$${pStr}</strong>
+          container.innerHTML = `
+            <div class="bg-slate-950 p-6 rounded-2xl border-2 border-amber-500/80 space-y-4 font-mono">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">BORSA HAVA BOŞLUĞU & TAPE KIVILCIMI</span>
+                  <strong class="font-display text-2xl font-black text-white">#${signal.symbol} (LONG)</strong>
                 </div>
-                <div class="bg-rose-950/40 p-2 rounded-lg border border-rose-900/50">
-                  <div class="text-rose-400 text-[10px]">KATI STOP (-%0.6)</div>
-                  <strong class="text-rose-300">$${slStr}</strong>
-                </div>
-                <div class="bg-emerald-950/40 p-2 rounded-lg border border-emerald-900/50">
-                  <div class="text-emerald-400 text-[10px]">HIZLI TP (+%1.4)</div>
-                  <strong class="text-emerald-300">$${tpStr}</strong>
+                <div class="text-left sm:text-right">
+                  <span class="text-slate-400 text-xs block">Giriş Fiyatı</span>
+                  <strong class="text-white text-xl font-bold">$${pStr}</strong>
                 </div>
               </div>
-            </div>
 
-            <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-center gap-2">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-              <span><strong>Zaman Kuralı:</strong> 8 dakika dolduğunda parite hedefe gitmemişse kâr/zarara bakılmaksızın pozisyon kapatılır.</span>
+              <!-- ANLIK METRİKLER -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                  <span class="text-slate-400 block text-[10px]">TAPE ALICI BASKISI</span>
+                  <strong class="text-emerald-400 text-sm">%${signal.buyRatio} Boğa Akışı</strong>
+                </div>
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                  <span class="text-slate-400 block text-[10px]">ANLIK SÜPÜRME HACMİ</span>
+                  <strong class="text-amber-400 text-sm">~$${signal.volK}K Piyasa Emri</strong>
+                </div>
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                  <span class="text-slate-400 block text-[10px]">TAHTA DURUMU</span>
+                  <strong class="text-emerald-400 text-sm">Satış Kademeleri Boş</strong>
+                </div>
+              </div>
+
+              <!-- HEDEFLER -->
+              <div class="bg-slate-900/90 border border-amber-500/30 rounded-xl p-4 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-amber-400 font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> 8 DAKİKALIK SCALP HEDEFLERİ</span>
+                  <span class="text-slate-400 text-[11px]">Hedef Süre: <strong>3-8 Dakika</strong></span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                    <div class="text-slate-500 text-[10px]">GİRİŞ</div>
+                    <strong class="text-slate-200">$${pStr}</strong>
+                  </div>
+                  <div class="bg-rose-950/40 p-2 rounded-lg border border-rose-900/50">
+                    <div class="text-rose-400 text-[10px]">KATI STOP (-%0.6)</div>
+                    <strong class="text-rose-300">$${slStr}</strong>
+                  </div>
+                  <div class="bg-emerald-950/40 p-2 rounded-lg border border-emerald-900/50">
+                    <div class="text-emerald-400 text-[10px]">HIZLI TP (+%1.4)</div>
+                    <strong class="text-emerald-300">$${tpStr}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span><strong>Zaman Kuralı:</strong> 8 dakika dolduğunda parite hedefe gitmemişse kâr/zarara bakılmaksızın pozisyon kapatılır.</span>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        }
       } catch (err) {
         console.error("Flash sinyal okuma hatası:", err);
       }
@@ -314,7 +319,6 @@
       `;
 
       try {
-        // 1. Ticker ve Temel Piyasa Verisi
         let ticker = cachedTickers.find(t => t.symbol === query);
         if (!ticker) {
           const tRes = await fetch(`https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES&symbol=${query}`);
@@ -335,14 +339,14 @@
         const change24h = (parseFloat(ticker.change24h || 0) * 100).toFixed(2);
         const openInterestUsdt = ticker.openInterest ? (parseFloat(ticker.openInterest) * price / 1000000).toFixed(2) : "0.00";
 
-        // 2. Tape Akışı: Son 100 Gerçekleşen Emir (Büyük Balina vs Bireysel Sürü)
+        // Tape akışı
         const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${query}&productType=USDT-FUTURES&limit=100`);
         const fillsData = await fillsRes.json();
         const fills = fillsData.data?.fillList || fillsData.data || [];
 
         let retailBuyVol = 0, retailSellVol = 0;
         let whaleBuyVol = 0, whaleSellVol = 0;
-        const WHALE_CUTOFF = 3000; // $3,000 üzeri anlık işlemler balina/kurumsal sayılır
+        const WHALE_CUTOFF = 3000;
 
         fills.forEach(f => {
           const notional = parseFloat(f.price) * parseFloat(f.size);
@@ -364,7 +368,7 @@
         const whaleDominance = Math.round(((whaleBuyVol + whaleSellVol) / tapeTotal) * 100);
         const retailDominance = 100 - whaleDominance;
 
-        // 3. Emir Defteri Derinliği (Orderbook Asymmetry)
+        // Derinlik
         const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${query}&productType=USDT-FUTURES&limit=25`);
         const depthData = await depthRes.json();
         const asks = depthData.data?.asks || [];
@@ -377,7 +381,7 @@
 
         const bookImbalance = totalAskDepthUsdt > 0 ? (totalBidDepthUsdt / totalAskDepthUsdt).toFixed(2) : "1.00";
 
-        // 4. NET İŞLEM YÖNÜ VE SEVİYELERİNİN BELİRLENMESİ
+        // NET İŞLEM YÖNÜ VE SEVİYELERİNİN BELİRLENMESİ
         let mathScore = 50;
         let actionDirection = "BEKLE / NÖTR";
         let actionColor = "text-amber-400 border-amber-500 bg-amber-500/10";
@@ -386,7 +390,6 @@
         let recTp = price * 1.015;
         let recSl = price * 0.992;
 
-        // SHORT SIKIŞMASI SENARYOSU
         if (fundingRate < -0.02 && buyPressure >= 60) {
           mathScore = 93;
           actionDirection = "🟢 KESİNLİKLE LONG (SHORT AÇMAK İNTİHARDIR)";
@@ -395,9 +398,7 @@
           leverageTip = "15x - 20x İzole";
           recTp = price * 1.020;
           recSl = price * 0.992;
-        } 
-        // LONG TASFİYE TUZAĞI SENARYOSU
-        else if (fundingRate > 0.03 && sellPressure >= 60) {
+        } else if (fundingRate > 0.03 && sellPressure >= 60) {
           mathScore = 20;
           actionDirection = "🔴 KESİNLİKLE SHORT (LONG AÇMAK İNTİHARDIR)";
           actionColor = "text-rose-400 border-rose-500 bg-rose-950/60";
@@ -405,9 +406,7 @@
           leverageTip = "10x - 15x İzole";
           recTp = price * 0.980;
           recSl = price * 1.008;
-        } 
-        // TAPE AGRESİF ALIM
-        else if (buyPressure >= 75) {
+        } else if (buyPressure >= 75) {
           mathScore = 82;
           actionDirection = "🟢 HIZLI LONG (TAPE SÜPÜRÜLÜYOR)";
           actionColor = "text-emerald-400 border-emerald-500 bg-emerald-950/60";
@@ -415,9 +414,7 @@
           leverageTip = "15x İzole";
           recTp = price * 1.015;
           recSl = price * 0.993;
-        } 
-        // TAPE AGRESİF SATIŞ
-        else if (sellPressure >= 75) {
+        } else if (sellPressure >= 75) {
           mathScore = 30;
           actionDirection = "🔴 HIZLI SHORT (TAPE BOŞALTILIYOR)";
           actionColor = "text-rose-400 border-rose-500 bg-rose-950/60";
@@ -608,12 +605,3 @@
   </script>
 </body>
 </html>
-```<FollowUp>
-<Suggestions>
-<Suggestion>Kodu GitHub'a gönderip TREE aramasını tekrar test edelim.</Suggestion>
-<Suggestion>X-Ray arama sonucundaki net işlem kartına doğrudan Bitget vadeli işlem linki ekleyelim mi?</Suggestion>
-</Suggestions>
-</FollowUp>
-<ElicitationsGroup>
-<Elicitation>Karttaki net işlem önerisinde kaldıraç oranını sabit 10x mi yoksa dinamik (10x-20x) mi tutalım?</Elicitation>
-</ElicitationsGroup>
