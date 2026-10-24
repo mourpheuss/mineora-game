@@ -6,27 +6,25 @@ const FIREBASE_DB_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// 4 saatlik mükerrer kilit kontrolü
-async function isAlertOnCooldown(symbol, type) {
+// Sinyal durumunu ve sinyal fiyatını Firebase'den okuma
+async function getAlertData(symbol, type) {
   try {
     const res = await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`);
-    if (!res.ok) return false;
-    const lastSentTime = await res.json();
-    if (lastSentTime && (Date.now() - Number(lastSentTime) < 14400000)) {
-      return true;
-    }
+    if (!res.ok) return null;
+    return await res.json();
   } catch (err) {
-    console.error("Firebase kontrol hatası:", err);
+    console.error("Firebase okuma hatası:", err);
   }
-  return false;
+  return null;
 }
 
-async function markAlertAsSent(symbol, type) {
+// Sinyal zamanını ve fiyatını kaydetme
+async function saveAlertData(symbol, type, data) {
   try {
     await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Date.now())
+      body: JSON.stringify(data)
     });
   } catch (err) {
     console.error("Firebase kayıt hatası:", err);
@@ -67,30 +65,8 @@ async function fetchFundingCountdown(symbol) {
   return "Bilinmiyor";
 }
 
-async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, oiFormatted, chgFormatted, countdownStr) {
-  const onCooldown = await isAlertOnCooldown(coin.symbol, type);
-  if (onCooldown) return;
-
-  const isPump = type === 'EARLY_ACCUMULATION';
-  const icon = isPump ? '⚡' : '🚨';
-  const yonStr = isPump ? '🚀 PUMP HAZIRLIĞI (Short Sıkışması)' : '🩸 DUMP HAZIRLIĞI (Aşırı Long Tuzağı)';
-  const chgStr = (parseFloat(chgFormatted) >= 0 ? '+' : '') + chgFormatted + '%';
-
-  // Sade, laf kalabalığı olmayan, şık mesaj şablonu
-  const text = `
-${icon} <b>MINEORA VIP SENTINEL</b>
-
-🎯 <b>Parite:</b> #${coin.symbol}
-📊 <b>Yön:</b> <b>${yonStr}</b>
-💵 <b>Fiyat:</b> $${coin.lastPr} (${chgStr})
-📈 <b>Fonlama Oranı:</b> %${fundingFormatted}
-⏳ <b>Fonlama Sayacı:</b> ${countdownStr} kaldı
-💼 <b>Açık Pozisyon (OI):</b> $${oiFormatted}M USDT
-💰 <b>24s Hacim:</b> $${volFormatted}M USDT
-
-🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını Aç</a>
-`.trim();
-
+// Telegram Bildirim Fonksiyonu
+async function sendTelegramMessage(text) {
   try {
     const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
@@ -102,13 +78,10 @@ ${icon} <b>MINEORA VIP SENTINEL</b>
         disable_web_page_preview: true
       })
     });
-    const data = await res.json();
-    if (data.ok) {
-      await markAlertAsSent(coin.symbol, type);
-      console.log(`[SADE ALERT GÖNDERİLDİ] ${coin.symbol} (${type})`);
-    }
+    return await res.json();
   } catch (err) {
     console.error("Telegram gönderme hatası:", err);
+    return { ok: false };
   }
 }
 
@@ -126,52 +99,124 @@ async function performSingleScan() {
     });
 
     for (const c of liquidPool) {
+      const currentPrice = parseFloat(c.lastPr);
       const funding = parseFloat(c.fundingRate || 0);
       const chg = parseFloat(c.change24h || 0) * 100;
       const volM = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
       const fundingPct = (funding * 100).toFixed(4);
       const chgFormatted = chg.toFixed(1);
 
-      // Fiyatı zaten %8'in üzerine çıkmış olan trenleri es geçiyoruz
+      // ================= KONTROL 1: HEDEF GÖRÜLDÜ / KÂR ALMA & FOMO FRENI =================
+      const earlyData = await getAlertData(c.symbol, 'EARLY_ACCUMULATION');
+      if (earlyData && earlyData.entryPrice && !earlyData.targetReached) {
+        const gainPct = ((currentPrice - earlyData.entryPrice) / earlyData.entryPrice) * 100;
+        
+        // Fiyat sinyal girişine göre en az +%18 sıçradıysa kâr mesajı gönderilir
+        if (gainPct >= 18.0) {
+          const targetMsg = `
+🛑 <b>MINEORA AVCI | HEDEF GÖRÜLDÜ</b>
+
+🎯 <b>Parite:</b> #${c.symbol}
+📈 <b>Gerçekleşen Patlama:</b> +%${gainPct.toFixed(1)} sıçradı!
+💵 <b>Mevcut Fiyat:</b> $${currentPrice}
+
+⚠️ <b>YARI YOLDA TRENE ATLAMAYIN!</b>
+Tahta tepe testini yaptı. Buradan yeni alım girmek yüksek risk taşır.
+
+💰 <b>Aksiyon:</b> Erken girenler için kâr alma (TP) ve izleme bölgesidir.
+🔗 <a href="https://www.bitget.com/futures/usdt/${c.symbol}">Bitget Tahtasını Aç</a>
+`.trim();
+
+          const sent = await sendTelegramMessage(targetMsg);
+          if (sent.ok) {
+            earlyData.targetReached = true;
+            earlyData.targetTime = Date.now();
+            await saveAlertData(c.symbol, 'EARLY_ACCUMULATION', earlyData);
+            console.log(`[HEDEF BİLDİRİMİ ATILDI] ${c.symbol} (+%${gainPct.toFixed(1)})`);
+          }
+          continue;
+        }
+      }
+
+      // Fiyatı zaten %8'in üzerinde olan trenleri yeni alım için eliyoruz
       if (chg > 8.0) continue;
 
-      // 1. PUMP HAZIRLIĞI (Fiyat sakin, fonlama negatif sıkışmış)
+      // ================= KONTROL 2: ERKEN PUMP HAZIRLIĞI =================
       if (funding <= -0.0035 && chg >= -4.0 && chg <= 8.0) {
+        // 4 saatlik kilit kontrolü
+        if (earlyData && (Date.now() - earlyData.timestamp < 14400000)) {
+          continue;
+        }
+
         const [oiRaw, countdown] = await Promise.all([
           fetchOpenInterest(c.symbol),
           fetchFundingCountdown(c.symbol)
         ]);
-        const oiValM = ((oiRaw * parseFloat(c.lastPr)) / 1000000).toFixed(2);
+        const oiValM = ((oiRaw * currentPrice) / 1000000).toFixed(2);
+        const chgStr = (parseFloat(chgFormatted) >= 0 ? '+' : '') + chgFormatted + '%';
 
-        await sendTelegramAlert(
-          c,
-          'EARLY_ACCUMULATION',
-          fundingPct,
-          volM,
-          oiValM,
-          chgFormatted,
-          countdown
-        );
+        const alertMsg = `
+⚡ <b>MINEORA VIP SENTINEL</b>
+
+🎯 <b>Parite:</b> #${c.symbol}
+📊 <b>Yön:</b> 🚀 PUMP HAZIRLIĞI (Short Sıkışması)
+💵 <b>Fiyat:</b> $${c.lastPr} (${chgStr})
+📈 <b>Fonlama Oranı:</b> %${fundingPct}
+⏳ <b>Fonlama Sayacı:</b> ${countdown} kaldı
+💼 <b>Açık Pozisyon (OI):</b> $${oiValM}M USDT
+💰 <b>24s Hacim:</b> $${volM}M USDT
+
+🔗 <a href="https://www.bitget.com/futures/usdt/${c.symbol}">Bitget Tahtasını Aç</a>
+`.trim();
+
+        const sent = await sendTelegramMessage(alertMsg);
+        if (sent.ok) {
+          await saveAlertData(c.symbol, 'EARLY_ACCUMULATION', {
+            timestamp: Date.now(),
+            entryPrice: currentPrice,
+            targetReached: false
+          });
+          console.log(`[ERKEN PUMP SİNYALİ ATILDI] ${c.symbol}`);
+        }
         continue;
       }
 
-      // 2. DUMP HAZIRLIĞI (Fiyat sakin/tepede, aşırı pozitif fonlama tuzağı)
+      // ================= KONTROL 3: DUMP HAZIRLIĞI =================
       if (funding >= 0.015 && chg >= -5.0 && chg <= 10.0) {
+        const dumpData = await getAlertData(c.symbol, 'DUMP_RISK');
+        if (dumpData && (Date.now() - dumpData.timestamp < 14400000)) {
+          continue;
+        }
+
         const [oiRaw, countdown] = await Promise.all([
           fetchOpenInterest(c.symbol),
           fetchFundingCountdown(c.symbol)
         ]);
-        const oiValM = ((oiRaw * parseFloat(c.lastPr)) / 1000000).toFixed(2);
+        const oiValM = ((oiRaw * currentPrice) / 1000000).toFixed(2);
+        const chgStr = (parseFloat(chgFormatted) >= 0 ? '+' : '') + chgFormatted + '%';
 
-        await sendTelegramAlert(
-          c,
-          'DUMP_RISK',
-          fundingPct,
-          volM,
-          oiValM,
-          chgFormatted,
-          countdown
-        );
+        const alertMsg = `
+🚨 <b>MINEORA VIP SENTINEL</b>
+
+🎯 <b>Parite:</b> #${c.symbol}
+📊 <b>Yön:</b> 🩸 DUMP HAZIRLIĞI (Aşırı Long Tuzağı)
+💵 <b>Fiyat:</b> $${c.lastPr} (${chgStr})
+📈 <b>Fonlama Oranı:</b> %${fundingPct}
+⏳ <b>Fonlama Sayacı:</b> ${countdown} kaldı
+💼 <b>Açık Pozisyon (OI):</b> $${oiValM}M USDT
+💰 <b>24s Hacim:</b> $${volM}M USDT
+
+🔗 <a href="https://www.bitget.com/futures/usdt/${c.symbol}">Bitget Tahtasını Aç</a>
+`.trim();
+
+        const sent = await sendTelegramMessage(alertMsg);
+        if (sent.ok) {
+          await saveAlertData(c.symbol, 'DUMP_RISK', {
+            timestamp: Date.now(),
+            entryPrice: currentPrice
+          });
+          console.log(`[DUMP SİNYALİ ATILDI] ${c.symbol}`);
+        }
         continue;
       }
     }
