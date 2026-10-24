@@ -212,9 +212,7 @@
 
   <script>
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_CHAT_ID = "-1004404988937";
-
-    let sentAlerts = JSON.parse(localStorage.getItem('mineora_sent_alerts') || '{}');
+    const TG_ADMIN_ID = "6457294906"; // SADECE SİZE ÖZEL TELEGRAM BİLDİRİMİ
 
     function openVipModal() {
       document.getElementById('vipPaymentModal').classList.remove('hidden');
@@ -239,6 +237,7 @@
       });
     }
 
+    // VIP Ödeme Bildirimi (Doğrudan sizin özel Telegram ID'nize gider)
     async function submitVipPayment() {
       const txHash = document.getElementById('inputTxHash').value.trim();
       if (!txHash) {
@@ -247,23 +246,30 @@
       }
 
       const user = sessionStorage.getItem('currentUser') || 'Web Ziyaretçisi';
-      const text = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${txHash}</code>\n\nLütfen admin panelinden doğrulamayı yapıp VIP onayı verin.`;
+      
+      const text = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID (Hash):</b> <code>${txHash}</code>\n\n🔍 <b>Tronscan Kontrol:</b>\nhttps://tronscan.org/#/transaction/${txHash}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden VIP üyeliğini açabilirsiniz.`;
 
       try {
-        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+        const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chat_id: TG_CHAT_ID,
+            chat_id: TG_ADMIN_ID,
             text: text,
             parse_mode: 'HTML'
           })
         });
-        alert("Ödeme bildiriminiz başarıyla iletildi. Transfer zincirde doğrulandıktan sonra VIP üyeliğiniz aktif edilecektir.");
-        document.getElementById('inputTxHash').value = '';
-        closeVipModal();
+
+        const data = await res.json();
+        if (data.ok) {
+          alert("Ödeme bildiriminiz başarıyla iletildi. Transfer doğrulandıktan sonra VIP üyeliğiniz aktif edilecektir.");
+          document.getElementById('inputTxHash').value = '';
+          closeVipModal();
+        } else {
+          alert("Bildirim iletilemedi. Lütfen Telegram'da botunuza gidip /start verdiğinizden emin olun.");
+        }
       } catch(e) {
-        alert("Bildirim iletilirken hata oluştu.");
+        alert("Bağlantı hatası oluştu.");
       }
     }
 
