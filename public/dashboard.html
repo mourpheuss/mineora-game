@@ -155,9 +155,10 @@
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHAT_ID = "-1004404988937";
 
+    // Spam engelleme: Aynı pariteye aynı bildirim türü 4 saat içinde tek sefer gider
     let sentAlerts = JSON.parse(localStorage.getItem('mineora_sent_alerts') || '{}');
 
-    async function sendTelegramAlertDirect(coin, type, fundingFormatted, volFormatted, desc) {
+    async function sendTelegramAlertDirect(coin, type, fundingFormatted, volFormatted, desc, chgFormatted) {
       if (!TG_BOT_TOKEN || !TG_CHAT_ID) return;
 
       const now = Date.now();
@@ -168,11 +169,18 @@
         return;
       }
 
-      const isPump = type === 'PUMP';
-      const icon = isPump ? '🚀' : '🚨';
-      const title = isPump ? 'MEGA SQUEEZE (PATLAMA FIRSATI)' : 'AŞIRI KALDIRAÇ (ÇÖKÜŞ KALKANI)';
+      let icon = '🚀';
+      let title = 'MEGA SQUEEZE (PATLAMA FIRSATI)';
 
-      const text = `${icon} <b>MINEORA VIP SENTINEL RADAR</b>\n<b>${title}</b>\n\n🪙 <b>Parite:</b> #${coin.symbol}\n💵 <b>Mevcut Fiyat:</b> $${coin.lastPr}\n📊 <b>Fonlama Oranı:</b> %${fundingFormatted}\n💰 <b>24s Vadeli Hacim:</b> $${volFormatted}M USDT\n\n📌 <b>Radar Analizi:</b>\n${desc}\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR')}\n🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını Görüntüle</a>`;
+      if (type === 'PUMP_COMPLETED') {
+        icon = '🏁';
+        title = 'HEDEF GÖRÜLDÜ / KÂR REALİZASYONU';
+      } else if (type === 'DUMP') {
+        icon = '🚨';
+        title = 'AŞIRI KALDIRAÇ (ÇÖKÜŞ KALKANI)';
+      }
+
+      const text = `${icon} <b>MINEORA VIP SENTINEL RADAR</b>\n<b>${title}</b>\n\n🪙 <b>Parite:</b> #${coin.symbol}\n💵 <b>Mevcut Fiyat:</b> $${coin.lastPr} (${chgFormatted ? (chgFormatted >= 0 ? '+' : '') + chgFormatted + '%' : ''})\n📊 <b>Fonlama Oranı:</b> %${fundingFormatted}\n💰 <b>24s Vadeli Hacim:</b> $${volFormatted}M USDT\n\n📌 <b>Radar Analizi:</b>\n${desc}\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR')}\n🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını Görüntüle</a>`;
 
       try {
         const url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
@@ -191,7 +199,9 @@
         if (data.ok) {
           sentAlerts[alertKey] = now;
           localStorage.setItem('mineora_sent_alerts', JSON.stringify(sentAlerts));
-          console.log(`[VIP ALERT] ${coin.symbol} Telegram'a başarıyla iletildi.`);
+          console.log(`[VIP ALERT] ${coin.symbol} (${type}) Telegram'a iletildi.`);
+        } else {
+          console.error("Telegram API Hatası:", data);
         }
       } catch (err) {
         console.error("Telegram Gönderim Hatası:", err);
@@ -199,7 +209,7 @@
     }
 
     async function testTelegramLive() {
-      const text = `⚡ <b>MINEORA VIP SENTINEL TEST MESAJI</b>\n\nBağlantı başarıyla kuruldu! Radar anomalileri tespit ettiğinde bildirimler doğrudan bu kanala iletilecektir.\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR')}`;
+      const text = `⚡ <b>MINEORA VIP SENTINEL TEST MESAJI</b>\n\nSentinel bağlantısı devrede! Büyük piyasa anomalileri tespit edildiğinde erken uyarı ve realizasyon bildirimleri anında bu kanala aktarılacaktır.\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR')}`;
       try {
         const url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
         const res = await fetch(url, {
@@ -213,7 +223,7 @@
         });
         const data = await res.json();
         if (data.ok) {
-          alert("Test bildirimi Telegram'a başarıyla gönderildi!");
+          alert("Test bildirimi VIP Telegram kanalına başarıyla gönderildi!");
         } else {
           alert("Telegram Hatası: " + (data.description || "Bilinmeyen hata"));
         }
@@ -245,13 +255,13 @@
                  parseFloat(t.usdtVolume || 0) >= 1200000;
         });
 
-        // Çekirdek Kural Aynen Korundu: Negatif Fonlama Sıkışması (SHORT SQUEEZE)
+        // Çekirdek Algoritma: Negatif Fonlama Sıkışması (SHORT SQUEEZE)
         const pumpCandidates = liquidPool.filter(t => {
           const funding = parseFloat(t.fundingRate || 0);
           return funding <= -0.015;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 4);
 
-        // Çekirdek Kural Aynen Korundu: Pozitif Fonlama & Kaldıraç Şişmesi (DUMP)
+        // Çekirdek Algoritma: Pozitif Fonlama & Kaldıraç Şişmesi (DUMP)
         const dumpCandidates = liquidPool.filter(t => {
           const funding = parseFloat(t.fundingRate || 0);
           const chg = parseFloat(t.change24h || 0) * 100;
@@ -262,20 +272,47 @@
         renderPumpCards(pumpCandidates);
         renderTable(liquidPool.slice(0, 15));
 
-        // Telegram bildirimlerini tetikle (Sadece yeni başlayan patlamalarda sinyal gider)
+        // Telegram Entegrasyonu: Erken Uyarı ve Hedef Tamamlandı Ayrımı
         pumpCandidates.forEach(c => {
-          const chg = parseFloat(c.change24h || 0) * 100;
-          if (chg < 15) { // Patlamış gitmiş olana değil, yeni başlayan sıkışmaya sinyal atar
-            const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
-            const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
-            sendTelegramAlertDirect(c, 'PUMP', funding, vol, 'Aşırı negatif fonlama birikimi. Short pozisyonlar sıkıştı, yukarı patlama (Short Squeeze) potansiyeli yüksek.');
+          const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+          const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+          const chg = (parseFloat(c.change24h || 0) * 100).toFixed(1);
+
+          if (parseFloat(chg) >= 15) {
+            // Zirveyi vurmuş parite için uyarı
+            sendTelegramAlertDirect(
+              c,
+              'PUMP_COMPLETED',
+              funding,
+              vol,
+              `Short squeeze dalgası yaşandı (+${chg}% sıçradı). Zirve test edildi; yeni pozisyon açmak yüksek risk taşır. Kâr alma ve izleme bölgesidir.`,
+              chg
+            );
+          } else {
+            // Henüz patlamamış olan için erken uyarı
+            sendTelegramAlertDirect(
+              c,
+              'PUMP',
+              funding,
+              vol,
+              'Aşırı negatif fonlama birikimi. Short pozisyonlar sıkıştı, tahta yukarı patlama (Short Squeeze) hazırlığında.',
+              chg
+            );
           }
         });
 
         dumpCandidates.forEach(c => {
           const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
           const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
-          sendTelegramAlertDirect(c, 'DUMP', funding, vol, 'Aşırı pozitif fonlama ve long yığılması. Sert tasfiye/çöküş (Dump) riski bulunuyor.');
+          const chg = (parseFloat(c.change24h || 0) * 100).toFixed(1);
+          sendTelegramAlertDirect(
+            c,
+            'DUMP',
+            funding,
+            vol,
+            'Aşırı pozitif fonlama ve kontrolsüz Long yığılması. Ters ayakta yakalanma ve sert zincirleme tasfiye (Dump) riski bulunuyor.',
+            chg
+          );
         });
 
       } catch(e) {
@@ -342,7 +379,6 @@
         const chg = parseFloat(c.change24h || 0) * 100;
         const price = parseFloat(c.lastPr);
 
-        // HAREKET ZİRVEYE ULAŞTI MI KONTROLÜ (ARK Durumu)
         const isCompleted = chg >= 15;
 
         return `
