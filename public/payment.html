@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mineora Sentinel | VIP Abonelik & Ödeme Kapısı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-orange-500 selection:text-white">
+
+  <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+    
+    <!-- Başlık -->
+    <div class="text-center space-y-2">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-2xl mx-auto shadow-lg shadow-amber-500/20">
+        <i class="fa-solid fa-crown"></i>
+      </div>
+      <h2 class="font-display font-black text-2xl text-white">MINEORA SENTINEL VIP</h2>
+      <p class="text-xs text-slate-400 font-mono">Radar erişimini açmak için aboneliğinizi başlatın</p>
+    </div>
+
+    <!-- Tutar -->
+    <div class="bg-slate-950 border border-slate-800 p-4 rounded-2xl flex justify-between items-center font-mono">
+      <div class="space-y-0.5">
+        <span class="text-xs text-slate-400 block">30 Günlük VIP Lisans:</span>
+        <span class="text-[10px] text-emerald-400">Canlı Radar + Telegram Kanalı</span>
+      </div>
+      <span class="text-xl font-black text-emerald-400">500 USDT</span>
+    </div>
+
+    <!-- Cüzdan Adresi -->
+    <div class="space-y-2 font-mono text-xs">
+      <div class="flex justify-between items-center">
+        <label class="text-slate-300 font-bold">USDT (TRC-20) Yatırma Adresi:</label>
+        <span class="text-[10px] bg-rose-950 border border-rose-800 text-rose-300 px-2 py-0.5 rounded font-bold">Yalnızca TRC-20</span>
+      </div>
+      <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+        <input type="text" id="walletAddr" value="TDJiWDhEfbeF3ckg1zvTF8VUht6TrkbXY5" readonly class="bg-transparent text-slate-200 text-xs w-full focus:outline-none select-all font-mono" />
+        <button onclick="copyAddr()" id="btnCopy" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg transition text-[11px] shrink-0 font-bold">
+          Kopyala
+        </button>
+      </div>
+      <p class="text-[10px] text-amber-400/90 leading-relaxed">
+        ⚠️ <strong>Uyarı:</strong> Yalnızca TRC-20 (Tron) ağı desteklenmektedir. Diğer ağlardan yapılan transferler kaybolur.
+      </p>
+    </div>
+
+    <!-- TxID Alanı -->
+    <div class="space-y-2 font-mono text-xs">
+      <label class="text-slate-300 font-bold block">İşlem Kodu (TxID / TxHash):</label>
+      <input type="text" id="txHashInput" placeholder="Örn: 4f8b9e... (Borsadan gelen transfer hash kodu)" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-3 w-full focus:outline-none focus:border-orange-500 font-mono" />
+    </div>
+
+    <!-- Bildirim Butonu -->
+    <button onclick="submitPaymentReport()" id="btnSubmitReport" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer">
+      <i class="fa-solid fa-paper-plane"></i> Ödemeyi Bildir & Onaya Gönder
+    </button>
+
+    <div class="text-center pt-2">
+      <button onclick="logoutToLogin()" class="text-slate-500 hover:text-rose-400 text-xs font-mono transition">
+        <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Farklı Hesapla Giriş Yap
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
+    const TG_ADMIN_ID = "6457294906"; // SADECE SİZE ÖZEL TELEGRAM BİLDİRİMİ
+
+    function copyAddr() {
+      const addr = document.getElementById('walletAddr').value;
+      navigator.clipboard.writeText(addr).then(() => {
+        const btn = document.getElementById('btnCopy');
+        btn.innerText = "Kopyalandı!";
+        btn.classList.remove('bg-orange-600');
+        btn.classList.add('bg-emerald-600');
+        setTimeout(() => {
+          btn.innerText = "Kopyala";
+          btn.classList.remove('bg-emerald-600');
+          btn.classList.add('bg-orange-600');
+        }, 2000);
+      });
+    }
+
+    async function submitPaymentReport() {
+      const tx = document.getElementById('txHashInput').value.trim();
+      if (!tx) {
+        alert("Lütfen transfer işleminize ait TxID (İşlem Kodu) bilgisini yazın.");
+        return;
+      }
+
+      const user = sessionStorage.getItem('currentUser') || 'Bilinmeyen Kullanıcı';
+      
+      const message = `
+💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>
+
+👤 <b>Kullanıcı:</b> ${user}
+🌐 <b>Ağ:</b> TRC-20 (Tron)
+🔗 <b>TxID (Hash):</b> <code>${tx}</code>
+
+🔍 <b>Tronscan Doğrulama Linki:</b>
+https://tronscan.org/#/transaction/${tx}
+
+✅ Cüzdanda 500 USDT transferini onayladıktan sonra Admin Masasından üyeliği aktifleştirebilirsiniz.
+      `.trim();
+
+      const btn = document.getElementById('btnSubmitReport');
+      btn.innerText = "İletiliyor...";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: TG_ADMIN_ID, // Sadece sizin telefonunuza özel mesaj
+            text: message,
+            parse_mode: 'HTML'
+          })
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          alert("Ödeme bildiriminiz başarıyla yöneticiye iletildi. Transfer zincirde kontrol edilip üyeliğiniz onaylandığında radara erişebileceksiniz.");
+          document.getElementById('txHashInput').value = '';
+          btn.innerText = "Bildirim Gönderildi (Onay Bekleniyor)";
+        } else {
+          alert("Bildirim gönderilemedi. Lütfen Telegram'da botunuza gidip /start verdiğinizden emin olun.");
+          btn.innerText = "Ödemeyi Bildir & Onaya Gönder";
+          btn.disabled = false;
+        }
+      } catch (e) {
+        alert("Bağlantı hatası oluştu: " + e.message);
+        btn.innerText = "Ödemeyi Bildir & Onaya Gönder";
+        btn.disabled = false;
+      }
+    }
+
+    function logoutToLogin() {
+      sessionStorage.clear();
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>
