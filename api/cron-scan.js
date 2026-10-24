@@ -91,7 +91,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
     }
 
-    // 2. Firebase'den Kalıcı Kilitleri ve On-Chain Transferlerini Al
+    // 2. Firebase Kilitleri ve On-Chain Transferlerini Oku
     let locks = {};
     let onChainTransfers = [];
     try {
@@ -104,8 +104,8 @@ export default async function handler(req, res) {
     try {
       const whaleRes = await fetch(`${FIREBASE_BASE}/whale_transfers.json`);
       const whaleData = await whaleRes.json();
-      if (whaleData && typeof whaleData === 'object') {
-        onChainTransfers = Object.keys(whaleData).map(k => whaleData[k]);
+      if (whaleData && typeof whaleData === 'object' && !whaleData.error) {
+        onChainTransfers = Object.keys(whaleData).map(k => whaleData[k]).filter(w => w && typeof w === 'object');
       }
     } catch(e) {
       onChainTransfers = [];
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
     const signalsToProcess = [];
 
     // ==========================================
-    // 1. ORİJİNAL LONG ALGORİTMASI (Dokunulmadı)
+    // 1. ORİJİNAL LONG ALGORİTMASI (Birebir Korundu)
     // ==========================================
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
@@ -132,14 +132,25 @@ export default async function handler(req, res) {
     longCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'LONG' }));
 
     // ==========================================
-    // 2. GÜVENLİ SHORT ALGORİTMASI (Dokunulmadı)
+    // 2. GÜVENLİ SHORT ALGORİTMASI (JCT & Hiper-Pump Kalkanı)
     // ==========================================
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-      const isExtremePumpWithPositiveFunding = chg >= 20.0 && funding >= 0.0002;
-      const isHeavyCrowdedLong = funding >= 0.0008 && chg >= 8.0;
-      return isExtremePumpWithPositiveFunding || isHeavyCrowdedLong;
+
+      // KALKAN 1: %45'in üzerindeki kontrolden çıkmış hiper pump tahtalarına ASLA dokunma!
+      if (chg > 45.0) return false;
+
+      // KALKAN 2: Fonlama eksi veya nötr ise ASLA dokunma (Short patlatmaya devam ediyor demektir)
+      if (funding <= 0.0003) return false;
+
+      // Kriter A: %18 ile %45 arasında şişmiş ve fonlaması belirgin artıya geçmiş tahtalar (+%0.05)
+      const isControlledTop = chg >= 18.0 && chg <= 45.0 && funding >= 0.0005;
+
+      // Kriter B: Aşırı Long kalabalığı birikmiş (+%0.10 fonlama) ve primli tahtalar
+      const isExtremeLongTrap = funding >= 0.0010 && chg >= 10.0;
+
+      return isControlledTop || isExtremeLongTrap;
     }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
 
     shortCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'SHORT' }));
@@ -161,7 +172,7 @@ export default async function handler(req, res) {
       // 120 DAKİKA KİLİT KONTROLÜ
       if (minutesPassed < 120) continue;
 
-      // On-Chain Eşleşme Teyidi Kontrolü
+      // On-Chain Balina Eşleşme Kontrolü
       const matchedWhale = onChainTransfers.find(w => w.symbol === symbol);
       const hasOnChainConfirmation = !!matchedWhale;
 
@@ -189,7 +200,7 @@ export default async function handler(req, res) {
       } else {
         tp1 = price * 0.982;
         tp2 = price * 0.955;
-        sl = price * 1.015;
+        sl = price * 1.015; // +%1.5 Kesin Stop
         rr = ((price - tp1) / (sl - price)).toFixed(1);
       }
 
