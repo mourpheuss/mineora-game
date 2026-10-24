@@ -126,32 +126,6 @@
 
     </div>
 
-    <!-- PİYASA TABLOSU -->
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 font-mono text-xs">
-      <div class="flex items-center justify-between">
-        <h3 class="font-display text-base font-bold text-white">📊 Bitget Erken Fırsat Sıralaması</h3>
-        <span class="text-slate-500 text-[11px]">Sadece Henüz Kopup Gitmemiş Pariteler (≤ +8%)</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left">
-          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
-            <tr>
-              <th class="py-3 px-4">Sembol</th>
-              <th class="py-3 px-4">Mevcut Fiyat</th>
-              <th class="py-3 px-4">24s Değişim</th>
-              <th class="py-3 px-4">Fonlama Oranı</th>
-              <th class="py-3 px-4">24s Vadeli Likidite</th>
-              <th class="py-3 px-4">Avcı Teşhisi</th>
-              <th class="py-3 px-4 text-right">Potansiyel</th>
-            </tr>
-          </thead>
-          <tbody id="generalMarketTableBody" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="7" class="py-6 text-center text-slate-500">Veriler taranıyor...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </main>
 
   <!-- KULLANICI BİTGET API AYARLARI MODALI -->
@@ -669,14 +643,12 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
                  parseFloat(t.usdtVolume || 0) >= 800000;
         });
 
-        // 1. Önce Fonlama Adaylarını Al
         const rawSqueezeCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
           return funding <= -0.0035 && chg >= -5.0 && chg <= 8.0;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 8);
 
-        // 2. ÇELİŞKİ GİDERİCİ TAPE SÜZGEÇ: Adayları gerçek Tape'den geçir
         const verifiedSqueezeList = [];
         for (const item of rawSqueezeCandidates) {
           try {
@@ -693,7 +665,6 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
             }
             const whalePct = totalVol > 0 ? Math.round((whaleVol / totalVol) * 100) : 0;
             
-            // Eğer tahtada balina alımı (%40+) varsa masaya al!
             if (whalePct >= 40) {
               item.verifiedWhalePct = whalePct;
               verifiedSqueezeList.push(item);
@@ -706,7 +677,6 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
           triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
 
-        // Erken Dump Adayları
         const dumpCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
@@ -714,14 +684,8 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
           return (chg >= 18.0 && chg <= 45.0 && funding >= 0.0005) || (funding >= 0.0010 && chg >= 10.0);
         }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h)).slice(0, 6);
 
-        const earlyTableList = liquidPool
-          .filter(t => (parseFloat(t.change24h || 0) * 100) <= 8.0)
-          .sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate))
-          .slice(0, 15);
-
         renderEarlyPumpCards(verifiedSqueezeList);
         renderDumpCards(dumpCandidates);
-        renderTable(earlyTableList);
 
       } catch(e) {
         console.error("Radar tarama hatası:", e);
@@ -877,37 +841,7 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
       }).join('');
     }
 
-    function renderTable(list) {
-      const tbody = document.getElementById('generalMarketTableBody');
-      tbody.innerHTML = list.map(c => {
-        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
-        const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
-        const chg = (parseFloat(c.change24h || 0) * 100);
-        const isSqueeze = parseFloat(c.fundingRate) <= -0.0035;
-        const isDangerous = parseFloat(c.fundingRate) >= 0.015;
-
-        return `
-          <tr class="hover:bg-slate-900/60 transition">
-            <td class="py-3 px-4 font-bold text-white">${c.symbol}</td>
-            <td class="py-3 px-4 font-mono">$${c.lastPr}</td>
-            <td class="py-3 px-4 font-mono font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-              ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
-            </td>
-            <td class="py-3 px-4 font-mono font-bold ${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-300'}">
-              ${funding}%
-            </td>
-            <td class="py-3 px-4 font-mono text-slate-400">$${vol}M</td>
-            <td class="py-3 px-4">
-              ${isDangerous ? '<span class="text-rose-400 font-bold">⚠️ Aşırı Long Yığılması (Dump)</span>' : isSqueeze ? '<span class="text-emerald-400 font-bold">⚡ Short Sıkışması (Pump)</span>' : '<span class="text-slate-400">Dengeli</span>'}
-            </td>
-            <td class="py-3 px-4 text-right">
-              ${isDangerous ? '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">Çöküş Riski</span>' : isSqueeze ? '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">Patlayabilir</span>' : '<span class="text-slate-500 text-[10px]">Nötr</span>'}
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
+    // API MODAL AYARLARI
     function openApiSettingsModal() {
       document.getElementById('apiSettingsModal').classList.remove('hidden');
       const u = sessionStorage.getItem('currentUser');
