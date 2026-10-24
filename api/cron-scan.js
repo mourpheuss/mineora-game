@@ -37,7 +37,6 @@ async function bitgetRequest(apiKey, secret, passphrase, method, endpoint, param
   return await response.json();
 }
 
-// Otomatik İşlem Açma Fonksiyonu
 async function tradeForUser(apiKey, secret, passphrase, symbol) {
   try {
     const accountRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/account/account', {
@@ -83,21 +82,18 @@ async function tradeForUser(apiKey, secret, passphrase, symbol) {
 
 export default async function handler(req, res) {
   try {
-    // 1. Bitget Vadeli Ticker Verilerini Çek
+    // 1. Bitget Ticker Verilerini Al
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
     const json = await tickersRes.json();
     if (json.code !== "00000" || !Array.isArray(json.data)) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
     }
 
-    const allTickers = json.data;
+    // 2. Firebase'deki Kilitleri Çek
+    const lockRes = await fetch("https://mineora-web-default-rtdb.firebaseio.com/cron_locks.json");
+    let locks = await lockRes.json() || {};
 
-    // 2. Firebase'den Son Gönderilen Sinyalleri Oku (Spam Koruması)
-    const signalsDbRes = await fetch("https://mineora-web-default-rtdb.firebaseio.com/cron_signals.json");
-    let signalsDb = await signalsDbRes.json() || {};
-
-    // 3. Filtreleme: Hacim >= 800K, Fonlama <= -0.0035, Değişim -%4 ile +%8 arası
-    const liquidPool = allTickers.filter(t => {
+    const liquidPool = json.data.filter(t => {
       return t.symbol.endsWith("USDT") &&
              !EXCLUDED.includes(t.symbol) &&
              parseFloat(t.usdtVolume || 0) >= 800000;
@@ -109,15 +105,25 @@ export default async function handler(req, res) {
       return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
     }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate));
 
-    const dispatched = [];
+    const sentSymbols = [];
 
     for (const item of candidates) {
       const symbol = item.symbol;
-      const lastSent = signalsDb[symbol]?.lastSent || 0;
-      const passedMinutes = (Date.now() - lastSent) / (1000 * 60);
+      const lastSentTime = locks[symbol] || 0;
+      const minutesPassed = (Date.now() - lastSentTime) / (1000 * 60);
 
-      // 2 saat (120 dk) geçmediyse tekrar gönderme
-      if (passedMinutes < 120) continue;
+      // 120 dakika (2 saat) dolmadan ASLA tekrar atma
+      if (minutesPassed < 120) {
+        continue;
+      }
+
+      // KİLİDİ ÖNCE KAYDET (Çifte istek gelirse spam olmasın)
+      locks[symbol] = Date.now();
+      await fetch(`https://mineora-web-default-rtdb.firebaseio.com/cron_locks/${symbol}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Date.now())
+      });
 
       const price = parseFloat(item.lastPr);
       const rawFunding = parseFloat(item.fundingRate || 0);
@@ -134,10 +140,10 @@ export default async function handler(req, res) {
       const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
       const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
 
-      // A) Önce Otomatik İşlemi Aç
+      // Otomatik İşlemi Aç
       await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol);
 
-      // B) Telegram'a Mesajı Fırlat
+      // Telegram VIP Bildirimi
       const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
@@ -160,18 +166,10 @@ export default async function handler(req, res) {
         body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
       });
 
-      // C) Kilidi Firebase'e Kaydet
-      signalsDb[symbol] = { lastSent: Date.now() };
-      await fetch(`https://mineora-web-default-rtdb.firebaseio.com/cron_signals/${symbol}.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lastSent: Date.now() })
-      });
-
-      dispatched.push(symbol);
+      sentSymbols.push(symbol);
     }
 
-    return res.status(200).json({ success: true, processed: dispatched });
+    return res.status(200).json({ success: true, sent: sentSymbols });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
