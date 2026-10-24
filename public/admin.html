@@ -9,6 +9,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -26,7 +31,7 @@
         </div>
         <div>
           <span class="font-display font-black text-xl tracking-tight text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs font-mono">ADMIN HQ</span></span>
-          <span class="text-[10px] text-slate-400 font-mono">VIP Lisans & Üye Kontrol Masası</span>
+          <span class="text-[10px] text-slate-400 font-mono">Firebase Canlı VIP Üye Masası</span>
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -75,13 +80,13 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h3 class="font-display text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-users text-orange-500"></i> Kayıtlı Üyeler & VIP Abonelik Masası
+            <i class="fa-solid fa-users text-orange-500"></i> Firebase Canlı Üye & VIP Onay Masası
           </h3>
-          <p class="text-xs text-slate-400">Üyelik durumlarını yönetin, ödeme yapanların VIP erişimini tek tıkla açın veya uzatın.</p>
+          <p class="text-xs text-slate-400">Veritabanındaki üyeleri anlık yönetin. Tek tıkla VIP onaylayın.</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="loadUsers()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs px-3 py-2 rounded-xl transition border border-slate-700">
-            <i class="fa-solid fa-rotate mr-1"></i> Listeyi Yenile
+            <i class="fa-solid fa-rotate mr-1"></i> Veritabanını Yenile
           </button>
         </div>
       </div>
@@ -98,7 +103,7 @@
             </tr>
           </thead>
           <tbody id="userTableBody" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="5" class="py-6 text-center text-slate-500">Kullanıcılar yükleniyor...</td></tr>
+            <tr><td colspan="5" class="py-6 text-center text-slate-500">Firebase'den veriler çekiliyor...</td></tr>
           </tbody>
         </table>
       </div>
@@ -107,15 +112,19 @@
   </main>
 
   <script>
-    // Örnek yerel kullanıcı verisi / Firebase senkronizasyonu
-    let users = JSON.parse(localStorage.getItem('mineora_users') || '[]');
+    // ================= FIREBASE BAĞLANTISI =================
+    const firebaseConfig = {
+      databaseURL: "https://mineora-web-default-rtdb.firebaseio.com/"
+    };
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
 
-    // Başlangıçta boşsa test verisi tanımlayalım
-    if (users.length === 0) {
-      users = [
-        { id: 1, username: 'Masterpro', email: 'eren@gmail.com', isVip: false, expireDate: null }
-      ];
-      localStorage.setItem('mineora_users', JSON.stringify(users));
+    // Güvenlik Doğrulaması
+    const isAdmin = sessionStorage.getItem('isAdmin');
+    if (isAdmin !== 'true') {
+      window.location.href = 'index.html';
     }
 
     function handleLogout() {
@@ -123,69 +132,86 @@
       window.location.href = 'index.html';
     }
 
-    function loadUsers() {
-      users = JSON.parse(localStorage.getItem('mineora_users') || '[]');
+    async function loadUsers() {
       const tbody = document.getElementById('userTableBody');
+      tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Yükleniyor...</td></tr>`;
 
-      let vipCount = 0;
-      let stdCount = 0;
+      try {
+        const snap = await db.ref('users').once('value');
+        const data = snap.val();
 
-      if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">Henüz kayıtlı üye yok.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = users.map(u => {
-        if (u.isVip) vipCount++; else stdCount++;
-
-        return `
-          <tr class="hover:bg-slate-950/40 transition">
-            <td class="py-3.5 px-4 font-bold text-white">${u.username}</td>
-            <td class="py-3.5 px-4 text-slate-400">${u.email}</td>
-            <td class="py-3.5 px-4">
-              ${u.isVip 
-                ? '<span class="px-2 py-0.5 rounded-md bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold text-[10px]">VIP AKTİF</span>' 
-                : '<span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-400 text-[10px]">STANDART</span>'}
-            </td>
-            <td class="py-3.5 px-4 text-slate-400">${u.expireDate || 'Süre Yok'}</td>
-            <td class="py-3.5 px-4 text-right space-x-2">
-              ${u.isVip 
-                ? `<button onclick="toggleVip(${u.id}, false)" class="bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 px-3 py-1 rounded-lg transition text-[11px]">VIP Düşür</button>` 
-                : `<button onclick="toggleVip(${u.id}, true)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded-lg transition text-[11px]">VIP Onayla</button>`}
-              <button onclick="deleteUser(${u.id})" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 px-2.5 py-1 rounded-lg transition text-[11px]">Sil</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      document.getElementById('vipMemberCount').innerText = vipCount;
-      document.getElementById('standardMemberCount').innerText = stdCount;
-      document.getElementById('totalRevenue').innerText = `$${vipCount * 500}`;
-    }
-
-    function toggleVip(userId, status) {
-      users = users.map(u => {
-        if (u.id === userId) {
-          u.isVip = status;
-          if (status) {
-            const nextMonth = new Date();
-            nextMonth.setDate(nextMonth.getDate() + 30);
-            u.expireDate = nextMonth.toLocaleDateString('tr-TR');
-          } else {
-            u.expireDate = null;
-          }
+        if (!data) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">Henüz kayıtlı üye bulunamadı.</td></tr>`;
+          document.getElementById('vipMemberCount').innerText = '0';
+          document.getElementById('standardMemberCount').innerText = '0';
+          document.getElementById('totalRevenue').innerText = '$0';
+          return;
         }
-        return u;
-      });
-      localStorage.setItem('mineora_users', JSON.stringify(users));
-      loadUsers();
+
+        let vipCount = 0;
+        let stdCount = 0;
+        const usersList = Object.keys(data).map(key => data[key]);
+
+        tbody.innerHTML = usersList.map(u => {
+          const isVipUser = (u.isVip === true || u.isVip === 'true');
+          if (isVipUser) vipCount++; else stdCount++;
+
+          return `
+            <tr class="hover:bg-slate-950/40 transition">
+              <td class="py-3.5 px-4 font-bold text-white">${u.username || '-'}</td>
+              <td class="py-3.5 px-4 text-slate-400">${u.email || '-'}</td>
+              <td class="py-3.5 px-4">
+                ${isVipUser 
+                  ? '<span class="px-2 py-0.5 rounded-md bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold text-[10px]">VIP AKTİF</span>' 
+                  : '<span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-400 text-[10px]">STANDART</span>'}
+              </td>
+              <td class="py-3.5 px-4 text-slate-400">${u.expireDate || 'Süre Yok'}</td>
+              <td class="py-3.5 px-4 text-right space-x-2">
+                ${isVipUser 
+                  ? `<button onclick="toggleVip('${u.username}', false)" class="bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 px-3 py-1 rounded-lg transition text-[11px]">VIP Düşür</button>` 
+                  : `<button onclick="toggleVip('${u.username}', true)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded-lg transition text-[11px]">VIP Onayla</button>`}
+                <button onclick="deleteUser('${u.username}')" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 px-2.5 py-1 rounded-lg transition text-[11px]">Sil</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        document.getElementById('vipMemberCount').innerText = vipCount;
+        document.getElementById('standardMemberCount').innerText = stdCount;
+        document.getElementById('totalRevenue').innerText = `$${vipCount * 500}`;
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400">Veritabanı okunamadı: ${e.message}</td></tr>`;
+      }
     }
 
-    function deleteUser(userId) {
-      if (!confirm("Bu üyeyi silmek istediğinize emin misiniz?")) return;
-      users = users.filter(u => u.id !== userId);
-      localStorage.setItem('mineora_users', JSON.stringify(users));
-      loadUsers();
+    async function toggleVip(username, status) {
+      try {
+        let expireDate = null;
+        if (status) {
+          const nextMonth = new Date();
+          nextMonth.setDate(nextMonth.getDate() + 30);
+          expireDate = nextMonth.toLocaleDateString('tr-TR');
+        }
+
+        await db.ref(`users/${username}`).update({
+          isVip: status,
+          expireDate: expireDate
+        });
+
+        loadUsers();
+      } catch(e) {
+        alert("Güncelleme hatası: " + e.message);
+      }
+    }
+
+    async function deleteUser(username) {
+      if (!confirm(`'${username}' kullanıcısını silmek istediğinize emin misiniz?`)) return;
+      try {
+        await db.ref(`users/${username}`).remove();
+        loadUsers();
+      } catch(e) {
+        alert("Silme hatası: " + e.message);
+      }
     }
 
     window.addEventListener('DOMContentLoaded', loadUsers);
