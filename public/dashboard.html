@@ -54,7 +54,7 @@
   <!-- ANA ALAN -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- ================= MINEORA X-RAY PARİTE RÖNTGEN DEDEKTÖRÜ ================= -->
+    <!-- MINEORA X-RAY PARİTE RÖNTGEN DEDEKTÖRÜ -->
     <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
@@ -76,7 +76,7 @@
     <!-- 2 BÜYÜK MASALI AVCI GÖRÜNÜMÜ -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      <!-- 1. MASA: PATLAMAYA HAZIRLANANLAR (FİYAT ≤ +8%) -->
+      <!-- 1. MASA: PATLAMAYA HAZIRLANANLAR -->
       <section class="bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-36 h-36 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -154,7 +154,7 @@
 
   </main>
 
-  <!-- ================= KULLANICI BİTGET API AYARLARI MODALI ================= -->
+  <!-- KULLANICI BİTGET API AYARLARI MODALI -->
   <div id="apiSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
       <button onclick="closeApiSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
@@ -265,7 +265,7 @@
       console.log(`[RADAR TESPİTİ] ${symbol} paritesi ekranda listelendi.`);
     }
 
-    // ================= %100 GERÇEK BORSA MİKRO-AKIS X-RAY MOTORU =================
+    // ================= %100 TUTARLI VE GERÇEK BORSA MİKRO-AKIS X-RAY MOTORU =================
     async function analyzeSingleCoin() {
       const input = document.getElementById('inputSearchSymbol');
       const area = document.getElementById('searchResultArea');
@@ -282,7 +282,6 @@
         return;
       }
 
-      // Butonu yükleniyor durumuna al
       const originalBtnText = btn.innerHTML;
       btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Taranıyor...</span>`;
       btn.disabled = true;
@@ -293,9 +292,7 @@
       const chg = parseFloat(found.change24h || 0) * 100;
       const volM = (parseFloat(found.usdtVolume || 0) / 1000000).toFixed(2);
 
-      // --- 1. GERÇEK VERİ: BİTGET TAPE (SON 100 İŞLEM) & DERİNLİK ÇEKİMİ ---
       let realWhaleVolume = 0;
-      let realRetailVolume = 0;
       let totalFillsVolume = 0;
       let realOIUsd = 0;
       let wickTarget = price * 0.988;
@@ -307,7 +304,6 @@
           fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${query}&productType=USDT-FUTURES&limit=20`).then(r => r.json()).catch(() => ({}))
         ]);
 
-        // Tape Analizi (Gerçek İşlem Dağılımı)
         if (fillsRes.code === "00000" && Array.isArray(fillsRes.data?.fillList || fillsRes.data)) {
           const list = fillsRes.data.fillList || fillsRes.data;
           list.forEach(f => {
@@ -315,25 +311,18 @@
             const size = parseFloat(f.size || 0);
             const notional = p * size;
             totalFillsVolume += notional;
-            if (notional >= 3000) {
-              realWhaleVolume += notional; // Kurumsal / Balina Emri
-            } else {
-              realRetailVolume += notional; // Küçük Yatırımcı
-            }
+            if (notional >= 3000) realWhaleVolume += notional;
           });
         }
 
-        // Gerçek Açık Pozisyon (OI)
         if (oiRes.code === "00000" && oiRes.data) {
           const oiAmount = parseFloat(oiRes.data.openInterestList?.[0]?.size || oiRes.data.openInterest || 0);
           realOIUsd = oiAmount * price;
         }
 
-        // Derinlikten Gerçek İğne / Stop Tuzağı Seviyesi
         if (depthRes.code === "00000" && depthRes.data) {
           const bids = depthRes.data.bids || [];
           if (bids.length > 5) {
-            // En büyük alış duvarının hemen altı
             let maxBidPrice = parseFloat(bids[0][0]);
             let maxBidSize = 0;
             bids.forEach(b => {
@@ -343,7 +332,7 @@
                 maxBidPrice = parseFloat(b[0]);
               }
             });
-            wickTarget = maxBidPrice * 0.994; // Duvar delinirse stopun patlayacağı yer
+            wickTarget = maxBidPrice * 0.994;
           }
         }
       } catch (err) {
@@ -353,52 +342,58 @@
         btn.disabled = false;
       }
 
-      // Oranları Matematiksel Olarak Hesapla
-      let realWhalePct = 50;
-      let realRetailPct = 50;
+      // 1. Gerçek Tape Oranları
+      let realWhalePct = 0;
+      let realRetailPct = 100;
       if (totalFillsVolume > 0) {
         realWhalePct = Math.round((realWhaleVolume / totalFillsVolume) * 100);
         realRetailPct = 100 - realWhalePct;
-      } else {
-        // Tahtada hacim yetersizse fonlama katsayısı
-        realWhalePct = Math.min(88, Math.max(15, Math.round(50 - (rawFunding * 5000))));
-        realRetailPct = 100 - realWhalePct;
       }
 
-      // Gerçek Yakıt / İvme Puanı (Açık Pozisyon Hacim Oranı + Fonlama)
+      // 2. Açık Pozisyon (OI) Yakıtı
       let dynamicFuel = 50;
       if (realOIUsd > 0 && parseFloat(found.usdtVolume || 0) > 0) {
         const oiToVolRatio = realOIUsd / parseFloat(found.usdtVolume);
         dynamicFuel = Math.round(Math.min(96, Math.max(10, (oiToVolRatio * 150) - (rawFunding * 4000))));
       } else {
-        dynamicFuel = Math.round(Math.min(96, Math.max(10, 50 - (rawFunding * 8000) - (chg * 0.3))));
+        dynamicFuel = Math.round(Math.min(96, Math.max(10, 50 - (rawFunding * 8000))));
       }
 
-      // Güvenlik Skoru (Balina Hakimiyeti ve Fonlama Ağırlıklı)
-      let dynamicScore = Math.round((realWhalePct * 0.6) + (dynamicFuel * 0.4) - (chg > 25 ? (chg - 25) * 1.2 : 0));
-      dynamicScore = Math.max(15, Math.min(97, dynamicScore));
+      // 3. Matematiksel Güvenlik Skoru
+      let dynamicScore = Math.round((realWhalePct * 0.55) + (dynamicFuel * 0.45) - (chg > 25 ? (chg - 25) * 1.5 : 0));
+      dynamicScore = Math.max(12, Math.min(97, dynamicScore));
 
-      // Net Kararlar
+      // 4. KESİN KURAL: Skor %70'in altındaysa veya Balina Payı %45'in altındaysa ASLA "LONG UYGUN" VERİLEMEZ!
       let isLongSuitable = false;
       let isShortSuitable = false;
       let verdict = "";
       let verdictDesc = "";
       let targets = null;
 
-      if (rawFunding <= -0.0035 && chg >= -5.0 && chg <= 8.0) {
+      // ÇİFT TEYİTLİ LONG FIRSATI (Hem fonlama negatif hem de balina alımı yüksek olmalı)
+      if (rawFunding <= -0.0035 && chg >= -5.0 && chg <= 8.0 && realWhalePct >= 45 && dynamicScore >= 68) {
         isLongSuitable = true;
         isShortSuitable = false;
-        verdict = "🟢 GÜVENLİ LONG GİRİŞİ (SHORT SIKIŞMASI)";
-        verdictDesc = `Fiyat henüz sakin (${chg >= 0 ? '+' : ''}${chg.toFixed(1)}%). Fonlama sert negatif (${fundingPct}%). Son işlemlerde %${realWhalePct} kurumsal balina alımı tespit edildi. Sert yukarı patlama bekleniyor!`;
+        verdict = "🟢 GÜVENLİ LONG GİRİŞİ (SHORT SIKIŞMASI & BALİNA)";
+        verdictDesc = `Fiyat henüz sakin (${chg >= 0 ? '+' : ''}${chg.toFixed(1)}%). Fonlama sert negatif (${fundingPct}%). Son işlemlerde %${realWhalePct} kurumsal balina alımı teyit edildi. Sert yukarı patlama bekleniyor!`;
         targets = calculateLiquidationTargets(price, rawFunding, false);
       }
+      // FONLAMA NEGATİF AMA BALİNA YOKSA (SENİN EKRANINDAKİ DURUM)
+      else if (rawFunding <= -0.0035 && realWhalePct < 45) {
+        isLongSuitable = false;
+        isShortSuitable = false;
+        verdict = "⚠️ DİKKAT: BİREYSEL SÜRÜ YIĞILMASI (LONG RİSKLİ)";
+        verdictDesc = `Fonlama sert negatif (${fundingPct}%) ancak son 100 işlemde kurumsal balina alımı (%${realWhalePct}) yetersiz. Alımların %${realRetailPct}'si bireysel sürü tarafından yapılıyor. Balina desteği olmadan Long girmek sermaye riski taşır!`;
+      }
+      // HİPER-PUMP TUZAĞI
       else if (chg > 45.0) {
         isLongSuitable = false;
         isShortSuitable = false;
         verdict = "🛑 İŞLEME GİRİŞ YASAK! (HİPER-PUMP TUZAĞI)";
         verdictDesc = `Parite kontrolden çıkmış (+${chg.toFixed(1)}%). Bireysel FOMO oranı (%${realRetailPct}) aşırı yüksek. Balina spot mal dağıtıyor. Her iki yön için de tasfiye tehlikesi var!`;
       }
-      else if (chg >= 18.0 && chg <= 45.0 && rawFunding >= 0.0005) {
+      // TEPE DUMP TUZAĞI (SHORT FIRSATI)
+      else if (chg >= 18.0 && chg <= 45.0 && rawFunding >= 0.0005 && dynamicScore >= 65) {
         isLongSuitable = false;
         isShortSuitable = true;
         verdict = "🔴 DUMP TUZAĞI TESPİT EDİLDİ (SHORT FIRSATI)";
@@ -406,6 +401,7 @@
         wickTarget = price * 1.018;
         targets = calculateLiquidationTargets(price, rawFunding, true);
       }
+      // AŞIRI LONG YIĞILMASI
       else if (rawFunding >= 0.0010 && chg >= 10.0) {
         isLongSuitable = false;
         isShortSuitable = true;
@@ -413,20 +409,20 @@
         verdictDesc = `Vadeli tahtada kontrolsüzce Long açılmış (+${fundingPct}%). Piyasa yapıcı stopları süpürmek için fiyatı dökme operasyonu yapacaktır.`;
         targets = calculateLiquidationTargets(price, rawFunding, true);
       }
+      // DENGELİ TAHTA
       else {
         isLongSuitable = false;
         isShortSuitable = false;
-        verdict = chg >= 0 ? "⚖️ DENGELİ POZİTİF TAHTA" : "⚖️ DENGELİ NEGATİF TAHTA";
-        verdictDesc = `Fonlama (${fundingPct}%) dengeli. Son 100 işlemde balina payı %${realWhalePct}, bireysel payı %${realRetailPct}. Henüz tek taraflı bir likidasyon baskısı oluşmamış.`;
+        verdict = chg >= 0 ? "⚖️ DENGELİ POZİTİF TAHTA (BEKLEMEDE KAL)" : "⚖️ DENGELİ NEGATİF TAHTA (BEKLEMEDE KAL)";
+        verdictDesc = `Fonlama (${fundingPct}%) dengeli. Son 100 işlemde balina payı %${realWhalePct}, bireysel payı %${realRetailPct}. Net bir likidasyon baskısı veya güvenli işlem koşulu oluşmamış.`;
       }
 
       const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
       const wickStr = wickTarget < 1 ? wickTarget.toFixed(6) : wickTarget.toFixed(4);
       const oiStr = realOIUsd > 0 ? `$${(realOIUsd / 1000000).toFixed(2)}M` : 'Aktif';
-      const isSafe = dynamicScore >= 75;
-      const isDangerous = dynamicScore < 40;
+      const isSafe = dynamicScore >= 68;
+      const isDangerous = dynamicScore < 45;
 
-      // TELEGRAM METNİ
       lastGeneratedXRayText = 
 `🔬 <b>MINEORA X-RAY | CANLI BORSA RÖNTGENİ</b>
 ━━━━━━━━━━━━━━━━━━━━
@@ -514,12 +510,12 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
               <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1.5">
                 <div class="flex justify-between items-center text-[11px]">
                   <span class="text-slate-400">🛡️ Güvenlik Skoru</span>
-                  <strong class="${dynamicScore >= 70 ? 'text-emerald-400' : dynamicScore < 40 ? 'text-rose-400' : 'text-amber-400'}">%${dynamicScore}/100</strong>
+                  <strong class="${isSafe ? 'text-emerald-400' : isDangerous ? 'text-rose-400' : 'text-amber-400'}">%${dynamicScore}/100</strong>
                 </div>
                 <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                  <div class="h-full ${dynamicScore >= 70 ? 'bg-emerald-500' : dynamicScore < 40 ? 'bg-rose-500' : 'bg-amber-500'}" style="width: ${dynamicScore}%"></div>
+                  <div class="h-full ${isSafe ? 'bg-emerald-500' : isDangerous ? 'bg-rose-500' : 'bg-amber-500'}" style="width: ${dynamicScore}%"></div>
                 </div>
-                <span class="text-[9px] text-slate-400 block">${dynamicScore >= 70 ? 'Kurumsal balina korumalı' : dynamicScore < 40 ? 'Yüksek risk (Girilmez)' : 'Dengeli piyasa'}</span>
+                <span class="text-[9px] text-slate-400 block">${isSafe ? 'Kurumsal balina korumalı' : isDangerous ? 'Yüksek risk (Girilmez)' : 'Dengeli piyasa'}</span>
               </div>
 
               <!-- 2. AÇIK POZİSYON YAKITI (OI) -->
@@ -538,7 +534,7 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
               <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1.5">
                 <div class="flex justify-between items-center text-[11px]">
                   <span class="text-slate-400">🐋 Gerçek Tape Akışı</span>
-                  <span class="text-[10px] font-bold ${realWhalePct >= 55 ? 'text-emerald-400' : 'text-amber-400'}">${realWhalePct >= 55 ? 'Balina Baskısı' : 'Bireysel Sürü'}</span>
+                  <span class="text-[10px] font-bold ${realWhalePct >= 45 ? 'text-emerald-400' : 'text-amber-400'}">${realWhalePct >= 45 ? 'Balina Baskısı' : 'Bireysel Sürü'}</span>
                 </div>
                 <div class="flex text-[10px] justify-between text-slate-300">
                   <span>🐑 Sürü: %${realRetailPct}</span>
@@ -614,7 +610,6 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
       `;
     }
 
-    // ================= X-RAY RAPORUNU GÖRSEL (PNG) OLARAK İNDİR =================
     async function downloadXRayImage(symbol) {
       const card = document.getElementById('xrayCardToExport');
       const btn = document.getElementById('btnDownloadXRay');
@@ -649,7 +644,6 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
       }
     }
 
-    // ================= TELEGRAM METNİNİ KOPYALA =================
     function copyTelegramXRayText() {
       const btn = document.getElementById('btnCopyXRay');
       if (!lastGeneratedXRayText) return;
@@ -668,7 +662,6 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
       });
     }
 
-    // ANA PİYASA TARAMASI
     async function scanSentinelMarket() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
@@ -893,7 +886,6 @@ TP1: $${targets.tp1} | TP2: $${targets.tp2} (R:R: 1:${targets.rr})` : ''}
       }).join('');
     }
 
-    // API MODAL AYARLARI
     function openApiSettingsModal() {
       document.getElementById('apiSettingsModal').classList.remove('hidden');
       const u = sessionStorage.getItem('currentUser');
