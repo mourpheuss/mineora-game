@@ -1,243 +1,178 @@
-// api/cron-scan.js
+import crypto from 'crypto';
+
+// Bitget API Bilgilerin
+const ADMIN_API_KEY = "bg_f73437198f37d20e56939b82041041d0";
+const ADMIN_SECRET = "fe44b9c347eb5d9dd0e624876809102bb3ec8bab9481ad7bdb5ddf4d8d332ecd";
+const ADMIN_PASSPHRASE = "Ers4834754";
+const BITGET_BASE_URL = 'https://api.bitget.com';
+
 const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-const TG_CHAT_ID = "-1004404988937";
+const TG_VIP_CHANNEL_ID = "-1004404988937";
 const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
-const FIREBASE_DB_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Sinyal durumunu ve sinyal fiyatını Firebase'den okuma
-async function getAlertData(symbol, type) {
-  try {
-    const res = await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (err) {
-    console.error("Firebase okuma hatası:", err);
-  }
-  return null;
+function getBitgetSign(timestamp, method, requestPath, secret, queryString = '', body = '') {
+  const message = timestamp + method.toUpperCase() + requestPath + (queryString ? '?' + queryString : '') + body;
+  return crypto.createHmac('sha256', secret).update(message).digest('base64');
 }
 
-// Sinyal zamanını ve fiyatını kaydetme
-async function saveAlertData(symbol, type, data) {
+async function bitgetRequest(apiKey, secret, passphrase, method, endpoint, params = {}, body = null) {
+  const timestamp = Date.now().toString();
+  const queryString = method === 'GET' && Object.keys(params).length > 0 ? new URLSearchParams(params).toString() : '';
+  const bodyString = body ? JSON.stringify(body) : '';
+  const sign = getBitgetSign(timestamp, method, endpoint, secret, queryString, bodyString);
+
+  const url = `${BITGET_BASE_URL}${endpoint}${queryString ? '?' + queryString : ''}`;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'ACCESS-KEY': apiKey,
+      'ACCESS-SIGN': sign,
+      'ACCESS-TIMESTAMP': timestamp,
+      'ACCESS-PASSPHRASE': passphrase,
+      'locale': 'en-US'
+    },
+    body: body ? bodyString : undefined
+  });
+  return await response.json();
+}
+
+// Otomatik İşlem Açma Fonksiyonu
+async function tradeForUser(apiKey, secret, passphrase, symbol) {
   try {
-    await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+    const accountRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/account/account', {
+      symbol: symbol,
+      productType: 'usdt-futures',
+      marginCoin: 'USDT'
     });
-  } catch (err) {
-    console.error("Firebase kayıt hatası:", err);
-  }
-}
 
-// Bitget Açık Pozisyon (OI) Çekme
-async function fetchOpenInterest(symbol) {
-  try {
-    const res = await fetch(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${symbol}&productType=USDT-FUTURES`);
-    const json = await res.json();
-    if (json.code === "00000" && json.data && json.data.openInterestList && json.data.openInterestList[0]) {
-      return parseFloat(json.data.openInterestList[0].size || 0);
-    }
-  } catch (e) {
-    console.error("OI çekme hatası:", symbol, e);
-  }
-  return 0;
-}
+    if (accountRes.code !== '00000' || !accountRes.data) return { success: false, error: accountRes.msg };
 
-// Bitget Fonlama Sayacı (Funding Countdown) Çekme
-// Bitget Fonlama Sayacı (Funding Countdown) Çekme - Düzeltilmiş
-async function fetchFundingCountdown(symbol) {
-  try {
-    const res = await fetch(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${symbol}&productType=USDT-FUTURES`);
-    const json = await res.json();
-    if (json.code === "00000" && Array.isArray(json.data) && json.data[0]) {
-      // Bitget bazen 'fundingTime' bazen 'nextFundingTime' olarak döner
-      const nextTime = Number(json.data[0].fundingTime || json.data[0].nextFundingTime || 0);
-      if (nextTime > 0) {
-        const diffMs = nextTime - Date.now();
-        if (diffMs > 0) {
-          const hours = Math.floor(diffMs / (1000 * 60 * 60));
-          const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-          return `${hours}s ${minutes}dk`;
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Sayaç hatası:", symbol, e);
-  }
-  return "~2 saat"; // API anlık yanıt vermezse standart 4 saatlik döngü tahmini
-}
-    }
-  } catch (e) {
-    console.error("Sayaç hatası:", symbol, e);
-  }
-  return "Bilinmiyor";
-}
+    const availableUsdt = parseFloat(accountRes.data.available || '0');
+    if (availableUsdt < 5) return { success: false, error: 'Yetersiz bakiye' };
 
-// Telegram Bildirim Fonksiyonu
-async function sendTelegramMessage(text) {
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: TG_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      })
+    const marginToUse = availableUsdt * 0.30;
+    const leverage = parseFloat(accountRes.data.longLeverage || accountRes.data.fixedLeverage || '10');
+
+    const tickerRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/market/ticker', {
+      symbol: symbol,
+      productType: 'usdt-futures'
     });
-    return await res.json();
+    const currentPrice = parseFloat(tickerRes.data?.lastPr || '0');
+    if (!currentPrice || currentPrice <= 0) return { success: false, error: 'Fiyat okunamadi' };
+
+    let targetSize = Math.floor(((marginToUse * leverage) / currentPrice) * 10) / 10;
+
+    const orderPayload = {
+      productType: 'usdt-futures',
+      symbol: symbol,
+      marginMode: accountRes.data.marginMode || 'crossed',
+      marginCoin: 'USDT',
+      side: 'buy',
+      tradeSide: 'open',
+      orderType: 'market',
+      size: targetSize.toString()
+    };
+
+    const orderRes = await bitgetRequest(apiKey, secret, passphrase, 'POST', '/api/v2/mix/order/place-order', {}, orderPayload);
+    return { success: orderRes.code === '00000', orderId: orderRes.data?.orderId, error: orderRes.msg };
   } catch (err) {
-    console.error("Telegram gönderme hatası:", err);
-    return { ok: false };
+    return { success: false, error: err.message };
   }
 }
 
-async function performSingleScan() {
+export default async function handler(req, res) {
   try {
-    const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
-    const json = await res.json();
-    if (json.code !== "00000" || !Array.isArray(json.data)) return;
+    // 1. Bitget Vadeli Ticker Verilerini Çek
+    const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
+    const json = await tickersRes.json();
+    if (json.code !== "00000" || !Array.isArray(json.data)) {
+      return res.status(500).json({ error: "Bitget verisi alinamadi" });
+    }
 
-    // Likidite Barajı (En az 800K USDT hacim)
-    const liquidPool = json.data.filter(t => {
+    const allTickers = json.data;
+
+    // 2. Firebase'den Son Gönderilen Sinyalleri Oku (Spam Koruması)
+    const signalsDbRes = await fetch("https://mineora-web-default-rtdb.firebaseio.com/cron_signals.json");
+    let signalsDb = await signalsDbRes.json() || {};
+
+    // 3. Filtreleme: Hacim >= 800K, Fonlama <= -0.0035, Değişim -%4 ile +%8 arası
+    const liquidPool = allTickers.filter(t => {
       return t.symbol.endsWith("USDT") &&
              !EXCLUDED.includes(t.symbol) &&
              parseFloat(t.usdtVolume || 0) >= 800000;
     });
 
-    for (const c of liquidPool) {
-      const currentPrice = parseFloat(c.lastPr);
-      const funding = parseFloat(c.fundingRate || 0);
-      const chg = parseFloat(c.change24h || 0) * 100;
-      const volM = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
-      const fundingPct = (funding * 100).toFixed(4);
-      const chgFormatted = chg.toFixed(1);
+    const candidates = liquidPool.filter(t => {
+      const chg = parseFloat(t.change24h || 0) * 100;
+      const funding = parseFloat(t.fundingRate || 0);
+      return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
+    }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate));
 
-      // ================= KONTROL 1: HEDEF GÖRÜLDÜ / KÂR ALMA & FOMO FRENI =================
-      const earlyData = await getAlertData(c.symbol, 'EARLY_ACCUMULATION');
-      if (earlyData && earlyData.entryPrice && !earlyData.targetReached) {
-        const gainPct = ((currentPrice - earlyData.entryPrice) / earlyData.entryPrice) * 100;
-        
-        // Fiyat sinyal girişine göre en az +%18 sıçradıysa kâr mesajı gönderilir
-        if (gainPct >= 18.0) {
-          const targetMsg = `
-🛑 <b>MINEORA AVCI | HEDEF GÖRÜLDÜ</b>
+    const dispatched = [];
 
-🎯 <b>Parite:</b> #${c.symbol}
-📈 <b>Gerçekleşen Patlama:</b> +%${gainPct.toFixed(1)} sıçradı!
-💵 <b>Mevcut Fiyat:</b> $${currentPrice}
+    for (const item of candidates) {
+      const symbol = item.symbol;
+      const lastSent = signalsDb[symbol]?.lastSent || 0;
+      const passedMinutes = (Date.now() - lastSent) / (1000 * 60);
 
-⚠️ <b>YARI YOLDA TRENE ATLAMAYIN!</b>
-Tahta tepe testini yaptı. Buradan yeni alım girmek yüksek risk taşır.
+      // 2 saat (120 dk) geçmediyse tekrar gönderme
+      if (passedMinutes < 120) continue;
 
-💰 <b>Aksiyon:</b> Erken girenler için kâr alma (TP) ve izleme bölgesidir.
-🔗 <a href="https://www.bitget.com/futures/usdt/${c.symbol}">Bitget Tahtasını Aç</a>
-`.trim();
+      const price = parseFloat(item.lastPr);
+      const rawFunding = parseFloat(item.fundingRate || 0);
+      const funding = (rawFunding * 100).toFixed(4);
 
-          const sent = await sendTelegramMessage(targetMsg);
-          if (sent.ok) {
-            earlyData.targetReached = true;
-            earlyData.targetTime = Date.now();
-            await saveAlertData(c.symbol, 'EARLY_ACCUMULATION', earlyData);
-            console.log(`[HEDEF BİLDİRİMİ ATILDI] ${c.symbol} (+%${gainPct.toFixed(1)})`);
-          }
-          continue;
-        }
-      }
+      const isExtreme = rawFunding <= -0.005;
+      const tp1 = price * 1.018;
+      const tp2 = isExtreme ? price * 1.048 : price * 1.038;
+      const sl = price * 0.986;
+      const rr = ((tp1 - price) / (price - sl)).toFixed(1);
 
-      // Fiyatı zaten %8'in üzerinde olan trenleri yeni alım için eliyoruz
-      if (chg > 8.0) continue;
+      const pEntry = price < 1 ? price.toFixed(6) : price.toFixed(4);
+      const pSl = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
+      const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
+      const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
 
-      // ================= KONTROL 2: ERKEN PUMP HAZIRLIĞI =================
-      if (funding <= -0.0035 && chg >= -4.0 && chg <= 8.0) {
-        // 4 saatlik kilit kontrolü
-        if (earlyData && (Date.now() - earlyData.timestamp < 14400000)) {
-          continue;
-        }
+      // A) Önce Otomatik İşlemi Aç
+      await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol);
 
-        const [oiRaw, countdown] = await Promise.all([
-          fetchOpenInterest(c.symbol),
-          fetchFundingCountdown(c.symbol)
-        ]);
-        const oiValM = ((oiRaw * currentPrice) / 1000000).toFixed(2);
-        const chgStr = (parseFloat(chgFormatted) >= 0 ? '+' : '') + chgFormatted + '%';
+      // B) Telegram'a Mesajı Fırlat
+      const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
+                  `━━━━━━━━━━━━━━━━━━━━\n` +
+                  `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
+                  `🟢 <b>YÖN / BEKLENTİ:</b> <b>LONG (PUMP / YUKARI PATLAMA) 🚀</b>\n` +
+                  `📊 <b>Giriş Fiyatı:</b> <code>$${pEntry}</code>\n` +
+                  `⚡ <b>Fonlama Oranı:</b> <code>${funding}%</code>\n` +
+                  `⚠️ <b>Teşhis:</b> Negatif Fonlama & Yoğun Short Sıkışması\n\n` +
+                  `🎯 <b>LİKİDASYON İŞLEM PLANI:</b>\n` +
+                  `🟢 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
+                  `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (-%1.4)\n` +
+                  `🎯 <b>TP 1 (50x Tasfiye):</b> <code>$${pTp1}</code> (+%1.8)\n` +
+                  `🚀 <b>TP 2 (20x Tasfiye):</b> <code>$${pTp2}</code> (+%4.2+)\n` +
+                  `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
+                  `━━━━━━━━━━━━━━━━━━━━\n` +
+                  `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçilmeli, stop maliyete çekilmelidir.</i>`;
 
-        const alertMsg = `
-⚡ <b>MINEORA VIP SENTINEL</b>
+      await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
+      });
 
-🎯 <b>Parite:</b> #${c.symbol}
-📊 <b>Yön:</b> 🚀 PUMP HAZIRLIĞI (Short Sıkışması)
-💵 <b>Fiyat:</b> $${c.lastPr} (${chgStr})
-📈 <b>Fonlama Oranı:</b> %${fundingPct}
-⏳ <b>Fonlama Sayacı:</b> ${countdown} kaldı
-💼 <b>Açık Pozisyon (OI):</b> $${oiValM}M USDT
-💰 <b>24s Hacim:</b> $${volM}M USDT
+      // C) Kilidi Firebase'e Kaydet
+      signalsDb[symbol] = { lastSent: Date.now() };
+      await fetch(`https://mineora-web-default-rtdb.firebaseio.com/cron_signals/${symbol}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lastSent: Date.now() })
+      });
 
-🔗 <a href="https://www.bitget.com/futures/usdt/${c.symbol}">Bitget Tahtasını Aç</a>
-`.trim();
-
-        const sent = await sendTelegramMessage(alertMsg);
-        if (sent.ok) {
-          await saveAlertData(c.symbol, 'EARLY_ACCUMULATION', {
-            timestamp: Date.now(),
-            entryPrice: currentPrice,
-            targetReached: false
-          });
-          console.log(`[ERKEN PUMP SİNYALİ ATILDI] ${c.symbol}`);
-        }
-        continue;
-      }
-
-      // ================= KONTROL 3: DUMP HAZIRLIĞI =================
-      if (funding >= 0.015 && chg >= -5.0 && chg <= 10.0) {
-        const dumpData = await getAlertData(c.symbol, 'DUMP_RISK');
-        if (dumpData && (Date.now() - dumpData.timestamp < 14400000)) {
-          continue;
-        }
-
-        const [oiRaw, countdown] = await Promise.all([
-          fetchOpenInterest(c.symbol),
-          fetchFundingCountdown(c.symbol)
-        ]);
-        const oiValM = ((oiRaw * currentPrice) / 1000000).toFixed(2);
-        const chgStr = (parseFloat(chgFormatted) >= 0 ? '+' : '') + chgFormatted + '%';
-
-        const alertMsg = `
-🚨 <b>MINEORA VIP SENTINEL</b>
-
-🎯 <b>Parite:</b> #${c.symbol}
-📊 <b>Yön:</b> 🩸 DUMP HAZIRLIĞI (Aşırı Long Tuzağı)
-💵 <b>Fiyat:</b> $${c.lastPr} (${chgStr})
-📈 <b>Fonlama Oranı:</b> %${fundingPct}
-⏳ <b>Fonlama Sayacı:</b> ${countdown} kaldı
-💼 <b>Açık Pozisyon (OI):</b> $${oiValM}M USDT
-💰 <b>24s Hacim:</b> $${volM}M USDT
-
-🔗 <a href="https://www.bitget.com/futures/usdt/${c.symbol}">Bitget Tahtasını Aç</a>
-`.trim();
-
-        const sent = await sendTelegramMessage(alertMsg);
-        if (sent.ok) {
-          await saveAlertData(c.symbol, 'DUMP_RISK', {
-            timestamp: Date.now(),
-            entryPrice: currentPrice
-          });
-          console.log(`[DUMP SİNYALİ ATILDI] ${c.symbol}`);
-        }
-        continue;
-      }
+      dispatched.push(symbol);
     }
-  } catch (err) {
-    console.error("Avcı tarama hatası:", err);
-  }
-}
 
-export default async function handler(req, res) {
-  await performSingleScan();
-  await sleep(25000);
-  await performSingleScan();
-  return res.status(200).json({ success: true, timestamp: Date.now() });
+    return res.status(200).json({ success: true, processed: dispatched });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 }
