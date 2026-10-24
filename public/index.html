@@ -3,184 +3,358 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Sentinel | Giriş & Kayıt</title>
+  <title>Mineora Sentinel | Kripto Erken Uyarı & Mega Patlama İstasyonu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
   <style>
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-orange-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white">
 
-  <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
-    
-    <!-- Logo ve Başlık -->
-    <div class="text-center space-y-2">
-      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-2xl mx-auto shadow-lg shadow-orange-600/30">
-        <i class="fa-solid fa-shield-halved"></i>
+  <!-- ÜST HEADER -->
+  <header class="bg-slate-900/95 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-600/30">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <span class="font-display font-black text-xl tracking-tight text-white block leading-tight">MINEORA <span class="text-orange-500 text-xs">SENTINEL</span></span>
+          <span class="text-[10px] text-slate-400 font-mono">Mega Patlama & Çöküş Erken Uyarı Radarı</span>
+        </div>
       </div>
-      <h1 class="font-display font-black text-2xl tracking-tight text-white">MINEORA <span class="text-orange-500">SENTINEL</span></h1>
-      <p class="text-xs text-slate-400 font-mono">Kurumsal Kripto Anomali & VIP Radar Masası</p>
+
+      <div class="flex items-center gap-3">
+        <!-- Canlı Durum -->
+        <div class="flex items-center gap-2 bg-emerald-950/70 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-emerald-400 font-bold tracking-wide">CANLI RADAR AKTİF</span>
+        </div>
+
+        <!-- VIP Satın Al Butonu -->
+        <button onclick="openVipModal()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-mono text-xs font-black px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-orange-500/20">
+          <i class="fa-solid fa-crown text-slate-950"></i> VIP Satın Al ($500)
+        </button>
+
+        <!-- Giriş / Kayıt Butonu -->
+        <button onclick="openAuthModal()" id="headerAuthBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-mono text-xs font-bold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5">
+          <i class="fa-solid fa-user"></i> <span id="authBtnText">Üye Girişi</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ANA ALAN / RADAR MASALARI (TAM ORİJİNAL GÖRÜNÜM) -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- COIN RISK ARAMA MOTORU -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-magnifying-glass-chart text-orange-500"></i> Parite Risk & Fırsat Dedektörü
+          </h2>
+          <p class="text-xs text-slate-400">İşlem açmayı düşündüğünüz coinin kaldıraç tuzağında olup olmadığını tek tuşla test edin.</p>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <input type="text" id="inputSearchSymbol" placeholder="Örn: SUI, IOST, PEPE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full sm:w-48 focus:outline-none focus:border-orange-500" />
+          <button onclick="analyzeSingleCoin()" class="bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer shrink-0">
+            Analiz Et
+          </button>
+        </div>
+      </div>
+      <div id="searchResultArea" class="hidden pt-3 border-t border-slate-800/80"></div>
     </div>
 
-    <!-- Tab Değiştirici -->
-    <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 font-mono text-xs">
-      <button id="tabLoginBtn" onclick="switchTab('login')" class="py-2.5 rounded-xl font-bold bg-orange-600 text-white transition">Giriş Yap</button>
-      <button id="tabRegisterBtn" onclick="switchTab('register')" class="py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition">Kayıt Ol</button>
+    <!-- 2 BÜYÜK MASA -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- ================= 1. MASA: ÇÖKÜŞ KALKANI ================= -->
+      <section class="bg-slate-900 border-2 border-rose-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-36 h-36 bg-rose-600/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+              <h3 class="font-display text-lg font-bold text-white">🚨 Çöküş / Dump Erken Uyarıları</h3>
+            </div>
+            <p class="text-[11px] text-rose-300 font-mono mt-0.5">Aşırı kaldıraç yığılmış, sert tasfiye ve çöküş riski yüksek coinler</p>
+          </div>
+          <button onclick="scanSentinelMarket()" class="text-slate-400 hover:text-white text-xs font-mono transition">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <div id="dumpWarningCards" class="space-y-3">
+          <div class="text-center py-10 text-slate-500 font-mono text-xs">
+            <i class="fa-solid fa-spinner animate-spin mr-1"></i> Vadeli tahtalardaki aşırı kaldıraç tuzakları taranıyor...
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. MASA: MEGA PATLAMA RADARI ================= -->
+      <section class="bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-36 h-36 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+              <h3 class="font-display text-lg font-bold text-white">🚀 Mega Patlama / Squeeze Fırsatları</h3>
+            </div>
+            <p class="text-[11px] text-emerald-300 font-mono mt-0.5">Aşırı negatif fonlama ve Short yığılması olan, yukarı patlamaya hazır pariteler</p>
+          </div>
+          <button onclick="scanSentinelMarket()" class="text-slate-400 hover:text-white text-xs font-mono transition">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <div id="pumpOpportunityCards" class="space-y-3">
+          <div class="text-center py-10 text-slate-500 font-mono text-xs">
+            <i class="fa-solid fa-spinner animate-spin mr-1"></i> Negatif fonlama sıkışması yaşayan coinler taranıyor...
+          </div>
+        </div>
+      </section>
+
     </div>
 
-    <!-- GİRİŞ FORMU -->
-    <form id="formLogin" onsubmit="event.preventDefault(); submitLogin();" class="space-y-4 font-mono text-xs">
-      <div class="space-y-1.5">
-        <label class="text-slate-400 block font-bold">Kullanıcı Adı veya E-posta:</label>
-        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
-          <i class="fa-solid fa-user text-slate-500 text-sm"></i>
-          <input type="text" id="loginUsername" required placeholder="kullanici_adi" class="bg-transparent text-white w-full focus:outline-none" />
-        </div>
+    <!-- PİYASA TABLOSU -->
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 font-mono text-xs">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-bold text-white">📊 Bitget Vadeli Tahta Risk Sıralaması (Canlı)</h3>
+        <span class="text-slate-500 text-[11px]">Sadece Likit Pariteler (≥ $1.2M Hacim)</span>
       </div>
-
-      <div class="space-y-1.5">
-        <label class="text-slate-400 block font-bold">Şifre:</label>
-        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
-          <i class="fa-solid fa-lock text-slate-500 text-sm"></i>
-          <input type="password" id="loginPassword" required placeholder="••••••••" class="bg-transparent text-white w-full focus:outline-none" />
-        </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+            <tr>
+              <th class="py-3 px-4">Sembol</th>
+              <th class="py-3 px-4">Mevcut Fiyat</th>
+              <th class="py-3 px-4">Fonlama Oranı (Funding)</th>
+              <th class="py-3 px-4">24s Vadeli Likidite</th>
+              <th class="py-3 px-4">Piyasa Teşhisi</th>
+              <th class="py-3 px-4 text-right">Öneri / Aksiyon</th>
+            </tr>
+          </thead>
+          <tbody id="generalMarketTableBody" class="divide-y divide-slate-800 text-slate-300">
+            <tr><td colspan="6" class="py-6 text-center text-slate-500">Veriler çekiliyor...</td></tr>
+          </tbody>
+        </table>
       </div>
+    </div>
 
-      <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20">
-        Panele Giriş Yap
+  </main>
+
+  <!-- ================= AUTH MODAL (GİRİŞ & KAYIT OL) ================= -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 relative">
+      
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
       </button>
-    </form>
 
-    <!-- KAYIT FORMU -->
-    <form id="formRegister" onsubmit="event.preventDefault(); submitRegister();" class="hidden space-y-4 font-mono text-xs">
-      <div class="space-y-1.5">
-        <label class="text-slate-400 block font-bold">Kullanıcı Adı:</label>
-        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
-          <i class="fa-solid fa-user text-slate-500 text-sm"></i>
-          <input type="text" id="regUsername" required placeholder="Örn: TraderAli" class="bg-transparent text-white w-full focus:outline-none" />
-        </div>
+      <div class="text-center space-y-1">
+        <h3 class="font-display font-black text-xl text-white">MINEORA SENTINEL</h3>
+        <p class="text-xs text-slate-400 font-mono">VIP Üye Girişi & Yeni Kayıt</p>
       </div>
 
-      <div class="space-y-1.5">
-        <label class="text-slate-400 block font-bold">E-Posta:</label>
-        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
-          <i class="fa-solid fa-envelope text-slate-500 text-sm"></i>
-          <input type="email" id="regEmail" required placeholder="ali@gmail.com" class="bg-transparent text-white w-full focus:outline-none" />
-        </div>
+      <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 font-mono text-xs">
+        <button id="modalTabLoginBtn" onclick="switchAuthTab('login')" class="py-2 rounded-xl font-bold bg-orange-600 text-white transition">Giriş Yap</button>
+        <button id="modalTabRegBtn" onclick="switchAuthTab('register')" class="py-2 rounded-xl font-bold text-slate-400 hover:text-white transition">Kayıt Ol</button>
       </div>
 
-      <div class="space-y-1.5">
-        <label class="text-slate-400 block font-bold">Şifre:</label>
-        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
-          <i class="fa-solid fa-lock text-slate-500 text-sm"></i>
-          <input type="password" id="regPassword" required placeholder="••••••••" class="bg-transparent text-white w-full focus:outline-none" />
+      <!-- Giriş Formu -->
+      <form id="modalFormLogin" onsubmit="event.preventDefault(); submitLogin();" class="space-y-3 font-mono text-xs">
+        <div>
+          <label class="text-slate-400 block font-bold mb-1">Kullanıcı Adı:</label>
+          <input type="text" id="loginUsername" required placeholder="kullanici_adi" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
         </div>
-      </div>
+        <div>
+          <label class="text-slate-400 block font-bold mb-1">Şifre:</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20">
+          Giriş Yap
+        </button>
+      </form>
 
-      <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">
-        Hesap Oluştur & Abonelik Adımına Geç
+      <!-- Kayıt Formu -->
+      <form id="modalFormRegister" onsubmit="event.preventDefault(); submitRegister();" class="hidden space-y-3 font-mono text-xs">
+        <div>
+          <label class="text-slate-400 block font-bold mb-1">Kullanıcı Adı:</label>
+          <input type="text" id="regUsername" required placeholder="Örn: TraderAli" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-slate-400 block font-bold mb-1">E-Posta:</label>
+          <input type="email" id="regEmail" required placeholder="ali@gmail.com" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-slate-400 block font-bold mb-1">Şifre:</label>
+          <input type="password" id="regPassword" required placeholder="••••••••" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">
+          Kayıt Ol & Ödeme Ekranına Geç
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= VIP SATIN ALMA / ÖDEME MODALI ================= -->
+  <div id="vipPaymentModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+      
+      <button onclick="closeVipModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
       </button>
-    </form>
 
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-xl mb-2">
+          <i class="fa-solid fa-crown"></i>
+        </div>
+        <h3 class="font-display text-xl font-black text-white">MINEORA SENTINEL VIP</h3>
+        <p class="text-xs text-slate-400 font-mono">30 Günlük Sınırsız VIP Radar & Telegram Sinyalleri</p>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex justify-between items-center font-mono">
+        <span class="text-xs text-slate-400">Abonelik Bedeli:</span>
+        <span class="text-base font-black text-emerald-400">500 USDT</span>
+      </div>
+
+      <div class="space-y-2 font-mono text-xs">
+        <div class="flex justify-between items-center">
+          <label class="text-slate-300 font-bold">USDT (TRC-20) Yatırma Adresi:</label>
+          <span class="text-[10px] bg-red-950 border border-red-800 text-red-300 px-2 py-0.5 rounded font-bold">Sadece TRC20</span>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
+          <input type="text" id="usdtWalletAddress" value="TDJiWDhEfbeF3ckg1zvTF8VUht6TrkbXY5" readonly class="bg-transparent text-slate-200 text-[11px] w-full focus:outline-none select-all font-mono" />
+          <button onclick="copyWalletAddress()" id="copyBtn" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg transition text-[11px] shrink-0 font-bold">
+            Kopyala
+          </button>
+        </div>
+        <p class="text-[10px] text-amber-400/90 leading-relaxed">
+          ⚠️ <strong>Önemli:</strong> Yalnızca <strong>TRC-20 (Tron)</strong> ağını kullanın.
+        </p>
+      </div>
+
+      <div class="space-y-2 font-mono text-xs">
+        <label class="text-slate-300 font-bold block">İşlem Kodu (TxID / TxHash):</label>
+        <input type="text" id="inputTxHash" placeholder="Örn: 4f8b9... (Transfer detayındaki hash)" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-2.5 w-full focus:outline-none focus:border-orange-500" />
+      </div>
+
+      <button onclick="submitVipPayment()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-paper-plane"></i> Ödemeyi Bildir & Onaya Gönder
+      </button>
+
+    </div>
   </div>
 
   <script>
-    // Firebase Konfigürasyonu
+    // ================= FIREBASE KURULUMU =================
     const firebaseConfig = {
       databaseURL: "https://analiz-sepeti-7ea73-default-rtdb.firebaseio.com"
     };
-
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.database();
 
-    function switchTab(tab) {
-      const formLogin = document.getElementById('formLogin');
-      const formRegister = document.getElementById('formRegister');
-      const btnLogin = document.getElementById('tabLoginBtn');
-      const btnRegister = document.getElementById('tabRegisterBtn');
+    // ================= TELEGRAM AYARLARI =================
+    const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
+    const TG_ADMIN_ID = "6457294906"; // SADECE SİZE ÖZEL TELEGRAM BİLDİRİMİ
 
-      if (tab === 'login') {
-        formLogin.classList.remove('hidden');
-        formRegister.classList.add('hidden');
-        btnLogin.className = "py-2.5 rounded-xl font-bold bg-orange-600 text-white transition";
-        btnRegister.className = "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition";
+    // MODAL YÖNETİMİ
+    function openAuthModal() {
+      const user = sessionStorage.getItem('currentUser');
+      if (user) {
+        sessionStorage.clear();
+        alert("Oturum kapatıldı.");
+        location.reload();
+        return;
+      }
+      document.getElementById('authModal').classList.remove('hidden');
+    }
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+    function openVipModal() {
+      document.getElementById('vipPaymentModal').classList.remove('hidden');
+    }
+    function closeVipModal() {
+      document.getElementById('vipPaymentModal').classList.add('hidden');
+    }
+
+    function switchAuthTab(t) {
+      if (t === 'login') {
+        document.getElementById('modalFormLogin').classList.remove('hidden');
+        document.getElementById('modalFormRegister').classList.add('hidden');
+        document.getElementById('modalTabLoginBtn').className = "py-2 rounded-xl font-bold bg-orange-600 text-white transition";
+        document.getElementById('modalTabRegBtn').className = "py-2 rounded-xl font-bold text-slate-400 hover:text-white transition";
       } else {
-        formLogin.classList.add('hidden');
-        formRegister.classList.remove('hidden');
-        btnRegister.className = "py-2.5 rounded-xl font-bold bg-orange-600 text-white transition";
-        btnLogin.className = "py-2.5 rounded-xl font-bold text-slate-400 hover:text-white transition";
+        document.getElementById('modalFormLogin').classList.add('hidden');
+        document.getElementById('modalFormRegister').classList.remove('hidden');
+        document.getElementById('modalTabRegBtn').className = "py-2 rounded-xl font-bold bg-orange-600 text-white transition";
+        document.getElementById('modalTabLoginBtn').className = "py-2 rounded-xl font-bold text-slate-400 hover:text-white transition";
       }
     }
 
+    // KAYIT OLMA FONKSİYONU
     async function submitRegister() {
-      const username = document.getElementById('regUsername').value.trim();
-      const email = document.getElementById('regEmail').value.trim();
-      const password = document.getElementById('regPassword').value.trim();
+      const u = document.getElementById('regUsername').value.trim();
+      const e = document.getElementById('regEmail').value.trim();
+      const p = document.getElementById('regPassword').value.trim();
 
-      if (!username || !email || !password) {
-        alert("Lütfen tüm alanları doldurun.");
-        return;
-      }
+      if (!u || !e || !p) { alert("Lütfen tüm alanları doldurun."); return; }
 
       try {
-        const userRef = db.ref('users/' + username);
-        const snapshot = await userRef.once('value');
+        const ref = db.ref('users/' + u);
+        const snap = await ref.once('value');
+        if (snap.exists()) { alert("Bu kullanıcı adı zaten alınmış!"); return; }
 
-        if (snapshot.exists()) {
-          alert("Bu kullanıcı adı zaten kullanımda. Lütfen başka bir isim seçin.");
-          return;
-        }
-
-        // Güvenlik Kuralına Uygun: isVip ZORUNLU false olarak kaydolur
-        const newUser = {
-          username: username,
-          email: email,
-          password: password,
+        await ref.set({
+          username: u,
+          email: e,
+          password: p,
           isVip: false,
-          status: "PAYMENT_PENDING",
           createdAt: Date.now()
-        };
+        });
 
-        await userRef.set(newUser);
-
-        // Kullanıcıyı oturuma al ama VIP yapma
-        sessionStorage.setItem('currentUser', username);
+        sessionStorage.setItem('currentUser', u);
         sessionStorage.setItem('isVip', 'false');
 
-        alert("Hesabınız oluşturuldu! Radara erişmek için lütfen 500 USDT VIP abonelik ödemesini tamamlayın.");
-        
-        // ASLA DİREKT RADARA ATMAZ, ÖDEME EKRANINA GÖNDERİR
-        window.location.href = 'payment.html';
-
-      } catch (err) {
-        console.error("Kayıt hatası:", err);
-        alert("Kayıt başarısız: " + err.message);
+        closeAuthModal();
+        alert("Kayıt başarılı! VIP Radar erişimini aktifleştirmek için lütfen ödeme bildiriminizi yapın.");
+        openVipModal(); // Doğrudan ödeme modalını açar
+      } catch(err) {
+        alert("Kayıt hatası: " + err.message);
       }
     }
 
+    // GİRİŞ YAPMA FONKSİYONU
     async function submitLogin() {
-      const username = document.getElementById('loginUsername').value.trim();
-      const password = document.getElementById('loginPassword').value.trim();
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value.trim();
 
-      if (!username || !password) {
-        alert("Lütfen bilgilerinizi eksiksiz girin.");
-        return;
-      }
+      if (!u || !p) { alert("Bilgileri girin."); return; }
 
-      // Yönetici doğrudan geçiş kontrolü
-      if ((username === 'Masterpro' || username === 'eren@gmail.com') && password === '123456') {
+      // Admin özel girişi
+      if ((u === 'Masterpro' || u === 'eren@gmail.com') && p === '123456') {
         sessionStorage.setItem('currentUser', 'Masterpro');
         sessionStorage.setItem('isVip', 'true');
         sessionStorage.setItem('isAdmin', 'true');
@@ -189,11 +363,11 @@
       }
 
       try {
-        const userRef = db.ref('users/' + username);
-        const snapshot = await userRef.once('value');
-        const user = snapshot.val();
+        const ref = db.ref('users/' + u);
+        const snap = await ref.once('value');
+        const user = snap.val();
 
-        if (!user || user.password !== password) {
+        if (!user || user.password !== p) {
           alert("Hatalı kullanıcı adı veya şifre!");
           return;
         }
@@ -201,21 +375,268 @@
         sessionStorage.setItem('currentUser', user.username);
         sessionStorage.setItem('isVip', user.isVip ? 'true' : 'false');
 
-        // ÖDEME YAPMAMIŞ KULLANICIYI İÇERİ SOKMA
+        closeAuthModal();
+
         if (!user.isVip) {
-          alert("VIP aboneliğiniz henüz aktif değil. Lütfen ödemenizi yapın veya yöneticinin onaylamasını bekleyin.");
-          window.location.href = 'payment.html';
-          return;
+          alert("Hesabınız aktif ancak VIP aboneliğiniz henüz onaylanmamış. Lütfen ödemeyi bildiriniz.");
+          openVipModal();
+        } else {
+          alert("Giriş başarılı! VIP Sentinel paneline hoş geldiniz.");
+          window.location.href = 'dashboard.html';
         }
-
-        // Sadece ödemesi onaylanmış VIP üyeler içeri girebilir
-        window.location.href = 'dashboard.html';
-
-      } catch (err) {
-        console.error("Giriş hatası:", err);
-        alert("Giriş yapılırken hata oluştu: " + err.message);
+      } catch(err) {
+        alert("Giriş hatası: " + err.message);
       }
     }
+
+    // CÜZDAN KOPYALA
+    function copyWalletAddress() {
+      const addr = document.getElementById('usdtWalletAddress').value;
+      navigator.clipboard.writeText(addr).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.innerText = "Kopyalandı!";
+        btn.classList.remove('bg-orange-600');
+        btn.classList.add('bg-emerald-600');
+        setTimeout(() => {
+          btn.innerText = "Kopyala";
+          btn.classList.remove('bg-emerald-600');
+          btn.classList.add('bg-orange-600');
+        }, 2000);
+      });
+    }
+
+    // VIP ÖDEME BİLDİRİMİ (SADECE 6457294906 HESABINA GİDER)
+    async function submitVipPayment() {
+      const tx = document.getElementById('inputTxHash').value.trim();
+      if (!tx) { alert("Lütfen TxID kodunu girin."); return; }
+
+      const user = sessionStorage.getItem('currentUser') || 'Ziyaretçi';
+      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${tx}</code>\n\n🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${tx}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz.`;
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: TG_ADMIN_ID,
+            text: msg,
+            parse_mode: 'HTML'
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert("Ödeme bildiriminiz yöneticiye başarıyla iletildi! Transfer kontrol edildikten sonra VIP erişiminiz açılacaktır.");
+          document.getElementById('inputTxHash').value = '';
+          closeVipModal();
+        } else {
+          alert("Bildirim iletilemedi. Lütfen botla Telegram üzerinden sohbet başlattığınızdan emin olun.");
+        }
+      } catch(e) {
+        alert("Bağlantı hatası: " + e.message);
+      }
+    }
+
+    // ================= RADAR MOTORU (VİTRİN İÇİN ÇALIŞIR, KANALA SPAM ATMAZ) =================
+    const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
+    let cachedTickers = [];
+
+    async function scanSentinelMarket() {
+      try {
+        const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
+        const json = await res.json();
+        if (json.code !== "00000" || !Array.isArray(json.data)) return;
+
+        cachedTickers = json.data;
+
+        const liquidPool = json.data.filter(t => {
+          return t.symbol.endsWith("USDT") &&
+                 !EXCLUDED.includes(t.symbol) &&
+                 parseFloat(t.usdtVolume || 0) >= 1200000;
+        });
+
+        const pumpCandidates = liquidPool.filter(t => {
+          return parseFloat(t.fundingRate || 0) <= -0.015;
+        }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 4);
+
+        const dumpCandidates = liquidPool.filter(t => {
+          const funding = parseFloat(t.fundingRate || 0);
+          const chg = parseFloat(t.change24h || 0) * 100;
+          return funding >= 0.020 || (chg >= 20 && funding >= 0.010);
+        }).sort((a, b) => parseFloat(b.fundingRate) - parseFloat(a.fundingRate)).slice(0, 4);
+
+        renderDumpCards(dumpCandidates);
+        renderPumpCards(pumpCandidates);
+        renderTable(liquidPool.slice(0, 15));
+
+      } catch(e) {
+        console.error("Sentinel tarama hatası:", e);
+      }
+    }
+
+    function renderDumpCards(items) {
+      const container = document.getElementById('dumpWarningCards');
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-base mb-2 block"></i>
+            Şu anda aşırı kaldıraç şişmesi yaşayan tehlikeli bir parite yok. Tahtalar dengeli.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = items.map(c => {
+        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+        const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+        const price = parseFloat(c.lastPr);
+
+        return `
+          <div class="bg-slate-950 p-4 rounded-2xl border border-rose-500/50 space-y-2.5">
+            <div class="flex justify-between items-center">
+              <div>
+                <strong class="font-display text-base font-black text-white">${c.symbol}</strong>
+                <span class="text-slate-400 font-mono text-xs ml-2">$${price < 1 ? price.toFixed(6) : price.toFixed(4)}</span>
+              </div>
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                ⚠️ ÇÖKÜŞ RİSKİ: YÜKSEK
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400 border-t border-slate-900">
+              <div>Fonlama: <strong class="text-rose-400">+${funding}% (Aşırı Long)</strong></div>
+              <div>24s Hacim: <strong class="text-slate-200">$${vol}M</strong></div>
+            </div>
+            <div class="bg-rose-950/30 border border-rose-900/50 p-2.5 rounded-xl text-[11px] text-rose-300">
+              <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+              <strong>Kalkan Uyarısı:</strong> Küçük yatırımcı Long tarafına yığılmış. Balina satışı vurduğu an zincirleme likidasyon çöküşü yaşanabilir. <strong>Kaldıraçlı Long girmeyin!</strong>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPumpCards(items) {
+      const container = document.getElementById('pumpOpportunityCards');
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
+            <i class="fa-solid fa-radar text-orange-400 text-base mb-2 block"></i>
+            Şu anda aşırı negatif fonlama eşiğini aşmış parite taranıyor...
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = items.map(c => {
+        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+        const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+        const chg = parseFloat(c.change24h || 0) * 100;
+        const price = parseFloat(c.lastPr);
+        const isCompleted = chg >= 15;
+
+        return `
+          <div class="bg-slate-950 p-4 rounded-2xl border ${isCompleted ? 'border-amber-500/50' : 'border-emerald-500/50'} space-y-2.5">
+            <div class="flex justify-between items-center">
+              <div>
+                <strong class="font-display text-base font-black text-white">${c.symbol}</strong>
+                <span class="text-slate-400 font-mono text-xs ml-2">$${price < 1 ? price.toFixed(6) : price.toFixed(4)}</span>
+                <span class="text-[11px] font-mono font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'} ml-1">(+${chg.toFixed(1)}%)</span>
+              </div>
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold ${isCompleted ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}">
+                ${isCompleted ? '🏁 PATLAMA GERÇEKLEŞTİ' : '🚀 SQUEEZE POTANSİYELİ'}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400 border-t border-slate-900">
+              <div>Fonlama: <strong class="${isCompleted ? 'text-amber-400' : 'text-emerald-400'}">${funding}% (Aşırı Short)</strong></div>
+              <div>24s Hacim: <strong class="text-slate-200">$${vol}M</strong></div>
+            </div>
+            <div class="${isCompleted ? 'bg-amber-950/30 border border-amber-900/50 text-amber-300' : 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-300'} p-2.5 rounded-xl text-[11px]">
+              ${isCompleted ? `
+                <i class="fa-solid fa-flag-checkered mr-1"></i>
+                <strong>Hedef Tamamlandı:</strong> Short squeeze patlaması yaşandı (+${chg.toFixed(1)}% sıçradı). <strong>Yeni pozisyon açmak risklidir, kâr alma / izleme bölgesi.</strong>
+              ` : `
+                <i class="fa-solid fa-bolt mr-1"></i>
+                <strong>Erken Uyarı:</strong> Piyasa Short tarafında sıkışmış durumda. Fiyat henüz patlamadı, sert bir yukarı sıçrama kapıda olabilir.
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTable(list) {
+      const tbody = document.getElementById('generalMarketTableBody');
+      tbody.innerHTML = list.map(c => {
+        const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+        const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+        const isDangerous = parseFloat(c.fundingRate) >= 0.02;
+        const isSqueeze = parseFloat(c.fundingRate) <= -0.015;
+
+        return `
+          <tr class="hover:bg-slate-900/60 transition">
+            <td class="py-3 px-4 font-bold text-white">${c.symbol}</td>
+            <td class="py-3 px-4 font-mono">$${c.lastPr}</td>
+            <td class="py-3 px-4 font-mono font-bold ${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-300'}">
+              ${funding}%
+            </td>
+            <td class="py-3 px-4 font-mono text-slate-400">$${vol}M</td>
+            <td class="py-3 px-4">
+              ${isDangerous ? '<span class="text-rose-400 font-bold">⚠️ Aşırı Şişkin (Dump Riski)</span>' : isSqueeze ? '<span class="text-emerald-400 font-bold">⚡ Short Sıkışması (Patlama)</span>' : '<span class="text-slate-400">Dengeli</span>'}
+            </td>
+            <td class="py-3 px-4 text-right">
+              ${isDangerous ? '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">Long Açma</span>' : isSqueeze ? '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">Pumplanabilir</span>' : '<span class="text-slate-500 text-[10px]">Nötr</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function analyzeSingleCoin() {
+      const input = document.getElementById('inputSearchSymbol');
+      const area = document.getElementById('searchResultArea');
+      let query = input.value.trim().toUpperCase();
+      if (!query) return;
+      if (!query.endsWith("USDT")) query += "USDT";
+
+      const found = cachedTickers.find(t => t.symbol === query);
+      area.classList.remove('hidden');
+
+      if (!found) {
+        area.innerHTML = `<div class="p-3 bg-slate-950 rounded-xl text-xs font-mono text-rose-400">Bitget Vadeli piyasasında '${query}' bulunamadı.</div>`;
+        return;
+      }
+
+      const funding = (parseFloat(found.fundingRate || 0) * 100).toFixed(4);
+      const vol = (parseFloat(found.usdtVolume || 0) / 1000000).toFixed(2);
+      const isDangerous = parseFloat(found.fundingRate) >= 0.02;
+      const isSqueeze = parseFloat(found.fundingRate) <= -0.015;
+
+      area.innerHTML = `
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 font-mono text-xs">
+          <div class="flex justify-between items-center">
+            <strong class="text-base text-white font-display font-black">${found.symbol} Analiz Raporu</strong>
+            <span class="text-slate-400">Fiyat: $${found.lastPr}</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-900 text-slate-300">
+            <div>Fonlama Oranı: <strong class="${isDangerous ? 'text-rose-400' : isSqueeze ? 'text-emerald-400' : 'text-slate-100'}">${funding}%</strong></div>
+            <div>24s Likidite: <strong class="text-slate-100">$${vol}M USDT</strong></div>
+            <div>24s Değişim: <strong class="${parseFloat(found.change24h) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${(parseFloat(found.change24h)*100).toFixed(2)}%</strong></div>
+          </div>
+          <div class="p-3 rounded-xl ${isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-300' : isSqueeze ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-300' : 'bg-slate-900 border border-slate-800 text-slate-300'}">
+            ${isDangerous ? '<strong>🚨 TEHLİKE UYARISI:</strong> Bu paritede aşırı Long ağırlığı ve pozitif fonlama var. Küçük yatırımcı ters ayakta yakalanabilir!' : isSqueeze ? '<strong>🚀 PATLAMA POTANSİYELİ:</strong> Paritede yüksek oranda Short birikimi var. Negatif fonlama her an yukarı sert bir sıkıştırmayı tetikleyebilir.' : '<strong>⚖️ DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı veya tasfiye tehdidi tespit edilmedi.'}
+          </div>
+        </div>
+      `;
+    }
+
+    // Durum kontrolü
+    window.addEventListener('DOMContentLoaded', () => {
+      const u = sessionStorage.getItem('currentUser');
+      if (u) {
+        document.getElementById('authBtnText').innerText = `Çıkış (${u})`;
+      }
+      scanSentinelMarket();
+      setInterval(scanSentinelMarket, 25000);
+    });
   </script>
 </body>
 </html>
