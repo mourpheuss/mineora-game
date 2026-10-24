@@ -165,11 +165,22 @@
     // TELEGRAM VE KANAL AYARLARI
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_VIP_CHANNEL_ID = "-1004404988937"; // SİNYALLERİN GİDECEĞİ VIP KANAL
-    const TG_MY_ADMIN_ID = "6457294906";        // SADECE ÖDEME VE ÜYELİK ONAYININ GELECEĞİ ŞAHSİ HESABIN
+    const TG_MY_ADMIN_ID = "6457294906";        // SADECE ÖDEME ONAYININ GELECEĞİ ŞAHSİ HESAP
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
-    const sentSignals = new Set(); // Tekrar eden sinyal spamını engelleme listesi
+
+    // KALICI DİSK KİLİDİ: Sayfa yenilense de 2 saat (120 dk) dolmadan aynı coini kanala atmaz
+    function canSendSignal(symbol) {
+      const lastSent = localStorage.getItem(`mineora_signal_${symbol}`);
+      if (!lastSent) return true;
+      const passedMinutes = (Date.now() - parseInt(lastSent, 10)) / (1000 * 60);
+      return passedMinutes >= 120;
+    }
+
+    function markSignalAsSent(symbol) {
+      localStorage.setItem(`mineora_signal_${symbol}`, Date.now().toString());
+    }
 
     // LİKİDASYON VE SEVİYE HESAPLAMA MOTORU
     function calculateLiquidationTargets(price, fundingRate) {
@@ -190,9 +201,9 @@
       };
     }
 
-    // SİNYALİ DOĞRUDAN VIP KANALA GÖNDEREN FONKSİYON
+    // SİNYALİ DOĞRUDAN VIP KANALA GÖNDEREN FONKSİYON (SPAM KORUMALI)
     async function triggerVipChannelSignal(symbol, price, rawFunding) {
-      if (sentSignals.has(symbol)) return;
+      if (!canSendSignal(symbol)) return;
 
       const funding = (rawFunding * 100).toFixed(4);
       const liq = calculateLiquidationTargets(price, rawFunding);
@@ -212,14 +223,14 @@
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçilmeli, stop maliyete çekilmelidir.</i>`;
 
+      markSignalAsSent(symbol); // Mesaj gitmeden önce kilidi vur
+
       try {
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
         });
-        sentSignals.add(symbol);
-        setTimeout(() => sentSignals.delete(symbol), 45 * 60 * 1000); // 45 dakika sonra tekrar izin ver
       } catch(e) {
         console.error("VIP Kanal iletim hatası:", e);
       }
