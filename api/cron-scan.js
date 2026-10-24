@@ -3,9 +3,10 @@ const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
 const TG_CHAT_ID = "-1004404988937";
 const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
 
-// Bellek içi spam önleme (aynı pariteye 4 saat içinde tek sinyal)
-let memoryAlerts = global._sentAlerts || {};
-global._sentAlerts = memoryAlerts;
+// Global nesne üzerinde kalıcı zaman kilidi (Sunucusuz ortam için)
+if (!global._sentTracker) {
+  global._sentTracker = {};
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -13,7 +14,8 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
   const now = Date.now();
   const alertKey = `${coin.symbol}_${type}`;
 
-  if (memoryAlerts[alertKey] && (now - memoryAlerts[alertKey] < 4 * 60 * 60 * 1000)) {
+  // 4 saatlik kilit kontrolü (4 * 60 * 60 * 1000 ms)
+  if (global._sentTracker[alertKey] && (now - global._sentTracker[alertKey] < 14400000)) {
     return;
   }
 
@@ -43,8 +45,8 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
     });
     const data = await res.json();
     if (data.ok) {
-      memoryAlerts[alertKey] = now;
-      console.log(`[VIP CRON ALERT] ${coin.symbol} iletildi.`);
+      global._sentTracker[alertKey] = now;
+      console.log(`[VIP ALERT] ${coin.symbol} (${type}) iletildi.`);
     }
   } catch (err) {
     console.error("Cron Telegram hatası:", err);
@@ -75,7 +77,7 @@ async function performSingleScan() {
       return funding >= 0.020 || (chg >= 20 && funding >= 0.010);
     });
 
-    // Pump sinyallerini işle
+    // Pump sinyallerini tara
     for (const c of pumpCandidates) {
       const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
       const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
@@ -102,7 +104,7 @@ async function performSingleScan() {
       }
     }
 
-    // Dump sinyallerini işle
+    // Dump sinyallerini tara
     for (const c of dumpCandidates) {
       const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
       const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
@@ -122,14 +124,8 @@ async function performSingleScan() {
 }
 
 export default async function handler(req, res) {
-  // 1. Döngü: Anında tara
   await performSingleScan();
-
-  // 25 saniye bekle
   await sleep(25000);
-
-  // 2. Döngü: 25. saniyede tekrar tara
   await performSingleScan();
-
   return res.status(200).json({ success: true, timestamp: Date.now() });
 }
