@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -33,16 +33,16 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Canlı Telegram Durumu -->
+        <!-- Canlı Durum -->
         <div class="flex items-center gap-2 bg-emerald-950/70 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="text-emerald-400 font-bold tracking-wide">CANLI RADAR AKTİF</span>
         </div>
 
-        <!-- VIP Kanala Git Butonu -->
-        <a href="https://t.me/+SENIN_VIP_DAVET_LINKIN" target="_blank" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs font-bold px-3.5 py-1.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-blue-600/20">
-          <i class="fa-brands fa-telegram text-sm"></i> VIP Kanal
-        </a>
+        <!-- VIP Satın Al Butonu -->
+        <button onclick="openVipModal()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-mono text-xs font-black px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-orange-500/20">
+          <i class="fa-solid fa-crown text-slate-950"></i> VIP Satın Al ($500)
+        </button>
 
         <!-- Çıkış -->
         <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg transition" title="Çıkış Yap">
@@ -75,7 +75,7 @@
       <div id="searchResultArea" class="hidden pt-3 border-t border-slate-800/80"></div>
     </div>
 
-    <!-- 2 BÜYÜK MASADAN OLUŞAN ÇİFT RADAR SİSTEMİ -->
+    <!-- 2 BÜYÜK MASA -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       <!-- ================= 1. MASA: ÇÖKÜŞ & DUMP KALKANI ================= -->
@@ -128,7 +128,7 @@
 
     </div>
 
-    <!-- PİYASA GENEL DURUM ÖZETİ -->
+    <!-- PİYASA TABLOSU -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 font-mono text-xs">
       <div class="flex items-center justify-between">
         <h3 class="font-display text-base font-bold text-white">📊 Bitget Vadeli Tahta Risk Sıralaması (Canlı)</h3>
@@ -155,69 +155,102 @@
 
   </main>
 
+  <!-- VIP SATIN ALMA / USDT (TRC-20) ÖDEME MODALI -->
+  <div id="vipPaymentModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+      
+      <!-- Kapatma -->
+      <button onclick="closeVipModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <!-- Başlık -->
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-xl mb-2">
+          <i class="fa-solid fa-crown"></i>
+        </div>
+        <h3 class="font-display text-xl font-black text-white">MINEORA SENTINEL VIP</h3>
+        <p class="text-xs text-slate-400 font-mono">30 Günlük Sınırsız Radar & Telegram VIP Kanal Erişimi</p>
+      </div>
+
+      <!-- Tutar -->
+      <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex justify-between items-center font-mono">
+        <span class="text-xs text-slate-400">Abonelik Bedeli:</span>
+        <span class="text-base font-black text-emerald-400">500 USDT</span>
+      </div>
+
+      <!-- Cüzdan Adresi -->
+      <div class="space-y-2 font-mono text-xs">
+        <div class="flex justify-between items-center">
+          <label class="text-slate-300 font-bold">USDT (TRC-20) Yatırma Adresi:</label>
+          <span class="text-[10px] bg-red-950 border border-red-800 text-red-300 px-2 py-0.5 rounded font-bold">Sadece TRC20</span>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
+          <input type="text" id="usdtWalletAddress" value="TDJiWDhEfbeF3ckg1zvTF8VUht6TrkbXY5" readonly class="bg-transparent text-slate-200 text-[11px] w-full focus:outline-none select-all font-mono" />
+          <button onclick="copyWalletAddress()" id="copyBtn" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg transition text-[11px] shrink-0 font-bold">
+            Kopyala
+          </button>
+        </div>
+        <p class="text-[10px] text-amber-400/90 leading-relaxed">
+          ⚠️ <strong>Dikkat:</strong> Lütfen sadece <strong>TRC-20 (Tron)</strong> ağını kullanarak gönderim yapın.
+        </p>
+      </div>
+
+      <!-- TxID Girişi -->
+      <div class="space-y-2 font-mono text-xs">
+        <label class="text-slate-300 font-bold block">İşlem Kodu (TxID / TxHash):</label>
+        <input type="text" id="inputTxHash" placeholder="Örn: 4f8b9... (Transfer detayındaki hash)" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-2.5 w-full focus:outline-none focus:border-orange-500" />
+      </div>
+
+      <!-- Bildir Butonu -->
+      <button onclick="submitVipPayment()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-paper-plane"></i> Ödemeyi Bildir & Onaya Gönder
+      </button>
+
+    </div>
+  </div>
+
   <script>
-    // ================= TELEGRAM AYARLARI =================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHAT_ID = "-1004404988937";
 
-    // Spam engelleme: Aynı pariteye aynı bildirim türü 4 saat içinde tek sefer gider
     let sentAlerts = JSON.parse(localStorage.getItem('mineora_sent_alerts') || '{}');
 
-    async function sendTelegramAlertDirect(coin, type, fundingFormatted, volFormatted, desc, chgFormatted) {
-      if (!TG_BOT_TOKEN || !TG_CHAT_ID) return;
+    function openVipModal() {
+      document.getElementById('vipPaymentModal').classList.remove('hidden');
+    }
 
-      const now = Date.now();
-      const alertKey = `${coin.symbol}_${type}`;
+    function closeVipModal() {
+      document.getElementById('vipPaymentModal').classList.add('hidden');
+    }
 
-      // 4 saatlik spam kontrolü
-      if (sentAlerts[alertKey] && (now - sentAlerts[alertKey] < 4 * 60 * 60 * 1000)) {
+    function copyWalletAddress() {
+      const addr = document.getElementById('usdtWalletAddress').value;
+      navigator.clipboard.writeText(addr).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.innerText = "Kopyalandı!";
+        btn.classList.remove('bg-orange-600');
+        btn.classList.add('bg-emerald-600');
+        setTimeout(() => {
+          btn.innerText = "Kopyala";
+          btn.classList.remove('bg-emerald-600');
+          btn.classList.add('bg-orange-600');
+        }, 2000);
+      });
+    }
+
+    async function submitVipPayment() {
+      const txHash = document.getElementById('inputTxHash').value.trim();
+      if (!txHash) {
+        alert("Lütfen transferinize ait TxID (İşlem Kodu) bilgisini girin.");
         return;
       }
 
-      let icon = '🚀';
-      let title = 'MEGA SQUEEZE (PATLAMA FIRSATI)';
-
-      if (type === 'PUMP_COMPLETED') {
-        icon = '🏁';
-        title = 'HEDEF GÖRÜLDÜ / KÂR REALİZASYONU';
-      } else if (type === 'DUMP') {
-        icon = '🚨';
-        title = 'AŞIRI KALDIRAÇ (ÇÖKÜŞ KALKANI)';
-      }
-
-      const text = `${icon} <b>MINEORA VIP SENTINEL RADAR</b>\n<b>${title}</b>\n\n🪙 <b>Parite:</b> #${coin.symbol}\n💵 <b>Mevcut Fiyat:</b> $${coin.lastPr} (${chgFormatted ? (chgFormatted >= 0 ? '+' : '') + chgFormatted + '%' : ''})\n📊 <b>Fonlama Oranı:</b> %${fundingFormatted}\n💰 <b>24s Vadeli Hacim:</b> $${volFormatted}M USDT\n\n📌 <b>Radar Analizi:</b>\n${desc}\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR')}\n🔗 <a href="https://www.bitget.com/futures/usdt/${coin.symbol}">Bitget Tahtasını Görüntüle</a>`;
+      const user = sessionStorage.getItem('currentUser') || 'Web Ziyaretçisi';
+      const text = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${txHash}</code>\n\nLütfen admin panelinden doğrulamayı yapıp VIP onayı verin.`;
 
       try {
-        const url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: TG_CHAT_ID,
-            text: text,
-            parse_mode: 'HTML',
-            disable_web_page_preview: true
-          })
-        });
-
-        const data = await res.json();
-        if (data.ok) {
-          sentAlerts[alertKey] = now;
-          localStorage.setItem('mineora_sent_alerts', JSON.stringify(sentAlerts));
-          console.log(`[VIP ALERT] ${coin.symbol} (${type}) Telegram'a iletildi.`);
-        } else {
-          console.error("Telegram API Hatası:", data);
-        }
-      } catch (err) {
-        console.error("Telegram Gönderim Hatası:", err);
-      }
-    }
-
-    async function testTelegramLive() {
-      const text = `⚡ <b>MINEORA VIP SENTINEL TEST MESAJI</b>\n\nSentinel bağlantısı devrede! Büyük piyasa anomalileri tespit edildiğinde erken uyarı ve realizasyon bildirimleri anında bu kanala aktarılacaktır.\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR')}`;
-      try {
-        const url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
-        const res = await fetch(url, {
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -226,14 +259,11 @@
             parse_mode: 'HTML'
           })
         });
-        const data = await res.json();
-        if (data.ok) {
-          alert("Test bildirimi VIP Telegram kanalına başarıyla gönderildi!");
-        } else {
-          alert("Telegram Hatası: " + (data.description || "Bilinmeyen hata"));
-        }
+        alert("Ödeme bildiriminiz başarıyla iletildi. Transfer zincirde doğrulandıktan sonra VIP üyeliğiniz aktif edilecektir.");
+        document.getElementById('inputTxHash').value = '';
+        closeVipModal();
       } catch(e) {
-        alert("Bağlantı hatası: " + e.message);
+        alert("Bildirim iletilirken hata oluştu.");
       }
     }
 
@@ -260,13 +290,10 @@
                  parseFloat(t.usdtVolume || 0) >= 1200000;
         });
 
-        // Çekirdek Algoritma: Negatif Fonlama Sıkışması (SHORT SQUEEZE)
         const pumpCandidates = liquidPool.filter(t => {
-          const funding = parseFloat(t.fundingRate || 0);
-          return funding <= -0.015;
+          return parseFloat(t.fundingRate || 0) <= -0.015;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 4);
 
-        // Çekirdek Algoritma: Pozitif Fonlama & Kaldıraç Şişmesi (DUMP)
         const dumpCandidates = liquidPool.filter(t => {
           const funding = parseFloat(t.fundingRate || 0);
           const chg = parseFloat(t.change24h || 0) * 100;
@@ -276,49 +303,6 @@
         renderDumpCards(dumpCandidates);
         renderPumpCards(pumpCandidates);
         renderTable(liquidPool.slice(0, 15));
-
-        // Telegram Entegrasyonu: Erken Uyarı ve Hedef Tamamlandı Ayrımı
-        pumpCandidates.forEach(c => {
-          const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
-          const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
-          const chg = (parseFloat(c.change24h || 0) * 100).toFixed(1);
-
-          if (parseFloat(chg) >= 15) {
-            // Zirveyi vurmuş parite için uyarı
-            sendTelegramAlertDirect(
-              c,
-              'PUMP_COMPLETED',
-              funding,
-              vol,
-              `Short squeeze dalgası yaşandı (+${chg}% sıçradı). Zirve test edildi; yeni pozisyon açmak yüksek risk taşır. Kâr alma ve izleme bölgesidir.`,
-              chg
-            );
-          } else {
-            // Henüz patlamamış olan için erken uyarı
-            sendTelegramAlertDirect(
-              c,
-              'PUMP',
-              funding,
-              vol,
-              'Aşırı negatif fonlama birikimi. Short pozisyonlar sıkıştı, tahta yukarı patlama (Short Squeeze) hazırlığında.',
-              chg
-            );
-          }
-        });
-
-        dumpCandidates.forEach(c => {
-          const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
-          const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
-          const chg = (parseFloat(c.change24h || 0) * 100).toFixed(1);
-          sendTelegramAlertDirect(
-            c,
-            'DUMP',
-            funding,
-            vol,
-            'Aşırı pozitif fonlama ve kontrolsüz Long yığılması. Ters ayakta yakalanma ve sert zincirleme tasfiye (Dump) riski bulunuyor.',
-            chg
-          );
-        });
 
       } catch(e) {
         console.error("Sentinel tarama hatası:", e);
@@ -383,7 +367,6 @@
         const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
         const chg = parseFloat(c.change24h || 0) * 100;
         const price = parseFloat(c.lastPr);
-
         const isCompleted = chg >= 15;
 
         return `
@@ -475,7 +458,7 @@
             <div>24s Değişim: <strong class="${parseFloat(found.change24h) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${(parseFloat(found.change24h)*100).toFixed(2)}%</strong></div>
           </div>
           <div class="p-3 rounded-xl ${isDangerous ? 'bg-rose-950/40 border border-rose-800 text-rose-300' : isSqueeze ? 'bg-emerald-950/40 border border-emerald-800 text-emerald-300' : 'bg-slate-900 border border-slate-800 text-slate-300'}">
-            ${isDangerous ? '<strong>🚨 TEHLİKE UYARISI:</strong> Bu paritede aşırı Long ağırlığı ve pozitif fonlama var. Küçük yatırımcı ters ayakta yakalanabilir, dikkatli olun!' : isSqueeze ? '<strong>🚀 PATLAMA POTANSİYELİ:</strong> Paritede yüksek oranda Short birikimi var. Negatif fonlama her an yukarı sert bir sıkıştırmayı tetikleyebilir.' : '<strong>⚖️ DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı veya tasfiye tehdidi tespit edilmedi.'}
+            ${isDangerous ? '<strong>🚨 TEHLİKE UYARISI:</strong> Bu paritede aşırı Long ağırlığı ve pozitif fonlama var. Küçük yatırımcı ters ayakta yakalanabilir!' : isSqueeze ? '<strong>🚀 PATLAMA POTANSİYELİ:</strong> Paritede yüksek oranda Short birikimi var. Negatif fonlama her an yukarı sert bir sıkıştırmayı tetikleyebilir.' : '<strong>⚖️ DENGELİ:</strong> Tahtada anormal bir kaldıraç baskısı veya tasfiye tehdidi tespit edilmedi.'}
           </div>
         </div>
       `;
