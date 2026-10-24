@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-// Bitget API Bilgilerin
+// Admin Yedek Bilgileri
 const ADMIN_API_KEY = "bg_f73437198f37d20e56939b82041041d0";
 const ADMIN_SECRET = "fe44b9c347eb5d9dd0e624876809102bb3ec8bab9481ad7bdb5ddf4d8d332ecd";
 const ADMIN_PASSPHRASE = "Ers4834754";
@@ -91,15 +91,20 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
     }
 
-    // 2. Firebase Kilitleri ve On-Chain Transferlerini Oku
+    // 2. Firebase Kilitleri, Kullanıcıları ve On-Chain Transferlerini Oku
     let locks = {};
+    let usersData = {};
     let onChainTransfers = [];
+    
     try {
       const lockRes = await fetch(`${FIREBASE_BASE}/cron_locks.json`);
       locks = (await lockRes.json()) || {};
-    } catch(e) {
-      locks = {};
-    }
+    } catch(e) { locks = {}; }
+
+    try {
+      const usersRes = await fetch(`${FIREBASE_BASE}/users.json`);
+      usersData = (await usersRes.json()) || {};
+    } catch(e) { usersData = {}; }
 
     try {
       const whaleRes = await fetch(`${FIREBASE_BASE}/whale_transfers.json`);
@@ -107,9 +112,7 @@ export default async function handler(req, res) {
       if (whaleData && typeof whaleData === 'object' && !whaleData.error) {
         onChainTransfers = Object.keys(whaleData).map(k => whaleData[k]).filter(w => w && typeof w === 'object');
       }
-    } catch(e) {
-      onChainTransfers = [];
-    }
+    } catch(e) { onChainTransfers = []; }
 
     // Likidite Filtresi: $800k ve üzeri, USDT vadeli pariteler
     const liquidPool = json.data.filter(t => {
@@ -121,7 +124,7 @@ export default async function handler(req, res) {
     const signalsToProcess = [];
 
     // ==========================================
-    // 1. ORİJİNAL LONG ALGORİTMASI (Birebir Korundu)
+    // 1. LONG ALGORİTMASI (Erken Sıkışma)
     // ==========================================
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
@@ -132,7 +135,7 @@ export default async function handler(req, res) {
     longCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'LONG' }));
 
     // ==========================================
-    // 2. GÜVENLİ SHORT ALGORİTMASI (JCT & Hiper-Pump Kalkanı)
+    // 2. GÜVENLİ SHORT ALGORİTMASI (Hiper-Pump Kalkanı)
     // ==========================================
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
@@ -141,13 +144,13 @@ export default async function handler(req, res) {
       // KALKAN 1: %45'in üzerindeki kontrolden çıkmış hiper pump tahtalarına ASLA dokunma!
       if (chg > 45.0) return false;
 
-      // KALKAN 2: Fonlama eksi veya nötr ise ASLA dokunma (Short patlatmaya devam ediyor demektir)
+      // KALKAN 2: Fonlama eksi veya nötr ise dokunma (Short squeeze sürüyordur)
       if (funding <= 0.0003) return false;
 
-      // Kriter A: %18 ile %45 arasında şişmiş ve fonlaması belirgin artıya geçmiş tahtalar (+%0.05)
+      // Kriter A: %18 ile %45 arasında şişmiş ve fonlaması belirgin artıya geçmiş tahtalar
       const isControlledTop = chg >= 18.0 && chg <= 45.0 && funding >= 0.0005;
 
-      // Kriter B: Aşırı Long kalabalığı birikmiş (+%0.10 fonlama) ve primli tahtalar
+      // Kriter B: Aşırı Long birikmiş (+%0.10 fonlama) ve primli tahtalar
       const isExtremeLongTrap = funding >= 0.0010 && chg >= 10.0;
 
       return isControlledTop || isExtremeLongTrap;
@@ -172,11 +175,11 @@ export default async function handler(req, res) {
       // 120 DAKİKA KİLİT KONTROLÜ
       if (minutesPassed < 120) continue;
 
-      // On-Chain Balina Eşleşme Kontrolü
+      // On-Chain Eşleşme Kontrolü
       const matchedWhale = onChainTransfers.find(w => w.symbol === symbol);
       const hasOnChainConfirmation = !!matchedWhale;
 
-      // Kilidi Firebase'e mühürle
+      // Kilidi Firebase'e kaydet
       const now = Date.now();
       locks[lockKey] = now;
       await fetch(`${FIREBASE_BASE}/cron_locks/${lockKey}.json`, {
@@ -209,9 +212,24 @@ export default async function handler(req, res) {
       const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
       const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
 
-      // Bitget Pozisyonunu Aç
+      // TÜM AKTİF VIP KULLANICILARDA İŞLEM AÇ
       const orderSide = dir === 'LONG' ? 'buy' : 'sell';
-      await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol, orderSide);
+      let executionCount = 0;
+
+      if (usersData && typeof usersData === 'object') {
+        for (const uKey of Object.keys(usersData)) {
+          const u = usersData[uKey];
+          if (u.autoTradeEnabled && u.bitgetApi && u.bitgetApi.key && u.bitgetApi.secret && u.bitgetApi.passphrase) {
+            await tradeForUser(u.bitgetApi.key, u.bitgetApi.secret, u.bitgetApi.passphrase, symbol, orderSide);
+            executionCount++;
+          }
+        }
+      }
+
+      // Kullanıcı listesi boşsa en azından Admin hesabında aç
+      if (executionCount === 0) {
+        await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol, orderSide);
+      }
 
       // Telegram Mesajı Formatı
       const isLong = dir === 'LONG';
