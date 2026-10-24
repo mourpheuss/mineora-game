@@ -33,6 +33,11 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- OTO-İŞLEM AYAR BUTONU -->
+        <button onclick="openApiSettingsModal()" class="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-400 border border-amber-500/30 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
+          <i class="fa-solid fa-robot"></i> <span>Oto-İşlem Botu</span>
+        </button>
+
         <div class="flex items-center gap-2 bg-emerald-950/70 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-mono text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="text-emerald-400 font-bold tracking-wide">CANLI AVCI AKTİF</span>
@@ -149,6 +154,54 @@
 
   </main>
 
+  <!-- ================= KULLANICI BİTGET API AYARLARI MODALI ================= -->
+  <div id="apiSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
+      <button onclick="closeApiSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+      
+      <div class="text-center space-y-1">
+        <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2">
+          <i class="fa-solid fa-robot"></i>
+        </div>
+        <h3 class="font-display font-black text-lg text-white">Bitget Otomatik Alım Botu</h3>
+        <p class="text-slate-400 text-[11px]">Sinyal yakalandığında hesabınızda %30 marjinle otomatik Long açar.</p>
+      </div>
+
+      <div class="space-y-3 pt-2">
+        <div>
+          <label class="text-slate-400 block mb-1">API Key:</label>
+          <input type="text" id="usrApiKey" placeholder="bg_..." class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">API Secret:</label>
+          <input type="password" id="usrApiSecret" placeholder="••••••••••••••••" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">API Passphrase:</label>
+          <input type="password" id="usrApiPass" placeholder="Bitget API parolanız" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        
+        <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl">
+          <span class="text-slate-300 font-bold">Otomatik Alım Durumu:</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="usrAutoTradeToggle" class="sr-only peer">
+            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        <p class="text-[10px] text-amber-400/90 leading-relaxed">
+          ⚠️ <strong>Güvenlik Uyarısı:</strong> API anahtarınızı oluştururken sadece <strong>"Futures / Vadeli İşlemler"</strong> yetkisini seçin. Para çekme (Withdrawal) iznini ASLA açmayın.
+        </p>
+      </div>
+
+      <button onclick="saveUserApiSettings()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20">
+        Ayarları Kaydet
+      </button>
+    </div>
+  </div>
+
   <script>
     const currentUser = sessionStorage.getItem('currentUser');
     const isVip = sessionStorage.getItem('isVip');
@@ -164,13 +217,13 @@
 
     // TELEGRAM VE KANAL AYARLARI
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_VIP_CHANNEL_ID = "-1004404988937"; // SİNYALLERİN GİDECEĞİ VIP KANAL
-    const TG_MY_ADMIN_ID = "6457294906";        // SADECE ÖDEME ONAYININ GELECEĞİ ŞAHSİ HESAP
+    const TG_VIP_CHANNEL_ID = "-1004404988937";
+    const TG_MY_ADMIN_ID = "6457294906";
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
     let cachedTickers = [];
 
-    // KALICI DİSK KİLİDİ: Sayfa yenilense de 2 saat (120 dk) dolmadan aynı coini kanala atmaz
+    // KALICI DİSK KİLİDİ
     function canSendSignal(symbol) {
       const lastSent = localStorage.getItem(`mineora_signal_${symbol}`);
       if (!lastSent) return true;
@@ -186,9 +239,9 @@
     function calculateLiquidationTargets(price, fundingRate) {
       const isExtreme = fundingRate <= -0.005;
 
-      const tp1 = price * 1.018; // 50x Tasfiye
-      const tp2 = isExtreme ? price * 1.048 : price * 1.038; // 20x Tasfiye
-      const sl = price * 0.986; // -%1.4 SL
+      const tp1 = price * 1.018; 
+      const tp2 = isExtreme ? price * 1.048 : price * 1.038; 
+      const sl = price * 0.986; 
 
       const riskReward = ((tp1 - price) / (price - sl)).toFixed(1);
 
@@ -201,10 +254,27 @@
       };
     }
 
-    // SİNYALİ DOĞRUDAN VIP KANALA GÖNDEREN FONKSİYON (SPAM KORUMALI)
+    // SİNYALİ DOĞRUDAN VIP KANALA GÖNDEREN VE OTO-İŞLEM AÇAN FONKSİYON
     async function triggerVipChannelSignal(symbol, price, rawFunding) {
       if (!canSendSignal(symbol)) return;
 
+      // 1. OTOMATİK İŞLEMİ TETİKLE (Hem Admin Hem Yetkili Üyeler)
+      fetch('/api/auto-trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol: symbol })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          console.log(`✅ [OTO-İŞLEM] ${symbol} pozisyonu basariyla iletildi:`, data.processed);
+        } else {
+          console.warn(`⚠️ [OTO-İŞLEM UYARISI] ${symbol}:`, data.error);
+        }
+      })
+      .catch(err => console.error("[OTO-İŞLEM BAĞLANTI HATASI]:", err));
+
+      // 2. VIP TELEGRAM KANALINA SİNYALİ GÖNDER
       const funding = (rawFunding * 100).toFixed(4);
       const liq = calculateLiquidationTargets(price, rawFunding);
 
@@ -223,7 +293,7 @@
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçilmeli, stop maliyete çekilmelidir.</i>`;
 
-      markSignalAsSent(symbol); // Mesaj gitmeden önce kilidi vur
+      markSignalAsSent(symbol); 
 
       try {
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -236,26 +306,6 @@
       }
     }
 
-    // YENİ ÜYE ÖDEME YAPTIĞINDA SADECE ŞAHSİ HESABINA GİDECEK BİLDİRİM FONKSİYONU
-    async function notifyOwnerForPayment(userName, network, txId, amount = "500") {
-      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($${amount} USDT)</b>\n\n` +
-                  `👤 <b>Kullanıcı:</b> ${userName}\n` +
-                  `🌐 <b>Ağ:</b> ${network}\n` +
-                  `🔗 <b>TxID:</b> <code>${txId}</code>\n\n` +
-                  `🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${txId}\n\n` +
-                  `✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz.`;
-
-      try {
-        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: TG_MY_ADMIN_ID, text: msg, parse_mode: 'HTML' })
-        });
-      } catch(e) {
-        console.error("Ödeme onay bildirim hatası:", e);
-      }
-    }
-
     async function scanSentinelMarket() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
@@ -264,33 +314,31 @@
 
         cachedTickers = json.data;
 
-        // Likit Havuz (En az 800K USDT hacim)
         const liquidPool = json.data.filter(t => {
           return t.symbol.endsWith("USDT") &&
                  !EXCLUDED.includes(t.symbol) &&
                  parseFloat(t.usdtVolume || 0) >= 800000;
         });
 
-        // 1. ERKEN SHORT SQUEEZE: Fiyat sakin (<= +8%), fonlama negatif (<= -0.0035)
+        // 1. Erken Short Squeeze Adayları
         const earlySqueezeCandidates = liquidPool.filter(t => {
           const chg = parseFloat(t.change24h || 0) * 100;
           const funding = parseFloat(t.fundingRate || 0);
           return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 6);
 
-        // Yakalanan sinyalleri SADECE VIP KANALA fırlat
+        // Yakalanan pariteleri tetikle
         earlySqueezeCandidates.forEach(item => {
           triggerVipChannelSignal(item.symbol, parseFloat(item.lastPr), parseFloat(item.fundingRate || 0));
         });
 
-        // 2. ERKEN DUMP ADAYLARI: Fonlama aşırı şişmiş (>= +0.015) ve fiyat <= +10%
+        // 2. Erken Dump Adayları
         const dumpCandidates = liquidPool.filter(t => {
           const funding = parseFloat(t.fundingRate || 0);
           const chg = parseFloat(t.change24h || 0) * 100;
           return funding >= 0.015 && chg <= 10.0;
         }).sort((a, b) => parseFloat(b.fundingRate) - parseFloat(a.fundingRate)).slice(0, 6);
 
-        // Tablo: Henüz kopup gitmemiş (<= +8%) pariteler arasından fonlaması en negatif olanlar
         const earlyTableList = liquidPool
           .filter(t => (parseFloat(t.change24h || 0) * 100) <= 8.0)
           .sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate))
@@ -344,7 +392,6 @@
               <div>24s Hacim: <strong class="text-slate-200">$${vol}M</strong></div>
             </div>
 
-            <!-- LİKİDASYON VE SEVİYE MASASI -->
             <div class="bg-slate-900/90 border border-emerald-500/30 rounded-xl p-3 font-mono space-y-2">
               <div class="flex items-center justify-between text-[11px]">
                 <span class="text-emerald-400 font-bold flex items-center gap-1.5">
@@ -521,6 +568,57 @@
           </div>
         </div>
       `;
+    }
+
+    // ================= KULLANICI BİTGET API MODAL FONKSİYONLARI =================
+    function openApiSettingsModal() {
+      document.getElementById('apiSettingsModal').classList.remove('hidden');
+      const u = sessionStorage.getItem('currentUser');
+      if (u) {
+        fetch(`https://mineora-web-default-rtdb.firebaseio.com/users/${u}.json`)
+          .then(r => r.json())
+          .then(d => {
+            if (d && d.bitgetApi) {
+              document.getElementById('usrApiKey').value = d.bitgetApi.key || '';
+              document.getElementById('usrApiSecret').value = d.bitgetApi.secret || '';
+              document.getElementById('usrApiPass').value = d.bitgetApi.passphrase || '';
+              document.getElementById('usrAutoTradeToggle').checked = d.autoTradeEnabled || false;
+            }
+          });
+      }
+    }
+
+    function closeApiSettingsModal() {
+      document.getElementById('apiSettingsModal').classList.add('hidden');
+    }
+
+    async function saveUserApiSettings() {
+      const u = sessionStorage.getItem('currentUser');
+      if (!u) return alert("Oturum bulunamadı.");
+
+      const key = document.getElementById('usrApiKey').value.trim();
+      const secret = document.getElementById('usrApiSecret').value.trim();
+      const pass = document.getElementById('usrApiPass').value.trim();
+      const enabled = document.getElementById('usrAutoTradeToggle').checked;
+
+      try {
+        await fetch(`https://mineora-web-default-rtdb.firebaseio.com/users/${u}/bitgetApi.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, secret, passphrase: pass })
+        });
+
+        await fetch(`https://mineora-web-default-rtdb.firebaseio.com/users/${u}/autoTradeEnabled.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(enabled)
+        });
+
+        alert("Bitget Bot ayarlarınız başarıyla kaydedildi!");
+        closeApiSettingsModal();
+      } catch(e) {
+        alert("Kaydetme hatası: " + e.message);
+      }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
