@@ -9,7 +9,6 @@ const BITGET_BASE_URL = 'https://api.bitget.com';
 const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
 const TG_VIP_CHANNEL_ID = "-1004404988937";
 const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
-
 const FIREBASE_BASE = "https://mineora-web-default-rtdb.firebaseio.com";
 
 function getBitgetSign(timestamp, method, requestPath, secret, queryString = '', body = '') {
@@ -39,7 +38,8 @@ async function bitgetRequest(apiKey, secret, passphrase, method, endpoint, param
   return await response.json();
 }
 
-async function tradeForUser(apiKey, secret, passphrase, symbol) {
+// ÇİFT YÖNLÜ OTO-İŞLEM (side: 'buy' veya 'sell')
+async function tradeForUser(apiKey, secret, passphrase, symbol, side) {
   try {
     const accountRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/account/account', {
       symbol: symbol,
@@ -53,7 +53,7 @@ async function tradeForUser(apiKey, secret, passphrase, symbol) {
     if (availableUsdt < 5) return { success: false, error: 'Yetersiz bakiye' };
 
     const marginToUse = availableUsdt * 0.30;
-    const leverage = parseFloat(accountRes.data.longLeverage || accountRes.data.fixedLeverage || '10');
+    const leverage = parseFloat(side === 'buy' ? (accountRes.data.longLeverage || '10') : (accountRes.data.shortLeverage || '10'));
 
     const tickerRes = await bitgetRequest(apiKey, secret, passphrase, 'GET', '/api/v2/mix/market/ticker', {
       symbol: symbol,
@@ -69,7 +69,7 @@ async function tradeForUser(apiKey, secret, passphrase, symbol) {
       symbol: symbol,
       marginMode: accountRes.data.marginMode || 'crossed',
       marginCoin: 'USDT',
-      side: 'buy',
+      side: side, // 'buy' (Long) veya 'sell' (Short)
       tradeSide: 'open',
       orderType: 'market',
       size: targetSize.toString()
@@ -84,14 +84,12 @@ async function tradeForUser(apiKey, secret, passphrase, symbol) {
 
 export default async function handler(req, res) {
   try {
-    // 1. Bitget Ticker Verilerini Al
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
     const json = await tickersRes.json();
     if (json.code !== "00000" || !Array.isArray(json.data)) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
     }
 
-    // 2. Firebase'den KALICI Kilit Verisini Çek
     let locks = {};
     try {
       const lockRes = await fetch(`${FIREBASE_BASE}/cron_locks.json`);
@@ -106,28 +104,42 @@ export default async function handler(req, res) {
              parseFloat(t.usdtVolume || 0) >= 800000;
     });
 
-    const candidates = liquidPool.filter(t => {
+    const signalsToProcess = [];
+
+    // 1. LONG ADAYLARI: Negatif Fonlama + Henüz Fırlamamış Dip Tahtalar
+    const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
       return funding <= -0.0035 && chg >= -4.0 && chg <= 8.0;
-    }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate));
+    });
+    longCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'LONG' }));
+
+    // 2. SHORT ADAYLARI: Aşırı Pozitif Fonlama VEYA Aşırı Şişip Tepe Yapmış Dönüş Pariteleri
+    const shortCandidates = liquidPool.filter(t => {
+      const chg = parseFloat(t.change24h || 0) * 100;
+      const funding = parseFloat(t.fundingRate || 0);
+      // Şart: Fonlama aşırı pozitif (küçük yatırımcı Long tarafında sıkışmış) VEYA 24s'de %25 üzeri fırlamış
+      return (funding >= 0.015) || (chg >= 25.0 && funding > 0);
+    });
+    shortCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'SHORT' }));
 
     const sentSymbols = [];
 
-    for (const item of candidates) {
+    for (const signal of signalsToProcess) {
+      const item = signal.item;
+      const dir = signal.direction;
       const symbol = item.symbol;
-      const lastSentTime = typeof locks[symbol] === 'number' ? locks[symbol] : 0;
+      const lockKey = `${symbol}_${dir}`;
+      
+      const lastSentTime = typeof locks[lockKey] === 'number' ? locks[lockKey] : 0;
       const minutesPassed = (Date.now() - lastSentTime) / (1000 * 60);
 
-      // 120 DAKİKA (2 SAAT) GEÇMEDİYSE KESİNLİKLE PAS GEÇ
-      if (minutesPassed < 120) {
-        continue;
-      }
+      if (minutesPassed < 120) continue;
 
-      // KİLİDİ ANINDA FİREBASE'E KALICI YAZ (Bekletmeden)
+      // Kilidi Firebase'e kaydet
       const now = Date.now();
-      locks[symbol] = now;
-      await fetch(`${FIREBASE_BASE}/cron_locks/${symbol}.json`, {
+      locks[lockKey] = now;
+      await fetch(`${FIREBASE_BASE}/cron_locks/${lockKey}.json`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(now)
@@ -137,34 +149,41 @@ export default async function handler(req, res) {
       const rawFunding = parseFloat(item.fundingRate || 0);
       const funding = (rawFunding * 100).toFixed(4);
 
-      const isExtreme = rawFunding <= -0.005;
-      const tp1 = price * 1.018;
-      const tp2 = isExtreme ? price * 1.048 : price * 1.038;
-      const sl = price * 0.986;
-      const rr = ((tp1 - price) / (price - sl)).toFixed(1);
+      let tp1, tp2, sl;
+      if (dir === 'LONG') {
+        tp1 = price * 1.018;
+        tp2 = rawFunding <= -0.005 ? price * 1.048 : price * 1.038;
+        sl = price * 0.986;
+      } else {
+        // SHORT HEDEFLERİ
+        tp1 = price * 0.982;
+        tp2 = price * 0.955;
+        sl = price * 1.015;
+      }
 
       const pEntry = price < 1 ? price.toFixed(6) : price.toFixed(4);
       const pSl = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
       const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
       const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
 
-      // Otomatik İşlem Aç
-      await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol);
+      // Otomatik Emri Aç (buy veya sell)
+      const orderSide = dir === 'LONG' ? 'buy' : 'sell';
+      await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol, orderSide);
 
-      // Telegram VIP Bildirimi Gönder
+      // Telegram Mesajı
+      const isLong = dir === 'LONG';
       const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
-                  `🟢 <b>YÖN / BEKLENTİ:</b> <b>LONG (PUMP / YUKARI PATLAMA) 🚀</b>\n` +
+                  `${isLong ? '🟢 <b>YÖN / BEKLENTİ:</b> <b>LONG (PUMP / YUKARI PATLAMA) 🚀</b>' : '🔴 <b>YÖN / BEKLENTİ:</b> <b>SHORT (DUMP / TEPE ÇÖKÜŞÜ) 🩸</b>'}\n` +
                   `📊 <b>Giriş Fiyatı:</b> <code>$${pEntry}</code>\n` +
                   `⚡ <b>Fonlama Oranı:</b> <code>${funding}%</code>\n` +
-                  `⚠️ <b>Teşhis:</b> Negatif Fonlama & Yoğun Short Sıkışması\n\n` +
+                  `⚠️ <b>Teşhis:</b> ${isLong ? 'Negatif Fonlama & Short Sıkışması' : 'Aşırı Şişme / Long Tasfiye Riski'}\n\n` +
                   `🎯 <b>LİKİDASYON İŞLEM PLANI:</b>\n` +
-                  `🟢 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
-                  `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (-%1.4)\n` +
-                  `🎯 <b>TP 1 (50x Tasfiye):</b> <code>$${pTp1}</code> (+%1.8)\n` +
-                  `🚀 <b>TP 2 (20x Tasfiye):</b> <code>$${pTp2}</code> (+%4.2+)\n` +
-                  `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
+                  `🎯 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
+                  `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (${isLong ? '-%1.4' : '+%1.5'})\n` +
+                  `🎯 <b>TP 1:</b> <code>$${pTp1}</code> (${isLong ? '+%1.8' : '-%1.8'})\n` +
+                  `🚀 <b>TP 2:</b> <code>$${pTp2}</code> (${isLong ? '+%3.8+' : '-%4.5+'})\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçilmeli, stop maliyete çekilmelidir.</i>`;
 
@@ -174,10 +193,10 @@ export default async function handler(req, res) {
         body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
       });
 
-      sentSymbols.push(symbol);
+      sentSymbols.push(`${symbol} (${dir})`);
     }
 
-    return res.status(200).json({ success: true, sent: sentSymbols });
+    return res.status(200).json({ success: true, processed: sentSymbols });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
