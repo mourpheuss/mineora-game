@@ -335,7 +335,7 @@
         const change24h = (parseFloat(ticker.change24h || 0) * 100).toFixed(2);
         const openInterestUsdt = ticker.openInterest ? (parseFloat(ticker.openInterest) * price / 1000000).toFixed(2) : "0.00";
 
-        // 2. Tape Akışı: Son 100 Gerçekleşen Emir (Büyük Balina vs Küçük Yatırımcı)
+        // 2. Tape Akışı: Son 100 Gerçekleşen Emir (Büyük Balina vs Bireysel Sürü)
         const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${query}&productType=USDT-FUTURES&limit=100`);
         const fillsData = await fillsRes.json();
         const fills = fillsData.data?.fillList || fillsData.data || [];
@@ -377,54 +377,70 @@
 
         const bookImbalance = totalAskDepthUsdt > 0 ? (totalBidDepthUsdt / totalAskDepthUsdt).toFixed(2) : "1.00";
 
-        // 4. Matematiksel Güvenlik & Manipülasyon Skoru (0 - 100)
+        // 4. NET İŞLEM YÖNÜ VE SEVİYELERİNİN BELİRLENMESİ
         let mathScore = 50;
-        let statusTitle = "NÖTR & DENGELİ PİYASA";
-        let badgeColor = "bg-slate-800 text-slate-300 border-slate-700";
-        let statusNarrative = "Tahtada tek taraflı bir manipülasyon veya aşırı sıkışma yok. Borsa genel trende göre hareket ediyor.";
+        let actionDirection = "BEKLE / NÖTR";
+        let actionColor = "text-amber-400 border-amber-500 bg-amber-500/10";
+        let actionReason = "Piyasada net bir kırılım ya da borsa sıkışması yok, yön oturana kadar işlem açılması önerilmez.";
+        let leverageTip = "10x - 15x İzole";
+        let recTp = price * 1.015;
+        let recSl = price * 0.992;
 
-        // SHORT SQUEEZE SENARYOSU (Fonlama eksi + Tape alıcı dolu)
+        // SHORT SIKIŞMASI SENARYOSU
         if (fundingRate < -0.02 && buyPressure >= 60) {
-          mathScore = 85 + Math.min(10, Math.round(Math.abs(fundingRate) * 100));
-          statusTitle = "🚨 SHORT SIKIŞMASI (SHORT SQUEEZE POTANSİYELİ)";
-          badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-700";
-          statusNarrative = `Fonlama oranı negatif (%${fundingRate.toFixed(4)}), yani piyasa short açmış bekliyor. Ancak Tape'de balinalar son 100 işlemde %${buyPressure} oranında agresif alım yapıyor! Borsa short pozisyonları tasfiye etmek için yukarı patlatabilir.`;
-        }
-        // LONG TASFİYE TUZAĞI (Sürü Long'da ama tahtadan mal boşaltılıyor)
+          mathScore = 93;
+          actionDirection = "🟢 KESİNLİKLE LONG (SHORT AÇMAK İNTİHARDIR)";
+          actionColor = "text-emerald-400 border-emerald-500 bg-emerald-950/60";
+          actionReason = `Fonlama aşırı negatif (%${fundingRate.toFixed(4)}), yani içerideki kitle tamamen Short'ta rehin kalmış durumda. Buna karşılık son 100 işlemde %${buyPressure} alıcı baskısı var! Borsa bu Short'çuları patlatmak için yukarı iğneleyecek. Kesinlikle Long yönünde yer alınmalı.`;
+          leverageTip = "15x - 20x İzole";
+          recTp = price * 1.020;
+          recSl = price * 0.992;
+        } 
+        // LONG TASFİYE TUZAĞI SENARYOSU
         else if (fundingRate > 0.03 && sellPressure >= 60) {
           mathScore = 20;
-          statusTitle = "💀 LONG TUZAĞI (TASFİYE SÜPÜRMESİ RİSKİ)";
-          badgeColor = "bg-rose-950/80 text-rose-300 border-rose-700";
-          statusNarrative = `Bireysel yatırımcılar (%${retailDominance} Sürü) Long yönlü birikmiş, fonlama pozitif. Buna karşın tahtada satış baskısı %${sellPressure} seviyesinde. Borsa Long kütlesini patlatmak için sert bir alt iğne bırakabilir; Long girmek tehlikeli!`;
-        }
-        // BALİNA AKÜMÜLASYONU (Fiyat sabit, dev blok alımlar)
-        else if (whaleDominance >= 55 && Math.abs(parseFloat(change24h)) < 3) {
-          mathScore = 78;
-          statusTitle = "🐋 SESSİZ BALİNA AKÜMÜLASYONU";
-          badgeColor = "bg-cyan-950/80 text-cyan-300 border-cyan-700";
-          statusNarrative = `Fiyat son 24 saatte sakin duruyor ancak tahtadaki hacmin %${whaleDominance}'i tek seferlik $3,000+ blok kurumsal emirlerden oluşuyor. Fiyatı kımıldatmadan kademelerden mal toplanıyor.`;
-        }
-        // HAVA BOŞLUĞU (Satış kademeleri ince)
-        else if (parseFloat(bookImbalance) >= 2.0) {
+          actionDirection = "🔴 KESİNLİKLE SHORT (LONG AÇMAK İNTİHARDIR)";
+          actionColor = "text-rose-400 border-rose-500 bg-rose-950/60";
+          actionReason = `Bireysel yatırımcılar (%${retailDominance} Sürü) Long yönlü birikmiş, fonlama pozitif. Buna karşın tahtada satış baskısı %${sellPressure} seviyesinde. Borsa Long kütlesini tasfiye etmek için sert bir alt iğne bırakabilir; Long girmek çok tehlikeli!`;
+          leverageTip = "10x - 15x İzole";
+          recTp = price * 0.980;
+          recSl = price * 1.008;
+        } 
+        // TAPE AGRESİF ALIM
+        else if (buyPressure >= 75) {
           mathScore = 82;
-          statusTitle = "💨 TAHTADA SATIŞ HAVA BOŞLUĞU";
-          badgeColor = "bg-amber-950/80 text-amber-300 border-amber-700";
-          statusNarrative = `Satış kademeleri (Ask) boşaltılmış durumda. Alış derinliği satışın ${bookImbalance} katı. Ufak bir market alımıyla fiyatın hızla sıçraması muhtemel.`;
+          actionDirection = "🟢 HIZLI LONG (TAPE SÜPÜRÜLÜYOR)";
+          actionColor = "text-emerald-400 border-emerald-500 bg-emerald-950/60";
+          actionReason = `Son 100 işlemde piyasa alıcıları ezici (%${buyPressure}). Tahtanın satış kademeleri seri market emirleriyle temizleniyor, kısa vadeli sıçrama bekleniyor.`;
+          leverageTip = "15x İzole";
+          recTp = price * 1.015;
+          recSl = price * 0.993;
+        } 
+        // TAPE AGRESİF SATIŞ
+        else if (sellPressure >= 75) {
+          mathScore = 30;
+          actionDirection = "🔴 HIZLI SHORT (TAPE BOŞALTILIYOR)";
+          actionColor = "text-rose-400 border-rose-500 bg-rose-950/60";
+          actionReason = `Satış emirleri son işlemlerde %${sellPressure} oranında tahtayı eziyor. Aşağı doğru kırılım riski yüksek.`;
+          leverageTip = "10x İzole";
+          recTp = price * 0.985;
+          recSl = price * 1.007;
         }
 
         const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
+        const tpStr = recTp < 1 ? recTp.toFixed(6) : recTp.toFixed(4);
+        const slStr = recSl < 1 ? recSl.toFixed(6) : recSl.toFixed(4);
 
-        // KARTI BAS
         area.innerHTML = `
           <div class="bg-slate-950 p-6 sm:p-7 rounded-2xl border-2 border-slate-800 space-y-6 font-mono text-xs">
             
-            <!-- PARİTE VE BAŞLIK -->
+            <!-- PARİTE VE FİYAT -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-5">
               <div>
                 <div class="flex items-center gap-3">
                   <h4 class="font-display font-black text-2xl text-white">#${ticker.symbol}</h4>
-                  <span class="text-[10px] px-2.5 py-0.5 rounded-lg border font-bold ${badgeColor}">
-                    ${statusTitle}
+                  <span class="text-[10px] px-2.5 py-0.5 rounded-lg border font-bold bg-slate-800 text-slate-300">
+                    VADELİ
                   </span>
                 </div>
                 <div class="text-[11px] text-slate-400 mt-1">Bitget USDT-Margined Vadeli Tahtası</div>
@@ -435,6 +451,44 @@
                   ${change24h >= 0 ? '+' : ''}${change24h}% (24s)
                 </span>
               </div>
+            </div>
+
+            <!-- GÖZE ÇARPAN DOĞRUDAN İŞLEM KARARI KARTI -->
+            <div class="p-5 rounded-2xl border-2 ${actionColor} space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">SİSTEMİN NET İŞLEM ÖNERİSİ</span>
+                  <div class="font-display text-xl font-black tracking-tight">${actionDirection}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-300">
+                    Kaldıraç: <strong>${leverageTip}</strong>
+                  </span>
+                  <span class="text-[10px] bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-300">
+                    Güven: <strong>%${mathScore}</strong>
+                  </span>
+                </div>
+              </div>
+
+              <!-- İŞLEM SEVİYELERİ -->
+              <div class="grid grid-cols-3 gap-2 text-center pt-2">
+                <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <span class="text-[10px] text-slate-400 block">ÖNERİLEN GİRİŞ</span>
+                  <strong class="text-white text-xs">$${pStr}</strong>
+                </div>
+                <div class="bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-900/60">
+                  <span class="text-[10px] text-emerald-400 block">KÂR AL (TP)</span>
+                  <strong class="text-emerald-300 text-xs">$${tpStr}</strong>
+                </div>
+                <div class="bg-rose-950/40 p-2.5 rounded-xl border border-rose-900/60">
+                  <span class="text-[10px] text-rose-400 block">KATI STOP (SL)</span>
+                  <strong class="text-rose-300 text-xs">$${slStr}</strong>
+                </div>
+              </div>
+
+              <p class="text-[11px] leading-relaxed pt-2 border-t border-slate-800/80 text-slate-300">
+                💡 <b>Neden Bu Karar?</b> ${actionReason}
+              </p>
             </div>
 
             <!-- 4'LÜ MATEMATİKSEL METRİK TABLOSU -->
@@ -460,7 +514,7 @@
               <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
                 <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">TAHTA BASKI ORANI</span>
                 <strong class="font-display text-2xl font-bold text-amber-400">${bookImbalance}x</strong>
-                <span class="text-[9px] text-slate-500 block mt-0.5">Alış/Satış Derinlik Oranı</span>
+                <span class="text-[9px] text-slate-500 block mt-0.5">Alış/Satış Derinliği</span>
               </div>
             </div>
 
@@ -481,19 +535,10 @@
               </div>
             </div>
 
-            <!-- DERİN TEŞHİS VE STRATEJİ RAPORU -->
-            <div class="p-4 bg-slate-900 rounded-xl border-l-4 ${mathScore >= 70 ? 'border-emerald-500' : mathScore <= 40 ? 'border-rose-500' : 'border-amber-500'} space-y-2">
-              <div class="flex items-center gap-2 text-white font-bold text-xs">
-                <i class="fa-solid fa-microscope text-amber-400"></i> X-RAY STRATEJİ VE TEŞHİS RAPORU
-              </div>
-              <p class="text-slate-300 text-[11px] leading-relaxed">
-                ${statusNarrative}
-              </p>
-              <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/80 flex flex-wrap gap-4">
-                <span>24s Vadeli Hacim: <b>$${vol24h}M</b></span>
-                <span>Aktif Açık Pozisyon: <b>$${openInterestUsdt}M</b></span>
-                <span>İncelenen Son Emir Sayısı: <b>100 İşlem</b></span>
-              </div>
+            <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/80 flex flex-wrap gap-4">
+              <span>24s Vadeli Hacim: <b>$${vol24h}M</b></span>
+              <span>Aktif Açık Pozisyon: <b>$${openInterestUsdt}M</b></span>
+              <span>İncelenen Son Emir Sayısı: <b>100 İşlem</b></span>
             </div>
 
           </div>
@@ -563,3 +608,12 @@
   </script>
 </body>
 </html>
+```<FollowUp>
+<Suggestions>
+<Suggestion>Kodu GitHub'a gönderip TREE aramasını tekrar test edelim.</Suggestion>
+<Suggestion>X-Ray arama sonucundaki net işlem kartına doğrudan Bitget vadeli işlem linki ekleyelim mi?</Suggestion>
+</Suggestions>
+</FollowUp>
+<ElicitationsGroup>
+<Elicitation>Karttaki net işlem önerisinde kaldıraç oranını sabit 10x mi yoksa dinamik (10x-20x) mi tutalım?</Elicitation>
+</ElicitationsGroup>
