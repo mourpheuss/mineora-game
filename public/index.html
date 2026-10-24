@@ -50,10 +50,9 @@
     </div>
   </header>
 
-  <!-- VİTRİN / LANDING HERO BÖLÜMÜ -->
+  <!-- VİTRİN HERO BÖLÜMÜ -->
   <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
 
-    <!-- HERO BAŞLIK (SIRLAR GİZLENDİ, PRESTİJ ÖN PLANDA) -->
     <div class="text-center max-w-3xl mx-auto space-y-6">
       <div class="inline-flex items-center gap-2 bg-orange-950/40 border border-orange-700/50 px-4 py-1.5 rounded-full font-mono text-xs text-orange-300">
         <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
@@ -79,7 +78,7 @@
       </div>
     </div>
 
-    <!-- SİSTEM ÖZELLİKLERİ VİTRİNİ -->
+    <!-- SİSTEM ÖZELLİKLERİ -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
       <div class="bg-slate-900/60 border border-slate-800 p-8 rounded-3xl space-y-4 hover:border-slate-700 transition">
@@ -261,9 +260,9 @@
   </div>
 
   <script>
-    // ================= FIREBASE KURULUMU =================
+    // ================= DOĞRU MINEORA FIREBASE BAĞLANTISI =================
     const firebaseConfig = {
-      databaseURL: "https://mineora-web-default-rtdb.firebaseio.com"
+      databaseURL: "https://mineora-web-default-rtdb.firebaseio.com/"
     };
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
@@ -272,7 +271,7 @@
 
     // ================= TELEGRAM AYARLARI =================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_ADMIN_ID = "6457294906"; // SADECE SİZE ÖZEL TELEGRAM BİLDİRİMİ
+    const TG_ADMIN_ID = "6457294906"; // SADECE VE SADECE SİZE ÖZEL TELEGRAM BİLDİRİMİ
 
     function openAuthModal(tab) {
       document.getElementById('authModal').classList.remove('hidden');
@@ -330,6 +329,7 @@
         alert("Hesabınız açıldı! VIP Sentinel Radara erişmek için lütfen 500 USDT lisans ödemenizi bildirin.");
         openVipModal();
       } catch(err) {
+        console.error("Kayıt hatası:", err);
         alert("Kayıt hatası: " + err.message);
       }
     }
@@ -341,6 +341,7 @@
 
       if (!u || !p) { alert("Bilgileri girin."); return; }
 
+      // Admin özel girişi
       if ((u === 'Masterpro' || u === 'eren@gmail.com') && p === '123456') {
         sessionStorage.setItem('currentUser', 'Masterpro');
         sessionStorage.setItem('isVip', 'true');
@@ -364,13 +365,16 @@
 
         closeAuthModal();
 
+        // VIP DEĞİLSE İÇERİ SOKMAZ, ÖDEME MODALINI AÇAR
         if (!user.isVip) {
-          alert("Aboneliğiniz henüz onaylanmamış. Lütfen ödemeyi bildirin veya yöneticinin onaylamasını bekleyin.");
+          alert("Aboneliğiniz henüz onaylanmamış. Lütfen ödemenizi bildirin veya yöneticinin onaylamasını bekleyin.");
           openVipModal();
         } else {
+          // Onaylı VIP ise radara geçirir
           window.location.href = 'dashboard.html';
         }
       } catch(err) {
+        console.error("Giriş hatası:", err);
         alert("Giriş hatası: " + err.message);
       }
     }
@@ -390,7 +394,7 @@
       });
     }
 
-    // VIP ÖDEME BİLDİRİMİ (SADECE SİZİN TELEFONUNUZA GELİR)
+    // VIP ÖDEME BİLDİRİMİ (SADECE KİŞİSEL TELEGRAM HESABINIZA DÜŞER)
     async function submitVipPayment() {
       const tx = document.getElementById('inputTxHash').value.trim();
       if (!tx) { alert("Lütfen TxID kodunu girin."); return; }
