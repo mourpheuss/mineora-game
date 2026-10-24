@@ -80,13 +80,17 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h3 class="font-display text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-users text-orange-500"></i> Firebase Canlı Üye & VIP Onay Masası
+            <i class="fa-solid fa-users text-orange-500"></i> Firebase Canlı Üye & VIP Masası
           </h3>
-          <p class="text-xs text-slate-400">Veritabanındaki üyeleri anlık yönetin. Tek tıkla VIP onaylayın.</p>
+          <p class="text-xs text-slate-400">Üyelerin şifrelerini görüntüleyin, durumlarını değiştirin veya yeni üye tanımlayın.</p>
         </div>
         <div class="flex items-center gap-2">
+          <!-- YENİ ÜYE EKLE BUTONU -->
+          <button onclick="openNewUserModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-orange-600/20 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-plus"></i> Yeni Üye Ekle
+          </button>
           <button onclick="loadUsers()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs px-3 py-2 rounded-xl transition border border-slate-700">
-            <i class="fa-solid fa-rotate mr-1"></i> Veritabanını Yenile
+            <i class="fa-solid fa-rotate mr-1"></i> Yenile
           </button>
         </div>
       </div>
@@ -97,19 +101,63 @@
             <tr>
               <th class="py-3 px-4">Kullanıcı Adı</th>
               <th class="py-3 px-4">E-Posta</th>
+              <th class="py-3 px-4">Şifre</th>
               <th class="py-3 px-4">VIP Durumu</th>
               <th class="py-3 px-4">Bitiş Tarihi</th>
               <th class="py-3 px-4 text-right">Yönetici İşlemleri</th>
             </tr>
           </thead>
           <tbody id="userTableBody" class="divide-y divide-slate-800 text-slate-300">
-            <tr><td colspan="5" class="py-6 text-center text-slate-500">Firebase'den veriler çekiliyor...</td></tr>
+            <tr><td colspan="6" class="py-6 text-center text-slate-500">Firebase'den veriler çekiliyor...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
   </main>
+
+  <!-- ================= YENİ ÜYE EKLEME MODALI ================= -->
+  <div id="newUserModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
+      <button onclick="closeNewUserModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="text-center space-y-1">
+        <div class="w-10 h-10 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2">
+          <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <h3 class="font-display font-black text-lg text-white">Yeni Üye Tanımla</h3>
+        <p class="text-slate-400 text-[11px]">Firebase veritabanına doğrudan üye ekler.</p>
+      </div>
+
+      <form onsubmit="event.preventDefault(); submitCreateUser();" class="space-y-3 pt-2">
+        <div>
+          <label class="text-slate-400 block mb-1">Kullanıcı Adı:</label>
+          <input type="text" id="addUsername" required placeholder="ornek_kullanici" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">E-Posta:</label>
+          <input type="email" id="addEmail" required placeholder="ornek@gmail.com" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Şifre:</label>
+          <input type="text" id="addPassword" required placeholder="Belirleyeceğiniz şifre" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl">
+          <span class="text-slate-300 font-bold">Doğrudan VIP Yap:</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="addIsVip" class="sr-only peer">
+            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20">
+          Üyeyi Veritabanına Kaydet
+        </button>
+      </form>
+    </div>
+  </div>
 
   <script>
     // ================= FIREBASE BAĞLANTISI =================
@@ -132,16 +180,73 @@
       window.location.href = 'index.html';
     }
 
+    function openNewUserModal() {
+      document.getElementById('newUserModal').classList.remove('hidden');
+    }
+    function closeNewUserModal() {
+      document.getElementById('newUserModal').classList.add('hidden');
+    }
+
+    // ADMİNDEN YENİ ÜYE KAYDETME FONKSİYONU
+    async function submitCreateUser() {
+      const u = document.getElementById('addUsername').value.trim();
+      const e = document.getElementById('addEmail').value.trim();
+      const p = document.getElementById('addPassword').value.trim();
+      const isVip = document.getElementById('addIsVip').checked;
+
+      if (!u || !e || !p) return alert("Tüm alanları doldurun.");
+
+      let expireDate = null;
+      if (isVip) {
+        const nextMonth = new Date();
+        nextMonth.setDate(nextMonth.getDate() + 30);
+        expireDate = nextMonth.toLocaleDateString('tr-TR');
+      }
+
+      try {
+        await db.ref(`users/${u}`).set({
+          username: u,
+          email: e,
+          password: p,
+          isVip: isVip,
+          expireDate: expireDate,
+          createdAt: Date.now()
+        });
+
+        alert(`'${u}' kullanıcısı başarıyla eklendi!`);
+        closeNewUserModal();
+        document.getElementById('addUsername').value = '';
+        document.getElementById('addEmail').value = '';
+        document.getElementById('addPassword').value = '';
+        loadUsers();
+      } catch(err) {
+        alert("Ekleme hatası: " + err.message);
+      }
+    }
+
+    // ŞİFRE GÖSTER / GİZLE
+    function togglePasswordView(spanId) {
+      const el = document.getElementById(spanId);
+      if (!el) return;
+      if (el.dataset.hidden === 'true') {
+        el.innerText = el.dataset.pass;
+        el.dataset.hidden = 'false';
+      } else {
+        el.innerText = '••••••••';
+        el.dataset.hidden = 'true';
+      }
+    }
+
     async function loadUsers() {
       const tbody = document.getElementById('userTableBody');
-      tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Yükleniyor...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Yükleniyor...</td></tr>`;
 
       try {
         const snap = await db.ref('users').once('value');
         const data = snap.val();
 
         if (!data) {
-          tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">Henüz kayıtlı üye bulunamadı.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500">Henüz kayıtlı üye bulunamadı.</td></tr>`;
           document.getElementById('vipMemberCount').innerText = '0';
           document.getElementById('standardMemberCount').innerText = '0';
           document.getElementById('totalRevenue').innerText = '$0';
@@ -152,14 +257,21 @@
         let stdCount = 0;
         const usersList = Object.keys(data).map(key => data[key]);
 
-        tbody.innerHTML = usersList.map(u => {
+        tbody.innerHTML = usersList.map((u, idx) => {
           const isVipUser = (u.isVip === true || u.isVip === 'true');
           if (isVipUser) vipCount++; else stdCount++;
+          const passId = `pass_${idx}`;
 
           return `
             <tr class="hover:bg-slate-950/40 transition">
               <td class="py-3.5 px-4 font-bold text-white">${u.username || '-'}</td>
               <td class="py-3.5 px-4 text-slate-400">${u.email || '-'}</td>
+              <td class="py-3.5 px-4 text-amber-300">
+                <span id="${passId}" data-pass="${u.password || ''}" data-hidden="false" class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800 text-[11px]">${u.password || '-'}</span>
+                <button onclick="togglePasswordView('${passId}')" class="ml-1 text-slate-500 hover:text-slate-300" title="Göster/Gizle">
+                  <i class="fa-solid fa-eye text-[10px]"></i>
+                </button>
+              </td>
               <td class="py-3.5 px-4">
                 ${isVipUser 
                   ? '<span class="px-2 py-0.5 rounded-md bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold text-[10px]">VIP AKTİF</span>' 
@@ -180,7 +292,7 @@
         document.getElementById('standardMemberCount').innerText = stdCount;
         document.getElementById('totalRevenue').innerText = `$${vipCount * 500}`;
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400">Veritabanı okunamadı: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-rose-400">Veritabanı okunamadı: ${e.message}</td></tr>`;
       }
     }
 
