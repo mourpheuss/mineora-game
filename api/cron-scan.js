@@ -6,12 +6,13 @@ const FIREBASE_DB_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Firebase REST API üzerinden son gönderim zamanını kontrol etme
+// Firebase REST API ile 4 saatlik kilit kontrolü
 async function isAlertOnCooldown(symbol, type) {
   try {
     const res = await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`);
+    if (!res.ok) return false;
     const lastSentTime = await res.json();
-    if (lastSentTime && (Date.now() - lastSentTime < 14400000)) { // 4 Saatlik Kilit (14.400.000 ms)
+    if (lastSentTime && (Date.now() - Number(lastSentTime) < 14400000)) { // 4 Saatlik Kilit (14.400.000 ms)
       return true;
     }
   } catch (err) {
@@ -20,7 +21,7 @@ async function isAlertOnCooldown(symbol, type) {
   return false;
 }
 
-// Gönderilen mesajın zamanını Firebase'e kaydetme
+// Gönderilen mesajı Firebase'e kaydetme
 async function markAlertAsSent(symbol, type) {
   try {
     await fetch(`${FIREBASE_DB_URL}/sent_alerts/${symbol}_${type}.json`, {
@@ -34,9 +35,10 @@ async function markAlertAsSent(symbol, type) {
 }
 
 async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, desc, chgFormatted) {
-  // 1. Kilit kontrolü: 4 saat dolmadıysa gönderme
+  // 1. Kilit kontrolü: 4 saat dolmadıysa KESİNLİKLE kanala gitmez
   const onCooldown = await isAlertOnCooldown(coin.symbol, type);
   if (onCooldown) {
+    console.log(`[ENGEL] ${coin.symbol} (${type}) için 4 saatlik kilit aktif, mesaj atılmadı.`);
     return;
   }
 
@@ -66,9 +68,9 @@ async function sendTelegramAlert(coin, type, fundingFormatted, volFormatted, des
     });
     const data = await res.json();
     if (data.ok) {
-      // 2. Mesaj başarıyla gittiyse veritabanına mühürle
+      // 2. Mesaj başarıyla gittikten hemen sonra Firebase'e mühür vurulur
       await markAlertAsSent(coin.symbol, type);
-      console.log(`[VIP ALERT GÖNDERİLDİ] ${coin.symbol} (${type})`);
+      console.log(`[VIP ALERT GÖNDERİLDİ VE KİLİTLENDİ] ${coin.symbol} (${type})`);
     }
   } catch (err) {
     console.error("Telegram gönderme hatası:", err);
