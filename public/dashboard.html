@@ -155,7 +155,6 @@
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHAT_ID = "-1004404988937";
 
-    // Spam engelleme: Aynı pariteye 4 saat boyunca yalnızca 1 kez bildirim gider
     let sentAlerts = JSON.parse(localStorage.getItem('mineora_sent_alerts') || '{}');
 
     async function sendTelegramAlertDirect(coin, type, fundingFormatted, volFormatted, desc) {
@@ -193,15 +192,12 @@
           sentAlerts[alertKey] = now;
           localStorage.setItem('mineora_sent_alerts', JSON.stringify(sentAlerts));
           console.log(`[VIP ALERT] ${coin.symbol} Telegram'a başarıyla iletildi.`);
-        } else {
-          console.error("Telegram API Hatası:", data);
         }
       } catch (err) {
         console.error("Telegram Gönderim Hatası:", err);
       }
     }
 
-    // Header'daki "Test Gönder" butonu için doğrudan test fonksiyonu
     async function testTelegramLive() {
       const text = `⚡ <b>MINEORA VIP SENTINEL TEST MESAJI</b>\n\nBağlantı başarıyla kuruldu! Radar anomalileri tespit ettiğinde bildirimler doğrudan bu kanala iletilecektir.\n\n⏰ <b>Zaman:</b> ${new Date().toLocaleTimeString('tr-TR')}`;
       try {
@@ -249,13 +245,13 @@
                  parseFloat(t.usdtVolume || 0) >= 1200000;
         });
 
-        // Negatif Fonlama Sıkışması (SHORT SQUEEZE - PUMP)
+        // Çekirdek Kural Aynen Korundu: Negatif Fonlama Sıkışması (SHORT SQUEEZE)
         const pumpCandidates = liquidPool.filter(t => {
           const funding = parseFloat(t.fundingRate || 0);
           return funding <= -0.015;
         }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate)).slice(0, 4);
 
-        // Aşırı Pozitif Fonlama (DUMP & LİKİDASYON RİSKİ)
+        // Çekirdek Kural Aynen Korundu: Pozitif Fonlama & Kaldıraç Şişmesi (DUMP)
         const dumpCandidates = liquidPool.filter(t => {
           const funding = parseFloat(t.fundingRate || 0);
           const chg = parseFloat(t.change24h || 0) * 100;
@@ -266,11 +262,14 @@
         renderPumpCards(pumpCandidates);
         renderTable(liquidPool.slice(0, 15));
 
-        // Telegram bildirimlerini tetikle
+        // Telegram bildirimlerini tetikle (Sadece yeni başlayan patlamalarda sinyal gider)
         pumpCandidates.forEach(c => {
-          const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
-          const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
-          sendTelegramAlertDirect(c, 'PUMP', funding, vol, 'Aşırı negatif fonlama birikimi. Short pozisyonlar sıkıştı, yukarı patlama (Short Squeeze) potansiyeli yüksek.');
+          const chg = parseFloat(c.change24h || 0) * 100;
+          if (chg < 15) { // Patlamış gitmiş olana değil, yeni başlayan sıkışmaya sinyal atar
+            const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
+            const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+            sendTelegramAlertDirect(c, 'PUMP', funding, vol, 'Aşırı negatif fonlama birikimi. Short pozisyonlar sıkıştı, yukarı patlama (Short Squeeze) potansiyeli yüksek.');
+          }
         });
 
         dumpCandidates.forEach(c => {
@@ -340,26 +339,36 @@
       container.innerHTML = items.map(c => {
         const funding = (parseFloat(c.fundingRate || 0) * 100).toFixed(4);
         const vol = (parseFloat(c.usdtVolume || 0) / 1000000).toFixed(2);
+        const chg = parseFloat(c.change24h || 0) * 100;
         const price = parseFloat(c.lastPr);
 
+        // HAREKET ZİRVEYE ULAŞTI MI KONTROLÜ (ARK Durumu)
+        const isCompleted = chg >= 15;
+
         return `
-          <div class="bg-slate-950 p-4 rounded-2xl border border-emerald-500/50 space-y-2.5">
+          <div class="bg-slate-950 p-4 rounded-2xl border ${isCompleted ? 'border-amber-500/50' : 'border-emerald-500/50'} space-y-2.5">
             <div class="flex justify-between items-center">
               <div>
                 <strong class="font-display text-base font-black text-white">${c.symbol}</strong>
                 <span class="text-slate-400 font-mono text-xs ml-2">$${price < 1 ? price.toFixed(6) : price.toFixed(4)}</span>
+                <span class="text-[11px] font-mono font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'} ml-1">(+${chg.toFixed(1)}%)</span>
               </div>
-              <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                🚀 SQUEEZE POTANSİYELİ
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold ${isCompleted ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}">
+                ${isCompleted ? '🏁 PATLAMA GERÇEKLEŞTİ' : '🚀 SQUEEZE POTANSİYELİ'}
               </span>
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400 border-t border-slate-900">
-              <div>Fonlama: <strong class="text-emerald-400">${funding}% (Aşırı Short)</strong></div>
+              <div>Fonlama: <strong class="${isCompleted ? 'text-amber-400' : 'text-emerald-400'}">${funding}% (Aşırı Short)</strong></div>
               <div>24s Hacim: <strong class="text-slate-200">$${vol}M</strong></div>
             </div>
-            <div class="bg-emerald-950/30 border border-emerald-900/50 p-2.5 rounded-xl text-[11px] text-emerald-300">
-              <i class="fa-solid fa-bolt mr-1"></i>
-              <strong>Fırsat Analizi:</strong> Piyasa Short tarafında sıkışmış durumda. Tahtadaki satış duvarı çekildiği an zorunlu tasfiyelerle sert bir yukarı patlama gelebilir.
+            <div class="${isCompleted ? 'bg-amber-950/30 border border-amber-900/50 text-amber-300' : 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-300'} p-2.5 rounded-xl text-[11px]">
+              ${isCompleted ? `
+                <i class="fa-solid fa-flag-checkered mr-1"></i>
+                <strong>Hedef Tamamlandı:</strong> Short squeeze patlaması yaşandı (+${chg.toFixed(1)}% sıçradı). <strong>Yeni pozisyon açmak risklidir, kâr alma / izleme bölgesi.</strong>
+              ` : `
+                <i class="fa-solid fa-bolt mr-1"></i>
+                <strong>Erken Uyarı:</strong> Piyasa Short tarafında sıkışmış durumda. Fiyat henüz patlamadı, sert bir yukarı sıçrama kapıda olabilir.
+              `}
             </div>
           </div>
         `;
