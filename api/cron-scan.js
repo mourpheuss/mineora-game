@@ -69,7 +69,7 @@ async function tradeForUser(apiKey, secret, passphrase, symbol, side) {
       symbol: symbol,
       marginMode: accountRes.data.marginMode || 'crossed',
       marginCoin: 'USDT',
-      side: side, // 'buy' veya 'sell'
+      side: side,
       tradeSide: 'open',
       orderType: 'market',
       size: targetSize.toString()
@@ -91,13 +91,24 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Bitget verisi alinamadi" });
     }
 
-    // 2. Firebase'den Kalıcı Kilitleri Al
+    // 2. Firebase'den Kalıcı Kilitleri ve On-Chain Transferlerini Al
     let locks = {};
+    let onChainTransfers = [];
     try {
       const lockRes = await fetch(`${FIREBASE_BASE}/cron_locks.json`);
       locks = (await lockRes.json()) || {};
     } catch(e) {
       locks = {};
+    }
+
+    try {
+      const whaleRes = await fetch(`${FIREBASE_BASE}/whale_transfers.json`);
+      const whaleData = await whaleRes.json();
+      if (whaleData && typeof whaleData === 'object') {
+        onChainTransfers = Object.keys(whaleData).map(k => whaleData[k]);
+      }
+    } catch(e) {
+      onChainTransfers = [];
     }
 
     // Likidite Filtresi: $800k ve üzeri, USDT vadeli pariteler
@@ -110,7 +121,7 @@ export default async function handler(req, res) {
     const signalsToProcess = [];
 
     // ==========================================
-    // 1. ORİJİNAL LONG ALGORİTMASI (Aynen Korundu)
+    // 1. ORİJİNAL LONG ALGORİTMASI (Dokunulmadı)
     // ==========================================
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
@@ -121,18 +132,13 @@ export default async function handler(req, res) {
     longCandidates.forEach(c => signalsToProcess.push({ item: c, direction: 'LONG' }));
 
     // ==========================================
-    // 2. GÜVENLİ SHORT ALGORİTMASI (Tepe & Şişme Radarı)
+    // 2. GÜVENLİ SHORT ALGORİTMASI (Dokunulmadı)
     // ==========================================
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-
-      // Kriter 1: %20 ve üzeri sert primlenmiş VE short baskısı kırılıp fonlaması artıya geçmiş tahtalar
       const isExtremePumpWithPositiveFunding = chg >= 20.0 && funding >= 0.0002;
-
-      // Kriter 2: Yoğun Long kalabalığı birikmiş (+%0.08 fonlama) ve primli tahtalar
       const isHeavyCrowdedLong = funding >= 0.0008 && chg >= 8.0;
-
       return isExtremePumpWithPositiveFunding || isHeavyCrowdedLong;
     }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
 
@@ -152,10 +158,14 @@ export default async function handler(req, res) {
       const lastSentTime = typeof locks[lockKey] === 'number' ? locks[lockKey] : 0;
       const minutesPassed = (Date.now() - lastSentTime) / (1000 * 60);
 
-      // 120 DAKİKA (2 SAAT) KİLİT KONTROLÜ
+      // 120 DAKİKA KİLİT KONTROLÜ
       if (minutesPassed < 120) continue;
 
-      // Kilidi Firebase'e kalıcı olarak yaz
+      // On-Chain Eşleşme Teyidi Kontrolü
+      const matchedWhale = onChainTransfers.find(w => w.symbol === symbol);
+      const hasOnChainConfirmation = !!matchedWhale;
+
+      // Kilidi Firebase'e mühürle
       const now = Date.now();
       locks[lockKey] = now;
       await fetch(`${FIREBASE_BASE}/cron_locks/${lockKey}.json`, {
@@ -177,10 +187,9 @@ export default async function handler(req, res) {
         sl = price * 0.986;
         rr = ((tp1 - price) / (price - sl)).toFixed(1);
       } else {
-        // SHORT LİKİDASYON HEDEFLERİ
-        tp1 = price * 0.982; // -%1.8
-        tp2 = price * 0.955; // -%4.5
-        sl = price * 1.015;  // +%1.5 Kesin Koruma Stopu
+        tp1 = price * 0.982;
+        tp2 = price * 0.955;
+        sl = price * 1.015;
         rr = ((price - tp1) / (sl - price)).toFixed(1);
       }
 
@@ -189,19 +198,28 @@ export default async function handler(req, res) {
       const pTp1 = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
       const pTp2 = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
 
-      // Otomatik Pozisyonu Aç (buy / sell)
+      // Bitget Pozisyonunu Aç
       const orderSide = dir === 'LONG' ? 'buy' : 'sell';
       await tradeForUser(ADMIN_API_KEY, ADMIN_SECRET, ADMIN_PASSPHRASE, symbol, orderSide);
 
-      // Telegram VIP Mesajını Gönder
+      // Telegram Mesajı Formatı
       const isLong = dir === 'LONG';
-      const msg = `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>\n` +
+      const badgeTitle = hasOnChainConfirmation 
+        ? `👑 <b>MINEORA VIP SENTINEL | ELMAS BALİNA SİNYALİ</b>\n🛡️ <i>[ON-CHAIN CÜZDAN HAREKETİ İLE ÇİFT TEYİTLİ]</i>` 
+        : `⚡ <b>MINEORA VIP SENTINEL | BALİNA AVCI SİNYALİ</b>`;
+
+      const onChainNote = hasOnChainConfirmation 
+        ? `\n🐋 <b>Balina Teyidi:</b> <code>${matchedWhale.amount || ''} ${matchedWhale.asset || ''} (${matchedWhale.usd || ''}) ${matchedWhale.type || ''}</code>\n` 
+        : '';
+
+      const msg = `${badgeTitle}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
                   `${isLong ? '🟢 <b>YÖN / BEKLENTİ:</b> <b>LONG (PUMP / YUKARI PATLAMA) 🚀</b>' : '🔴 <b>YÖN / BEKLENTİ:</b> <b>SHORT (DUMP / TEPE ÇÖKÜŞÜ) 🩸</b>'}\n` +
                   `📊 <b>Giriş Fiyatı:</b> <code>$${pEntry}</code>\n` +
                   `⚡ <b>Fonlama Oranı:</b> <code>${funding}%</code>\n` +
-                  `⚠️ <b>Teşhis:</b> ${isLong ? 'Negatif Fonlama & Short Sıkışması' : 'Aşırı Şişme / Long Tasfiye Riski'}\n\n` +
+                  `⚠️ <b>Teşhis:</b> ${isLong ? 'Negatif Fonlama & Short Sıkışması' : 'Aşırı Şişme / Long Tasfiye Riski'}\n` +
+                  `${onChainNote}\n` +
                   `🎯 <b>LİKİDASYON İŞLEM PLANI:</b>\n` +
                   `🎯 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
                   `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (${isLong ? '-%1.4' : '+%1.5'})\n` +
@@ -217,7 +235,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
       });
 
-      sentSymbols.push(`${symbol} (${dir})`);
+      sentSymbols.push(`${symbol} (${dir})${hasOnChainConfirmation ? ' [ELMAS]' : ''}`);
     }
 
     return res.status(200).json({ success: true, processed: sentSymbols });
