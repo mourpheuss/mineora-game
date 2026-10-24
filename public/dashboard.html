@@ -302,37 +302,37 @@
         const res = await fetch("https://mineora-web-default-rtdb.firebaseio.com/whale_transfers.json");
         const data = await res.json();
         
-        if (data && typeof data === 'object') {
-          cachedWhaleTransfers = Object.keys(data).map(k => data[k]);
+        if (data && typeof data === 'object' && !data.error) {
+          cachedWhaleTransfers = Object.keys(data)
+            .map(k => data[k])
+            .filter(item => item && typeof item === 'object');
         } else {
-          // Firebase'de henüz transfer kaydı yoksa varsayılan son zincir akışları
-          cachedWhaleTransfers = [
-            { time: "18:42", asset: "USDT", amount: "12,500,000", usd: "$12.5M", type: "INFLOW (Giriş)", to: "Bitget", symbol: "USDT", isDirect: true },
-            { time: "17:15", asset: "AXIS", amount: "4,200,000", usd: "$1.08M", type: "OUTFLOW (Çıkış)", to: "Bilinmeyen Cüzdan", symbol: "AXISUSDT", isDirect: true },
-            { time: "16:05", asset: "USDT", amount: "8,900,000", usd: "$8.9M", type: "INFLOW (Giriş)", to: "Bitget", symbol: "USDT", isDirect: true },
-            { time: "14:20", asset: "BTW", amount: "3,100,000", usd: "$5.33M", type: "INFLOW (Giriş)", to: "Bitget Futures", symbol: "BTWUSDT", isDirect: true }
-          ];
+          cachedWhaleTransfers = [];
         }
-        renderWhaleTable(cachedWhaleTransfers);
       } catch(e) {
         console.error("Whale API okuma hatası:", e);
+        cachedWhaleTransfers = [];
       }
+      renderWhaleTable(cachedWhaleTransfers);
     }
 
     function renderWhaleTable(transfers) {
       const tbody = document.getElementById('onChainWhaleTableBody');
+      if (!tbody) return;
+
       if (!transfers || transfers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-5 text-center text-slate-500">Son 12 saatte büyük blokzincir transferi bulunamadı.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-5 text-center text-slate-500 font-mono text-xs"><i class="fa-solid fa-radar mr-1.5 text-amber-400"></i> Son 12 saatte tespit edilen büyük blokzincir transferi bulunmuyor.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = transfers.map(t => {
-        const isInflow = t.type.includes("INFLOW");
+        const safeType = String(t.type || 'INFLOW (Giriş)');
+        const isInflow = safeType.includes("INFLOW");
         return `
           <tr class="hover:bg-slate-900/60 transition">
             <td class="py-2.5 px-3 text-slate-400 font-mono">${t.time || '-'}</td>
-            <td class="py-2.5 px-3 font-bold text-white">${t.amount} ${t.asset}</td>
-            <td class="py-2.5 px-3 text-amber-400 font-black">${t.usd}</td>
+            <td class="py-2.5 px-3 font-bold text-white">${t.amount || '0'} ${t.asset || ''}</td>
+            <td class="py-2.5 px-3 text-amber-400 font-black">${t.usd || '$0'}</td>
             <td class="py-2.5 px-3">
               <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isInflow ? 'bg-emerald-950 border border-emerald-800 text-emerald-400' : 'bg-sky-950 border border-sky-800 text-sky-400'}">
                 ${isInflow ? '📥 BORSA GİRİŞİ (Cephane)' : '📤 SOĞUK CÜZDAN (Arz Şoku)'}
