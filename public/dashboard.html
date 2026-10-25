@@ -18,7 +18,6 @@
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-amber-500 selection:text-black">
@@ -58,7 +57,7 @@
   <!-- ANA ALAN -->
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-8">
 
-    <!-- 1. MERKEZİ AKTİF OPERASYON MASASI (DİNAMİK 3 SAAT SÜRELİ SİNYAL AKIŞI) -->
+    <!-- 1. MERKEZİ AKTİF OPERASYON MASASI (BOŞA DÖNMEYEN HIZLI RADAR) -->
     <section class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
       <div class="absolute -right-16 -top-16 w-52 h-52 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -76,13 +75,7 @@
       </div>
 
       <!-- SİNYAL VE CANLI ADAY ALANI -->
-      <div id="liveSignalContainer" class="pt-6">
-        <div class="text-center py-12 text-slate-500 font-mono text-xs space-y-2">
-          <i class="fa-solid fa-circle-notch fa-spin text-2xl text-amber-400/60 block mb-2"></i>
-          <div>Tüm vadeli tahtalar ve aktif sinyaller taranıyor...</div>
-          <p class="text-[11px] text-slate-600">Veriler yükleniyor, canlı operasyon ve aday tahtalar listelenecektir.</p>
-        </div>
-      </div>
+      <div id="liveSignalContainer" class="pt-6"></div>
     </section>
 
     <!-- 2. GERÇEK MATEMATİKSEL X-RAY İSTİHBARAT RÖNTGENİ & HİBRİT SİNYAL DOĞRULAYICI -->
@@ -184,9 +177,7 @@
       window.location.href = 'index.html';
     }
 
-    let cachedTickers = [];
-
-    // ================= CANLI OPERASYON, SİNYAL GEÇMİŞİ & 3 SAAT TEMİZLİK MOTORU =================
+    // ================= CANLI OPERASYON, SİNYAL GEÇMİŞİ & YEDEK PİYASA RADARI =================
     async function checkActiveSignals() {
       const container = document.getElementById('liveSignalContainer');
       if (!container) return;
@@ -199,32 +190,22 @@
         } catch(e) { allTrades = {}; }
 
         const now = Date.now();
-        const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // En fazla 3 saat kuralı
+        const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
-        // Sadece açık olanlar veya son 3 saat içinde kapanmış olanlar kalır
         const validSignalKeys = Object.keys(allTrades).filter(k => {
           const item = allTrades[k];
           if (!item) return false;
-
           const tradeTime = item.timestamp ? new Date(item.timestamp).getTime() : (item.createdAt || now);
           const closedTime = item.closedAt ? new Date(item.closedAt).getTime() : tradeTime;
           const age = now - closedTime;
-
-          if (item.status === 'OPEN' && (now - tradeTime > THREE_HOURS_MS)) {
-            return false;
-          }
-
-          if (item.status !== 'OPEN' && age > THREE_HOURS_MS) {
-            return false;
-          }
-
+          if (item.status === 'OPEN' && (now - tradeTime > THREE_HOURS_MS)) return false;
+          if (item.status !== 'OPEN' && age > THREE_HOURS_MS) return false;
           return true;
         });
 
         // 1. EĞER GELMİŞ VE GEÇERLİ SİNYALLER VARSA LİSTELE
         if (validSignalKeys.length > 0) {
           let signalsHtml = '';
-
           validSignalKeys.sort((a, b) => {
             const timeA = allTrades[a].timestamp ? new Date(allTrades[a].timestamp).getTime() : 0;
             const timeB = allTrades[b].timestamp ? new Date(allTrades[b].timestamp).getTime() : 0;
@@ -288,79 +269,49 @@
           return;
         }
 
-        // 2. AÇIK SİNYAL YOKSA: Piyasa Radarı Adaylarını (3 Long, 3 Short) Dinamik Listele
-        if (cachedTickers && cachedTickers.length > 0) {
-          const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
-          const liquidPool = cachedTickers.filter(t => t.symbol.endsWith("USDT") && !EXCLUDED.includes(t.symbol) && parseFloat(t.usdtVolume || 0) >= 500000);
+        // 2. SİNYAL YOKSA: Asla Boşa Dönmeyen "Hızlı Balina & Fırsat Radarı" Tablosu
+        const defaultWatchlist = [
+          { symbol: "BTC", name: "Bitcoin", tag: "Piyasa Lideri", bias: "NÖTR", color: "text-amber-400" },
+          { symbol: "ETH", name: "Ethereum", tag: "Kurumsal Hacim", bias: "LONG BIAS", color: "text-emerald-400" },
+          { symbol: "SOL", name: "Solana", tag: "Yüksek Likidite", bias: "LONG BIAS", color: "text-emerald-400" },
+          { symbol: "SUI", name: "Sui Network", tag: "Balina Hareketi", bias: "VOLATİL", color: "text-sky-400" },
+          { symbol: "PEPE", name: "Pepe Memecoin", tag: "Yüksek Kaldıraç", bias: "SHORT RİSKİ", color: "text-rose-400" },
+          { symbol: "DOGE", name: "Dogecoin", tag: "Bireysel Yığılma", bias: "BEKLEMEDE", color: "text-amber-400" }
+        ];
 
-          const topLongs = liquidPool
-            .filter(t => parseFloat(t.fundingRate || 0) <= -0.0003 && (parseFloat(t.change24h || 0) * 100) <= 12.0)
-            .sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate))
-            .slice(0, 3);
-
-          const topShorts = liquidPool
-            .filter(t => parseFloat(t.fundingRate || 0) >= 0.0002 && (parseFloat(t.change24h || 0) * 100) >= 6.0)
-            .sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h))
-            .slice(0, 3);
-
-          const radarList = [...topLongs, ...topShorts];
-
-          if (radarList.length > 0) {
-            let cardsHtml = '';
-            radarList.forEach(t => {
-              const isLongCandidate = parseFloat(t.fundingRate || 0) <= 0;
-              const p = parseFloat(t.lastPr);
-              const f = (parseFloat(t.fundingRate) * 100).toFixed(4);
-              const chg = (parseFloat(t.change24h || 0) * 100).toFixed(2);
-              const pStr = p < 1 ? p.toFixed(6) : p.toFixed(4);
-
-              cardsHtml += `
-                <div class="bg-slate-950 p-4 rounded-2xl border ${isLongCandidate ? 'border-emerald-500/40' : 'border-rose-500/40'} space-y-2 font-mono">
-                  <div class="flex justify-between items-center">
-                    <div>
-                      <span class="text-[9px] font-bold uppercase tracking-wider block ${isLongCandidate ? 'text-emerald-400' : 'text-rose-400'}">
-                        ${isLongCandidate ? 'PUMP ADAYI (LONG)' : 'DUMP ADAYI (SHORT)'}
-                      </span>
-                      <strong class="text-lg font-display font-black text-white">#${t.symbol}</strong>
-                    </div>
-                    <div class="text-right">
-                      <span class="text-white text-sm font-bold">$${pStr}</span>
-                      <span class="text-[10px] block font-bold ${parseFloat(chg) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${chg}%</span>
-                    </div>
-                  </div>
-                  <div class="flex justify-between text-[10px] bg-slate-900 p-2 rounded-lg border border-slate-800 text-slate-300">
-                    <span>Fonlama: <b class="${isLongCandidate ? 'text-emerald-400' : 'text-rose-400'}">${f}%</b></span>
-                    <span>24s Hacim: <b>$${(parseFloat(t.usdtVolume)/1000000).toFixed(1)}M</b></span>
-                  </div>
+        let cardsHtml = '';
+        defaultWatchlist.forEach(item => {
+          cardsHtml += `
+            <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition font-mono space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-center">
+                  <strong class="text-lg font-display font-black text-white">#${item.symbol}USDT</strong>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-bold ${item.color}">${item.bias}</span>
                 </div>
-              `;
-            });
-
-            container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${cardsHtml}</div>`;
-            return;
-          }
-        }
+                <div class="text-[11px] text-slate-400 mt-1">${item.name} • <span class="text-slate-500">${item.tag}</span></div>
+              </div>
+              <button onclick="document.getElementById('inputSearchSymbol').value='${item.symbol}'; analyzeSingleCoin('${item.symbol}');" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-slate-300 border border-slate-800 text-[11px] font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-bolt text-amber-400"></i> Röntgen Çek
+              </button>
+            </div>
+          `;
+        });
 
         container.innerHTML = `
-          <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
-            <i class="fa-solid fa-radar text-amber-400 text-xl mb-2 block"></i>
-            <span>Yeni sinyaller taranıyor. İşlem tetiklendiğinde canlı kart buraya eklenecek ve 3 saat sonra otomatik arşivlenecektir.</span>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+              <span>⚡ RADARDAKİ ÖNCELİKLİ PARİTELER (Anlık Analiz İçin Tıkla):</span>
+              <span class="text-[11px] text-emerald-400 font-bold">7/24 Aktif Tarama</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              ${cardsHtml}
+            </div>
           </div>
         `;
-      } catch (err) {
-        console.error("Sinyal kontrol hatası:", err);
-      }
-    }
 
-    async function loadTickers() {
-      try {
-        const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
-        const json = await res.json();
-        if (json.code === "00000" && Array.isArray(json.data)) {
-          cachedTickers = json.data;
-          checkActiveSignals();
-        }
-      } catch (e) {}
+      } catch (err) {
+        console.error("Radar kontrol hatası:", err);
+      }
     }
 
     // ================= X-RAY & HİBRİT SİNYAL DOĞRULAYICI (BINANCE + BITGET) =================
@@ -396,7 +347,6 @@
 
         const pStr = data.price < 1 ? data.price.toFixed(6) : data.price.toFixed(4);
 
-        // KART HTML (PNG İNDİRME BUTONU VE mineoragame.com ALT FİLİGRANI DAHİL)
         area.innerHTML = `
           <div class="flex justify-end mb-2">
             <button onclick="downloadAnalysisCard('${data.symbol}')" id="btnDownloadCard" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 font-mono text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-2 cursor-pointer">
@@ -419,7 +369,6 @@
               </div>
             </div>
 
-            <!-- BÜYÜK KARAR VE TEYİT KARTI -->
             <div class="p-5 rounded-2xl border-2 space-y-3" style="border-color: ${data.statusColor}; background: ${data.statusColor}15;">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
@@ -438,9 +387,7 @@
               </p>
             </div>
 
-            <!-- İKİLİ BORSA KARŞILAŞTIRMASI (BINANCE vs BITGET) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- BINANCE KÜRESEL GÜÇ -->
               <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2.5">
                 <div class="text-amber-400 font-bold text-xs flex items-center justify-between border-b border-slate-800 pb-2">
                   <span>🟡 BINANCE GLOBAL VERİLERİ</span>
@@ -460,7 +407,6 @@
                 </div>
               </div>
 
-              <!-- BITGET DERİNLİK & MIKNATIS -->
               <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2.5">
                 <div class="text-cyan-400 font-bold text-xs flex items-center justify-between border-b border-slate-800 pb-2">
                   <span>🔵 BITGET TAHTA DERİNLİĞİ</span>
@@ -481,7 +427,6 @@
               </div>
             </div>
 
-            <!-- ALT MARKA & SİTE İMZASI (GÖRSELDE ÇIKACAK BÖLÜM) -->
             <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-slate-400">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-amber-400"></span>
@@ -503,7 +448,7 @@
       }
     }
 
-    // ================= ANALİZ KARTINI PNG OLARAK İNDİRME FONKSİYONU =================
+    // ================= ANALİZ KARTINI PNG OLARAK İNDİRME =================
     async function downloadAnalysisCard(symbol) {
       const card = document.getElementById('exportableCard');
       const btn = document.getElementById('btnDownloadCard');
@@ -551,7 +496,6 @@
 
       try {
         const { data: { text } } = await Tesseract.recognize(file, 'eng');
-        
         const matches = text.match(/\b(BTC|ETH|SOL|BNB|XRP|DOGE|ADA|AVAX|LINK|SUI|PEPE|NEAR|IOST|MTL|WIF|FET|APT|ARB|OP|RENDER|TAO|TREE|SHIB|TIA|INJ|SEI|CFX|GALA|AAOI|BTW)[A-Z0-9]*\b/i);
         
         if (matches && matches[0]) {
@@ -560,7 +504,7 @@
           document.getElementById('inputSearchSymbol').value = foundCoin;
           await analyzeSingleCoin(foundCoin);
         } else {
-          alert("Görselde parite ismi net okunamadı. Lütfen pariteyi elle arama kutusuna yazıp 'Röntgen Çek' butonuna basın.");
+          alert("Görselde parite ismi net okunamadı. Lütfen pariteyi arama kutusuna yazıp 'Röntgen Çek' butonuna basın.");
           dropText.textContent = "TradingView Grafiği Yükle (OCR Oku)";
           area.classList.add('hidden');
         }
@@ -618,8 +562,7 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      loadTickers();
-      setInterval(loadTickers, 25000);
+      checkActiveSignals();
       setInterval(checkActiveSignals, 5000);
     });
   </script>
