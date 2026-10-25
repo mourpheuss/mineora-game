@@ -75,7 +75,7 @@ export default async function handler(req, res) {
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `🏁 <b>Kapanış Fiyatı:</b> <code>$${curPriceStr}</code>\n` +
-                       `🏆 <b>Net Kâr:</b> <b>+%1.60</b> <i>(10x Kaldıraç: +%16 | 20x: +%32)</i>\n` +
+                       `🏆 <b>Net Kâr:</b> <b>+%1.60</b> <i>(10x: +%16 | 20x: +%32)</i>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `✨ <i>Tüm hedeflere ulaşıldı, operasyon başarıyla tamamlandı.</i>\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
       const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
-        trade.sl = trade.entryPrice; // Stop seviyesi başa başa (Break-even) çekildi
+        trade.sl = trade.entryPrice;
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
             method: 'PUT',
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `⚡ <b>Anlık Fiyat:</b> <code>$${curPriceStr}</code>\n` +
-                       `💰 <b>Kâr:</b> <b>+%0.80</b> <i>(Pozisyonun %50'si kârla kapatılabilir)</i>\n` +
+                       `💰 <b>Kâr:</b> <b>+%0.80</b> <i>(Kâr realize edilebilir)</i>\n` +
                        `🛡️ <b>Risk Yönetimi:</b> Stop-Loss giriş seviyesine (<code>$${entryPriceStr}</code>) çekildi. İşlem risksiz izleniyor!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: YENİ SİNYAL ÜRETİMİ (DİPTEN SNIPE EDEN YENİ NESİL RADAR)
+    // MODÜL 2: KURUMSAL LEVEL-2 TAHTA & BALİNA AKIŞ MOTORU
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -165,7 +165,6 @@ export default async function handler(req, res) {
       return (now - tTime) <= LOCK_WINDOW_MS;
     }).length;
 
-    // Masada en fazla 2 aktif işleme izin ver
     if (openTradesCount >= 2) {
       return res.status(200).json({ status: "IDLE", message: "Takipte aktif operasyonlar var; yeni sinyal beklemede." });
     }
@@ -195,62 +194,114 @@ export default async function handler(req, res) {
 
       const rangePosition = (price - low24) / (high24 - low24);
 
-      // Son 40 Mikro Emir Akışı (Alıcı/Satıcı Baskısı)
-      const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=40`, { headers: browserHeaders })
+      // KURAL 1: Kesinlikle sadece dip çeyrek (<= 0.30) veya tepe çeyrek (>= 0.72)
+      const isDipZone = rangePosition <= 0.30;
+      const isTopZone = rangePosition >= 0.72;
+      if (!isDipZone && !isTopZone) continue;
+
+      // 1. ADIM: LEVEL-2 DERİNLİK TAHTASI OKUMA (DUVAR KONTROLÜ)
+      const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/merge-depth?symbol=${item.symbol}&productType=usdt-futures&limit=15`, { headers: browserHeaders })
+        .then(r => r.json()).catch(() => ({}));
+
+      const bids = depthRes.data?.bids || [];
+      const asks = depthRes.data?.asks || [];
+
+      let totalBidVolume = 0;
+      let totalAskVolume = 0;
+      let maxAskWall = 0;
+      let maxBidWall = 0;
+
+      bids.forEach(b => {
+        const sz = parseFloat(b[1] || 0);
+        totalBidVolume += sz;
+        if (sz > maxBidWall) maxBidWall = sz;
+      });
+
+      asks.forEach(a => {
+        const sz = parseFloat(a[1] || 0);
+        totalAskVolume += sz;
+        if (sz > maxAskWall) maxAskWall = sz;
+      });
+
+      const totalDepth = totalBidVolume + totalAskVolume;
+      if (totalDepth <= 0) continue;
+
+      const bidDepthPct = (totalBidVolume / totalDepth) * 100;
+
+      // 2. ADIM: SON TAPE AKIŞINDA BALİNA İŞLEMLERİNİ SÜZME
+      const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=50`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       const fills = fillsRes.data?.fillList || fillsRes.data || [];
-      let buyVol = 0;
-      let sellVol = 0;
+      let whaleBuyUsd = 0;
+      let whaleSellUsd = 0;
 
       if (Array.isArray(fills)) {
         fills.forEach(f => {
           const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
-          if (f.side === 'buy') buyVol += val;
-          else sellVol += val;
+          // 250 USDT üzerindeki gerçek piyasa emirleri (bot süpürmelerini ve balinaları ayıklar)
+          if (val >= 250) {
+            if (f.side === 'buy') whaleBuyUsd += val;
+            else whaleSellUsd += val;
+          }
         });
       }
 
-      const totalFlow = buyVol + sellVol;
-      const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
+      const totalWhaleFlow = whaleBuyUsd + whaleSellUsd;
+      const whaleBuyPct = totalWhaleFlow > 0 ? (whaleBuyUsd / totalWhaleFlow) * 100 : 50;
 
       // Açık Pozisyon (OI)
       const oiRes = await fetch(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${item.symbol}&productType=usdt-futures`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
       const currentOI = parseFloat(oiRes.data?.openInterestList?.[0]?.size || oiRes.data?.[0]?.size || 0);
 
-      // ================= YENİ: DİP DÖNÜŞ SNIPER (LONG) =================
-      // Fiyat tabanın hemen üzerinde (range <= 0.35), alıcılar %57+ üstün, fonlama şişmemiş
-      const isReversalSniperLong = (rangePosition <= 0.35) && (buyPct >= 57) && (fundingRate <= 0.008);
+      // ================= SAĞLAM DIP LONG KRİTERİ =================
+      // 1. Fiyat taban çeyreğinde (range <= 0.30)
+      // 2. Alış derinliği tahtada üstün (bidDepthPct >= 55)
+      // 3. Önünde engel devasa bir Ask Duvarı YOK (maxAskWall < totalBidVolume * 0.75)
+      // 4. Balina emir akışı %60+ alıcı yönünde
+      // 5. Fonlama pozitif değil (şişkinlik yok, <= 0.006)
+      const isInstitutionalDipLong = isDipZone && 
+                                     (bidDepthPct >= 55) && 
+                                     (maxAskWall < totalBidVolume * 0.75) && 
+                                     (whaleBuyPct >= 60) && 
+                                     (fundingRate <= 0.006);
 
-      // ================= YENİ: TEPE RET SNIPER (SHORT) =================
-      // Fiyat tepede (range >= 0.70), satıcılar %59+ üstün
-      const isReversalSniperShort = (rangePosition >= 0.70) && (buyPct <= 41) && (fundingRate >= 0.010);
+      // ================= SAĞLAM TEPE SHORT KRİTERİ =================
+      // 1. Fiyat tepe çeyreğinde (range >= 0.72)
+      // 2. Satış derinliği üstün (bidDepthPct <= 44)
+      // 3. Altında destek duvarı zayıf
+      // 4. Balina emir akışı %60+ satıcı yönünde
+      // 5. Fonlama şişkin (>= 0.010)
+      const isInstitutionalTopShort = isTopZone && 
+                                      (bidDepthPct <= 44) && 
+                                      (whaleBuyPct <= 38) && 
+                                      (fundingRate >= 0.010);
 
-      if (isReversalSniperLong) {
+      if (isInstitutionalDipLong) {
         candidate = item;
         direction = 'LONG';
-        confidenceScore = Math.round(buyPct);
+        confidenceScore = Math.round(whaleBuyPct);
         oiSnapshot = currentOI;
-        intelligenceReason = `Dip bölgede (%${Math.round(rangePosition * 100)}) satıcılar tükendi. Market alıcıları %${confidenceScore} güçle tahtayı süpürüyor; sıçrama tabandan yakalandı.`;
+        intelligenceReason = `Tahtanın ilk 15 kademesinde %${Math.round(bidDepthPct)} alış desteği kuruldu, önünde direnç duvarı yok. Balina emirleri %${confidenceScore} güçle dipte birikiyor.`;
         break;
       }
 
-      if (isReversalSniperShort) {
+      if (isInstitutionalTopShort) {
         candidate = item;
         direction = 'SHORT';
-        confidenceScore = Math.round(100 - buyPct);
+        confidenceScore = Math.round(100 - whaleBuyPct);
         oiSnapshot = currentOI;
-        intelligenceReason = `Tepe dirençte (%${Math.round(rangePosition * 100)}) kurumsal blok satış başladı. Alıcı gücü kırıldı, hızlı geri çekilme eşiğinde.`;
+        intelligenceReason = `Tepe bölgede satış blokları tahtayı kilitledi. Alıcı derinliği %${Math.round(bidDepthPct)} seviyesine geriledi, kurumsal kâr satışı başladı.`;
         break;
       }
     }
 
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Açık pozisyonlar izlendi; yeni dip fırsatı bekleniyor." });
+      return res.status(200).json({ status: "SCANNING", message: "Tahta derinlikleri taranıyor; kurumsal taban bekleniyor." });
     }
 
-    // 4. HEDEF VE STOP MATEMATİĞİ (HIZLI VE NET SEVİYELER)
+    // 4. HEDEF VE STOP MATEMATİĞİ
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.008 : entryPrice * 0.992;
@@ -299,11 +350,11 @@ export default async function handler(req, res) {
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
 
-    const tgMsg = `⚡ <b>MINEORA FLASH SCALP | DİPTEN ONAYLI İŞLEM</b>\n` +
+    const tgMsg = `⚡ <b>MINEORA FLASH SCALP | DERİNLİK DOĞRULANMIŞ SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidate.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Sıçrama)' : '🔴 SHORT (Tepe Reddi)'}\n` +
-                  `⚡ <b>Teyit Gücü:</b> %${confidenceScore}\n` +
+                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Taban Kurumsal Birikim)' : '🔴 SHORT (Tepe Dağıtım Reddi)'}\n` +
+                  `⚡ <b>Balina Gücü:</b> %${confidenceScore}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.80)\n` +
