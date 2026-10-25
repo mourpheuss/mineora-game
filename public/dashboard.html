@@ -6,9 +6,12 @@
   <title>Mineora Sentinel | Kurumsal Operasyon & X-Ray Terminali</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- OCR Kütüphanesi (Ekran resminden coin adını otomatik okumak için) -->
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- OCR Kütüphanesi -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <!-- HTML2CANVAS (Analiz Kartını Tek Tıkla PNG Olarak İndirmek İçin) -->
+  <!-- HTML2CANVAS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -37,6 +40,10 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <button onclick="openRefModal()" class="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
+          <i class="fa-solid fa-handshake"></i> <span>%30 Referans Kazancı</span>
+        </button>
+
         <button onclick="openApiSettingsModal()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
           <i class="fa-solid fa-robot"></i> <span>Bitget Oto-Bot</span>
         </button>
@@ -74,7 +81,6 @@
         </div>
       </div>
 
-      <!-- SİNYAL VE CANLI ADAY ALANI -->
       <div id="liveSignalContainer" class="pt-6"></div>
     </section>
 
@@ -94,7 +100,6 @@
 
       <!-- ARAMA VE SÜRÜKLE BIRAK YÜKLEME KONTROLLERİ -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Elle Arama -->
         <div class="flex gap-2">
           <input type="text" id="inputSearchSymbol" placeholder="Örn: SOL, BTC, PEPE, SUI..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-3 uppercase font-mono flex-1 focus:outline-none focus:border-amber-500" onkeydown="if(event.key==='Enter') analyzeSingleCoin()" />
           <button onclick="analyzeSingleCoin()" id="btnSearchSubmit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-6 py-3 rounded-xl transition cursor-pointer shrink-0 shadow flex items-center gap-2">
@@ -102,7 +107,6 @@
           </button>
         </div>
 
-        <!-- TradingView Ekran Görüntüsü Yükleme (OCR) -->
         <div id="dropZone" onclick="document.getElementById('xrayFileInput').click()" class="border-2 border-dashed border-slate-700 hover:border-amber-500/80 bg-slate-950/60 rounded-xl px-4 py-2.5 text-center cursor-pointer transition flex items-center justify-center gap-3">
           <i class="fa-solid fa-camera text-amber-400 text-lg"></i>
           <span id="dropZoneText" class="text-xs font-mono text-slate-300">TradingView Grafiği Yükle (OCR Oku)</span>
@@ -110,11 +114,54 @@
         </div>
       </div>
 
-      <!-- ANALİZ SONUÇ ALANI -->
       <div id="searchResultArea" class="hidden"></div>
     </section>
 
   </main>
+
+  <!-- ================= REFERANS & %30 ORTAKLIK MODALI ================= -->
+  <div id="refModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
+      <button onclick="closeRefModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="text-center space-y-1">
+        <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2">
+          <i class="fa-solid fa-handshake"></i>
+        </div>
+        <h3 class="font-display font-black text-lg text-white">%30 Referans Ortaklığı</h3>
+        <p class="text-slate-400 text-[11px]">Linkinle gelen her 200$ VIP satışından anında <b>60 USDT</b> kazan.</p>
+      </div>
+
+      <!-- İstatistik Kutuları -->
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center">
+          <span class="text-[10px] text-slate-500 block">KAYITLI DAVETLİ</span>
+          <strong id="refCountDisplay" class="font-display text-xl text-white">0</strong>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-2xl border border-emerald-900/50 text-center">
+          <span class="text-[10px] text-slate-500 block">TOPLAM KAZANÇ</span>
+          <strong id="refEarningsDisplay" class="font-display text-xl text-emerald-400">0 USDT</strong>
+        </div>
+      </div>
+
+      <!-- Kullanıcı Referans Linki -->
+      <div class="space-y-1.5 pt-2">
+        <label class="text-slate-300 font-bold block">Senin Özel Davet Linkin:</label>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
+          <input type="text" id="myRefLinkInput" readonly class="bg-transparent text-amber-300 text-[11px] w-full focus:outline-none select-all font-mono" />
+          <button onclick="copyMyRefLink()" id="btnCopyRef" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition text-[11px] shrink-0">
+            Kopyala
+          </button>
+        </div>
+      </div>
+
+      <div class="p-3 bg-amber-950/20 border border-amber-500/30 rounded-xl text-[10px] text-amber-300/90 leading-relaxed">
+        💡 <b>Nasıl Çalışır?</b> Bu linki veya kullanıcı adını arkadaşlarına ver. Kayıt olup 200$ VIP aldıklarında hesabına otomatik <b>60 USDT</b> komisyon yansır.
+      </div>
+    </div>
+  </div>
 
   <!-- KULLANICI BİTGET API MODALI -->
   <div id="apiSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -165,6 +212,14 @@
   </div>
 
   <script>
+    const firebaseConfig = {
+      databaseURL: "https://mineora-web-default-rtdb.firebaseio.com/"
+    };
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
     const currentUser = sessionStorage.getItem('currentUser');
     const isVip = sessionStorage.getItem('isVip');
 
@@ -175,6 +230,38 @@
     function handleLogout() {
       sessionStorage.clear();
       window.location.href = 'index.html';
+    }
+
+    // ================= REFERANS MODAL FONKSİYONLARI =================
+    function openRefModal() {
+      document.getElementById('refModal').classList.remove('hidden');
+      const origin = window.location.origin;
+      const refUrl = `${origin}/index.html?ref=${currentUser}`;
+      document.getElementById('myRefLinkInput').value = refUrl;
+
+      // Kullanıcının güncel kazancını ve davet sayısını Firebase'den çek
+      db.ref('users/' + currentUser).once('value').then(snap => {
+        const uData = snap.val() || {};
+        document.getElementById('refCountDisplay').textContent = uData.totalReferredCount || 0;
+        document.getElementById('refEarningsDisplay').textContent = `${uData.refEarningsUsdt || 0} USDT`;
+      });
+    }
+
+    function closeRefModal() {
+      document.getElementById('refModal').classList.add('hidden');
+    }
+
+    function copyMyRefLink() {
+      const link = document.getElementById('myRefLinkInput').value;
+      navigator.clipboard.writeText(link).then(() => {
+        const btn = document.getElementById('btnCopyRef');
+        btn.textContent = "Kopyalandı!";
+        btn.className = "bg-emerald-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition text-[11px] shrink-0";
+        setTimeout(() => {
+          btn.textContent = "Kopyala";
+          btn.className = "bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition text-[11px] shrink-0";
+        }, 2000);
+      });
     }
 
     // ================= CANLI OPERASYON, SİNYAL GEÇMİŞİ & YEDEK PİYASA RADARI =================
@@ -203,7 +290,6 @@
           return true;
         });
 
-        // 1. EĞER GELMİŞ VE GEÇERLİ SİNYALLER VARSA LİSTELE
         if (validSignalKeys.length > 0) {
           let signalsHtml = '';
           validSignalKeys.sort((a, b) => {
@@ -269,7 +355,6 @@
           return;
         }
 
-        // 2. SİNYAL YOKSA: Asla Boşa Dönmeyen "Hızlı Balina & Fırsat Radarı" Tablosu
         const defaultWatchlist = [
           { symbol: "BTC", name: "Bitcoin", tag: "Piyasa Lideri", bias: "NÖTR", color: "text-amber-400" },
           { symbol: "ETH", name: "Ethereum", tag: "Kurumsal Hacim", bias: "LONG BIAS", color: "text-emerald-400" },
@@ -519,16 +604,15 @@
       document.getElementById('apiSettingsModal').classList.remove('hidden');
       const u = sessionStorage.getItem('currentUser');
       if (u) {
-        fetch(`https://mineora-web-default-rtdb.firebaseio.com/users/${u}.json`)
-          .then(r => r.json())
-          .then(d => {
-            if (d && d.bitgetApi) {
-              document.getElementById('usrApiKey').value = d.bitgetApi.key || '';
-              document.getElementById('usrApiSecret').value = d.bitgetApi.secret || '';
-              document.getElementById('usrApiPass').value = d.bitgetApi.passphrase || '';
-              document.getElementById('usrAutoTradeToggle').checked = d.autoTradeEnabled || false;
-            }
-          });
+        db.ref(`users/${u}`).once('value').then(snap => {
+          const d = snap.val() || {};
+          if (d && d.bitgetApi) {
+            document.getElementById('usrApiKey').value = d.bitgetApi.key || '';
+            document.getElementById('usrApiSecret').value = d.bitgetApi.secret || '';
+            document.getElementById('usrApiPass').value = d.bitgetApi.passphrase || '';
+            document.getElementById('usrAutoTradeToggle').checked = d.autoTradeEnabled || false;
+          }
+        });
       }
     }
 
@@ -545,17 +629,8 @@
       const pass = document.getElementById('usrApiPass').value.trim();
       const enabled = document.getElementById('usrAutoTradeToggle').checked;
 
-      await fetch(`https://mineora-web-default-rtdb.firebaseio.com/users/${u}/bitgetApi.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, secret, passphrase: pass })
-      });
-
-      await fetch(`https://mineora-web-default-rtdb.firebaseio.com/users/${u}/autoTradeEnabled.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(enabled)
-      });
+      await db.ref(`users/${u}/bitgetApi`).set({ key, secret, passphrase: pass });
+      await db.ref(`users/${u}/autoTradeEnabled`).set(enabled);
 
       alert("Bitget Bot ayarlarınız kaydedildi!");
       closeApiSettingsModal();
