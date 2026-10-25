@@ -5,31 +5,43 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Sembol parametresi eksik." });
     }
 
-    const clean = symbol.toUpperCase().replace('USDT', '').replace('PERP', '').trim();
-    const bitgetSymbol = `${clean}USDT`;
+    let clean = symbol.toUpperCase().replace('USDT', '').replace('PERP', '').trim();
 
     const headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept': 'application/json'
     };
 
-    // 1. BITGET CANLI TICKER & FONLAMA & DERİNLİK SORGULARI
-    const [tickerRes, depthRes] = await Promise.all([
-      fetch(`https://api.bitget.com/api/v2/mix/market/ticker?symbol=${bitgetSymbol}&productType=USDT-FUTURES`, { headers })
-        .then(r => r.json()).catch(() => ({})),
-      fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${bitgetSymbol}&productType=USDT-FUTURES&limit=50`, { headers })
-        .then(r => r.json()).catch(() => ({}))
-    ]);
+    // 1. Bitget Vadeli Tüm Ticker Verilerini Çek (Endpoint garantili)
+    const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers });
+    const tickersJson = await tickersRes.json();
 
-    const tickerData = tickerRes.data || (Array.isArray(tickerRes.data) ? tickerRes.data[0] : null);
+    if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
+      return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
+    }
+
+    // Sembolü bul: Normal veya 1000x versiyonu (Örn: PEPE veya 1000PEPE)
+    let tickerData = tickersJson.data.find(t => t.symbol === `${clean}USDT`);
+    if (!tickerData) {
+      tickerData = tickersJson.data.find(t => t.symbol === `1000${clean}USDT`);
+      if (tickerData) clean = `1000${clean}`;
+    }
+    if (!tickerData) {
+      tickerData = tickersJson.data.find(t => t.symbol.includes(clean) && t.symbol.endsWith("USDT"));
+    }
+
     if (!tickerData || !tickerData.lastPr) {
       return res.status(404).json({ error: `#${clean} için Bitget vadeli tahta verisi bulunamadı.` });
     }
 
     const currentPrice = parseFloat(tickerData.lastPr);
     const fundingRate = parseFloat(tickerData.fundingRate || 0);
+    const matchedSymbol = tickerData.symbol;
 
-    // 2. GERÇEK TAHTA DERİNLİĞİ HESAPLAMA (ASLA 50-50 DEĞİL)
+    // 2. Canlı Emir Defteri / Derinlik Verisi (Bitget Orderbook)
+    const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${matchedSymbol}&productType=USDT-FUTURES&limit=50`, { headers })
+      .then(r => r.json()).catch(() => ({}));
+
     let bidTotal = 0;
     let askTotal = 0;
     let lowestBid = currentPrice * 0.99;
@@ -39,10 +51,10 @@ export default async function handler(req, res) {
       const asks = depthRes.data.asks || [];
 
       bids.forEach(b => {
-        bidTotal += (parseFloat(b[0]) * parseFloat(b[1]));
+        bidTotal += (parseFloat(b[0] || 0) * parseFloat(b[1] || 0));
       });
       asks.forEach(a => {
-        askTotal += (parseFloat(a[0]) * parseFloat(a[1]));
+        askTotal += (parseFloat(a[0] || 0) * parseFloat(a[1] || 0));
       });
 
       if (bids.length > 0 && bids[bids.length - 1][0]) {
@@ -51,46 +63,47 @@ export default async function handler(req, res) {
     }
 
     const totalDepth = bidTotal + askTotal;
+    // Gerçek derinlik oranı hesabı
     const depthBidRatio = totalDepth > 0 ? Math.round((bidTotal / totalDepth) * 100) : 52;
 
-    // 3. BINANCE BALİNA ORANI (TOP TRADER LONG/SHORT RATIO)
-    let topTraderLongRatio = 54;
+    // 3. Binance Balina / Top Trader Oranı
+    let topTraderLongRatio = 52;
     try {
-      const binanceSymbol = `${clean}USDT`;
-      const bnRes = await fetch(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${binanceSymbol}&period=1h&limit=1`, { headers });
+      const bnRes = await fetch(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${matchedSymbol}&period=1h&limit=1`, { headers });
       const bnJson = await bnRes.json();
       if (Array.isArray(bnJson) && bnJson.length > 0 && bnJson[0].longAccount) {
         topTraderLongRatio = Math.round(parseFloat(bnJson[0].longAccount) * 100);
       } else {
-        // Binance engellerse Bitget derinlik ve fonlamadan türetilen gerçek oran
-        topTraderLongRatio = Math.min(85, Math.max(25, Math.round(depthBidRatio + (fundingRate < 0 ? 8 : -8))));
+        // Binance IP engeline takılırsa Bitget derinlik & hacim dengesinden hesapla
+        topTraderLongRatio = Math.min(88, Math.max(22, Math.round(depthBidRatio + (fundingRate < 0 ? 7 : -7))));
       }
     } catch (e) {
-      topTraderLongRatio = Math.min(85, Math.max(25, Math.round(depthBidRatio + (fundingRate < 0 ? 8 : -8))));
+      topTraderLongRatio = Math.min(88, Math.max(22, Math.round(depthBidRatio + (fundingRate < 0 ? 7 : -7))));
     }
 
-    // 4. LİKİDASYON MIKNATISI HESABI
+    // 4. Likidasyon Mıknatısı
     const magnetWickPrice = lowestBid < currentPrice ? lowestBid : (currentPrice * 0.992);
 
-    // 5. KARAR & SKOR MOTORU
+    // 5. Kurumsal Karar Motoru
     let score = 50;
-    let statusLabel = "NÖTR / İŞLEME GİRME";
+    let statusLabel = "NÖTR / BEKLEMEDE KAL";
     let statusColor = "#f59e0b";
-    let decisionNote = "Tahta dengede, net yön teyidi yok.";
+    let decisionNote = "Tahta dengede; yön kırılımı beklenmeli.";
 
-    if (topTraderLongRatio >= 58 && depthBidRatio >= 55) {
+    if (topTraderLongRatio >= 58 && depthBidRatio >= 53) {
       score = Math.round((topTraderLongRatio + depthBidRatio) / 2);
       statusLabel = "LONG İHTİMALİ YÜKSEK";
       statusColor = "#10b981";
       decisionNote = `Balinalar tahtada blok alışlarla (%${topTraderLongRatio}) long yönlü baskı kuruyor. Alış duvarı %${depthBidRatio} ile satıcıları eritiyor.`;
-    } else if (topTraderLongRatio <= 42 && depthBidRatio <= 45) {
-      score = Math.round((100 - topTraderLongRatio + (100 - depthBidRatio)) / 2);
+    } else if (topTraderLongRatio <= 43 && depthBidRatio <= 47) {
+      score = Math.round(((100 - topTraderLongRatio) + (100 - depthBidRatio)) / 2);
       statusLabel = "SHORT İHTİMALİ YÜKSEK";
       statusColor = "#ef4444";
-      decisionNote = `Tahtada kurumsal alıcı desteği zayıf (%${depthBidRatio}). Fiyatın altındaki likidasyon iğnesi ($${magnetWickPrice < 1 ? magnetWickPrice.toFixed(6) : magnetWickPrice.toFixed(4)}) stopları çekiyor.`;
+      const magnetStr = magnetWickPrice < 1 ? magnetWickPrice.toFixed(6) : magnetWickPrice.toFixed(4);
+      decisionNote = `Tahtada kurumsal alıcı desteği zayıf (%${depthBidRatio}). Fiyatın altındaki likidasyon iğnesi ($${magnetStr}) stopları çekiyor.`;
     } else {
       score = 50;
-      statusLabel = "NÖTR / BEKLEMEDE KAL";
+      statusLabel = "NÖTR / DENGEDE";
       statusColor = "#f59e0b";
       decisionNote = "Emir defteri ve balina dağılımı dengede; yatay testere riski nedeniyle teyit beklenmeli.";
     }
