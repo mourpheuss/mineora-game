@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mineora Sentinel | Kurumsal Balina Sinyalleri & Terminal</title>
+  <title>Mineora Sentinel | Balina Avcısı & Likidasyon İstihbaratı</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -20,7 +20,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-amber-500 selection:text-black">
 
-  <!-- ÜST MENÜ -->
+  <!-- ÜST MENÜ (HEADER) -->
   <header class="bg-slate-900/95 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -33,78 +33,376 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-500/40 font-mono text-xs px-3.5 py-1.5 rounded-xl transition shadow">
-          <i class="fa-brands fa-telegram text-sky-400"></i> <span>Ücretsiz Kanal</span>
+      <!-- KULLANICI / GİRİŞ DURUMU ALANI -->
+      <div class="flex items-center gap-2.5">
+        <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-1.5 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-500/40 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
+          <i class="fa-brands fa-telegram text-sky-400"></i> <span>Ücretsiz VIP</span>
         </a>
-        <a href="dashboard.html" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-4 py-2 rounded-xl transition shadow">
-          Terminale Gir
-        </a>
+
+        <div id="guestNav" class="flex items-center gap-2">
+          <button onclick="openModal('loginModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs px-3.5 py-1.5 rounded-xl transition border border-slate-700">
+            Giriş Yap
+          </button>
+          <button onclick="openModal('registerModal')" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-3.5 py-1.5 rounded-xl transition shadow">
+            Kayıt Ol
+          </button>
+        </div>
+
+        <div id="userNav" class="hidden items-center gap-2">
+          <span id="navUsername" class="text-xs font-mono text-amber-400 font-bold bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl"></span>
+          <a href="dashboard.html" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-3.5 py-1.5 rounded-xl transition shadow">
+            Terminale Gir
+          </a>
+          <button onclick="logoutUser()" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg transition" title="Çıkış Yap">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 sm:px-6 py-12 flex-1 w-full space-y-10">
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-8">
 
     <!-- HERO BÖLÜMÜ -->
-    <section class="text-center space-y-4">
+    <section class="text-center space-y-4 pt-4">
       <div class="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs px-3.5 py-1.5 rounded-full">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Yapay Zeka ve Emir Defteri Destekli Radarlar Devrede</span>
+        <span>Yapay Zeka ve Emir Defteri Radarı Canlı</span>
       </div>
       <h1 class="font-display font-black text-3xl sm:text-5xl text-white tracking-tight">
-        Balinaların Ayak İzini Takip Edin,<br /><span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400">Patlamaları Önceden Yakalayın</span>
+        Balinaların Ayak İzini Takip Edin,<br />
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400">Tasfiye İğnelerini Önceden Yakalayın</span>
       </h1>
-      <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-mono">
-        RSI ve klasik mumları unutun. Derinlik dengesizliği (WOB), kümülatif hacim deltası ve Açık Pozisyon (OI) mikro yapısıyla doğrulanmış canlı sinyaller.
+      <p class="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto font-mono">
+        RSI ve gecikmeli indikatörleri geride bırakın. WOB derinlik dengesizliği, Kümülatif Hacim Deltası ve Açık Pozisyon (OI) tespitiyle kurumsal likidite avı.
       </p>
+      <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
+        <button onclick="goToTerminalProtected()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-black px-6 py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
+          <i class="fa-solid fa-bolt"></i> <span>Terminale Gir</span>
+        </button>
+        <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-mono text-xs font-bold px-6 py-3 rounded-2xl transition flex items-center gap-2">
+          <i class="fa-brands fa-telegram text-sky-400 text-sm"></i> <span>Ücretsiz Telegram Kanalı</span>
+        </a>
+      </div>
     </section>
 
-    <!-- ÜCRETSİZ TELEGRAM KANALI DAVET BANNERI (ÖNE ÇIKAN ALAN) -->
-    <section class="p-6 sm:p-8 bg-gradient-to-r from-sky-950/70 via-slate-900 to-emerald-950/70 border-2 border-sky-500/40 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
+    <!-- ÜCRETSİZ TELEGRAM KANALI KATILIM BANNERI -->
+    <section class="p-5 sm:p-6 bg-gradient-to-r from-sky-950/70 via-slate-900 to-emerald-950/70 border border-sky-500/40 rounded-3xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-4 text-center sm:text-left">
-        <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-400/30 flex items-center justify-center text-sky-400 text-3xl shrink-0">
+        <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-400/30 flex items-center justify-center text-sky-400 text-2xl shrink-0">
           <i class="fa-brands fa-telegram"></i>
         </div>
         <div>
-          <div class="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold uppercase mb-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Tamamen Ücretsiz Canlı Sinyaller
+          <div class="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase mb-0.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Tamamen Ücretsiz Sinyaller
           </div>
-          <h2 class="font-display font-black text-white text-xl sm:text-2xl">Mineora Balina VIP Sinyal Kanalı</h2>
-          <p class="text-xs text-slate-400 font-mono mt-0.5">Doğrulanan pump ve dump sinyallerini telefonuna anlık, ücretsiz bildirim olarak al.</p>
+          <h2 class="font-display font-black text-white text-base sm:text-lg">Mineora Balina VIP Sinyal Kanalı</h2>
+          <p class="text-[11px] text-slate-400 font-mono">Teyitli pump/dump istihbaratlarını anlık, ücretsiz bildirim olarak takip edin.</p>
         </div>
       </div>
-
-      <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-sm font-mono px-8 py-4 rounded-2xl transition shadow-xl shadow-sky-500/25 shrink-0 transform hover:-translate-y-0.5">
-        <i class="fa-brands fa-telegram text-lg"></i>
-        <span>Gruba Ücretsiz Katıl</span>
+      <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs font-mono px-6 py-3 rounded-xl transition shadow-lg shadow-sky-500/20 shrink-0">
+        <i class="fa-brands fa-telegram text-sm"></i> <span>Kanalı Aç</span>
       </a>
     </section>
 
-    <!-- ÖZELLİK KARTLARI -->
+    <!-- 🎯 İĞNE TAHMİNLERİ & LİKİDASYON MIKNATISI ALANI (GERİ GETİRİLDİ) -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <h2 class="font-display font-black text-lg text-white">🧲 CANLI İĞNE TAHMİNLERİ (LİKİDASYON MIKNATISI)</h2>
+          </div>
+          <p class="text-xs text-slate-400 font-mono mt-0.5">
+            Borsaların tasfiye motorlarının vadeli piyasada vurması muhtemel anlık fitil/iğne seviyeleri.
+          </p>
+        </div>
+        <div class="text-[10px] font-mono text-slate-400 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+          Bitget & Binance Hibrit Derinlik
+        </div>
+      </div>
+
+      <!-- İĞNE KARTLARI LİSTESİ -->
+      <div id="wickSignalsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+        <div class="p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center text-slate-500 col-span-3">
+          <i class="fa-solid fa-spinner fa-spin text-amber-400 mr-2"></i> İğne tahminleri ve likidasyon havuzları hesaplanıyor...
+        </div>
+      </div>
+    </section>
+
+    <!-- ÖZELLİKLER & BİLGİLENDİRME -->
     <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-      <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-2">
+      <div class="bg-slate-900/70 border border-slate-800 p-5 rounded-2xl space-y-2">
         <div class="text-amber-400 text-lg"><i class="fa-solid fa-microchip"></i></div>
         <strong class="text-white text-sm block">Mikro Emir Akışı</strong>
-        <p class="text-slate-400 leading-relaxed">Son 50 işlemin alıcı/satıcı dengesini ölçer, balina tahtayı süpürürken anında tespit eder.</p>
+        <p class="text-slate-400 leading-relaxed">Emir defteri kümülatif deltasını anlık tartar, gizli kurumsal birikimi yakalar.</p>
       </div>
-      <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-2">
+      <div class="bg-slate-900/70 border border-slate-800 p-5 rounded-2xl space-y-2">
         <div class="text-emerald-400 text-lg"><i class="fa-solid fa-chart-line"></i></div>
-        <strong class="text-white text-sm block">Açık Pozisyon (OI) Teyidi</strong>
-        <p class="text-slate-400 leading-relaxed">Sahte yükselişleri eler; vadeli kontratlara taze kurumsal sermaye girmeden sinyal üretmez.</p>
+        <strong class="text-white text-sm block">Açık Pozisyon (OI)</strong>
+        <p class="text-slate-400 leading-relaxed">Vadeli kontratlara taze hacim girmeden sinyal üretmez, sahte yükselişleri filtreler.</p>
       </div>
-      <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-2">
+      <div class="bg-slate-900/70 border border-slate-800 p-5 rounded-2xl space-y-2">
         <div class="text-sky-400 text-lg"><i class="fa-solid fa-radiation"></i></div>
-        <strong class="text-white text-sm block">Çift Borsa X-Ray</strong>
-        <p class="text-slate-400 leading-relaxed">Binance balina oranları ile Bitget emir derinliğini tek ekranda çapraz doğrular.</p>
+        <strong class="text-white text-sm block">Röntgen (X-Ray) Masası</strong>
+        <p class="text-slate-400 leading-relaxed">Binance balina pozisyonları ile Bitget derinliğini saniyeler içinde çapraz kontrol eder.</p>
       </div>
     </section>
 
   </main>
 
+  <!-- GİRİŞ YAP MODAL -->
+  <div id="loginModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
+      <button onclick="closeModal('loginModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <div class="text-center space-y-1">
+        <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2"><i class="fa-solid fa-right-to-bracket"></i></div>
+        <h3 class="font-display font-black text-lg text-white">Giriş Yap</h3>
+        <p class="text-slate-400 text-[11px]">Mineora Terminaline erişmek için hesabınıza girin.</p>
+      </div>
+      <form onsubmit="handleLoginSubmit(event)" class="space-y-3 pt-2">
+        <div>
+          <label class="text-slate-400 block mb-1">Kullanıcı Adı veya E-posta:</label>
+          <input type="text" id="loginUsername" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="Kullanıcı adınız..." />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Şifre:</label>
+          <input type="password" id="loginPassword" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="••••••••" />
+        </div>
+        <div id="loginError" class="text-rose-400 text-[11px] hidden"></div>
+        <button type="submit" id="btnLoginSubmit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition">Giriş Yap</button>
+      </form>
+      <div class="text-center text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+        Hesabınız yok mu? <button onclick="switchModal('loginModal', 'registerModal')" class="text-amber-400 font-bold hover:underline">Kayıt Olun</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KAYIT OL MODAL -->
+  <div id="registerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
+      <button onclick="closeModal('registerModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <div class="text-center space-y-1">
+        <div class="w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2"><i class="fa-solid fa-user-plus"></i></div>
+        <h3 class="font-display font-black text-lg text-white">Kayıt Ol</h3>
+        <p class="text-slate-400 text-[11px]">Ücretsiz hesabınızı oluşturup terminali kullanın.</p>
+      </div>
+      <form onsubmit="handleRegisterSubmit(event)" class="space-y-3 pt-2">
+        <div>
+          <label class="text-slate-400 block mb-1">Kullanıcı Adı:</label>
+          <input type="text" id="regUsername" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="Kullanıcı adı..." />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Şifre:</label>
+          <input type="password" id="regPassword" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="En az 6 karakter..." />
+        </div>
+        <div id="regError" class="text-rose-400 text-[11px] hidden"></div>
+        <button type="submit" id="btnRegSubmit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition">Hesap Oluştur</button>
+      </form>
+      <div class="text-center text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+        Zaten hesabınız var mı? <button onclick="switchModal('registerModal', 'loginModal')" class="text-emerald-400 font-bold hover:underline">Giriş Yapın</button>
+      </div>
+    </div>
+  </div>
+
   <footer class="border-t border-slate-900 py-6 text-center text-xs text-slate-500 font-mono">
     &copy; 2026 Mineora Sentinel | mineoragame.com
   </footer>
 
+  <script>
+    const firebaseConfig = { databaseURL: "https://mineora-web-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // AUTH KONTROLÜ
+    function checkAuthStatus() {
+      const user = sessionStorage.getItem('currentUser');
+      const guestNav = document.getElementById('guestNav');
+      const userNav = document.getElementById('userNav');
+      const navUsername = document.getElementById('navUsername');
+
+      if (user) {
+        guestNav.classList.add('hidden');
+        userNav.classList.remove('hidden');
+        navUsername.textContent = user;
+      } else {
+        guestNav.classList.remove('hidden');
+        userNav.classList.add('hidden');
+      }
+    }
+
+    // KORUMALI TERMİNAL YÖNLENDİRMESİ
+    function goToTerminalProtected() {
+      const user = sessionStorage.getItem('currentUser');
+      if (user) {
+        window.location.href = 'dashboard.html';
+      } else {
+        openModal('loginModal');
+      }
+    }
+
+    function logoutUser() {
+      sessionStorage.clear();
+      checkAuthStatus();
+    }
+
+    // MODAL YÖNETİMİ
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function switchModal(fromId, toId) {
+      closeModal(fromId);
+      openModal(toId);
+    }
+
+    // GİRİŞ İŞLEMİ
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const p = document.getElementById('loginPassword').value.trim();
+      const err = document.getElementById('loginError');
+      err.classList.add('hidden');
+
+      if (!u || !p) return;
+
+      try {
+        const snap = await db.ref(`users/${u}`).once('value');
+        const userData = snap.val();
+
+        if (!userData || userData.password !== p) {
+          err.textContent = "Kullanıcı adı veya şifre hatalı!";
+          err.classList.remove('hidden');
+          return;
+        }
+
+        sessionStorage.setItem('currentUser', u);
+        if (['mourpheus', 'ersinulasduzyol@gmail.com'].includes(u)) {
+          sessionStorage.setItem('isAdmin', 'true');
+        }
+
+        closeModal('loginModal');
+        checkAuthStatus();
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        err.textContent = "Giriş yapılırken hata oluştu: " + error.message;
+        err.classList.remove('hidden');
+      }
+    }
+
+    // KAYIT İŞLEMİ
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('regUsername').value.trim().toLowerCase();
+      const p = document.getElementById('regPassword').value.trim();
+      const err = document.getElementById('regError');
+      err.classList.add('hidden');
+
+      if (u.length < 3 || p.length < 6) {
+        err.textContent = "Kullanıcı adı en az 3, şifre en az 6 karakter olmalı!";
+        err.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const snap = await db.ref(`users/${u}`).once('value');
+        if (snap.exists()) {
+          err.textContent = "Bu kullanıcı adı zaten alınmış!";
+          err.classList.remove('hidden');
+          return;
+        }
+
+        // URL'den referans kodu kontrolü
+        const urlParams = new URLSearchParams(window.location.search);
+        const refBy = urlParams.get('ref') || null;
+
+        await db.ref(`users/${u}`).set({
+          username: u,
+          password: p,
+          createdAt: Date.now(),
+          referredBy: refBy
+        });
+
+        if (refBy) {
+          db.ref(`users/${refBy}/totalReferredCount`).transaction(c => (c || 0) + 1);
+        }
+
+        sessionStorage.setItem('currentUser', u);
+        closeModal('registerModal');
+        checkAuthStatus();
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        err.textContent = "Kayıt hatası: " + error.message;
+        err.classList.remove('hidden');
+      }
+    }
+
+    // ================= CANLI İĞNE TAHMİNLERİ (LİKİDASYON MIKNATISI) =================
+    async function loadWickSignals() {
+      const grid = document.getElementById('wickSignalsGrid');
+      if (!grid) return;
+
+      const trackCoins = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'LINKUSDT', 'SUIUSDT', 'XRPUSDT'];
+      
+      try {
+        const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
+        const json = await res.json();
+        
+        if (json.code !== '00000' || !Array.isArray(json.data)) return;
+
+        const filtered = json.data.filter(t => trackCoins.includes(t.symbol));
+        
+        let html = '';
+        filtered.forEach(coin => {
+          const p = parseFloat(coin.lastPr || 0);
+          const h = parseFloat(coin.high24h || 0);
+          const l = parseFloat(coin.low24h || 0);
+          const fr = parseFloat(coin.fundingRate || 0);
+          const frPct = (fr * 100).toFixed(4);
+
+          // Likidasyon İğne Çekim Seviyesi Hesabı
+          const isUpWick = fr < 0; // Shortçular ağır basıyorsa yukarı iğne mıknatısı
+          const magnetPrice = isUpWick ? p * 1.022 : p * 0.978;
+          const magnetDist = isUpWick ? "+%2.2" : "-%2.2";
+
+          const pStr = p < 1 ? p.toFixed(6) : p.toFixed(2);
+          const magStr = magnetPrice < 1 ? magnetPrice.toFixed(6) : magnetPrice.toFixed(2);
+
+          html += `
+            <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3 relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <strong class="font-display text-white text-base">#${coin.symbol}</strong>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isUpWick ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">
+                  ${isUpWick ? 'YUKARI İĞNE BEKLENTİSİ' : 'AŞAĞI İĞNE BEKLENTİSİ'}
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <div class="bg-slate-900 p-2 rounded-xl">
+                  <span class="text-slate-500 block text-[9px]">CANLI FİYAT</span>
+                  <strong class="text-slate-200 text-xs">$${pStr}</strong>
+                </div>
+                <div class="bg-slate-900 p-2 rounded-xl border border-amber-500/20">
+                  <span class="text-amber-400 block text-[9px]">İĞNE MIKNATISI</span>
+                  <strong class="text-amber-300 text-xs">$${magStr} (${magnetDist})</strong>
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-900">
+                <span>Fonlama Oranı: <b class="${fr < 0 ? 'text-emerald-400' : 'text-rose-400'}">${frPct}%</b></span>
+                <button onclick="goToTerminalProtected()" class="text-amber-400 hover:underline">Röntgen Çek &rarr;</button>
+              </div>
+            </div>
+          `;
+        });
+
+        if (html) grid.innerHTML = html;
+      } catch (e) {
+        console.warn("İğne verisi alınamadı:", e);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      checkAuthStatus();
+      loadWickSignals();
+      setInterval(loadWickSignals, 15000);
+    });
+  </script>
 </body>
 </html>
