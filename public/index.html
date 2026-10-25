@@ -34,7 +34,12 @@
       </div>
 
       <!-- KULLANICI / GİRİŞ DURUMU ALANI -->
-      <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-2 sm:gap-2.5">
+        <!-- İLETİŞİM BUTONU -->
+        <button onclick="openModal('contactModal')" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow cursor-pointer">
+          <i class="fa-solid fa-headset text-amber-400"></i> <span>İletişim</span>
+        </button>
+
         <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-1.5 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-500/40 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
           <i class="fa-brands fa-telegram text-sky-400"></i> <span>Ücretsiz VIP</span>
         </a>
@@ -82,6 +87,9 @@
       <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
         <button onclick="goToTerminalProtected()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-black px-6 py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer">
           <i class="fa-solid fa-bolt"></i> <span>Terminale Gir</span>
+        </button>
+        <button onclick="openModal('contactModal')" class="bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold px-6 py-3 rounded-2xl transition flex items-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-phone text-amber-400 text-sm"></i> <span>Bize Ulaşın</span>
         </button>
         <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-mono text-xs font-bold px-6 py-3 rounded-2xl transition flex items-center gap-2">
           <i class="fa-brands fa-telegram text-sky-400 text-sm"></i> <span>Ücretsiz Telegram Kanalı</span>
@@ -171,6 +179,45 @@
     </section>
 
   </main>
+
+  <!-- ================= İLETİŞİM FORMU MODALI ================= -->
+  <div id="contactModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
+      <button onclick="closeModal('contactModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white transition cursor-pointer">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="text-center space-y-1">
+        <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-1">
+          <i class="fa-solid fa-headset"></i>
+        </div>
+        <h3 class="font-display font-black text-lg text-white">Bizimle İletişime Geçin</h3>
+        <p class="text-slate-400 text-[11px]">Sorularınız, VIP üyelik ve destek için bilgilerinizi bırakın; size hemen dönüş yapalım.</p>
+      </div>
+
+      <form onsubmit="handleContactSubmit(event)" class="space-y-3 pt-2">
+        <div>
+          <label class="text-slate-400 block mb-1">Ad Soyad:</label>
+          <input type="text" id="contactFullName" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="Adınız ve Soyadınız..." />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Telefon Numarası:</label>
+          <input type="tel" id="contactPhone" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-amber-300 focus:outline-none focus:border-amber-500" placeholder="05XX XXX XX XX" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Mesajınız / Notunuz (İsteğe Bağlı):</label>
+          <textarea id="contactNote" rows="3" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Konu, VIP bilgi veya sorularınız..."></textarea>
+        </div>
+
+        <div id="contactError" class="text-rose-400 text-[11px] hidden"></div>
+        <div id="contactSuccess" class="text-emerald-400 text-[11px] bg-emerald-950/40 border border-emerald-900 p-3 rounded-xl hidden leading-relaxed"></div>
+
+        <button type="submit" id="btnContactSubmit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20">
+          Mesajı Gönder
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- GİRİŞ YAP MODAL -->
   <div id="loginModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -325,6 +372,60 @@
         btn.textContent = "Kopyalandı!";
         setTimeout(() => { btn.textContent = "Kopyala"; }, 2000);
       });
+    }
+
+    // ================= İLETİŞİM FORMU GÖNDERİMİ (ADMİNE DÜŞER) =================
+    async function handleContactSubmit(e) {
+      e.preventDefault();
+      const fullName = document.getElementById('contactFullName').value.trim();
+      const phone = document.getElementById('contactPhone').value.trim();
+      const note = document.getElementById('contactNote').value.trim();
+      const err = document.getElementById('contactError');
+      const succ = document.getElementById('contactSuccess');
+      const btn = document.getElementById('btnContactSubmit');
+
+      err.classList.add('hidden');
+      succ.classList.add('hidden');
+
+      if (!fullName || !phone) {
+        err.textContent = "Lütfen ad soyad ve telefon numaranızı eksiksiz yazınız.";
+        err.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Gönderiliyor...`;
+
+      try {
+        const msgId = `msg_${Date.now()}`;
+        await db.ref(`contact_messages/${msgId}`).set({
+          id: msgId,
+          fullName: fullName,
+          phone: phone,
+          note: note || 'Not girilmedi',
+          createdAt: Date.now(),
+          dateString: new Date().toLocaleString('tr-TR')
+        });
+
+        succ.innerHTML = `✅ <b>Talebiniz başarıyla alındı!</b><br>Bilgileriniz yöneticiye iletildi. En kısa sürede sizinle iletişime geçeceğiz.`;
+        succ.classList.remove('hidden');
+
+        document.getElementById('contactFullName').value = '';
+        document.getElementById('contactPhone').value = '';
+        document.getElementById('contactNote').value = '';
+
+        setTimeout(() => {
+          closeModal('contactModal');
+          succ.classList.add('hidden');
+        }, 3000);
+
+      } catch (error) {
+        err.textContent = "Gönderilirken bir hata oluştu: " + error.message;
+        err.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `Mesajı Gönder`;
+      }
     }
 
     // ================= GİRİŞ İŞLEMİ (MASTER ADMIN DOĞRUDAN GEÇİŞLİ) =================
@@ -486,7 +587,6 @@
         const fr = parseFloat(coin.fundingRate || 0);
         const frPct = (fr * 100).toFixed(4);
 
-        // Likidasyon İğnesi Yön ve Seviye Hesabı
         const isUpWick = fr < 0;
         const magnetPrice = isUpWick ? p * 1.025 : p * 0.975;
         const magnetDist = isUpWick ? "+%2.5" : "-%2.5";
