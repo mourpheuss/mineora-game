@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // CORS Başlıkları
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -9,36 +8,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    const rawSymbol = (req.query.symbol || req.body?.symbol || 'BTC').toUpperCase().trim();
+    const rawSymbol = (req.query.symbol || req.body?.symbol || 'SOL').toUpperCase().trim();
     const symbol = rawSymbol.endsWith('USDT') ? rawSymbol : `${rawSymbol}USDT`;
 
-    // Paralel Veri Çekimi (Binance + Bitget)
     const [
       binanceFundingRes,
       binanceOiRes,
       binanceTopTraderRes,
+      binanceTickerRes,
       bitgetTickerRes,
       bitgetDepthRes,
       bitgetFillsRes
     ] = await Promise.all([
-      // Binance Fonlama Oranı
       fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}&limit=1`).then(r => r.json()).catch(() => []),
-      // Binance Açık Pozisyon (OI)
       fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`).then(r => r.json()).catch(() => ({})),
-      // Binance Top Trader Long/Short Oranı (Balina Hesaplar)
       fetch(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=5m&limit=1`).then(r => r.json()).catch(() => []),
-      // Bitget Ticker
-      fetch(`https://api.bitget.com/api/v2/mix/market/ticker?symbol=${symbol}&productType=USDT-FUTURES`).then(r => r.json()).catch(() => ({})),
-      // Bitget Derinlik (Emir Defteri)
-      fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${symbol}&productType=USDT-FUTURES&limit=20`).then(r => r.json()).catch(() => ({})),
-      // Bitget Son İşlemler (Tape)
-      fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${symbol}&productType=USDT-FUTURES&limit=100`).then(r => r.json()).catch(() => ({}))
+      fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`).then(r => r.json()).catch(() => ({})),
+      fetch(`https://api.bitget.com/api/v2/mix/market/ticker?symbol=${symbol}&productType=usdt-futures`).then(r => r.json()).catch(() => ({})),
+      fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${symbol}&productType=usdt-futures&limit=20`).then(r => r.json()).catch(() => ({})),
+      fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${symbol}&productType=usdt-futures&limit=100`).then(r => r.json()).catch(() => ({}))
     ]);
 
-    // 1. Fiyat Bilgisi
-    const currentPrice = parseFloat(bitgetTickerRes.data?.lastPr || 0);
+    // 1. Fiyat Bilgisi (Bitget yoksa Binance'ten yedek al)
+    let currentPrice = 0;
+    if (bitgetTickerRes.code === '00000' && bitgetTickerRes.data) {
+      const bData = Array.isArray(bitgetTickerRes.data) ? bitgetTickerRes.data[0] : bitgetTickerRes.data;
+      currentPrice = parseFloat(bData?.lastPr || 0);
+    }
+    if (!currentPrice && binanceTickerRes.price) {
+      currentPrice = parseFloat(binanceTickerRes.price);
+    }
+
     if (!currentPrice || currentPrice <= 0) {
-      return res.status(404).json({ error: `Parite bulunamadı veya veri alınamadı: ${symbol}` });
+      return res.status(404).json({ error: `Parite bulunamadı: ${symbol}` });
     }
 
     // 2. Binance Metrikleri
@@ -103,13 +105,12 @@ export default async function handler(req, res) {
     const whaleBuyRatio = totalWhaleVol > 0 ? Math.round((whaleBuyVolume / totalWhaleVol) * 100) : 50;
 
     // 5. Karar & Teyit Skoru Formülü
-    // Binance Balina Yönü (%35) + Bitget Tape Balinası (%35) + Fonlama Sıkışması (%30)
     let confirmationScore = 50;
     confirmationScore += (binanceWhaleLongRatio - 50) * 0.5;
     confirmationScore += (whaleBuyRatio - 50) * 0.5;
 
-    if (binanceFunding < -0.01) confirmationScore += 12; // Short sıkışması ekstra güven verir
-    if (binanceFunding > 0.04) confirmationScore -= 12;  // Aşırı Long şişkinliği fake riskini artırır
+    if (binanceFunding < -0.01) confirmationScore += 12;
+    if (binanceFunding > 0.04) confirmationScore -= 12;
 
     confirmationScore = Math.max(12, Math.min(96, Math.round(confirmationScore)));
 
@@ -122,12 +123,12 @@ export default async function handler(req, res) {
       status = 'APPROVED';
       statusLabel = 'SİNYAL ONAYLANDI (GÜVENLİ ALIM)';
       statusColor = '#10b981';
-      decisionNote = `İndikatörün AL sinyali küresel verilerle doğrulanıyor. Binance balinalarının %${binanceWhaleLongRatio}'si Long tarafında ve Bitget tahtasında $1.200+ kurumsal blok alışlar baskın.`;
+      decisionNote = `İndikatörün AL sinyali küresel verilerle doğrulanıyor. Binance balinalarının %${binanceWhaleLongRatio}'si Long tarafında ve tahtada kurumsal blok alımlar baskın.`;
     } else if (confirmationScore <= 38) {
       status = 'FAKE_TRAP';
       statusLabel = 'DİKKAT: SAHTE SİNYAL / TUZAK!';
       statusColor = '#ef4444';
-      decisionNote = `Grafikteki AL sinyali yanıltıcı olabilir. Binance balinaları pozisyon kapatıyor veya Short tarafında (%${binanceWhaleShortRatio}). Tahtada kurumsal alıcı desteği yok, iğneyle stop patlatabilir.`;
+      decisionNote = `Grafikteki AL sinyali yanıltıcı olabilir. Binance balinaları Short tarafında (%${binanceWhaleShortRatio}). Tahtada kurumsal alıcı desteği yok, iğneyle stop patlatabilir.`;
     } else {
       statusLabel = 'KISMİ TEYİT (RİSKLİ BÖLGE)';
       statusColor = '#f59e0b';
