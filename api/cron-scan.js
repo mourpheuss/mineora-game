@@ -9,7 +9,10 @@ export default async function handler(req, res) {
     const TG_CHANNEL_ID = "-1004404988937"; // Mineora Balina Sinyal VIP Kanalı
     const TG_ADMIN_ID = "6457294906";     // Mourpheus Özel
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
-    const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+    
+    // HIZLI SCALP ZAMAN AYARLARI
+    const LOCK_WINDOW_MS = 20 * 60 * 1000;       // 20 dakika işlem kilidi
+    const SAME_COIN_LOCK_MS = 45 * 60 * 1000;   // Aynı pariteye 45 dakika kilit
     const now = Date.now();
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -21,11 +24,11 @@ export default async function handler(req, res) {
     }
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT"];
-    // Derinlik filtresi: En az 1.2M USDT hacimli pariteler
+    // Canlı Likidite Havuzu: 600.000 USDT üzeri tüm hareketli pariteler
     const pool = tickersJson.data.filter(t => 
       t.symbol.endsWith("USDT") && 
       !EXCLUDED.includes(t.symbol) && 
-      parseFloat(t.usdtVolume || 0) >= 1200000
+      parseFloat(t.usdtVolume || 0) >= 600000
     );
 
     // 2. Firebase Aktif İşlemleri ve Geçmiş Sinyalleri Oku
@@ -43,18 +46,18 @@ export default async function handler(req, res) {
       lastSignals = {};
     }
 
-    // SPAM KİLİDİ 1: Masada aktif takip edilen açık bir işlem varsa YENİ SİNYAL ÜRETMEZ
-    const hasOpenTrade = Object.values(activeTrades).some(t => {
+    // SPAM KİLİDİ: Masada aynı anda en fazla 2 hızlı operasyona izin ver
+    const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
       const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
-      return (now - tTime) <= FOUR_HOURS_MS;
-    });
+      return (now - tTime) <= LOCK_WINDOW_MS;
+    }).length;
 
-    if (hasOpenTrade) {
-      return res.status(200).json({ status: "IDLE", message: "Takipte açık operasyon var; yeni sinyal açılmadı." });
+    if (openTradesCount >= 2) {
+      return res.status(200).json({ status: "IDLE", message: "Masada 2 aktif scalp işlem var, bekleniyor." });
     }
 
-    // 3. MİKROYAPI VE BALİNA İSTİHBARAT MOTORU
+    // 3. MİKRO ATEŞLEME & TAPE SIKIŞMA MOTORU
     let candidate = null;
     let direction = null;
     let confidenceScore = 0;
@@ -62,9 +65,8 @@ export default async function handler(req, res) {
     let intelligenceReason = "";
 
     for (const item of pool) {
-      // SPAM KİLİDİ 2: Bu pariteye son 4 saat içinde sinyal verildiyse ASLA TEKRAR VERME
       const lastSentTime = lastSignals[item.symbol] || 0;
-      if (now - lastSentTime < FOUR_HOURS_MS) continue;
+      if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
       const price = parseFloat(item.lastPr || 0);
       const high24 = parseFloat(item.high24h || 0);
@@ -74,8 +76,8 @@ export default async function handler(req, res) {
 
       const rangePosition = (price - low24) / (high24 - low24);
 
-      // A) Emir Defteri Akışı (Tape Reading - Son 50 İşlem)
-      const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=50`, { headers: browserHeaders })
+      // Son 40 Mikro Emir Akışı (Anlık Taker Agresifliği)
+      const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=40`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       const fills = fillsRes.data?.fillList || fillsRes.data || [];
@@ -93,47 +95,51 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      // B) Açık Pozisyon (Open Interest - OI) Kontrolü
+      // Açık Pozisyon (OI)
       const oiRes = await fetch(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${item.symbol}&productType=usdt-futures`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       const currentOI = parseFloat(oiRes.data?.openInterestList?.[0]?.size || oiRes.data?.[0]?.size || 0);
 
-      // ================= KESİN PUMP MATEMATİĞİ =================
-      const isInstitutionalPump = (rangePosition <= 0.38) && (buyPct >= 62) && (fundingRate <= 0.005);
+      // ================= 3-5 DK HIZLI PUMP SCALP KRİTERİ =================
+      // Taker alış gücü %58 üstünde ve tahta aşırı tepeye çıkmamış (range <= 0.58)
+      const isFastPump = (rangePosition <= 0.58) && (buyPct >= 58) && (fundingRate <= 0.010);
 
-      // ================= KESİN DUMP MATEMATİĞİ =================
-      const isInstitutionalDump = (rangePosition >= 0.70) && (buyPct <= 36) && (fundingRate >= 0.015);
+      // ================= 3-5 DK HIZLI DUMP SCALP KRİTERİ =================
+      // Taker satış baskısı %58 üstünde ve fiyat dipten kopmuş (range >= 0.45)
+      const isFastDump = (rangePosition >= 0.45) && (buyPct <= 42) && (fundingRate >= 0.005);
 
-      if (isInstitutionalPump) {
+      if (isFastPump) {
         candidate = item;
         direction = 'LONG';
         confidenceScore = Math.round(buyPct);
         oiSnapshot = currentOI;
-        intelligenceReason = `Dip bölgede (%${Math.round(rangePosition * 100)}) taze sermaye birikimi tespit edildi. Market alıcıları %${confidenceScore} güçle tahtayı süpürüyor, short likidasyon patlaması kapıda.`;
+        intelligenceReason = `Anlık taker hacim patlaması (%${confidenceScore} Alıcı Baskısı). Tahta kademeleri süpürülüyor, 3-5 dk içinde likidite sıçraması bekleniyor.`;
         break;
       }
 
-      if (isInstitutionalDump) {
+      if (isFastDump) {
         candidate = item;
         direction = 'SHORT';
         confidenceScore = Math.round(100 - buyPct);
         oiSnapshot = currentOI;
-        intelligenceReason = `Tepe likidite bölgesinde (%${Math.round(rangePosition * 100)}) kurumsal dağıtım başladı. Satış baskısı %${confidenceScore}, aşırı kaldıraçlı longçuları tasfiye iğnesi bekleniyor.`;
+        intelligenceReason = `Anlık kurumsal blok satış baskısı (%${confidenceScore}). Destek kademeleri eriyor, ani tasfiye iğnesi bekleniyor.`;
         break;
       }
     }
 
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Vadeli tahtalar taranıyor; pump/dump eşiğindeki parite bekleniyor." });
+      return res.status(200).json({ status: "SCANNING", message: "Hızlı scalp fırsatları taranıyor..." });
     }
 
-    // 4. Hedefler ve Stop Hesabı
+    // 4. HIZLI HEDEFLER (VUR-KAÇ SCALP SEVİYELERİ)
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
-    const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
-    const tp2 = isLong ? entryPrice * 1.038 : entryPrice * 0.962;
-    const sl = isLong ? entryPrice * 0.988 : entryPrice * 1.012;
+    
+    // HIZLI TP ORANLARI: TP1 +%0.8, TP2 +%1.6, SL -%0.7
+    const tp1 = isLong ? entryPrice * 1.008 : entryPrice * 0.992;
+    const tp2 = isLong ? entryPrice * 1.016 : entryPrice * 0.984;
+    const sl = isLong ? entryPrice * 0.993 : entryPrice * 1.007;
 
     const tradeId = `trade_${Date.now()}`;
     const newTrade = {
@@ -152,7 +158,7 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase'e Kaydet
+    // 5. Firebase Kaydı
     try {
       await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
@@ -170,29 +176,29 @@ export default async function handler(req, res) {
       console.warn("Firebase log:", fbErr);
     }
 
-    // 6. TELEGRAM BİLDİRİMİNİ GÖNDER (Davet Linki Entegre)
+    // 6. TELEGRAM BİLDİRİMİ (HIZLI SCALP ŞABLONU)
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
 
-    const tgMsg = `🎯 <b>MINEORA SENTINEL | KURUMSAL DOĞRULANMIŞ SİNYAL</b>\n` +
+    const tgMsg = `⚡ <b>MINEORA FLASH SCALP | ANLIK HIZLI OPERASYON</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidate.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Likidite Patlaması)' : '🔴 SHORT (Tepe Kurumsal Dağıtım)'}\n` +
-                  `⚡ <b>Teyit Gücü:</b> %${confidenceScore}\n` +
+                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Hızlı Patlama)' : '🔴 SHORT (Hızlı Dökülme)'}\n` +
+                  `⚡ <b>Süpürme Gücü:</b> %${confidenceScore}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🎯 <b>Hedef 1:</b> <code>$${tp1Str}</code> (+%1.8)\n` +
-                  `🚀 <b>Hedef 2:</b> <code>$${tp2Str}</code> (+%3.8)\n` +
-                  `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code> (-%1.2)\n` +
+                  `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.80)\n` +
+                  `🚀 <b>Hızlı TP 2:</b> <code>$${tp2Str}</code> (+%1.60)\n` +
+                  `🛑 <b>Sıkı Stop:</b> <code>$${slStr}</code> (-%0.70)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
+                  `⏱ <i>Beklenen Hareket: 3 - 5 Dakika İçi</i>\n` +
                   `📊 <i>İstihbarat: ${intelligenceReason}</i>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                   `📢 <i>Ücretsiz Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
-    // DOĞRUDAN KANALA GÖNDER
     const channelRes = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -200,7 +206,6 @@ export default async function handler(req, res) {
     });
     const channelData = await channelRes.json();
 
-    // YÖNETİCİYE YEDEK BİLGİ GÖNDER
     await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -210,8 +215,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       trade: newTrade,
-      channel_sent: channelData.ok,
-      telegram_response: channelData
+      channel_sent: channelData.ok
     });
 
   } catch (error) {
