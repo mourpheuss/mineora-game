@@ -488,51 +488,51 @@
       }
     }
 
-    // ================= X-RAY VE CİHAZ PARMAK İZİ GÜVENLİK MOTORU =================
+   // ================= X-RAY VE SAĞLAM CİHAZ HAK MOTORU =================
     const MAX_FREE_CREDITS = 3;
 
-    // Gizli sekme veya çerez temizliğinde bile değişmeyen donanım bazlı parmak izi
-    function generateDeviceFingerprint() {
-      try {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl');
-        let debugInfo = "";
-        if (gl) {
-          const ext = gl.getExtension('WEBGL_debug_renderer_info');
-          debugInfo = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : "";
-        }
-        const rawString = `${navigator.userAgent}_${screen.width}x${screen.height}_${navigator.hardwareConcurrency}_${debugInfo}_${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
-        let hash = 0;
-        for (let i = 0; i < rawString.length; i++) {
-          hash = ((hash << 5) - hash) + rawString.charCodeAt(i);
-          hash |= 0;
-        }
-        return 'dev_' + Math.abs(hash);
-      } catch (e) {
-        return 'dev_fallback_' + Math.floor(Math.random() * 100000);
+    function getDeviceId() {
+      let dId = localStorage.getItem('_mn_dev_id');
+      if (!dId) {
+        dId = 'dev_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+        localStorage.setItem('_mn_dev_id', dId);
       }
+      return dId;
     }
 
-    const deviceId = generateDeviceFingerprint();
+    const deviceId = getDeviceId();
+
+    function getLocalUsage() {
+      const u = localStorage.getItem('_mn_usage_' + deviceId);
+      return u ? parseInt(u, 10) : 0;
+    }
 
     async function getRemainingCredits() {
+      let used = getLocalUsage();
+      
+      // Firebase'den de teyit et (Hata verirse local veriyi bozma)
       try {
         const snap = await db.ref('deviceUsage/' + deviceId).once('value');
-        const used = snap.val() || 0;
-        const remaining = Math.max(0, MAX_FREE_CREDITS - used);
-        const badge = document.getElementById('freeCreditBadge');
-        if (badge) badge.textContent = `${remaining} / ${MAX_FREE_CREDITS}`;
-        return remaining;
+        if (snap.exists()) {
+          const cloudUsed = snap.val() || 0;
+          used = Math.max(used, cloudUsed);
+        }
       } catch (e) {
-        return 0;
+        // Firebase erişiminde kural engeli olsa dahi yerel haktan devam eder
       }
+
+      const remaining = Math.max(0, MAX_FREE_CREDITS - used);
+      const badge = document.getElementById('freeCreditBadge');
+      if (badge) badge.textContent = `${remaining} / ${MAX_FREE_CREDITS}`;
+      return remaining;
     }
 
     async function incrementUsage() {
+      const current = getLocalUsage() + 1;
+      localStorage.setItem('_mn_usage_' + deviceId, current);
+
       try {
-        const snap = await db.ref('deviceUsage/' + deviceId).once('value');
-        const used = snap.val() || 0;
-        await db.ref('deviceUsage/' + deviceId).set(used + 1);
+        await db.ref('deviceUsage/' + deviceId).set(current);
       } catch (e) {}
     }
 
@@ -555,7 +555,7 @@
             <p class="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
               Bu cihaz için tanımlanan 3 ücretsiz istihbarat hakkı tamamlandı. Sınırsız röntgen çekmek, gizli balina akışını izlemek ve 7/24 Telegram VIP sinyallerine erişmek için lisans başlatın.
             </p>
-            <button onclick="openVipModal()" class="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-xs px-6 py-3 rounded-xl transition shadow-lg shadow-orange-500/30 transform hover:-translate-y-0.5">
+            <button onclick="openVipModal()" class="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-xs px-6 py-3 rounded-xl transition shadow-lg shadow-orange-500/30 transform hover:-translate-y-0.5 cursor-pointer">
               <i class="fa-solid fa-crown mr-1"></i> VIP Lisansı Başlat ($500)
             </button>
           </div>
@@ -705,10 +705,6 @@
       }
     }
 
-    // Sayfa açıldığında kalan hakkı otomatik oku
     window.addEventListener('DOMContentLoaded', () => {
       getRemainingCredits();
     });
-  </script>
-</body>
-</html>
