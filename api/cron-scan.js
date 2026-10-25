@@ -100,15 +100,9 @@ export default async function handler(req, res) {
       const currentOI = parseFloat(oiRes.data?.openInterestList?.[0]?.size || oiRes.data?.[0]?.size || 0);
 
       // ================= KESİN PUMP MATEMATİĞİ =================
-      // 1. Fiyat taban çeyrekte (range <= 0.38)
-      // 2. Taker alıcılar tahtayı süpürüyor (buyPct >= 62%)
-      // 3. Fonlama short lehine ucuz (fundingRate <= 0.005%)
       const isInstitutionalPump = (rangePosition <= 0.38) && (buyPct >= 62) && (fundingRate <= 0.005);
 
       // ================= KESİN DUMP MATEMATİĞİ =================
-      // 1. Fiyat tepe çeyrekte (range >= 0.70)
-      // 2. Blok satışlar tahtayı eziyor (buyPct <= 36%)
-      // 3. Fonlama şişkin / longçular ağır ceza ödüyor (fundingRate >= 0.015%)
       const isInstitutionalDump = (rangePosition >= 0.70) && (buyPct <= 36) && (fundingRate >= 0.015);
 
       if (isInstitutionalPump) {
@@ -158,7 +152,7 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase'e Kaydet (Hem açık işlem listesine hem parite kilit listesine)
+    // 5. Firebase'e Kaydet
     try {
       await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
@@ -176,7 +170,7 @@ export default async function handler(req, res) {
       console.warn("Firebase log:", fbErr);
     }
 
-    // 6. TELEGRAM BİLDİRİMİNİ GÖNDER
+    // 6. TELEGRAM BİLDİRİMİNİ GÖNDER (Davet Linki Entegre)
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
@@ -194,7 +188,9 @@ export default async function handler(req, res) {
                   `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code> (-%1.2)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `📊 <i>İstihbarat: ${intelligenceReason}</i>\n` +
-                  `⚡ <i>Canlı Operasyon Masası: mineoragame.com</i>`;
+                  `━━━━━━━━━━━━━━━━━━━━\n` +
+                  `⚡ <i>Canlı Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
+                  `📢 <i>Ücretsiz Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
     // DOĞRUDAN KANALA GÖNDER
     const channelRes = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
