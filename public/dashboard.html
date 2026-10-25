@@ -58,7 +58,7 @@
   <!-- ANA ALAN -->
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-8">
 
-    <!-- 1. MERKEZİ AKTİF OPERASYON MASASI -->
+    <!-- 1. MERKEZİ AKTİF OPERASYON MASASI (DİNAMİK 3 SAAT SÜRELİ SİNYAL AKIŞI) -->
     <section class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
       <div class="absolute -right-16 -top-16 w-52 h-52 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -68,7 +68,7 @@
             <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
             <h2 class="font-display font-black text-xl text-white">🎯 CANLI OPERASYON & PATLAMA RADARI</h2>
           </div>
-          <p class="text-xs text-slate-400 font-mono mt-1">15M Ölü Tahta Sıkışması, Fonlama Baskısı ve Balina Ayak İzi Taraması</p>
+          <p class="text-xs text-slate-400 font-mono mt-1">Gelen sinyaller anlık işlenir; TP/SL durumuna göre en fazla 3 saat sonra otomatik arşivlenir.</p>
         </div>
         <div class="font-mono text-xs px-3.5 py-1.5 rounded-xl bg-slate-950 text-slate-300 border border-slate-800 flex items-center gap-2 self-start sm:self-auto">
           <i class="fa-solid fa-satellite-dish text-amber-400"></i> <span>Durum:</span> <strong id="sentinelStatusText" class="text-emerald-400">Canlı İzleniyor</strong>
@@ -79,7 +79,7 @@
       <div id="liveSignalContainer" class="pt-6">
         <div class="text-center py-12 text-slate-500 font-mono text-xs space-y-2">
           <i class="fa-solid fa-circle-notch fa-spin text-2xl text-amber-400/60 block mb-2"></i>
-          <div>Tüm vadeli tahtalar uykudaki sıkışmalar için taranıyor...</div>
+          <div>Tüm vadeli tahtalar ve aktif sinyaller taranıyor...</div>
           <p class="text-[11px] text-slate-600">Veriler yükleniyor, canlı operasyon ve aday tahtalar listelenecektir.</p>
         </div>
       </div>
@@ -186,150 +186,157 @@
 
     let cachedTickers = [];
 
-    // ================= CANLI OPERASYON & PATLAMA RADARI MOTORU =================
+    // ================= CANLI OPERASYON, SİNYAL GEÇMİŞİ & 3 SAAT TEMİZLİK MOTORU =================
     async function checkActiveSignals() {
       const container = document.getElementById('liveSignalContainer');
       if (!container) return;
 
       try {
-        let activeTrades = {};
+        let allTrades = {};
         try {
           const atRes = await fetch("https://mineora-web-default-rtdb.firebaseio.com/active_trades.json");
-          activeTrades = (await atRes.json()) || {};
-        } catch(e) { activeTrades = {}; }
+          allTrades = (await atRes.json()) || {};
+        } catch(e) { allTrades = {}; }
 
-        const openTradeKeys = typeof activeTrades === 'object' && activeTrades !== null
-          ? Object.keys(activeTrades).filter(k => activeTrades[k] && activeTrades[k].status === 'OPEN')
-          : [];
+        const now = Date.now();
+        const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // En fazla 3 saat kuralı
 
-        if (openTradeKeys.length > 0) {
-          const activeKey = openTradeKeys[0];
-          const signal = activeTrades[activeKey];
-          const isLong = signal.direction === 'LONG';
-          const pStr = signal.entryPrice < 1 ? signal.entryPrice.toFixed(6) : signal.entryPrice.toFixed(4);
-          const tp1Str = signal.tp1 < 1 ? signal.tp1.toFixed(6) : signal.tp1.toFixed(4);
-          const tp2Str = signal.tp2 < 1 ? signal.tp2.toFixed(6) : signal.tp2.toFixed(4);
-          const slStr = signal.sl < 1 ? signal.sl.toFixed(6) : signal.sl.toFixed(4);
+        // Sadece açık olanlar veya son 3 saat içinde kapanmış olanlar kalır
+        const validSignalKeys = Object.keys(allTrades).filter(k => {
+          const item = allTrades[k];
+          if (!item) return false;
 
-          container.innerHTML = `
-            <div class="bg-slate-950 p-6 rounded-2xl border-2 ${isLong ? 'border-emerald-500/80 shadow-emerald-500/10' : 'border-rose-500/80 shadow-rose-500/10'} shadow-2xl space-y-5 font-mono">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-900 pb-4">
-                <div>
-                  <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">DOĞRULANMIŞ CANLI POZİSYON</span>
+          const tradeTime = item.timestamp ? new Date(item.timestamp).getTime() : (item.createdAt || now);
+          const closedTime = item.closedAt ? new Date(item.closedAt).getTime() : tradeTime;
+          const age = now - closedTime;
+
+          if (item.status === 'OPEN' && (now - tradeTime > THREE_HOURS_MS)) {
+            return false;
+          }
+
+          if (item.status !== 'OPEN' && age > THREE_HOURS_MS) {
+            return false;
+          }
+
+          return true;
+        });
+
+        // 1. EĞER GELMİŞ VE GEÇERLİ SİNYALLER VARSA LİSTELE
+        if (validSignalKeys.length > 0) {
+          let signalsHtml = '';
+
+          validSignalKeys.sort((a, b) => {
+            const timeA = allTrades[a].timestamp ? new Date(allTrades[a].timestamp).getTime() : 0;
+            const timeB = allTrades[b].timestamp ? new Date(allTrades[b].timestamp).getTime() : 0;
+            return timeB - timeA;
+          });
+
+          validSignalKeys.forEach(k => {
+            const signal = allTrades[k];
+            const isLong = signal.direction === 'LONG';
+            const pStr = signal.entryPrice < 1 ? signal.entryPrice.toFixed(6) : signal.entryPrice.toFixed(4);
+            const tp1Str = signal.tp1 < 1 ? signal.tp1.toFixed(6) : signal.tp1.toFixed(4);
+            const slStr = signal.sl < 1 ? signal.sl.toFixed(6) : signal.sl.toFixed(4);
+
+            let statusBadge = '';
+            if (signal.status === 'CLOSED_TP2' || signal.tp2Hit) {
+              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🎯 HEDEF 2 TAMAMLANDI (+%3.8+)</span>';
+            } else if (signal.status === 'CLOSED_TP1' || signal.tp1Hit) {
+              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">✅ HEDEF 1 ALINDI (+%1.8)</span>';
+            } else if (signal.status === 'CLOSED_SL' || signal.slHit) {
+              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">🛑 STOP OLDU</span>';
+            } else {
+              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">⏳ TAKİP EDİLİYOR</span>';
+            }
+
+            signalsHtml += `
+              <div class="bg-slate-950 p-5 rounded-2xl border-2 ${isLong ? 'border-emerald-500/60' : 'border-rose-500/60'} space-y-4 font-mono shadow-lg">
+                <div class="flex items-center justify-between border-b border-slate-900 pb-3">
                   <div class="flex items-center gap-3">
-                    <strong class="font-display text-3xl font-black text-white">#${signal.symbol}</strong>
-                    <span class="text-xs px-3 py-1 rounded-lg font-black ${isLong ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">
+                    <strong class="font-display text-2xl font-black text-white">#${signal.symbol}</strong>
+                    <span class="text-xs px-2.5 py-0.5 rounded-lg font-bold ${isLong ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">
                       ${signal.direction}
                     </span>
                   </div>
+                  <div>${statusBadge}</div>
                 </div>
-                <div class="text-left sm:text-right">
-                  <span class="text-slate-400 text-xs block">Giriş Seviyesi</span>
-                  <strong class="text-white text-2xl font-bold">$${pStr}</strong>
-                </div>
-              </div>
 
-              <!-- İŞLEM SEVİYELERİ -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-                <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                  <div class="text-slate-500 text-[10px]">GİRİŞ</div>
-                  <strong class="text-slate-200 text-xs">$${pStr}</strong>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+                    <div class="text-slate-500 text-[10px]">GİRİŞ</div>
+                    <strong class="text-slate-200">$${pStr}</strong>
+                  </div>
+                  <div class="bg-emerald-950/30 p-2 rounded-xl border border-emerald-900/40">
+                    <div class="text-emerald-400 text-[10px]">HEDEF (TP)</div>
+                    <strong class="text-emerald-300">$${tp1Str}</strong>
+                  </div>
+                  <div class="bg-rose-950/30 p-2 rounded-xl border border-rose-900/40">
+                    <div class="text-rose-400 text-[10px]">STOP (SL)</div>
+                    <strong class="text-rose-300">$${slStr}</strong>
+                  </div>
                 </div>
-                <div class="bg-rose-950/40 p-2.5 rounded-xl border border-rose-900/50">
-                  <div class="text-rose-400 text-[10px]">STOP-LOSS (SL)</div>
-                  <strong class="text-rose-300 text-xs">$${slStr}</strong>
-                </div>
-                <div class="bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-900/50">
-                  <div class="text-emerald-400 text-[10px]">TP 1 (+%1.8)</div>
-                  <strong class="text-emerald-300 text-xs">$${tp1Str}</strong>
-                </div>
-                <div class="bg-emerald-950/60 p-2.5 rounded-xl border border-emerald-800/80">
-                  <div class="text-emerald-300 text-[10px]">TP 2 (+%3.8+)</div>
-                  <strong class="text-emerald-200 text-xs">$${tp2Str}</strong>
-                </div>
-              </div>
 
-              <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
-                <span class="text-slate-300">Hedef 1 Durumu: <strong class="${signal.tp1Hit ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}">${signal.tp1Hit ? '✅ ALINDI (Stop Maliyette)' : '⏳ Takip Ediliyor'}</strong></span>
-                <span class="text-slate-500 text-[11px]">Mineora Sentinel Motoru v2</span>
+                <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1">
+                  <span>Sinyal: ${signal.timestamp ? new Date(signal.timestamp).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : 'Canlı'}</span>
+                  <span>Otomatik Temizlik: 3 Saat</span>
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          });
+
+          container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${signalsHtml}</div>`;
           return;
         }
 
+        // 2. AÇIK SİNYAL YOKSA: Piyasa Radarı Adaylarını (3 Long, 3 Short) Dinamik Listele
         if (cachedTickers && cachedTickers.length > 0) {
           const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
           const liquidPool = cachedTickers.filter(t => t.symbol.endsWith("USDT") && !EXCLUDED.includes(t.symbol) && parseFloat(t.usdtVolume || 0) >= 500000);
 
-          const topLong = liquidPool
-            .filter(t => parseFloat(t.fundingRate || 0) <= -0.0005 && (parseFloat(t.change24h || 0) * 100) <= 12.0)
-            .sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate))[0];
+          const topLongs = liquidPool
+            .filter(t => parseFloat(t.fundingRate || 0) <= -0.0003 && (parseFloat(t.change24h || 0) * 100) <= 12.0)
+            .sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate))
+            .slice(0, 3);
 
-          const topShort = liquidPool
-            .filter(t => parseFloat(t.fundingRate || 0) >= 0.0003 && (parseFloat(t.change24h || 0) * 100) >= 10.0)
-            .sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h))[0];
+          const topShorts = liquidPool
+            .filter(t => parseFloat(t.fundingRate || 0) >= 0.0002 && (parseFloat(t.change24h || 0) * 100) >= 6.0)
+            .sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h))
+            .slice(0, 3);
 
-          if (topLong || topShort) {
+          const radarList = [...topLongs, ...topShorts];
+
+          if (radarList.length > 0) {
             let cardsHtml = '';
-
-            if (topLong) {
-              const p = parseFloat(topLong.lastPr);
-              const f = (parseFloat(topLong.fundingRate) * 100).toFixed(4);
-              const chg = (parseFloat(topLong.change24h || 0) * 100).toFixed(2);
+            radarList.forEach(t => {
+              const isLongCandidate = parseFloat(t.fundingRate || 0) <= 0;
+              const p = parseFloat(t.lastPr);
+              const f = (parseFloat(t.fundingRate) * 100).toFixed(4);
+              const chg = (parseFloat(t.change24h || 0) * 100).toFixed(2);
               const pStr = p < 1 ? p.toFixed(6) : p.toFixed(4);
+
               cardsHtml += `
-                <div class="bg-slate-950 p-5 rounded-2xl border border-emerald-500/50 space-y-3 font-mono">
+                <div class="bg-slate-950 p-4 rounded-2xl border ${isLongCandidate ? 'border-emerald-500/40' : 'border-rose-500/40'} space-y-2 font-mono">
                   <div class="flex justify-between items-center">
                     <div>
-                      <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">ERKEN SHORT SIKIŞMASI (PUMP ADAYI)</span>
-                      <strong class="text-xl font-display font-black text-white">#${topLong.symbol}</strong>
+                      <span class="text-[9px] font-bold uppercase tracking-wider block ${isLongCandidate ? 'text-emerald-400' : 'text-rose-400'}">
+                        ${isLongCandidate ? 'PUMP ADAYI (LONG)' : 'DUMP ADAYI (SHORT)'}
+                      </span>
+                      <strong class="text-lg font-display font-black text-white">#${t.symbol}</strong>
                     </div>
                     <div class="text-right">
-                      <span class="text-white text-lg font-bold">$${pStr}</span>
-                      <span class="text-[11px] block font-bold ${parseFloat(chg) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${chg}% (24s)</span>
+                      <span class="text-white text-sm font-bold">$${pStr}</span>
+                      <span class="text-[10px] block font-bold ${parseFloat(chg) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${chg}%</span>
                     </div>
                   </div>
-                  <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                    <div>Fonlama: <strong class="text-emerald-400">${f}%</strong></div>
-                    <div>24s Hacim: <strong class="text-slate-200">$${(parseFloat(topLong.usdtVolume)/1000000).toFixed(2)}M</strong></div>
-                  </div>
-                  <div class="text-[10px] text-emerald-300/90 bg-emerald-950/30 p-2 rounded-lg border border-emerald-900/50">
-                    ⚡ <b>Teşhis:</b> Tahtada Short'lar fonlama ödüyor, patlama hazırlığı izleniyor.
+                  <div class="flex justify-between text-[10px] bg-slate-900 p-2 rounded-lg border border-slate-800 text-slate-300">
+                    <span>Fonlama: <b class="${isLongCandidate ? 'text-emerald-400' : 'text-rose-400'}">${f}%</b></span>
+                    <span>24s Hacim: <b>$${(parseFloat(t.usdtVolume)/1000000).toFixed(1)}M</b></span>
                   </div>
                 </div>
               `;
-            }
+            });
 
-            if (topShort) {
-              const p = parseFloat(topShort.lastPr);
-              const f = (parseFloat(topShort.fundingRate) * 100).toFixed(4);
-              const chg = (parseFloat(topShort.change24h || 0) * 100).toFixed(2);
-              const pStr = p < 1 ? p.toFixed(6) : p.toFixed(4);
-              cardsHtml += `
-                <div class="bg-slate-950 p-5 rounded-2xl border border-rose-500/50 space-y-3 font-mono">
-                  <div class="flex justify-between items-center">
-                    <div>
-                      <span class="text-[10px] text-rose-400 font-bold uppercase tracking-wider block">ERKEN DUMP / TEPE TUZAĞI (SHORT ADAYI)</span>
-                      <strong class="text-xl font-display font-black text-white">#${topShort.symbol}</strong>
-                    </div>
-                    <div class="text-right">
-                      <span class="text-white text-lg font-bold">$${pStr}</span>
-                      <span class="text-[11px] block font-bold text-rose-400">+${chg}% (24s)</span>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                    <div>Fonlama: <strong class="text-rose-400">${f}%</strong></div>
-                    <div>24s Hacim: <strong class="text-slate-200">$${(parseFloat(topShort.usdtVolume)/1000000).toFixed(2)}M</strong></div>
-                  </div>
-                  <div class="text-[10px] text-rose-300/90 bg-rose-950/30 p-2 rounded-lg border border-rose-900/50">
-                    🚨 <b>Teşhis:</b> Fiyat primli, aşırı Long yığılması tasfiye riski taşıyor.
-                  </div>
-                </div>
-              `;
-            }
-
-            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${cardsHtml}</div>`;
+            container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${cardsHtml}</div>`;
             return;
           }
         }
@@ -337,7 +344,7 @@
         container.innerHTML = `
           <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
             <i class="fa-solid fa-radar text-amber-400 text-xl mb-2 block"></i>
-            <span>Tahtalar taranıyor. Eşik değerleri sağlayan parite tespit edildiğinde canlı operasyon kartı buraya kilitlenecektir.</span>
+            <span>Yeni sinyaller taranıyor. İşlem tetiklendiğinde canlı kart buraya eklenecek ve 3 saat sonra otomatik arşivlenecektir.</span>
           </div>
         `;
       } catch (err) {
@@ -389,7 +396,7 @@
 
         const pStr = data.price < 1 ? data.price.toFixed(6) : data.price.toFixed(4);
 
-        // KART HTML (GÖRSEL ÇIKTISINA HAZIR İMZALI VE BUTONLU)
+        // KART HTML (PNG İNDİRME BUTONU VE mineoragame.com ALT FİLİGRANI DAHİL)
         area.innerHTML = `
           <div class="flex justify-end mb-2">
             <button onclick="downloadAnalysisCard('${data.symbol}')" id="btnDownloadCard" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 font-mono text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-2 cursor-pointer">
@@ -416,7 +423,7 @@
             <div class="p-5 rounded-2xl border-2 space-y-3" style="border-color: ${data.statusColor}; background: ${data.statusColor}15;">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">İNDİKATÖR SİNYAL KARARI</span>
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">X-RAY PİYASA YÖNÜ & BEKLENTİ</span>
                   <div class="font-display text-xl font-black tracking-tight" style="color: ${data.statusColor};">${data.statusLabel}</div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -507,8 +514,8 @@
 
       try {
         const canvas = await html2canvas(card, {
-          backgroundColor: '#020617', // Koyu slate-950 arka plan
-          scale: 2, // Retinal / Yüksek Çözünürlüklü Kalite
+          backgroundColor: '#020617',
+          scale: 2,
           useCORS: true
         });
 
@@ -545,7 +552,7 @@
       try {
         const { data: { text } } = await Tesseract.recognize(file, 'eng');
         
-        const matches = text.match(/\b(BTC|ETH|SOL|BNB|XRP|DOGE|ADA|AVAX|LINK|SUI|PEPE|NEAR|IOST|MTL|WIF|FET|APT|ARB|OP|RENDER|TAO|TREE|SHIB|TIA|INJ|SEI|CFX|GALA|AAOI)[A-Z0-9]*\b/i);
+        const matches = text.match(/\b(BTC|ETH|SOL|BNB|XRP|DOGE|ADA|AVAX|LINK|SUI|PEPE|NEAR|IOST|MTL|WIF|FET|APT|ARB|OP|RENDER|TAO|TREE|SHIB|TIA|INJ|SEI|CFX|GALA|AAOI|BTW)[A-Z0-9]*\b/i);
         
         if (matches && matches[0]) {
           let foundCoin = matches[0].toUpperCase().replace('USDT', '').replace('PERP', '').trim();
