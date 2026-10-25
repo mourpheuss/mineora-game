@@ -216,7 +216,7 @@ export default async function handler(req, res) {
 
     const candidateSignals = [];
 
-    // LONG Adayları: Barut Hazır Havuzu (Fonlama <= -0.05% ve sakin fiyat)
+    // LONG Adayları: Fonlama <= -0.05% (-0.0005) ve fiyat taban bölgede
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
@@ -238,7 +238,7 @@ export default async function handler(req, res) {
     const sentSymbols = [];
 
     // ====================================================
-    // 4. "HAREKETE 1 KALA" MİKRO-FİTİL VE TAPE İVME MOTORU
+    // 4. KESİN KIRILIM VE MİKRO-FİTİL TETİK MOTORU (1 KALA)
     // ====================================================
     for (const signal of candidateSignals) {
       const item = signal.item;
@@ -257,7 +257,40 @@ export default async function handler(req, res) {
       const chg = parseFloat(item.change24h || 0) * 100;
       const volM = (parseFloat(item.usdtVolume || 0) / 1000000).toFixed(2);
 
-      // Bitget Mikro-Tape Verisi (Son 100 işlem)
+      // --- 1. AŞAMA: 1 DAKİKALIK MUM (KLINE) İVME TEYİDİ ---
+      let isCandleTriggered = false;
+      try {
+        const klineRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=1m&limit=5`);
+        const klineJson = await klineRes.json();
+        
+        if (klineJson.code === "00000" && Array.isArray(klineJson.data) && klineJson.data.length >= 2) {
+          const currentCandle = klineJson.data[0];
+          const cOpen = parseFloat(currentCandle[1]);
+          const cClose = parseFloat(currentCandle[4]);
+          const candleChangePct = ((cClose - cOpen) / cOpen) * 100;
+
+          if (dir === 'LONG') {
+            // Son 1 dakikalık mum +%0.35 ile +%0.90 arasında yeşil yakmış olmalı (İlk sıçrama anı!)
+            if (candleChangePct >= 0.35 && candleChangePct <= 0.90) {
+              isCandleTriggered = true;
+            }
+          } else {
+            // SHORT için son 1 dakikalık mum -%0.35 ile -%0.90 arasında kırmızı yakmış olmalı
+            if (candleChangePct <= -0.35 && candleChangePct >= -0.90) {
+              isCandleTriggered = true;
+            }
+          }
+        }
+      } catch (err) {
+        isCandleTriggered = false;
+      }
+
+      // Fiyat tabandan kafasını kaldırmadıysa (BTW gibi yatayda uyuyorsa) ASLA SİNYAL VERME!
+      if (!isCandleTriggered) {
+        continue;
+      }
+
+      // --- 2. AŞAMA: DERİNLİK & GERÇEK TAPE SÜZGEÇLERİ ---
       let fills = [];
       let realWhaleVolume = 0;
       let totalFillsVolume = 0;
@@ -310,41 +343,6 @@ export default async function handler(req, res) {
         }
       } catch (err) {
         console.warn("Mikro veri hatası:", err);
-      }
-
-      // ====================================================
-      // ⚡ "1 KALA" KIVILCIM KONTROLÜ (TREN HAREKET ANI TESTİ)
-      // ====================================================
-      if (fills.length >= 25) {
-        const latestTradeTime = parseInt(fills[0]?.cTime || fills[0]?.ts || now);
-        const oldestTradeTime = parseInt(fills[fills.length - 1]?.cTime || fills[fills.length - 1]?.ts || now);
-        const tapeSpanSeconds = Math.max(1, (latestTradeTime - oldestTradeTime) / 1000);
-
-        const buyRatio = totalFillsVolume > 0 ? (totalBuyVolume / totalFillsVolume) : 0.5;
-        const sellRatio = 1 - buyRatio;
-
-        // LONG İÇİN HAREKETE GEÇİŞ TETİĞİ:
-        // 1. Son 100 işlem 150 saniyeden kısa sürede gerçekleşmiş olmalı (tahta hızlanmış!)
-        // 2. Alıcılar son akışta en az %58 oranında tahtayı süpürüyor olmalı!
-        if (dir === 'LONG') {
-          const isTapeAccelerating = tapeSpanSeconds <= 150;
-          const isBuyersTakingOver = buyRatio >= 0.58;
-
-          if (!isTapeAccelerating || !isBuyersTakingOver) {
-            // Barut hazır ama henüz süpürme başlamadı. Saatlerce beklememek için pas geç.
-            continue;
-          }
-        }
-
-        // SHORT İÇİN HAREKETE GEÇİŞ TETİĞİ:
-        if (dir === 'SHORT') {
-          const isTapeAccelerating = tapeSpanSeconds <= 150;
-          const isSellersDumping = sellRatio >= 0.58;
-
-          if (!isTapeAccelerating || !isSellersDumping) {
-            continue;
-          }
-        }
       }
 
       const realWhalePct = totalFillsVolume > 0 ? Math.round((realWhaleVolume / totalFillsVolume) * 100) : 50;
@@ -426,18 +424,18 @@ export default async function handler(req, res) {
       const oiStr = realOIUsd > 0 ? `$${(realOIUsd / 1000000).toFixed(2)}M` : 'Aktif';
 
       const isLong = dir === 'LONG';
-      const msg = `⚡ <b>MINEORA SENTINEL | HAREKETE 1 KALA (KIVILCIM TETİĞİ)</b>\n` +
+      const msg = `🚀 <b>MINEORA SENTINEL | ANLIK HAREKET BAŞLADI (1 KALA TETİĞİ)</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
-                  `${isLong ? '🟢 <b>YÖN:</b> <b>LONG (TAPE SÜPÜRÜLÜYOR / PUMP BAŞLADI) 🚀</b>' : '🔴 <b>YÖN:</b> <b>SHORT (TAPE BOŞALTILIYOR / DUMP BAŞLADI) 🩸</b>'}\n` +
+                  `${isLong ? '🟢 <b>YÖN:</b> <b>LONG (1M MUMU FIRLADI / PUMP BAŞLADI) 🚀</b>' : '🔴 <b>YÖN:</b> <b>SHORT (1M MUMU ÇÖKTÜ / DUMP BAŞLADI) 🩸</b>'}\n` +
                   `📊 <b>Giriş Fiyatı:</b> <code>$${pEntry}</code> (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)\n` +
                   `⚡ <b>Fonlama:</b> <code>${fundingPct}%</code> | <b>Hacim:</b> <code>$${volM}M</code>\n` +
                   `📊 <b>Açık Pozisyon (OI):</b> <code>${oiStr}</code>\n\n` +
-                  `🔬 <b>ANLIK İVME METRİKLERİ:</b>\n` +
-                  `⏱️ <b>Tape Akış Hızı:</b> <code>Saniyeler İçinde İvmelendi</code>\n` +
-                  `🐋 <b>Balina Dominansı:</b> <code>%${realWhalePct} Kurumsal</code>\n` +
-                  `⛽ <b>Açık Pozisyon Yakıtı:</b> <code>%${dynamicFuel} Depo</code>\n` +
-                  `🎯 <b>Likidite Duvarı & İğne (Wick):</b> <code>$${pWick}</code>\n\n` +
+                  `🔬 <b>ANLIK KIVILCIM VERİLERİ:</b>\n` +
+                  `🕯️ <b>1 Dakikalık İvme:</b> <code>%0.35+ Canlı Kırılım Teyit Edildi</code>\n` +
+                  `🐋 <b>Balina Dominansı:</b> <code>%${realWhalePct} Kurumsal Blok</code>\n` +
+                  `⛽ <b>Yakıt Basıncı:</b> <code>%${dynamicFuel} Depo</code>\n` +
+                  `🎯 <b>Likidite Duvarı:</b> <code>$${pWick}</code>\n\n` +
                   `🎯 <b>LİKİDASYON & İŞLEM PLANI:</b>\n` +
                   `🎯 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
                   `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (${isLong ? '-%1.4' : '+%1.4'})\n` +
@@ -446,7 +444,7 @@ export default async function handler(req, res) {
                   `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🌐 <b>Canlı Terminal:</b> <a href="https://mineoragame.com">mineoragame.com</a>\n` +
-                  `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçmeli, stop maliyete çekilmelidir.</i>`;
+                  `💡 <i>Fiyat ilk kıvılcımı yaktı, TP1 seviyesinde kasanın %50'si nakde geçmeli!</i>`;
 
       await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
@@ -454,7 +452,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
       });
 
-      sentSymbols.push(`${symbol} (${dir}) [Kıvılcım Teyidi Alındı]`);
+      sentSymbols.push(`${symbol} (${dir}) [1M Mum İvmesi Onaylandı]`);
     }
 
     return res.status(200).json({ success: true, processed: sentSymbols });
