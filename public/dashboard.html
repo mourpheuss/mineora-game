@@ -6,6 +6,8 @@
   <title>Mineora Sentinel | Kurumsal Operasyon & X-Ray Terminali</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- OCR Kütüphanesi (Ekran resminden coin adını otomatik okumak için) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,6 +16,7 @@
     body { font-family: 'Inter', sans-serif; }
     .font-display { font-family: 'Space Grotesk', sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-amber-500 selection:text-black">
@@ -80,22 +83,35 @@
       </div>
     </section>
 
-    <!-- 2. GERÇEK MATEMATİKSEL X-RAY İSTİHBARAT RÖNTGENİ -->
+    <!-- 2. GERÇEK MATEMATİKSEL X-RAY İSTİHBARAT RÖNTGENİ & HİBRİT SİNYAL DOĞRULAYICI -->
     <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
         <div>
-          <h3 class="font-display text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-radiation text-amber-500"></i> X-Ray Canlı İstihbarat Röntgeni
-          </h3>
-          <p class="text-xs text-slate-400">Merak ettiğin herhangi bir coinin derin tahtasını, anlık balina dominansını ve borsa tuzağını analiz et.</p>
-        </div>
-        <div class="flex items-center gap-2 w-full md:w-auto">
-          <div class="relative flex-1 md:w-56">
-            <input type="text" id="inputSearchSymbol" placeholder="Örn: TREE, SUI, DOGE..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-2.5 uppercase font-mono w-full focus:outline-none focus:border-amber-500" onkeydown="if(event.key==='Enter') analyzeSingleCoin()" />
+          <div class="flex items-center gap-2">
+            <h3 class="font-display text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-radiation text-amber-500"></i> X-Ray Canlı İstihbarat & İndikatör Doğrulayıcı
+            </h3>
+            <span class="bg-sky-950 text-sky-400 border border-sky-800 text-[10px] font-mono px-2 py-0.5 rounded-md font-bold">BINANCE + BITGET HİBRİT</span>
           </div>
-          <button onclick="analyzeSingleCoin()" id="btnSearchSubmit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer shrink-0 shadow flex items-center gap-2">
+          <p class="text-xs text-slate-400 mt-1">İndikatörünün AL/SAT sinyalini test et. Ekran görüntüsü yükle veya pariteyi elle arat.</p>
+        </div>
+      </div>
+
+      <!-- ARAMA VE SÜRÜKLE BIRAK YÜKLEME KONTROLLERİ -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Elle Arama -->
+        <div class="flex gap-2">
+          <input type="text" id="inputSearchSymbol" placeholder="Örn: SOL, BTC, PEPE, SUI..." class="bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-4 py-3 uppercase font-mono flex-1 focus:outline-none focus:border-amber-500" onkeydown="if(event.key==='Enter') analyzeSingleCoin()" />
+          <button onclick="analyzeSingleCoin()" id="btnSearchSubmit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-6 py-3 rounded-xl transition cursor-pointer shrink-0 shadow flex items-center gap-2">
             <i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>
           </button>
+        </div>
+
+        <!-- TradingView Ekran Görüntüsü Yükleme (OCR) -->
+        <div id="dropZone" onclick="document.getElementById('xrayFileInput').click()" class="border-2 border-dashed border-slate-700 hover:border-amber-500/80 bg-slate-950/60 rounded-xl px-4 py-2.5 text-center cursor-pointer transition flex items-center justify-center gap-3">
+          <i class="fa-solid fa-camera text-amber-400 text-lg"></i>
+          <span id="dropZoneText" class="text-xs font-mono text-slate-300">TradingView Grafiği Yükle (OCR Oku)</span>
+          <input type="file" id="xrayFileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
         </div>
       </div>
 
@@ -174,7 +190,6 @@
       if (!container) return;
 
       try {
-        // 1. Firebase'deki Açık Pozisyonları Oku (active_trades)
         let activeTrades = {};
         try {
           const atRes = await fetch("https://mineora-web-default-rtdb.firebaseio.com/active_trades.json");
@@ -185,7 +200,6 @@
           ? Object.keys(activeTrades).filter(k => activeTrades[k] && activeTrades[k].status === 'OPEN')
           : [];
 
-        // EĞER AÇIK POZİSYON VARSA: Canlı İşlem Kartını Göster
         if (openTradeKeys.length > 0) {
           const activeKey = openTradeKeys[0];
           const signal = activeTrades[activeKey];
@@ -242,17 +256,14 @@
           return;
         }
 
-        // 2. AÇIK İŞLEM YOKSA: Bitget Tahtasındaki Canlı Long & Short Adaylarını Göster
         if (cachedTickers && cachedTickers.length > 0) {
           const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
           const liquidPool = cachedTickers.filter(t => t.symbol.endsWith("USDT") && !EXCLUDED.includes(t.symbol) && parseFloat(t.usdtVolume || 0) >= 500000);
 
-          // En negatif fonlamalı Long adayı
           const topLong = liquidPool
             .filter(t => parseFloat(t.fundingRate || 0) <= -0.0005 && (parseFloat(t.change24h || 0) * 100) <= 12.0)
             .sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate))[0];
 
-          // En primli Short adayı
           const topShort = liquidPool
             .filter(t => parseFloat(t.fundingRate || 0) >= 0.0003 && (parseFloat(t.change24h || 0) * 100) >= 10.0)
             .sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h))[0];
@@ -321,7 +332,6 @@
           }
         }
 
-        // Bekleme Durumu
         container.innerHTML = `
           <div class="text-center py-10 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-400 font-mono text-xs">
             <i class="fa-solid fa-radar text-amber-400 text-xl mb-2 block"></i>
@@ -333,26 +343,26 @@
       }
     }
 
-    // ================= X-RAY MATEMATİKSEL MOTORU =================
     async function loadTickers() {
       try {
         const res = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
         const json = await res.json();
         if (json.code === "00000" && Array.isArray(json.data)) {
           cachedTickers = json.data;
-          checkActiveSignals(); // Ticker'lar yüklendiğinde radarı tazele
+          checkActiveSignals();
         }
       } catch (e) {}
     }
 
-    async function analyzeSingleCoin() {
+    // ================= X-RAY & HİBRİT SİNYAL DOĞRULAYICI (BINANCE + BITGET) =================
+    async function analyzeSingleCoin(customSymbol = null) {
       const input = document.getElementById('inputSearchSymbol');
       const area = document.getElementById('searchResultArea');
       const btn = document.getElementById('btnSearchSubmit');
       
-      let query = input.value.trim().toUpperCase();
+      let query = customSymbol || input.value.trim().toUpperCase();
       if (!query) return;
-      if (!query.endsWith("USDT")) query += "USDT";
+      query = query.replace('USDT', '').replace('PERP', '').trim();
 
       area.classList.remove('hidden');
       btn.disabled = true;
@@ -360,209 +370,104 @@
       area.innerHTML = `
         <div class="text-center py-12 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-slate-400 space-y-3">
           <i class="fa-solid fa-circle-notch fa-spin text-amber-400 text-2xl"></i>
-          <div><b>${query}</b> için emir defteri derinliği ve son 100 tape işlemi inceleniyor...</div>
+          <div><b>#${query}USDT</b> için Binance balinaları ve Bitget derinliği sorgulanıyor...</div>
         </div>
       `;
 
       try {
-        let ticker = cachedTickers.find(t => t.symbol === query);
-        if (!ticker) {
-          const tRes = await fetch(`https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES&symbol=${query}`);
-          const tData = await tRes.json();
-          if (tData.code === "00000" && tData.data && tData.data.length > 0) ticker = tData.data[0];
-        }
+        const xRes = await fetch(`/api/xray-scan?symbol=${encodeURIComponent(query)}`);
+        const data = await xRes.json();
 
-        if (!ticker) {
-          area.innerHTML = `<div class="p-5 bg-rose-950/40 rounded-2xl border border-rose-900/60 text-xs font-mono text-rose-300"><b>${query}</b> vadeli tahtada bulunamadı veya parite ismi hatalı.</div>`;
+        if (!data.success) {
+          area.innerHTML = `<div class="p-5 bg-rose-950/40 rounded-2xl border border-rose-900/60 text-xs font-mono text-rose-300"><b>${query}</b> için veri alınamadı: ${data.error || 'Bilinmeyen hata'}</div>`;
           btn.disabled = false;
           btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>`;
           return;
         }
 
-        const price = parseFloat(ticker.lastPr);
-        const fundingRate = parseFloat(ticker.fundingRate || 0) * 100;
-        const vol24h = (parseFloat(ticker.usdtVolume || 0) / 1000000).toFixed(2);
-        const change24h = (parseFloat(ticker.change24h || 0) * 100).toFixed(2);
-        const openInterestUsdt = ticker.openInterest ? (parseFloat(ticker.openInterest) * price / 1000000).toFixed(2) : "0.00";
-
-        // Tape
-        const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${query}&productType=USDT-FUTURES&limit=100`);
-        const fillsData = await fillsRes.json();
-        const fills = fillsData.data?.fillList || fillsData.data || [];
-
-        let retailBuyVol = 0, retailSellVol = 0;
-        let whaleBuyVol = 0, whaleSellVol = 0;
-        const WHALE_CUTOFF = 1500;
-
-        fills.forEach(f => {
-          const notional = parseFloat(f.price) * parseFloat(f.size);
-          if (f.side === 'buy') {
-            if (notional >= WHALE_CUTOFF) whaleBuyVol += notional; else retailBuyVol += notional;
-          } else {
-            if (notional >= WHALE_CUTOFF) whaleSellVol += notional; else retailSellVol += notional;
-          }
-        });
-
-        const totalBuyVol = retailBuyVol + whaleBuyVol;
-        const totalSellVol = retailSellVol + whaleSellVol;
-        const tapeTotal = totalBuyVol + totalSellVol || 1;
-
-        const buyPressure = Math.round((totalBuyVol / tapeTotal) * 100);
-        const sellPressure = 100 - buyPressure;
-        const whaleDominance = Math.round(((whaleBuyVol + whaleSellVol) / tapeTotal) * 100);
-        const retailDominance = 100 - whaleDominance;
-
-        // Derinlik
-        const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${query}&productType=USDT-FUTURES&limit=25`);
-        const depthData = await depthRes.json();
-        const asks = depthData.data?.asks || [];
-        const bids = depthData.data?.bids || [];
-
-        let totalBidDepthUsdt = 0;
-        let totalAskDepthUsdt = 0;
-        bids.slice(0, 20).forEach(b => totalBidDepthUsdt += (parseFloat(b[0]) * parseFloat(b[1])));
-        asks.slice(0, 20).forEach(a => totalAskDepthUsdt += (parseFloat(a[0]) * parseFloat(a[1])));
-
-        const bookImbalance = totalAskDepthUsdt > 0 ? (totalBidDepthUsdt / totalAskDepthUsdt).toFixed(2) : "1.00";
-
-        // Karar
-        let mathScore = 50;
-        let actionDirection = "BEKLE / NÖTR";
-        let actionColor = "text-amber-400 border-amber-500 bg-amber-500/10";
-        let actionReason = "Piyasada belirgin bir sıkışma ya da tasfiye hazırlığı yok; genel piyasa akışına tabi.";
-        let leverageTip = "10x - 15x İzole";
-        let recTp = price * 1.018;
-        let recSl = price * 0.992;
-
-        if (fundingRate < -0.02 && buyPressure >= 60) {
-          mathScore = 93;
-          actionDirection = "🟢 KESİNLİKLE LONG (SHORT TASFİYE TUZAĞI)";
-          actionColor = "text-emerald-400 border-emerald-500 bg-emerald-950/60";
-          actionReason = `Fonlama aşırı negatif (%${fundingRate.toFixed(4)}), yani içerideki kitle tamamen Short'ta rehin kalmış durumda. Son işlemlerde %${buyPressure} alıcı baskısı var; borsa bu Short'çuları patlatmak için yukarı iğneleyecek!`;
-          leverageTip = "15x - 20x İzole";
-          recTp = price * 1.025;
-          recSl = price * 0.992;
-        } else if (fundingRate > 0.03 && sellPressure >= 60) {
-          mathScore = 20;
-          actionDirection = "🔴 KESİNLİKLE SHORT (LONG TASFİYE TUZAĞI)";
-          actionColor = "text-rose-400 border-rose-500 bg-rose-950/60";
-          actionReason = `Bireysel yatırımcı kitlesi Long yığmış (%${fundingRate.toFixed(4)}), tahtada kurumsal alıcı yok (%${sellPressure} satış). Borsa Long kütlesini tasfiye etmek için alt iğne bırakabilir; Long girmek intihardır!`;
-          leverageTip = "10x - 15x İzole";
-          recTp = price * 0.975;
-          recSl = price * 1.008;
-        } else if (buyPressure >= 75) {
-          mathScore = 82;
-          actionDirection = "🟢 HIZLI LONG (TAPE SÜPÜRÜLÜYOR)";
-          actionColor = "text-emerald-400 border-emerald-500 bg-emerald-950/60";
-          actionReason = `Son işlemlerde alıcılar ezici (%${buyPressure}). Tahtanın satış kademeleri temizleniyor.`;
-          leverageTip = "15x İzole";
-          recTp = price * 1.018;
-          recSl = price * 0.993;
-        } else if (sellPressure >= 75) {
-          mathScore = 30;
-          actionDirection = "🔴 HIZLI SHORT (TAPE BOŞALTILIYOR)";
-          actionColor = "text-rose-400 border-rose-500 bg-rose-950/60";
-          actionReason = `Satış emirleri son işlemlerde %${sellPressure} oranında tahtayı eziyor.`;
-          leverageTip = "10x İzole";
-          recTp = price * 0.982;
-          recSl = price * 1.007;
-        }
-
-        const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
-        const tpStr = recTp < 1 ? recTp.toFixed(6) : recTp.toFixed(4);
-        const slStr = recSl < 1 ? recSl.toFixed(6) : recSl.toFixed(4);
+        const pStr = data.price < 1 ? data.price.toFixed(6) : data.price.toFixed(4);
 
         area.innerHTML = `
           <div class="bg-slate-950 p-6 sm:p-7 rounded-2xl border-2 border-slate-800 space-y-6 font-mono text-xs">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-5">
               <div>
                 <div class="flex items-center gap-3">
-                  <h4 class="font-display font-black text-2xl text-white">#${ticker.symbol}</h4>
-                  <span class="text-[10px] px-2.5 py-0.5 rounded-lg border font-bold bg-slate-800 text-slate-300">VADELİ</span>
+                  <h4 class="font-display font-black text-2xl text-white">#${data.symbol}</h4>
+                  <span class="text-[10px] px-2.5 py-0.5 rounded-lg border font-bold bg-slate-800 text-slate-300">HİBRİT VADELİ</span>
                 </div>
-                <div class="text-[11px] text-slate-400 mt-1">Bitget USDT-Margined Vadeli Tahtası</div>
+                <div class="text-[11px] text-slate-400 mt-1">Binance Global & Bitget Likidite Röntgeni</div>
               </div>
               <div class="text-left sm:text-right">
                 <div class="font-display text-3xl font-black text-white">$${pStr}</div>
-                <span class="text-xs font-bold ${change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-                  ${change24h >= 0 ? '+' : ''}${change24h}% (24s)
-                </span>
+                <span class="text-xs font-bold text-slate-400">Canlı Piyasa Fiyatı</span>
               </div>
             </div>
 
-            <div class="p-5 rounded-2xl border-2 ${actionColor} space-y-3">
+            <!-- BÜYÜK KARAR VE TEYİT KARTI -->
+            <div class="p-5 rounded-2xl border-2 space-y-3" style="border-color: ${data.statusColor}; background: ${data.statusColor}15;">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">SİSTEMİN NET İŞLEM ÖNERİSİ</span>
-                  <div class="font-display text-xl font-black tracking-tight">${actionDirection}</div>
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">İNDİKATÖR SİNYAL KARARI</span>
+                  <div class="font-display text-xl font-black tracking-tight" style="color: ${data.statusColor};">${data.statusLabel}</div>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="text-[10px] bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-300">
-                    Kaldıraç: <strong>${leverageTip}</strong>
-                  </span>
-                  <span class="text-[10px] bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-300">
-                    Güven: <strong>%${mathScore}</strong>
+                  <span class="text-xs bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-300">
+                    X-Ray Teyit Skoru: <strong class="text-lg font-bold" style="color: ${data.statusColor};">%${data.score}</strong>
                   </span>
                 </div>
               </div>
 
-              <div class="grid grid-cols-3 gap-2 text-center pt-2">
-                <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
-                  <span class="text-[10px] text-slate-400 block">ÖNERİLEN GİRİŞ</span>
-                  <strong class="text-white text-xs">$${pStr}</strong>
-                </div>
-                <div class="bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-900/60">
-                  <span class="text-[10px] text-emerald-400 block">KÂR AL (TP)</span>
-                  <strong class="text-emerald-300 text-xs">$${tpStr}</strong>
-                </div>
-                <div class="bg-rose-950/40 p-2.5 rounded-xl border border-rose-900/60">
-                  <span class="text-[10px] text-rose-400 block">KATI STOP (SL)</span>
-                  <strong class="text-rose-300 text-xs">$${slStr}</strong>
-                </div>
-              </div>
-
-              <p class="text-[11px] leading-relaxed pt-2 border-t border-slate-800/80 text-slate-300">
-                💡 <b>Neden Bu Karar?</b> ${actionReason}
+              <p class="text-[11px] leading-relaxed pt-2 border-t border-slate-800/80 text-slate-200">
+                💡 <b>Perde Arkası Teşhisi:</b> ${data.decisionNote}
               </p>
             </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-center">
-              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
-                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">GÜVENLİK SKORU</span>
-                <strong class="font-display text-2xl font-bold ${mathScore >= 70 ? 'text-emerald-400' : mathScore <= 40 ? 'text-rose-400' : 'text-amber-400'}">%${mathScore}</strong>
+            <!-- İKİLİ BORSA KARŞILAŞTIRMASI (BINANCE vs BITGET) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- BINANCE KÜRESEL GÜÇ -->
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2.5">
+                <div class="text-amber-400 font-bold text-xs flex items-center justify-between border-b border-slate-800 pb-2">
+                  <span>🟡 BINANCE GLOBAL VERİLERİ</span>
+                  <span class="text-[10px] text-slate-500">Piyasa Hacim Lideri</span>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Balina Dağılımı (Top Trader):</span>
+                  <strong class="text-sky-400">${data.binance.whaleLongPct} Long / ${data.binance.whaleShortPct} Short</strong>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Açık Pozisyon (OI):</span>
+                  <strong class="text-white">${data.binance.oiUsd}</strong>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Fonlama Oranı:</span>
+                  <strong class="${parseFloat(data.binance.fundingPct) <= 0 ? 'text-emerald-400' : 'text-rose-400'}">${data.binance.fundingPct}</strong>
+                </div>
               </div>
-              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
-                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">FONLAMA ORANI</span>
-                <strong class="font-display text-2xl font-bold ${fundingRate <= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fundingRate.toFixed(4)}%</strong>
-              </div>
-              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
-                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">BALİNA DOMİNANSI</span>
-                <strong class="font-display text-2xl font-bold text-cyan-400">%${whaleDominance}</strong>
-                <span class="text-[9px] text-slate-500 block mt-0.5">Sürü: %${retailDominance}</span>
-              </div>
-              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800/90">
-                <span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">TAHTA BASKI ORANI</span>
-                <strong class="font-display text-2xl font-bold text-amber-400">${bookImbalance}x</strong>
+
+              <!-- BITGET DERİNLİK & MIKNATIS -->
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2.5">
+                <div class="text-cyan-400 font-bold text-xs flex items-center justify-between border-b border-slate-800 pb-2">
+                  <span>🔵 BITGET TAHTA DERİNLİĞİ</span>
+                  <span class="text-[10px] text-slate-500">Tasfiye & İğne Radarı</span>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Kurumsal Blok Alış ($1.2K+):</span>
+                  <strong class="text-emerald-400">${data.bitget.whaleBuyPct}</strong>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Alış / Satış Derinlik Duvarı:</span>
+                  <strong class="text-slate-200">${data.bitget.bidWallDepth} / ${data.bitget.askWallDepth}</strong>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>Likidasyon Mıknatısı (İğne):</span>
+                  <strong class="text-rose-400">$${data.bitget.magnetWickPrice}</strong>
+                </div>
               </div>
             </div>
 
-            <div class="bg-slate-900/70 p-4 rounded-xl border border-slate-800/80 space-y-2.5">
-              <div class="flex justify-between text-xs">
-                <span class="text-emerald-400 font-bold">Piyasa Alıcıları: %${buyPressure}</span>
-                <span class="text-rose-400 font-bold">Piyasa Satıcıları: %${sellPressure}</span>
-              </div>
-              <div class="w-full bg-rose-950/70 h-3 rounded-full overflow-hidden flex border border-slate-800">
-                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${buyPressure}%"></div>
-              </div>
-              <div class="flex justify-between text-[11px] text-slate-400 pt-1">
-                <span>🐋 Balina Alımı: <b>$${Math.round(whaleBuyVol/1000)}K</b> | Bireysel: $${Math.round(retailBuyVol/1000)}K</span>
-                <span>🐋 Balina Satışı: <b>$${Math.round(whaleSellVol/1000)}K</b> | Bireysel: $${Math.round(retailSellVol/1000)}K</span>
-              </div>
-            </div>
-
-            <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/80 flex flex-wrap gap-4">
-              <span>24s Vadeli Hacim: <b>$${vol24h}M</b></span>
-              <span>Aktif Açık Pozisyon: <b>$${openInterestUsdt}M</b></span>
+            <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/80 flex justify-between">
+              <span>Mineora Cross-Exchange İstihbarat Motoru</span>
+              <span>Saniyeler İçinde Çift Borsa Taraması</span>
             </div>
 
           </div>
@@ -572,6 +477,46 @@
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>`;
+      }
+    }
+
+    // ================= OCR İLE GÖRSELDEN COIN OKUMA =================
+    async function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const dropText = document.getElementById('dropZoneText');
+      const area = document.getElementById('searchResultArea');
+      
+      area.classList.remove('hidden');
+      dropText.textContent = "Görsel taranıyor (OCR)...";
+      area.innerHTML = `
+        <div class="text-center py-12 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-slate-400 space-y-3">
+          <i class="fa-solid fa-spinner fa-spin text-amber-400 text-2xl"></i>
+          <div>Yüklenen TradingView görselinden parite adı tespit ediliyor...</div>
+        </div>
+      `;
+
+      try {
+        const { data: { text } } = await Tesseract.recognize(file, 'eng');
+        
+        // Yaygın parite regex eşleştirmesi
+        const matches = text.match(/\b(BTC|ETH|SOL|BNB|XRP|DOGE|ADA|AVAX|LINK|SUI|PEPE|NEAR|IOST|MTL|WIF|FET|APT|ARB|OP|RENDER|TAO|TREE|SHIB|TIA|INJ|SEI|CFX|GALA)[A-Z0-9]*\b/i);
+        
+        if (matches && matches[0]) {
+          let foundCoin = matches[0].toUpperCase().replace('USDT', '').replace('PERP', '').trim();
+          dropText.textContent = "Tespit: #" + foundCoin;
+          document.getElementById('inputSearchSymbol').value = foundCoin;
+          await analyzeSingleCoin(foundCoin);
+        } else {
+          alert("Görselde parite ismi net okunamadı. Lütfen pariteyi elle arama kutusuna yazıp 'Röntgen Çek' butonuna basın.");
+          dropText.textContent = "TradingView Grafiği Yükle (OCR Oku)";
+          area.classList.add('hidden');
+        }
+      } catch (err) {
+        alert("OCR okuma hatası: " + err.message);
+        dropText.textContent = "TradingView Grafiği Yükle (OCR Oku)";
+        area.classList.add('hidden');
       }
     }
 
