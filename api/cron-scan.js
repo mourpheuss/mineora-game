@@ -8,73 +8,78 @@ export default async function handler(req, res) {
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+    const now = Date.now();
 
-    // 1. Bitget Vadeli Ticker Listesini Çek
+    // 1. Bitget Vadeli Piyasa Verilerini Çek
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
     const tickersJson = await tickersRes.json();
 
     if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
-      return res.status(500).json({ error: "Bitget ticker verisi alınamadı." });
+      return res.status(500).json({ error: "Bitget verisi alınamadı." });
     }
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
-    
-    // Yalnızca yeterli likiditeye sahip pariteler
+    // Minimum 1.2M USDT hacimli canlı tahtalar
     const pool = tickersJson.data.filter(t => 
       t.symbol.endsWith("USDT") && 
       !EXCLUDED.includes(t.symbol) && 
-      parseFloat(t.usdtVolume || 0) >= 1500000
+      parseFloat(t.usdtVolume || 0) >= 1200000
     );
 
-    // 2. Mevcut Açık İşlemleri Kontrol Et
+    // 2. Firebase'deki Aktif İşlemleri ve Son Sinyal Zamanlarını Oku
     let activeTrades = {};
+    let lastSignals = {};
     try {
-      const atRes = await fetch(`${FIREBASE_BASE_URL}/active_trades.json`);
+      const [atRes, lsRes] = await Promise.all([
+        fetch(`${FIREBASE_BASE_URL}/active_trades.json`),
+        fetch(`${FIREBASE_BASE_URL}/last_signals.json`)
+      ]);
       activeTrades = (await atRes.json()) || {};
-    } catch (e) { activeTrades = {}; }
+      lastSignals = (await lsRes.json()) || {};
+    } catch (e) {
+      activeTrades = {};
+      lastSignals = {};
+    }
 
-    const now = Date.now();
-    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
-
-    // Halihazırda açık bir işlem var mı?
-    const hasOpenTrade = Object.values(activeTrades).some(t => {
+    // Aktif açık işlem kontrolü (Varsa yeni sinyal arama, spamı kes)
+    const openTrades = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
-      const tTime = t.timestamp ? new Date(t.timestamp).getTime() : (t.createdAt || now);
+      const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
       return (now - tTime) <= THREE_HOURS_MS;
     });
 
-    if (hasOpenTrade) {
-      return res.status(200).json({ status: "IDLE", message: "Zaten açık bir işlem takip ediliyor." });
+    if (openTrades.length > 0) {
+      return res.status(200).json({ status: "IDLE", message: `Zaten aktif işlem takip ediliyor: #${openTrades[0].symbol}` });
     }
 
-    // 3. GELİŞMİŞ KURUMSAL FİLTRELEME & SIKIŞMA TARAMASI
+    // 3. GELİŞMİŞ KURUMSAL FİLTRELEME & TAHTA RÖNTGENİ
     let selectedCandidate = null;
     let selectedDirection = null;
 
     for (const item of pool) {
+      // 3 Saatlik Katı Kilit: Bu coine son 3 saatte sinyal atılmışsa KESİNLİKLE GEÇ
+      const lastSentTime = lastSignals[item.symbol] || 0;
+      if (now - lastSentTime < THREE_HOURS_MS) continue;
+
       const funding = parseFloat(item.fundingRate || 0);
       const chg24h = parseFloat(item.change24h || 0) * 100;
       const price = parseFloat(item.lastPr || 0);
-
       if (price <= 0) continue;
 
-      // --- LONG ŞARTLARI (TUZAKLARDAN ARINDIRILMIŞ) ---
-      // 1. Fonlama eksi olmalı (-%0.02 veya daha negatif)
-      // 2. Parite aşırı çöküşte OLMAMALI (24s düşüş -%3.5'ten fazla ise serbest düşüş sayılır, girilmez)
-      // 3. Fiyat aşırı şişmemiş olmalı (< +8%)
-      const isLongCandidate = (funding <= -0.0002) && (chg24h >= -3.5) && (chg24h <= 8.0);
+      // TUZAKLARI ENGELLEYEN ŞARTLAR:
+      // LONG: Fonlama negatif OLMALI, ancak parite serbest düşüşte OLMAMALI (24s değişimi >= -1.5% ve <= +5.5%)
+      const isLongSetup = (funding <= -0.0003) && (chg24h >= -1.5) && (chg24h <= 5.5);
 
-      // --- SHORT ŞARTLARI ---
-      // 1. Fonlama pozitif (+%0.02+)
-      // 2. Fiyat primli (+7% ve üzeri)
-      const isShortCandidate = (funding >= 0.0002) && (chg24h >= 7.0);
+      // SHORT: Fonlama pozitif ve şişkin, fiyatta tepe yapmış (+6.5% üzeri)
+      const isShortSetup = (funding >= 0.0003) && (chg24h >= 6.5);
 
-      if (!isLongCandidate && !isShortCandidate) continue;
+      if (!isLongSetup && !isShortSetup) continue;
 
-      // 4. İKİNCİ AŞAMA: EMİR DEFTERİ & TAPE (SON İŞLEMLER) TEYİDİ
+      // 4. İKİNCİ AŞAMA: EMİR DEFTERİ DUVARLARI VE PİYASA EMİR AKIŞI (TAPE FLOW) TEYİDİ
       const [depthRes, fillsRes] = await Promise.all([
-        fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${item.symbol}&productType=usdt-futures&limit=20`, { headers: browserHeaders }).then(r => r.json()).catch(() => ({})),
-        fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders }).then(r => r.json()).catch(() => ({}))
+        fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${item.symbol}&productType=usdt-futures&limit=25`, { headers: browserHeaders }).then(r => r.json()).catch(() => ({})),
+        fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=50`, { headers: browserHeaders }).then(r => r.json()).catch(() => ({}))
       ]);
 
       const fills = fillsRes.data?.fillList || fillsRes.data || [];
@@ -90,9 +95,9 @@ export default async function handler(req, res) {
       }
 
       const totalFlow = buyVol + sellVol;
-      const takerBuyRatio = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
+      const buyRatio = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      // Emir Defteri Desteği (Alış Duvarı vs Satış Duvarı)
+      // Alış ve Satış Duvarı Büyüklükleri
       let bidDepth = 0;
       let askDepth = 0;
       if (depthRes.data) {
@@ -100,14 +105,16 @@ export default async function handler(req, res) {
         (depthRes.data.asks || []).forEach(a => { askDepth += parseFloat(a[0]) * parseFloat(a[1]); });
       }
 
-      // KESİN GİRİŞ KURALLARI:
-      if (isLongCandidate && takerBuyRatio >= 58 && bidDepth >= askDepth * 0.9) {
+      // KESİN GİRİŞ TEYİTLERİ:
+      // LONG: Piyasa alıcıları tahtayı en az %58 oranında süpürüyor olmalı + Alış desteği satıştan güçlü olmalı
+      if (isLongSetup && buyRatio >= 58 && bidDepth >= askDepth * 1.1) {
         selectedCandidate = item;
         selectedDirection = 'LONG';
-        break; // Teyitli parite bulundu
+        break;
       }
 
-      if (isShortCandidate && takerBuyRatio <= 42 && askDepth >= bidDepth * 1.1) {
+      // SHORT: Satıcılar baskın (%42 altı alım) + Satış duvarı alıştan güçlü olmalı
+      if (isShortSetup && buyRatio <= 42 && askDepth >= bidDepth * 1.1) {
         selectedCandidate = item;
         selectedDirection = 'SHORT';
         break;
@@ -115,10 +122,10 @@ export default async function handler(req, res) {
     }
 
     if (!selectedCandidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Eşik değerleri tam karşılayan kurumsal sinyal bulunamadı (Tuzaklar elendi)." });
+      return res.status(200).json({ status: "SCANNING", message: "Yüksek olasılıklı kurumsal kurulum taranıyor (Tuzaklar elendi)." });
     }
 
-    // 5. SEVİYE HESAPLARI (HASSAS HEDEFLER)
+    // 5. İŞLEM SEVİYELERİ
     const entryPrice = parseFloat(selectedCandidate.lastPr);
     const isLong = selectedDirection === 'LONG';
     const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
@@ -139,30 +146,37 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 6. Firebase'e Yaz
-    await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTrade)
-    });
+    // 6. ÖNCE FIREBASE'E YAZ (KİLİTLERİ DEVREYE SOK)
+    await Promise.all([
+      fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTrade)
+      }),
+      fetch(`${FIREBASE_BASE_URL}/last_signals/${selectedCandidate.symbol}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(now)
+      })
+    ]);
 
-    // 7. Telegram Bildirimi Fırlat
+    // 7. TELEGRAM'A SADECE 1 KEZ GÖNDER
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
 
-    const tgMsg = `🎯 <b>MINEORA SENTINEL | KURUMSAL SİNYAL</b>\n` +
+    const tgMsg = `🎯 <b>MINEORA SENTINEL | KURUMSAL TEYİTLİ SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${selectedCandidate.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${selectedDirection === 'LONG' ? '🟢 LONG' : '🔴 SHORT'}\n` +
-                  `💵 <b>Giriş Seviyesi:</b> <code>$${pStr}</code>\n` +
+                  `🧭 <b>Yön:</b> ${selectedDirection === 'LONG' ? '🟢 LONG (Alış Desteği Doğrulandı)' : '🔴 SHORT (Tepe Dağıtımı Doğrulandı)'}\n` +
+                  `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🎯 <b>Hedef 1 (+%1.8):</b> <code>$${tp1Str}</code>\n` +
-                  `🚀 <b>Hedef 2 (+%3.8+):</b> <code>$${tp2Str}</code>\n` +
-                  `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code>\n` +
+                  `🎯 <b>Hedef 1:</b> <code>$${tp1Str}</code> (+%1.8)\n` +
+                  `🚀 <b>Hedef 2:</b> <code>$${tp2Str}</code> (+%3.8)\n` +
+                  `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code> (-%1.2)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `⚡ <i>Emir defteri ve tape akışı doğrulanmıştır.</i>`;
+                  `⚡ <i>Emir Defteri ve Tape Akışı Onaylıdır.</i>`;
 
     await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
