@@ -38,7 +38,7 @@
         <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 border border-slate-700">
           <i class="fa-solid fa-chart-line"></i> Canlı Radara Git
         </a>
-        <button onclick="handleLogout()" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 font-mono text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1.5">
+        <button onclick="handleLogout()" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 font-mono text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
           <i class="fa-solid fa-arrow-right-from-bracket"></i> Çıkış
         </button>
       </div>
@@ -49,7 +49,15 @@
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
 
     <!-- METRİK KARTLARI -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2">
+        <span class="text-slate-400 font-mono text-xs uppercase block">Gelen İletişim Talebi</span>
+        <div class="flex items-baseline justify-between">
+          <strong id="contactMsgCount" class="font-display text-3xl font-black text-amber-400">0</strong>
+          <span class="text-slate-500 text-xs font-mono">Mesaj</span>
+        </div>
+      </div>
+
       <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2">
         <span class="text-slate-400 font-mono text-xs uppercase block">Aktif VIP Üyeler</span>
         <div class="flex items-baseline justify-between">
@@ -75,7 +83,39 @@
       </div>
     </div>
 
-    <!-- ÜYE LİSTESİ MASASI -->
+    <!-- ================= 1. GELEN İLETİŞİM & TELEFON TALEPLERİ MASASI ================= -->
+    <div class="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 space-y-4 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h3 class="font-display text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-headset text-amber-400"></i> Gelen İletişim & Talep Mesajları
+          </h3>
+          <p class="text-xs text-slate-400">Ana sayfadaki iletişim formundan gönderilen ad soyad ve telefon bilgileri.</p>
+        </div>
+        <button onclick="loadContactMessages()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-xs px-3 py-2 rounded-xl transition border border-slate-700 cursor-pointer">
+          <i class="fa-solid fa-rotate mr-1"></i> Talepleri Yenile
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left font-mono text-xs">
+          <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+            <tr>
+              <th class="py-3 px-4">Tarih</th>
+              <th class="py-3 px-4">Ad Soyad</th>
+              <th class="py-3 px-4">Telefon</th>
+              <th class="py-3 px-4">Mesaj / Not</th>
+              <th class="py-3 px-4 text-right">İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="contactTableBody" class="divide-y divide-slate-800 text-slate-300">
+            <tr><td colspan="5" class="py-6 text-center text-slate-500">İletişim mesajları yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ================= 2. ÜYE LİSTESİ MASASI ================= -->
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -86,10 +126,10 @@
         </div>
         <div class="flex items-center gap-2">
           <!-- YENİ ÜYE EKLE BUTONU -->
-          <button onclick="openNewUserModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-orange-600/20 flex items-center gap-1.5">
+          <button onclick="openNewUserModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-orange-600/20 flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-user-plus"></i> Yeni Üye Ekle
           </button>
-          <button onclick="loadUsers()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs px-3 py-2 rounded-xl transition border border-slate-700">
+          <button onclick="loadUsers()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs px-3 py-2 rounded-xl transition border border-slate-700 cursor-pointer">
             <i class="fa-solid fa-rotate mr-1"></i> Yenile
           </button>
         </div>
@@ -100,7 +140,7 @@
           <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
             <tr>
               <th class="py-3 px-4">Kullanıcı Adı</th>
-              <th class="py-3 px-4">E-Posta</th>
+              <th class="py-3 px-4">E-Posta / TxID</th>
               <th class="py-3 px-4">Şifre</th>
               <th class="py-3 px-4">VIP Durumu</th>
               <th class="py-3 px-4">Bitiş Tarihi</th>
@@ -119,7 +159,7 @@
   <!-- ================= YENİ ÜYE EKLEME MODALI ================= -->
   <div id="newUserModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
-      <button onclick="closeNewUserModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+      <button onclick="closeNewUserModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition cursor-pointer">
         <i class="fa-solid fa-xmark text-lg"></i>
       </button>
 
@@ -152,7 +192,7 @@
           </label>
         </div>
 
-        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20">
+        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20 cursor-pointer">
           Üyeyi Veritabanına Kaydet
         </button>
       </form>
@@ -187,7 +227,66 @@
       document.getElementById('newUserModal').classList.add('hidden');
     }
 
-    // ADMİNDEN YENİ ÜYE KAYDETME FONKSİYONU
+    // ================= GELEN İLETİŞİM MESAJLARINI ÇEKME =================
+    async function loadContactMessages() {
+      const tbody = document.getElementById('contactTableBody');
+      const counter = document.getElementById('contactMsgCount');
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-1"></i> İletişim mesajları yükleniyor...</td></tr>`;
+
+      try {
+        const snap = await db.ref('contact_messages').once('value');
+        const data = snap.val();
+
+        if (!data) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">Henüz gelen bir iletişim veya arama talebi yok.</td></tr>`;
+          if (counter) counter.innerText = '0';
+          return;
+        }
+
+        const msgList = Object.keys(data).map(k => ({ _key: k, ...data[k] }));
+        msgList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        if (counter) counter.innerText = msgList.length;
+
+        tbody.innerHTML = msgList.map(m => {
+          const rawPhone = m.phone ? String(m.phone).replace(/\s+/g, '') : '';
+          return `
+            <tr class="hover:bg-slate-950/40 transition">
+              <td class="py-3.5 px-4 text-slate-400 whitespace-nowrap">${m.dateString || '-'}</td>
+              <td class="py-3.5 px-4 font-bold text-white">${m.fullName || '-'}</td>
+              <td class="py-3.5 px-4 text-amber-300 font-bold">
+                <a href="tel:${rawPhone}" class="hover:underline flex items-center gap-1.5">
+                  <i class="fa-solid fa-phone text-emerald-400 text-[10px]"></i> ${m.phone || '-'}
+                </a>
+              </td>
+              <td class="py-3.5 px-4 text-slate-300 max-w-xs break-words">${m.note || '-'}</td>
+              <td class="py-3.5 px-4 text-right">
+                <button onclick="deleteContactMessage('${m._key || m.id}')" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 px-2.5 py-1 rounded-lg transition text-[11px] cursor-pointer">
+                  Sil
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400">Mesajlar alınamadı: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function deleteContactMessage(msgKey) {
+      if (!confirm("Bu iletişim talebini silmek istediğinize emin misiniz?")) return;
+      try {
+        await db.ref(`contact_messages/${msgKey}`).remove();
+        loadContactMessages();
+      } catch(e) {
+        alert("Silme hatası: " + e.message);
+      }
+    }
+
+    // ================= ADMİNDEN YENİ ÜYE KAYDETME =================
     async function submitCreateUser() {
       const u = document.getElementById('addUsername').value.trim();
       const e = document.getElementById('addEmail').value.trim();
@@ -209,6 +308,8 @@
           email: e,
           password: p,
           isVip: isVip,
+          isApproved: isVip,
+          status: isVip ? 'APPROVED' : 'PENDING',
           expireDate: expireDate,
           createdAt: Date.now()
         });
@@ -224,7 +325,6 @@
       }
     }
 
-    // ŞİFRE GÖSTER / GİZLE
     function togglePasswordView(spanId) {
       const el = document.getElementById(spanId);
       if (!el) return;
@@ -237,6 +337,7 @@
       }
     }
 
+    // ================= KULLANICILARI YÜKLEME =================
     async function loadUsers() {
       const tbody = document.getElementById('userTableBody');
       tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Yükleniyor...</td></tr>`;
@@ -258,14 +359,15 @@
         const usersList = Object.keys(data).map(key => data[key]);
 
         tbody.innerHTML = usersList.map((u, idx) => {
-          const isVipUser = (u.isVip === true || u.isVip === 'true');
+          const isVipUser = (u.isVip === true || u.isVip === 'true' || u.isApproved === true);
           if (isVipUser) vipCount++; else stdCount++;
           const passId = `pass_${idx}`;
+          const mailOrTx = u.txId ? `TxID: ${u.txId.substring(0, 10)}...` : (u.email || '-');
 
           return `
             <tr class="hover:bg-slate-950/40 transition">
               <td class="py-3.5 px-4 font-bold text-white">${u.username || '-'}</td>
-              <td class="py-3.5 px-4 text-slate-400">${u.email || '-'}</td>
+              <td class="py-3.5 px-4 text-slate-400 font-mono text-[11px]" title="${u.txId || u.email || ''}">${mailOrTx}</td>
               <td class="py-3.5 px-4 text-amber-300">
                 <span id="${passId}" data-pass="${u.password || ''}" data-hidden="false" class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800 text-[11px]">${u.password || '-'}</span>
                 <button onclick="togglePasswordView('${passId}')" class="ml-1 text-slate-500 hover:text-slate-300" title="Göster/Gizle">
@@ -275,14 +377,14 @@
               <td class="py-3.5 px-4">
                 ${isVipUser 
                   ? '<span class="px-2 py-0.5 rounded-md bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold text-[10px]">VIP AKTİF</span>' 
-                  : '<span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-400 text-[10px]">STANDART</span>'}
+                  : '<span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-400 text-[10px]">ONAY BEKLİYOR</span>'}
               </td>
-              <td class="py-3.5 px-4 text-slate-400">${u.expireDate || 'Süre Yok'}</td>
+              <td class="py-3.5 px-4 text-slate-400">${u.expireDate || 'Süresiz'}</td>
               <td class="py-3.5 px-4 text-right space-x-2">
                 ${isVipUser 
-                  ? `<button onclick="toggleVip('${u.username}', false)" class="bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 px-3 py-1 rounded-lg transition text-[11px]">VIP Düşür</button>` 
-                  : `<button onclick="toggleVip('${u.username}', true)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded-lg transition text-[11px]">VIP Onayla</button>`}
-                <button onclick="deleteUser('${u.username}')" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 px-2.5 py-1 rounded-lg transition text-[11px]">Sil</button>
+                  ? `<button onclick="toggleVip('${u.username}', false)" class="bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 px-3 py-1 rounded-lg transition text-[11px] cursor-pointer">VIP Düşür</button>` 
+                  : `<button onclick="toggleVip('${u.username}', true)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded-lg transition text-[11px] cursor-pointer">VIP Onayla</button>`}
+                <button onclick="deleteUser('${u.username}')" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 px-2.5 py-1 rounded-lg transition text-[11px] cursor-pointer">Sil</button>
               </td>
             </tr>
           `;
@@ -290,7 +392,7 @@
 
         document.getElementById('vipMemberCount').innerText = vipCount;
         document.getElementById('standardMemberCount').innerText = stdCount;
-        document.getElementById('totalRevenue').innerText = `$${vipCount * 500}`;
+        document.getElementById('totalRevenue').innerText = `$${vipCount * 200}`;
       } catch (e) {
         tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-rose-400">Veritabanı okunamadı: ${e.message}</td></tr>`;
       }
@@ -307,6 +409,8 @@
 
         await db.ref(`users/${username}`).update({
           isVip: status,
+          isApproved: status,
+          status: status ? 'APPROVED' : 'PENDING',
           expireDate: expireDate
         });
 
@@ -326,7 +430,10 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', loadUsers);
+    window.addEventListener('DOMContentLoaded', () => {
+      loadContactMessages();
+      loadUsers();
+    });
   </script>
 </body>
 </html>
