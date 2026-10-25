@@ -11,7 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <!-- OCR Kütüphanesi -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <!-- HTML2CANVAS -->
+  <!-- HTML2CANVAS (Analiz Kartı PNG İndirme) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -64,7 +64,7 @@
   <!-- ANA ALAN -->
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-8">
 
-    <!-- 1. MERKEZİ AKTİF OPERASYON MASASI (BOŞA DÖNMEYEN HIZLI RADAR) -->
+    <!-- 1. MERKEZİ AKTİF OPERASYON MASASI -->
     <section class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
       <div class="absolute -right-16 -top-16 w-52 h-52 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -74,13 +74,14 @@
             <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
             <h2 class="font-display font-black text-xl text-white">🎯 CANLI OPERASYON & PATLAMA RADARI</h2>
           </div>
-          <p class="text-xs text-slate-400 font-mono mt-1">Gelen sinyaller anlık işlenir; TP/SL durumuna göre en fazla 3 saat sonra otomatik arşivlenir.</p>
+          <p class="text-xs text-slate-400 font-mono mt-1">Gelen sinyaller anlık işlenir; TP/SL durumuna göre en fazla 3 saat sonra arşivlenir.</p>
         </div>
         <div class="font-mono text-xs px-3.5 py-1.5 rounded-xl bg-slate-950 text-slate-300 border border-slate-800 flex items-center gap-2 self-start sm:self-auto">
           <i class="fa-solid fa-satellite-dish text-amber-400"></i> <span>Durum:</span> <strong id="sentinelStatusText" class="text-emerald-400">Canlı İzleniyor</strong>
         </div>
       </div>
 
+      <!-- SİNYAL VE CANLI RADAR ALANI -->
       <div id="liveSignalContainer" class="pt-6"></div>
     </section>
 
@@ -134,7 +135,6 @@
         <p class="text-slate-400 text-[11px]">Linkinle gelen her 200$ VIP satışından anında <b>60 USDT</b> kazan.</p>
       </div>
 
-      <!-- İstatistik Kutuları -->
       <div class="grid grid-cols-2 gap-2 pt-2">
         <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center">
           <span class="text-[10px] text-slate-500 block">KAYITLI DAVETLİ</span>
@@ -146,7 +146,6 @@
         </div>
       </div>
 
-      <!-- Kullanıcı Referans Linki -->
       <div class="space-y-1.5 pt-2">
         <label class="text-slate-300 font-bold block">Senin Özel Davet Linkin:</label>
         <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
@@ -158,7 +157,7 @@
       </div>
 
       <div class="p-3 bg-amber-950/20 border border-amber-500/30 rounded-xl text-[10px] text-amber-300/90 leading-relaxed">
-        💡 <b>Nasıl Çalışır?</b> Bu linki veya kullanıcı adını arkadaşlarına ver. Kayıt olup 200$ VIP aldıklarında hesabına otomatik <b>60 USDT</b> komisyon yansır.
+        💡 <b>Nasıl Çalışır?</b> Bu linki paylaş. Davetinle gelen kullanıcı 200$ VIP aldığında hesabına doğrudan <b>60 USDT</b> komisyon yansır.
       </div>
     </div>
   </div>
@@ -239,7 +238,6 @@
       const refUrl = `${origin}/index.html?ref=${currentUser}`;
       document.getElementById('myRefLinkInput').value = refUrl;
 
-      // Kullanıcının güncel kazancını ve davet sayısını Firebase'den çek
       db.ref('users/' + currentUser).once('value').then(snap => {
         const uData = snap.val() || {};
         document.getElementById('refCountDisplay').textContent = uData.totalReferredCount || 0;
@@ -264,65 +262,96 @@
       });
     }
 
-    // ================= CANLI OPERASYON, SİNYAL GEÇMİŞİ & YEDEK PİYASA RADARI =================
+    // ================= CANLI OPERASYON & SİNYAL LİSTELEME (GÜVENLİ PARSER) =================
     async function checkActiveSignals() {
       const container = document.getElementById('liveSignalContainer');
       if (!container) return;
 
       try {
-        let allTrades = {};
+        let rawData = null;
         try {
           const atRes = await fetch("https://mineora-web-default-rtdb.firebaseio.com/active_trades.json");
-          allTrades = (await atRes.json()) || {};
-        } catch(e) { allTrades = {}; }
+          rawData = await atRes.json();
+        } catch(e) { rawData = null; }
+
+        if (!rawData) {
+          showFallbackWatchlist(container);
+          return;
+        }
+
+        // Veri dizi veya nesne olsa da güvenle listeye çevir
+        let tradeList = [];
+        if (Array.isArray(rawData)) {
+          tradeList = rawData.filter(Boolean);
+        } else if (typeof rawData === 'object') {
+          tradeList = Object.keys(rawData).map(k => ({ _id: k, ...rawData[k] })).filter(Boolean);
+        }
 
         const now = Date.now();
         const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
-        const validSignalKeys = Object.keys(allTrades).filter(k => {
-          const item = allTrades[k];
-          if (!item) return false;
-          const tradeTime = item.timestamp ? new Date(item.timestamp).getTime() : (item.createdAt || now);
-          const closedTime = item.closedAt ? new Date(item.closedAt).getTime() : tradeTime;
-          const age = now - closedTime;
-          if (item.status === 'OPEN' && (now - tradeTime > THREE_HOURS_MS)) return false;
-          if (item.status !== 'OPEN' && age > THREE_HOURS_MS) return false;
-          return true;
+        const validTrades = tradeList.filter(item => {
+          if (!item || !item.symbol) return false;
+
+          let itemTime = now;
+          if (item.timestamp) {
+            itemTime = typeof item.timestamp === 'number' ? (item.timestamp < 10000000000 ? item.timestamp * 1000 : item.timestamp) : new Date(item.timestamp).getTime();
+          } else if (item.createdAt) {
+            itemTime = typeof item.createdAt === 'number' ? (item.createdAt < 10000000000 ? item.createdAt * 1000 : item.createdAt) : new Date(item.createdAt).getTime();
+          }
+
+          if (isNaN(itemTime)) itemTime = now;
+
+          const st = String(item.status || item.state || 'OPEN').toUpperCase();
+
+          if (st === 'OPEN' || st === 'ACTIVE') {
+            return (now - itemTime) <= THREE_HOURS_MS;
+          }
+
+          let closedTime = item.closedAt ? new Date(item.closedAt).getTime() : itemTime;
+          if (isNaN(closedTime)) closedTime = itemTime;
+          return (now - closedTime) <= THREE_HOURS_MS;
         });
 
-        if (validSignalKeys.length > 0) {
-          let signalsHtml = '';
-          validSignalKeys.sort((a, b) => {
-            const timeA = allTrades[a].timestamp ? new Date(allTrades[a].timestamp).getTime() : 0;
-            const timeB = allTrades[b].timestamp ? new Date(allTrades[b].timestamp).getTime() : 0;
-            return timeB - timeA;
+        // 1. Sinyaller varsa bas
+        if (validTrades.length > 0) {
+          validTrades.sort((a, b) => {
+            const tA = a.timestamp ? new Date(a.timestamp).getTime() : (a.createdAt || 0);
+            const tB = b.timestamp ? new Date(b.timestamp).getTime() : (b.createdAt || 0);
+            return (tB || 0) - (tA || 0);
           });
 
-          validSignalKeys.forEach(k => {
-            const signal = allTrades[k];
-            const isLong = signal.direction === 'LONG';
-            const pStr = signal.entryPrice < 1 ? signal.entryPrice.toFixed(6) : signal.entryPrice.toFixed(4);
-            const tp1Str = signal.tp1 < 1 ? signal.tp1.toFixed(6) : signal.tp1.toFixed(4);
-            const slStr = signal.sl < 1 ? signal.sl.toFixed(6) : signal.sl.toFixed(4);
+          let html = '';
+          validTrades.forEach(signal => {
+            const isLong = String(signal.direction || signal.side || 'LONG').toUpperCase().includes('LONG');
+            const ep = parseFloat(signal.entryPrice || signal.price || signal.entry || 0);
+            const tp1 = parseFloat(signal.tp1 || (ep * (isLong ? 1.018 : 0.982)));
+            const sl = parseFloat(signal.sl || (ep * (isLong ? 0.988 : 1.012)));
 
-            let statusBadge = '';
-            if (signal.status === 'CLOSED_TP2' || signal.tp2Hit) {
-              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🎯 HEDEF 2 TAMAMLANDI (+%3.8+)</span>';
-            } else if (signal.status === 'CLOSED_TP1' || signal.tp1Hit) {
-              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">✅ HEDEF 1 ALINDI (+%1.8)</span>';
-            } else if (signal.status === 'CLOSED_SL' || signal.slHit) {
+            const pStr = ep < 1 ? ep.toFixed(6) : ep.toFixed(4);
+            const tpStr = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
+            const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
+
+            const st = String(signal.status || signal.state || 'OPEN').toUpperCase();
+            let statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">⏳ TAKİP EDİLİYOR</span>';
+
+            if (st.includes('TP2') || signal.tp2Hit) {
+              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🎯 HEDEF 2 ALINDI</span>';
+            } else if (st.includes('TP1') || signal.tp1Hit) {
+              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">✅ HEDEF 1 ALINDI</span>';
+            } else if (st.includes('SL') || signal.slHit) {
               statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">🛑 STOP OLDU</span>';
-            } else {
-              statusBadge = '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">⏳ TAKİP EDİLİYOR</span>';
             }
 
-            signalsHtml += `
+            const cleanSym = String(signal.symbol).replace('USDT', '').replace('#', '');
+
+            html += `
               <div class="bg-slate-950 p-5 rounded-2xl border-2 ${isLong ? 'border-emerald-500/60' : 'border-rose-500/60'} space-y-4 font-mono shadow-lg">
                 <div class="flex items-center justify-between border-b border-slate-900 pb-3">
                   <div class="flex items-center gap-3">
-                    <strong class="font-display text-2xl font-black text-white">#${signal.symbol}</strong>
+                    <strong class="font-display text-2xl font-black text-white">#${cleanSym}USDT</strong>
                     <span class="text-xs px-2.5 py-0.5 rounded-lg font-bold ${isLong ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">
-                      ${signal.direction}
+                      ${isLong ? 'LONG' : 'SHORT'}
                     </span>
                   </div>
                   <div>${statusBadge}</div>
@@ -335,7 +364,7 @@
                   </div>
                   <div class="bg-emerald-950/30 p-2 rounded-xl border border-emerald-900/40">
                     <div class="text-emerald-400 text-[10px]">HEDEF (TP)</div>
-                    <strong class="text-emerald-300">$${tp1Str}</strong>
+                    <strong class="text-emerald-300">$${tpStr}</strong>
                   </div>
                   <div class="bg-rose-950/30 p-2 rounded-xl border border-rose-900/40">
                     <div class="text-rose-400 text-[10px]">STOP (SL)</div>
@@ -344,59 +373,67 @@
                 </div>
 
                 <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1">
-                  <span>Sinyal: ${signal.timestamp ? new Date(signal.timestamp).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : 'Canlı'}</span>
-                  <span>Otomatik Temizlik: 3 Saat</span>
+                  <span>Sinyal: Canlı İşlem Masası</span>
+                  <button onclick="document.getElementById('inputSearchSymbol').value='${cleanSym}'; analyzeSingleCoin('${cleanSym}');" class="text-amber-400 hover:underline">
+                    Röntgeni Aç →
+                  </button>
                 </div>
               </div>
             `;
           });
 
-          container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${signalsHtml}</div>`;
+          container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${html}</div>`;
           return;
         }
 
-        const defaultWatchlist = [
-          { symbol: "BTC", name: "Bitcoin", tag: "Piyasa Lideri", bias: "NÖTR", color: "text-amber-400" },
-          { symbol: "ETH", name: "Ethereum", tag: "Kurumsal Hacim", bias: "LONG BIAS", color: "text-emerald-400" },
-          { symbol: "SOL", name: "Solana", tag: "Yüksek Likidite", bias: "LONG BIAS", color: "text-emerald-400" },
-          { symbol: "SUI", name: "Sui Network", tag: "Balina Hareketi", bias: "VOLATİL", color: "text-sky-400" },
-          { symbol: "PEPE", name: "Pepe Memecoin", tag: "Yüksek Kaldıraç", bias: "SHORT RİSKİ", color: "text-rose-400" },
-          { symbol: "DOGE", name: "Dogecoin", tag: "Bireysel Yığılma", bias: "BEKLEMEDE", color: "text-amber-400" }
-        ];
-
-        let cardsHtml = '';
-        defaultWatchlist.forEach(item => {
-          cardsHtml += `
-            <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition font-mono space-y-3 flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-center">
-                  <strong class="text-lg font-display font-black text-white">#${item.symbol}USDT</strong>
-                  <span class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-bold ${item.color}">${item.bias}</span>
-                </div>
-                <div class="text-[11px] text-slate-400 mt-1">${item.name} • <span class="text-slate-500">${item.tag}</span></div>
-              </div>
-              <button onclick="document.getElementById('inputSearchSymbol').value='${item.symbol}'; analyzeSingleCoin('${item.symbol}');" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-slate-300 border border-slate-800 text-[11px] font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-bolt text-amber-400"></i> Röntgen Çek
-              </button>
-            </div>
-          `;
-        });
-
-        container.innerHTML = `
-          <div class="space-y-4">
-            <div class="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
-              <span>⚡ RADARDAKİ ÖNCELİKLİ PARİTELER (Anlık Analiz İçin Tıkla):</span>
-              <span class="text-[11px] text-emerald-400 font-bold">7/24 Aktif Tarama</span>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              ${cardsHtml}
-            </div>
-          </div>
-        `;
+        // 2. Aktif sinyal yoksa yedek radarı göster
+        showFallbackWatchlist(container);
 
       } catch (err) {
-        console.error("Radar kontrol hatası:", err);
+        console.error("Sinyal çözümleme hatası:", err);
+        showFallbackWatchlist(container);
       }
+    }
+
+    function showFallbackWatchlist(container) {
+      const defaultWatchlist = [
+        { symbol: "BTC", name: "Bitcoin", tag: "Piyasa Lideri", bias: "NÖTR", color: "text-amber-400" },
+        { symbol: "ETH", name: "Ethereum", tag: "Kurumsal Hacim", bias: "LONG BIAS", color: "text-emerald-400" },
+        { symbol: "SOL", name: "Solana", tag: "Yüksek Likidite", bias: "LONG BIAS", color: "text-emerald-400" },
+        { symbol: "SUI", name: "Sui Network", tag: "Balina Hareketi", bias: "VOLATİL", color: "text-sky-400" },
+        { symbol: "PEPE", name: "Pepe Memecoin", tag: "Yüksek Kaldıraç", bias: "SHORT RİSKİ", color: "text-rose-400" },
+        { symbol: "DOGE", name: "Dogecoin", tag: "Bireysel Yığılma", bias: "BEKLEMEDE", color: "text-amber-400" }
+      ];
+
+      let cardsHtml = '';
+      defaultWatchlist.forEach(item => {
+        cardsHtml += `
+          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition font-mono space-y-3 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center">
+                <strong class="text-lg font-display font-black text-white">#${item.symbol}USDT</strong>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-bold ${item.color}">${item.bias}</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1">${item.name} • <span class="text-slate-500">${item.tag}</span></div>
+            </div>
+            <button onclick="document.getElementById('inputSearchSymbol').value='${item.symbol}'; analyzeSingleCoin('${item.symbol}');" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-slate-300 border border-slate-800 text-[11px] font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-bolt text-amber-400"></i> Röntgen Çek
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+            <span>⚡ RADARDAKİ ÖNCELİKLİ PARİTELER (Anlık Analiz İçin Tıkla):</span>
+            <span class="text-[11px] text-emerald-400 font-bold">7/24 Aktif Tarama</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            ${cardsHtml}
+          </div>
+        </div>
+      `;
     }
 
     // ================= X-RAY & HİBRİT SİNYAL DOĞRULAYICI (BINANCE + BITGET) =================
