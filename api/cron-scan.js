@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_CHANNEL_ID = "-1003180299696"; // Telegram Kanalın
+    const TG_CHANNEL_ID = "-1003180299696"; // Senin Ana Telegram Kanalın
     const TG_ADMIN_ID = "6457294906";     // Yönetici Özel Sohbetin
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       parseFloat(t.usdtVolume || 0) >= 600000
     );
 
-    // 2. Firebase Kontrolü (Hata verse de akışı durdurmaz)
+    // 2. Firebase Aktif İşlemleri Oku
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takip edilen açık işlem bulunuyor." });
     }
 
-    // 3. ANLIK TAPE AKIŞI VE DİP/TEPE DÖNÜŞ TARAMASI
+    // 3. Emir Akışı ve Dönüş Taraması
     let candidate = null;
     let direction = null;
 
@@ -85,9 +85,7 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      // Dip Bölge & Agresif Alıcı Akını
       const isEarlyLong = (rangePosition <= 0.40) && (buyPct >= 55);
-      // Tepe Bölge & Satış Dağıtımı
       const isEarlyShort = (rangePosition >= 0.65) && (buyPct <= 44);
 
       if (isEarlyLong) {
@@ -107,7 +105,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "SCANNING", message: "Uygun işlem taranıyor." });
     }
 
-    // 4. Hedefler & Stop
+    // 4. Seviyeleri Belirle
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
@@ -128,25 +126,21 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase'e Yaz (Hata verse de devam eder)
-    try {
-      await Promise.all([
-        fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newTrade)
-        }),
-        fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(now)
-        })
-      ]);
-    } catch (fbErr) {
-      console.warn("Firebase uyarısı:", fbErr);
-    }
+    // 5. Firebase'e Yaz
+    await Promise.all([
+      fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTrade)
+      }),
+      fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(now)
+      })
+    ]).catch(() => {});
 
-    // 6. TELEGRAM BİLDİRİMİNİ FIRLAT (KANAL VE YÖNETİCİ)
+    // 6. TELEGRAM KANALINA VE YÖNETİCİYE GÖNDER
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
@@ -164,18 +158,19 @@ export default async function handler(req, res) {
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: mineoragame.com</i>`;
 
-    await Promise.all([
-      fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgMsg, parse_mode: 'HTML' })
-      }),
-      fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: tgMsg, parse_mode: 'HTML' })
-      })
-    ]).catch(() => {});
+    // Önce kanala gönder
+    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgMsg, parse_mode: 'HTML' })
+    }).catch(() => {});
+
+    // Ardından özel sohbete gönder
+    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: tgMsg, parse_mode: 'HTML' })
+    }).catch(() => {});
 
     return res.status(200).json({ success: true, trade: newTrade });
 
