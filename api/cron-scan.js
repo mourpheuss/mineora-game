@@ -6,13 +6,13 @@ export default async function handler(req, res) {
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_CHANNEL_ID = "-1003180299696"; // Ana Telegram Kanalın
-    const TG_ADMIN_ID = "6457294906";     // Yönetici Özel Bildirimi
+    const TG_CHANNEL_ID = "-1003180299696"; // Telegram Kanalın
+    const TG_ADMIN_ID = "6457294906";     // Yönetici Sohbetin
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
     const now = Date.now();
 
-    // 1. Bitget Ticker Verilerini Çek
+    // 1. Bitget Vadeli Ticker Verilerini Çek
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
     const tickersJson = await tickersRes.json();
 
@@ -21,13 +21,14 @@ export default async function handler(req, res) {
     }
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
+    // Hacim eşiği 600K USDT'ye çekildi (Daha canlı ve erken tepki)
     const pool = tickersJson.data.filter(t => 
       t.symbol.endsWith("USDT") && 
       !EXCLUDED.includes(t.symbol) && 
-      parseFloat(t.usdtVolume || 0) >= 800000
+      parseFloat(t.usdtVolume || 0) >= 600000
     );
 
-    // 2. Firebase Aktif İşlem ve Son Sinyal Kontrolü
+    // 2. Firebase Aktif İşlemleri ve Kilitleri Oku
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -42,7 +43,6 @@ export default async function handler(req, res) {
       lastSignals = {};
     }
 
-    // Açık işlem kontrolü
     const hasOpenTrade = Object.values(activeTrades).some(t => {
       if (!t || t.status !== 'OPEN') return false;
       const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takip edilen açık işlem bulunuyor." });
     }
 
-    // 3. Ham Tape / Emir Akışı Taraması
+    // 3. ANLIK EMİR AKIŞI VE DİP/TEPE DÖNÜŞ MOTORU
     let candidate = null;
     let direction = null;
 
@@ -68,6 +68,7 @@ export default async function handler(req, res) {
 
       const rangePosition = (price - low24) / (high24 - low24);
 
+      // Son 40 işlemin ham veri akışı
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=40`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -86,18 +87,19 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      // LONG: Fiyat günün alt çeyreğinde ve piyasa alıcıları agresif (%62+ alım)
-      const isEarlyLongReversal = (rangePosition <= 0.35) && (buyPct >= 62);
-      // SHORT: Fiyat günün üst çeyreğinde ve ani satış baskısı başladı (%38 altı alım)
-      const isEarlyShortReversal = (rangePosition >= 0.70) && (buyPct <= 38);
+      // LONG: Fiyat dip bölgede (<= 0.40) ve piyasa alıcıları agresif (%55+ alım)
+      const isEarlyLong = (rangePosition <= 0.40) && (buyPct >= 55);
 
-      if (isEarlyLongReversal) {
+      // SHORT: Fiyat tepe bölgede (>= 0.65) ve satış baskısı başladı (%44 altı alım)
+      const isEarlyShort = (rangePosition >= 0.65) && (buyPct <= 44);
+
+      if (isEarlyLong) {
         candidate = item;
         direction = 'LONG';
         break;
       }
 
-      if (isEarlyShortReversal) {
+      if (isEarlyShort) {
         candidate = item;
         direction = 'SHORT';
         break;
@@ -105,10 +107,10 @@ export default async function handler(req, res) {
     }
 
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Uygun sinyal taranıyor." });
+      return res.status(200).json({ status: "SCANNING", message: "Ham emir akışı ve dip/tepe likidite dönüşü taranıyor." });
     }
 
-    // 4. Seviye Hesapları
+    // 4. Seviyeler
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
@@ -144,26 +146,26 @@ export default async function handler(req, res) {
     ]);
 
     if (!fbRes1.ok) {
-      return res.status(500).json({ error: "Firebase veritabanı kayıt hatası." });
+      return res.status(500).json({ error: "Firebase kayıt hatası." });
     }
 
-    // 6. Kanala ve Yöneticiye Gönder
+    // 6. Hem Kanala Hem Sana Gönder
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
 
-    const tgMsg = `🎯 <b>MINEORA SENTINEL | DOĞRULANMIŞ SİNYAL</b>\n` +
+    const tgMsg = `🎯 <b>MINEORA SENTINEL | KURUMSAL DOĞRULANMIŞ SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidate.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Dönüşü)' : '🔴 SHORT (Tepe Dağıtımı)'}\n` +
+                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Likidite Tepkisi)' : '🔴 SHORT (Tepe Dağıtımı)'}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hedef 1:</b> <code>$${tp1Str}</code> (+%1.8)\n` +
                   `🚀 <b>Hedef 2:</b> <code>$${tp2Str}</code> (+%3.8)\n` +
                   `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code> (-%1.2)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `⚡ <i>Canlı Radar & Panel: mineoragame.com</i>`;
+                  `⚡ <i>Canlı Terminal: mineoragame.com</i>`;
 
     await Promise.all([
       fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
