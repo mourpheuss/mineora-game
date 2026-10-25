@@ -40,11 +40,11 @@
         </a>
 
         <div id="guestNav" class="flex items-center gap-2">
-          <button onclick="openModal('loginModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs px-3.5 py-1.5 rounded-xl transition border border-slate-700">
+          <button onclick="openModal('loginModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs px-3.5 py-1.5 rounded-xl transition border border-slate-700 cursor-pointer">
             Giriş Yap
           </button>
-          <button onclick="openModal('registerModal')" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-3.5 py-1.5 rounded-xl transition shadow">
-            Kayıt Ol
+          <button onclick="openModal('registerModal')" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-3.5 py-1.5 rounded-xl transition shadow cursor-pointer">
+            VIP Kayıt Ol
           </button>
         </div>
 
@@ -77,7 +77,7 @@
         RSI ve gecikmeli indikatörleri geride bırakın. WOB derinlik dengesizliği, Kümülatif Hacim Deltası ve Açık Pozisyon (OI) tespitiyle kurumsal likidite avı.
       </p>
       <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
-        <button onclick="goToTerminalProtected()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-black px-6 py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
+        <button onclick="goToTerminalProtected()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-black px-6 py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer">
           <i class="fa-solid fa-bolt"></i> <span>Terminale Gir</span>
         </button>
         <a href="https://t.me/mineorabalina" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-mono text-xs font-bold px-6 py-3 rounded-2xl transition flex items-center gap-2">
@@ -93,7 +93,7 @@
           <i class="fa-brands fa-telegram"></i>
         </div>
         <div>
-          <div class="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase mb-0.5">
+          <div class="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold uppercase mb-0.5">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Tamamen Ücretsiz Sinyaller
           </div>
           <h2 class="font-display font-black text-white text-base sm:text-lg">Mineora Balina VIP Sinyal Kanalı</h2>
@@ -105,7 +105,7 @@
       </a>
     </section>
 
-    <!-- 🎯 İĞNE TAHMİNLERİ & LİKİDASYON MIKNATISI ALANI (GERİ GETİRİLDİ) -->
+    <!-- 🎯 CANLI İĞNE TAHMİNLERİ (LİKİDASYON MIKNATISI) -->
     <section class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
@@ -122,7 +122,6 @@
         </div>
       </div>
 
-      <!-- İĞNE KARTLARI LİSTESİ -->
       <div id="wickSignalsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
         <div class="p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center text-slate-500 col-span-3">
           <i class="fa-solid fa-spinner fa-spin text-amber-400 mr-2"></i> İğne tahminleri ve likidasyon havuzları hesaplanıyor...
@@ -162,7 +161,7 @@
       </div>
       <form onsubmit="handleLoginSubmit(event)" class="space-y-3 pt-2">
         <div>
-          <label class="text-slate-400 block mb-1">Kullanıcı Adı veya E-posta:</label>
+          <label class="text-slate-400 block mb-1">Kullanıcı Adı:</label>
           <input type="text" id="loginUsername" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="Kullanıcı adınız..." />
         </div>
         <div>
@@ -170,37 +169,75 @@
           <input type="password" id="loginPassword" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="••••••••" />
         </div>
         <div id="loginError" class="text-rose-400 text-[11px] hidden"></div>
-        <button type="submit" id="btnLoginSubmit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition">Giriş Yap</button>
+        <button type="submit" id="btnLoginSubmit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition cursor-pointer">Giriş Yap</button>
       </form>
       <div class="text-center text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
-        Hesabınız yok mu? <button onclick="switchModal('loginModal', 'registerModal')" class="text-amber-400 font-bold hover:underline">Kayıt Olun</button>
+        Hesabınız yok mu? <button onclick="switchModal('loginModal', 'registerModal')" class="text-amber-400 font-bold hover:underline cursor-pointer">VIP Kayıt Olun</button>
       </div>
     </div>
   </div>
 
-  <!-- KAYIT OL MODAL -->
-  <div id="registerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
+  <!-- VIP KAYIT OL & USDT ÖDEME MODALI (ORİJİNAL MİMARİ GERİ GETİRİLDİ) -->
+  <div id="registerModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs my-8">
       <button onclick="closeModal('registerModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+      
       <div class="text-center space-y-1">
-        <div class="w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2"><i class="fa-solid fa-user-plus"></i></div>
-        <h3 class="font-display font-black text-lg text-white">Kayıt Ol</h3>
-        <p class="text-slate-400 text-[11px]">Ücretsiz hesabınızı oluşturup terminali kullanın.</p>
+        <div class="w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-1">
+          <i class="fa-solid fa-gem"></i>
+        </div>
+        <h3 class="font-display font-black text-lg text-white">Mineora Sentinel VIP Lisansı</h3>
+        <p class="text-slate-400 text-[11px]">Ömür boyu sınırsız erişim & otomatik bot entegrasyonu.</p>
       </div>
-      <form onsubmit="handleRegisterSubmit(event)" class="space-y-3 pt-2">
+
+      <!-- FİYAT VE TETHER ÖDEME BİLGİSİ KUTUSU -->
+      <div class="bg-slate-950 p-4 rounded-2xl border border-emerald-500/40 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-slate-400">VIP Lisans Bedeli:</span>
+          <strong class="text-base text-emerald-400 font-display font-bold">200 USDT</strong>
+        </div>
+        
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-slate-400 uppercase font-bold">TETHER (USDT) AĞI:</span>
+            <span class="bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold">TRC-20 (Tron)</span>
+          </div>
+          
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-2 rounded-xl">
+            <input type="text" id="usdtAddressDisplay" readonly value="TGC8B2Z3kXjU9fVdYrA88sK5zQW4yK2XYZ" class="bg-transparent text-amber-300 text-[10px] w-full focus:outline-none select-all font-mono" />
+            <button type="button" onclick="copyUsdtAddress()" id="btnCopyUsdt" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1 rounded-lg transition text-[10px] shrink-0 cursor-pointer">
+              Kopyala
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-500 italic">* Lütfen yalnızca USDT (TRC-20) ağından gönderim yapınız.</p>
+        </div>
+      </div>
+
+      <!-- KAYIT VE TXID FORMU -->
+      <form onsubmit="handleRegisterSubmit(event)" class="space-y-3">
         <div>
-          <label class="text-slate-400 block mb-1">Kullanıcı Adı:</label>
-          <input type="text" id="regUsername" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="Kullanıcı adı..." />
+          <label class="text-slate-400 block mb-1">Kullanıcı Adı Seçin:</label>
+          <input type="text" id="regUsername" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="Kullanıcı adınız..." />
         </div>
         <div>
-          <label class="text-slate-400 block mb-1">Şifre:</label>
+          <label class="text-slate-400 block mb-1">Şifre Belirleyin:</label>
           <input type="password" id="regPassword" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-white focus:outline-none focus:border-amber-500" placeholder="En az 6 karakter..." />
         </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Ödeme İşlem Kodu (TxID / Hash):</label>
+          <input type="text" id="regTxId" required class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 w-full text-amber-300 focus:outline-none focus:border-amber-500 text-[11px]" placeholder="Örn: 4a2b9c7d8e..." />
+        </div>
+
         <div id="regError" class="text-rose-400 text-[11px] hidden"></div>
-        <button type="submit" id="btnRegSubmit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition">Hesap Oluştur</button>
+        <div id="regSuccess" class="text-emerald-400 text-[11px] bg-emerald-950/40 border border-emerald-900 p-3 rounded-xl hidden leading-relaxed"></div>
+
+        <button type="submit" id="btnRegSubmit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-500/20">
+          Ödemeyi Bildir & Onaya Gönder
+        </button>
       </form>
+
       <div class="text-center text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
-        Zaten hesabınız var mı? <button onclick="switchModal('registerModal', 'loginModal')" class="text-emerald-400 font-bold hover:underline">Giriş Yapın</button>
+        Zaten onaylı hesabınız var mı? <button onclick="switchModal('registerModal', 'loginModal')" class="text-emerald-400 font-bold hover:underline cursor-pointer">Giriş Yapın</button>
       </div>
     </div>
   </div>
@@ -254,7 +291,16 @@
       openModal(toId);
     }
 
-    // GİRİŞ İŞLEMİ
+    function copyUsdtAddress() {
+      const input = document.getElementById('usdtAddressDisplay');
+      navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById('btnCopyUsdt');
+        btn.textContent = "Kopyalandı!";
+        setTimeout(() => { btn.textContent = "Kopyala"; }, 2000);
+      });
+    }
+
+    // ================= GİRİŞ İŞLEMİ (ONAY KONTROLLÜ) =================
     async function handleLoginSubmit(e) {
       e.preventDefault();
       const u = document.getElementById('loginUsername').value.trim().toLowerCase();
@@ -274,8 +320,16 @@
           return;
         }
 
+        // YÖNETİCİ HESABI DEĞİLSE ONAY KONTROLÜ YAP
+        const isAdmin = ['mourpheus', 'ersinulasduzyol@gmail.com'].includes(u);
+        if (!isAdmin && userData.isApproved !== true) {
+          err.innerHTML = `⚠️ <b>Hesabınız henüz onaylanmadı.</b><br>USDT transferiniz yönetici tarafından inceleniyor. Onaylandığında giriş yapabilirsiniz.`;
+          err.classList.remove('hidden');
+          return;
+        }
+
         sessionStorage.setItem('currentUser', u);
-        if (['mourpheus', 'ersinulasduzyol@gmail.com'].includes(u)) {
+        if (isAdmin) {
           sessionStorage.setItem('isAdmin', 'true');
         }
 
@@ -288,25 +342,41 @@
       }
     }
 
-    // KAYIT İŞLEMİ
+    // ================= KAYIT İŞLEMİ (ONAY BEKLEYEN MİMARİ) =================
     async function handleRegisterSubmit(e) {
       e.preventDefault();
       const u = document.getElementById('regUsername').value.trim().toLowerCase();
       const p = document.getElementById('regPassword').value.trim();
+      const tx = document.getElementById('regTxId').value.trim();
       const err = document.getElementById('regError');
+      const succ = document.getElementById('regSuccess');
+      const btn = document.getElementById('btnRegSubmit');
+      
       err.classList.add('hidden');
+      succ.classList.add('hidden');
 
       if (u.length < 3 || p.length < 6) {
-        err.textContent = "Kullanıcı adı en az 3, şifre en az 6 karakter olmalı!";
+        err.textContent = "Kullanıcı adı en az 3, şifre en az 6 karakter olmalıdır!";
         err.classList.remove('hidden');
         return;
       }
+
+      if (!tx || tx.length < 8) {
+        err.textContent = "Lütfen geçerli bir USDT TxID (İşlem Kodu) giriniz!";
+        err.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Kayıt Bildiriliyor...`;
 
       try {
         const snap = await db.ref(`users/${u}`).once('value');
         if (snap.exists()) {
           err.textContent = "Bu kullanıcı adı zaten alınmış!";
           err.classList.remove('hidden');
+          btn.disabled = false;
+          btn.innerHTML = `Ödemeyi Bildir & Onaya Gönder`;
           return;
         }
 
@@ -314,9 +384,14 @@
         const urlParams = new URLSearchParams(window.location.search);
         const refBy = urlParams.get('ref') || null;
 
+        // VERİTABANINA ONAY BEKLİYOR OLARAK KAYDET
         await db.ref(`users/${u}`).set({
           username: u,
           password: p,
+          txId: tx,
+          plan: 'VIP_LIFETIME',
+          isApproved: false, // SEN ONAY VERENE KADAR FALSE
+          status: 'PENDING',
           createdAt: Date.now(),
           referredBy: refBy
         });
@@ -325,13 +400,24 @@
           db.ref(`users/${refBy}/totalReferredCount`).transaction(c => (c || 0) + 1);
         }
 
-        sessionStorage.setItem('currentUser', u);
-        closeModal('registerModal');
-        checkAuthStatus();
-        window.location.href = 'dashboard.html';
+        succ.innerHTML = `✅ <b>Kayıt ve ödeme bildiriminiz alındı!</b><br>TxID kodunuz yönetici masasına iletildi. Onay verildikten sonra belirlediğiniz bilgilerle giriş yapabilirsiniz.`;
+        succ.classList.remove('hidden');
+        
+        document.getElementById('regUsername').value = '';
+        document.getElementById('regPassword').value = '';
+        document.getElementById('regTxId').value = '';
+
+        setTimeout(() => {
+          closeModal('registerModal');
+          openModal('loginModal');
+        }, 4000);
+
       } catch (error) {
         err.textContent = "Kayıt hatası: " + error.message;
         err.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `Ödemeyi Bildir & Onaya Gönder`;
       }
     }
 
@@ -353,13 +439,11 @@
         let html = '';
         filtered.forEach(coin => {
           const p = parseFloat(coin.lastPr || 0);
-          const h = parseFloat(coin.high24h || 0);
-          const l = parseFloat(coin.low24h || 0);
           const fr = parseFloat(coin.fundingRate || 0);
           const frPct = (fr * 100).toFixed(4);
 
           // Likidasyon İğne Çekim Seviyesi Hesabı
-          const isUpWick = fr < 0; // Shortçular ağır basıyorsa yukarı iğne mıknatısı
+          const isUpWick = fr < 0;
           const magnetPrice = isUpWick ? p * 1.022 : p * 0.978;
           const magnetDist = isUpWick ? "+%2.2" : "-%2.2";
 
@@ -386,7 +470,7 @@
               </div>
               <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-900">
                 <span>Fonlama Oranı: <b class="${fr < 0 ? 'text-emerald-400' : 'text-rose-400'}">${frPct}%</b></span>
-                <button onclick="goToTerminalProtected()" class="text-amber-400 hover:underline">Röntgen Çek &rarr;</button>
+                <button onclick="goToTerminalProtected()" class="text-amber-400 hover:underline cursor-pointer">Röntgen Çek &rarr;</button>
               </div>
             </div>
           `;
