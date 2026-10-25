@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
     const LOCK_WINDOW_MS = 45 * 60 * 1000;
-    const SAME_COIN_LOCK_MS = 40 * 60 * 1000; // 40 dk dinamik kilit
+    const SAME_COIN_LOCK_MS = 40 * 60 * 1000;
     const now = Date.now();
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
                        `🏁 <b>Kapanış:</b> <code>$${curPriceStr}</code>\n` +
                        `🏆 <b>Net Kâr:</b> <b>+%2.00</b> <i>(10x: +%20 | 20x: +%40)</i>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                       `✨ <i>Seviye hedefi tam başarıyla tamamlandı.</i>\n` +
+                       `✨ <i>Seviye tepki operasyonu başarıyla tamamlandı.</i>\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `⚡ <b>Anlık Fiyat:</b> <code>$${curPriceStr}</code>\n` +
                        `💰 <b>Kâr:</b> <b>+%1.00</b> <i>(Pozisyonun %50'si kârla kapatılabilir)</i>\n` +
-                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss başa baş seviyesine çekildi. Risk sıfırlandı!\n` +
+                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss başabaş seviyesine çekildi. Risk sıfırlandı!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -141,7 +141,7 @@ export default async function handler(req, res) {
                         `🛑 <b>Çıkış:</b> <code>$${curPriceStr}</code>\n` +
                         `📉 <b>Zarar-Kes:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : 'Seviye İhlali Koruma Çıkışı'}\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `🛡️ <i>Sermaye korundu. Yeni majör fırsat taranıyor.</i>`;
+                        `🛡️ <i>Sermaye korundu. Yeni majör seviye taranıyor.</i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: TÜM HAVUZ (600K+ HACİM) 15M DESTEK/DİRENÇ + MİKRO TETİK MOTORU
+    // MODÜL 2: TÜM HAVUZ (600K+ HACİM) 15M DESTEK/DİRENÇ + PARABOLİK KALKAN
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -199,10 +199,13 @@ export default async function handler(req, res) {
 
     let candidateTrade = null;
 
-    // TÜM HAVUZU TARA (Sınır yok)
+    // TÜM HAVUZU TARA
     for (const item of pool) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
+
+      // 24 SAATLİK DEĞİŞİM ORANI (PARABOLİK PUMP/DUMP KALKANI)
+      const chg24h = parseFloat(item.change24h || 0) * 100;
 
       // 1. ADIM: 15 DAKİKALIK MUMLAR (DESTEK & DİRENÇ HARİTASI)
       const candles15mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=15m&limit=35`, { headers: browserHeaders })
@@ -231,7 +234,13 @@ export default async function handler(req, res) {
       const isAtSupport = (cur15m.low <= majorSupport15m * 1.004) && (cur15m.close >= majorSupport15m * 0.997);
       const isAtResistance = (cur15m.high >= majorResistance15m * 0.996) && (cur15m.close <= majorResistance15m * 1.003);
 
-      if (!isAtSupport && !isAtResistance) continue; // Boşluktaki pariteler elenir
+      if (!isAtSupport && !isAtResistance) continue;
+
+      // PARABOLİK TREND KORUMASI:
+      // - 24 saatte %8'den fazla fırlamışsa ASLA SHORT açma (CAPUSDT hatası)
+      // - 24 saatte %8'den fazla çökmüşse ASLA LONG açma (Düşen bıçak)
+      if (isAtResistance && chg24h >= 8.0) continue;
+      if (isAtSupport && chg24h <= -8.0) continue;
 
       // 2. ADIM: 1 DAKİKALIK MİKRO TAHTA & Z-SCORE
       const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=20`, { headers: browserHeaders })
@@ -276,7 +285,7 @@ export default async function handler(req, res) {
       const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
       const fundingRate = parseFloat(item.fundingRate || 0);
 
-      // ================= SENARYO A: DESTEKTEN LONG =================
+      // ================= SENARYO A: DESTEKTEN LONG (ICNT MODELİ) =================
       if (isAtSupport && takerBuyRatio >= 68 && fundingRate <= 0.006) {
         candidateTrade = {
           symbol: item.symbol,
@@ -290,7 +299,7 @@ export default async function handler(req, res) {
         break;
       }
 
-      // ================= SENARYO B: DİRENÇTEN SHORT =================
+      // ================= SENARYO B: DİRENÇTEN SHORT (DENGELİ DİRENÇ MODELİ) =================
       if (isAtResistance && takerBuyRatio <= 32 && fundingRate >= 0.002) {
         candidateTrade = {
           symbol: item.symbol,
