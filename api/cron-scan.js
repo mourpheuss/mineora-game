@@ -207,20 +207,20 @@ export default async function handler(req, res) {
       }
     }
 
-    // Likidite Filtresi: $500k üzeri USDT vadeli pariteler
+    // Likidite Filtresi: En az $2.500.000 hacimli tahtalar (Sığ tahtalar elenir)
     const liquidPool = json.data.filter(t => {
       return t.symbol.endsWith("USDT") &&
              !EXCLUDED.includes(t.symbol) &&
-             parseFloat(t.usdtVolume || 0) >= 500000;
+             parseFloat(t.usdtVolume || 0) >= 2500000;
     });
 
     const candidateSignals = [];
 
-    // LONG Adayları: Fonlama <= -0.05% (-0.0005) ve fiyat taban bölgede
+    // LONG Adayları: Fonlama <= -0.04% (-0.0004) ve 24s Değişim sakin
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-      return funding <= -0.0005 && chg >= -8.0 && chg <= 12.0;
+      return funding <= -0.0004 && chg >= -10.0 && chg <= 12.0;
     }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate));
 
     longCandidates.forEach(c => candidateSignals.push({ item: c, direction: 'LONG' }));
@@ -229,8 +229,8 @@ export default async function handler(req, res) {
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-      if (chg > 45.0 || funding <= 0.0001) return false;
-      return (chg >= 10.0 && chg <= 45.0 && funding >= 0.0003) || (funding >= 0.0006 && chg >= 6.0);
+      if (chg > 50.0 || funding <= 0.0001) return false;
+      return (chg >= 12.0 && chg <= 45.0 && funding >= 0.0003) || (funding >= 0.0006 && chg >= 6.0);
     }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
 
     shortCandidates.forEach(c => candidateSignals.push({ item: c, direction: 'SHORT' }));
@@ -238,7 +238,7 @@ export default async function handler(req, res) {
     const sentSymbols = [];
 
     // ====================================================
-    // 4. KESİN KIRILIM VE MİKRO-FİTİL TETİK MOTORU (1 KALA)
+    // 4. 15 DAKİKALIK DİRENÇ/DESTEK KIRILIMI & SIKIŞMA MOTORU
     // ====================================================
     for (const signal of candidateSignals) {
       const item = signal.item;
@@ -257,45 +257,52 @@ export default async function handler(req, res) {
       const chg = parseFloat(item.change24h || 0) * 100;
       const volM = (parseFloat(item.usdtVolume || 0) / 1000000).toFixed(2);
 
-      // --- 1. AŞAMA: 1 DAKİKALIK MUM (KLINE) İVME TEYİDİ ---
-      let isCandleTriggered = false;
+      // --- AŞAMA 1: SON 15-20 DAKİKALIK MUM GEÇMİŞİ VE KIRILIM ---
+      let isStructureBreak = false;
       try {
-        const klineRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=1m&limit=5`);
+        const klineRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=1m&limit=20`);
         const klineJson = await klineRes.json();
         
-        if (klineJson.code === "00000" && Array.isArray(klineJson.data) && klineJson.data.length >= 2) {
-          const currentCandle = klineJson.data[0];
-          const cOpen = parseFloat(currentCandle[1]);
-          const cClose = parseFloat(currentCandle[4]);
-          const candleChangePct = ((cClose - cOpen) / cOpen) * 100;
+        if (klineJson.code === "00000" && Array.isArray(klineJson.data) && klineJson.data.length >= 15) {
+          const candles = klineJson.data; // [0: canlı mum, 1: son kapanan, 2..15: geçmiş]
+          
+          let prevHigh = 0;
+          let prevLow = 999999999;
+
+          // Son 15 dakikanın (canlı mum hariç) tepe ve dip sınırları
+          for (let i = 1; i <= 15; i++) {
+            const h = parseFloat(candles[i][2]);
+            const l = parseFloat(candles[i][3]);
+            if (h > prevHigh) prevHigh = h;
+            if (l < prevLow) prevLow = l;
+          }
 
           if (dir === 'LONG') {
-            // Son 1 dakikalık mum +%0.35 ile +%0.90 arasında yeşil yakmış olmalı (İlk sıçrama anı!)
-            if (candleChangePct >= 0.35 && candleChangePct <= 0.90) {
-              isCandleTriggered = true;
+            // Şart: Fiyat son 15 dakikanın en yüksek tavanını kırmış veya üzerine çıkmış olmalı!
+            // Aynı zamanda tavanın %0.80'den fazla uzağına fırlamamış olmalı (Tren henüz kalkıyor!)
+            if (price >= prevHigh && price <= (prevHigh * 1.008)) {
+              isStructureBreak = true;
             }
           } else {
-            // SHORT için son 1 dakikalık mum -%0.35 ile -%0.90 arasında kırmızı yakmış olmalı
-            if (candleChangePct <= -0.35 && candleChangePct >= -0.90) {
-              isCandleTriggered = true;
+            // SHORT için son 15 dakikanın tabanını aşağı kırmış olmalı
+            if (price <= prevLow && price >= (prevLow * 0.992)) {
+              isStructureBreak = true;
             }
           }
         }
       } catch (err) {
-        isCandleTriggered = false;
+        isStructureBreak = false;
       }
 
-      // Fiyat tabandan kafasını kaldırmadıysa (BTW gibi yatayda uyuyorsa) ASLA SİNYAL VERME!
-      if (!isCandleTriggered) {
+      // Direnç/Destek kırılmadıysa (parite yatayda testere yapıyorsa) ASLA SİNYAL ATMA!
+      if (!isStructureBreak) {
         continue;
       }
 
-      // --- 2. AŞAMA: DERİNLİK & GERÇEK TAPE SÜZGEÇLERİ ---
+      // --- AŞAMA 2: DERİNLİK & GERÇEK TAPE SÜZGEÇLERİ ---
       let fills = [];
       let realWhaleVolume = 0;
       let totalFillsVolume = 0;
-      let totalBuyVolume = 0;
-      let totalSellVolume = 0;
       let realOIUsd = 0;
       let wickTarget = dir === 'LONG' ? price * 0.990 : price * 1.015;
 
@@ -311,13 +318,7 @@ export default async function handler(req, res) {
           fills.forEach(f => {
             const notional = parseFloat(f.price || 0) * parseFloat(f.size || 0);
             totalFillsVolume += notional;
-            if (f.side === 'buy') {
-              totalBuyVolume += notional;
-              if (notional >= 1200) realWhaleVolume += notional;
-            } else {
-              totalSellVolume += notional;
-              if (notional >= 1200) realWhaleVolume += notional;
-            }
+            if (notional >= 1200) realWhaleVolume += notional;
           });
         }
 
@@ -356,7 +357,7 @@ export default async function handler(req, res) {
         dynamicFuel = Math.round(Math.min(96, Math.max(10, 50 - (rawFunding * 8000))));
       }
 
-      const dynamicScore = Math.min(98, Math.max(75, Math.round((realWhalePct * 0.6) + (dynamicFuel * 0.4))));
+      const dynamicScore = Math.min(98, Math.max(78, Math.round((realWhalePct * 0.6) + (dynamicFuel * 0.4))));
 
       // Kilitleri mühürle
       memoryLocks[symbol] = now;
@@ -424,17 +425,17 @@ export default async function handler(req, res) {
       const oiStr = realOIUsd > 0 ? `$${(realOIUsd / 1000000).toFixed(2)}M` : 'Aktif';
 
       const isLong = dir === 'LONG';
-      const msg = `🚀 <b>MINEORA SENTINEL | ANLIK HAREKET BAŞLADI (1 KALA TETİĞİ)</b>\n` +
+      const msg = `🎯 <b>MINEORA SENTINEL | 15M DİRENÇ KIRILIMI & PATLAMA</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
-                  `${isLong ? '🟢 <b>YÖN:</b> <b>LONG (1M MUMU FIRLADI / PUMP BAŞLADI) 🚀</b>' : '🔴 <b>YÖN:</b> <b>SHORT (1M MUMU ÇÖKTÜ / DUMP BAŞLADI) 🩸</b>'}\n` +
+                  `${isLong ? '🟢 <b>YÖN:</b> <b>LONG (15M TAVANI DELİNDİ / YÜRÜYÜŞ BAŞLIYOR) 🚀</b>' : '🔴 <b>YÖN:</b> <b>SHORT (15M TABANI ÇÖKTÜ / DUMP GELİYOR) 🩸</b>'}\n` +
                   `📊 <b>Giriş Fiyatı:</b> <code>$${pEntry}</code> (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)\n` +
                   `⚡ <b>Fonlama:</b> <code>${fundingPct}%</code> | <b>Hacim:</b> <code>$${volM}M</code>\n` +
                   `📊 <b>Açık Pozisyon (OI):</b> <code>${oiStr}</code>\n\n` +
-                  `🔬 <b>ANLIK KIVILCIM VERİLERİ:</b>\n` +
-                  `🕯️ <b>1 Dakikalık İvme:</b> <code>%0.35+ Canlı Kırılım Teyit Edildi</code>\n` +
+                  `🔬 <b>PİYASA YAPISI TEYİDİ:</b>\n` +
+                  `📈 <b>Yapısal Durum:</b> <code>15 Dakikalık Konsolidasyon Tavanı Kırıldı</code>\n` +
                   `🐋 <b>Balina Dominansı:</b> <code>%${realWhalePct} Kurumsal Blok</code>\n` +
-                  `⛽ <b>Yakıt Basıncı:</b> <code>%${dynamicFuel} Depo</code>\n` +
+                  `⛽ <b>Basınç Deposu:</b> <code>%${dynamicFuel} Doluluk</code>\n` +
                   `🎯 <b>Likidite Duvarı:</b> <code>$${pWick}</code>\n\n` +
                   `🎯 <b>LİKİDASYON & İŞLEM PLANI:</b>\n` +
                   `🎯 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
@@ -444,7 +445,7 @@ export default async function handler(req, res) {
                   `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🌐 <b>Canlı Terminal:</b> <a href="https://mineoragame.com">mineoragame.com</a>\n` +
-                  `💡 <i>Fiyat ilk kıvılcımı yaktı, TP1 seviyesinde kasanın %50'si nakde geçmeli!</i>`;
+                  `💡 <i>Kırılım teyit edildi. İşlem 15-45 dk vadede hedeflere koşacaktır.</i>`;
 
       await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
@@ -452,7 +453,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({ chat_id: TG_VIP_CHANNEL_ID, text: msg, parse_mode: 'HTML' })
       });
 
-      sentSymbols.push(`${symbol} (${dir}) [1M Mum İvmesi Onaylandı]`);
+      sentSymbols.push(`${symbol} (${dir}) [15M Tavan Kırılımı Onaylandı]`);
     }
 
     return res.status(200).json({ success: true, processed: sentSymbols });
