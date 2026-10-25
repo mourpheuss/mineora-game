@@ -1,13 +1,13 @@
 export default async function handler(req, res) {
   try {
     const browserHeaders = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept': 'application/json'
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1003180299696"; // Telegram Kanalın
-    const TG_ADMIN_ID = "6457294906";     // Yönetici Sohbetin
+    const TG_ADMIN_ID = "6457294906";     // Yönetici Özel Sohbetin
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
     const now = Date.now();
@@ -21,14 +21,13 @@ export default async function handler(req, res) {
     }
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
-    // Hacim eşiği 600K USDT'ye çekildi (Daha canlı ve erken tepki)
     const pool = tickersJson.data.filter(t => 
       t.symbol.endsWith("USDT") && 
       !EXCLUDED.includes(t.symbol) && 
       parseFloat(t.usdtVolume || 0) >= 600000
     );
 
-    // 2. Firebase Aktif İşlemleri ve Kilitleri Oku
+    // 2. Firebase Kontrolü (Hata verse de akışı durdurmaz)
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -53,7 +52,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takip edilen açık işlem bulunuyor." });
     }
 
-    // 3. ANLIK EMİR AKIŞI VE DİP/TEPE DÖNÜŞ MOTORU
+    // 3. ANLIK TAPE AKIŞI VE DİP/TEPE DÖNÜŞ TARAMASI
     let candidate = null;
     let direction = null;
 
@@ -68,7 +67,6 @@ export default async function handler(req, res) {
 
       const rangePosition = (price - low24) / (high24 - low24);
 
-      // Son 40 işlemin ham veri akışı
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=40`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -87,10 +85,9 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      // LONG: Fiyat dip bölgede (<= 0.40) ve piyasa alıcıları agresif (%55+ alım)
+      // Dip Bölge & Agresif Alıcı Akını
       const isEarlyLong = (rangePosition <= 0.40) && (buyPct >= 55);
-
-      // SHORT: Fiyat tepe bölgede (>= 0.65) ve satış baskısı başladı (%44 altı alım)
+      // Tepe Bölge & Satış Dağıtımı
       const isEarlyShort = (rangePosition >= 0.65) && (buyPct <= 44);
 
       if (isEarlyLong) {
@@ -107,10 +104,10 @@ export default async function handler(req, res) {
     }
 
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Ham emir akışı ve dip/tepe likidite dönüşü taranıyor." });
+      return res.status(200).json({ status: "SCANNING", message: "Uygun işlem taranıyor." });
     }
 
-    // 4. Seviyeler
+    // 4. Hedefler & Stop
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
@@ -131,25 +128,25 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase'e Yaz (Kilit Mekanizması)
-    const [fbRes1] = await Promise.all([
-      fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTrade)
-      }),
-      fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(now)
-      })
-    ]);
-
-    if (!fbRes1.ok) {
-      return res.status(500).json({ error: "Firebase kayıt hatası." });
+    // 5. Firebase'e Yaz (Hata verse de devam eder)
+    try {
+      await Promise.all([
+        fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTrade)
+        }),
+        fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(now)
+        })
+      ]);
+    } catch (fbErr) {
+      console.warn("Firebase uyarısı:", fbErr);
     }
 
-    // 6. Hem Kanala Hem Sana Gönder
+    // 6. TELEGRAM BİLDİRİMİNİ FIRLAT (KANAL VE YÖNETİCİ)
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
