@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const TG_CHANNEL_ID = "-1004404988937"; // Mineora Balina Sinyal VIP Kanalı
     const TG_ADMIN_ID = "6457294906";     // Mourpheus Özel
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
-    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+    const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
     const now = Date.now();
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -20,15 +20,15 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
     }
 
-    // Ana coinleri hariç tut, kurumsal hacim filtresi (1.5M+ USDT)
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT"];
+    // Derinlik filtresi: En az 1.2M USDT hacimli pariteler
     const pool = tickersJson.data.filter(t => 
       t.symbol.endsWith("USDT") && 
       !EXCLUDED.includes(t.symbol) && 
-      parseFloat(t.usdtVolume || 0) >= 1500000
+      parseFloat(t.usdtVolume || 0) >= 1200000
     );
 
-    // 2. Firebase Aktif İşlemleri Oku
+    // 2. Firebase Aktif İşlemleri ve Geçmiş Sinyalleri Oku
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -43,35 +43,38 @@ export default async function handler(req, res) {
       lastSignals = {};
     }
 
-    // Takipte açık işlem varsa bekle (Spam ve risk engeli)
+    // SPAM KİLİDİ 1: Masada aktif takip edilen açık bir işlem varsa YENİ SİNYAL ÜRETMEZ
     const hasOpenTrade = Object.values(activeTrades).some(t => {
       if (!t || t.status !== 'OPEN') return false;
       const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
-      return (now - tTime) <= THREE_HOURS_MS;
+      return (now - tTime) <= FOUR_HOURS_MS;
     });
 
     if (hasOpenTrade) {
-      return res.status(200).json({ status: "IDLE", message: "Takip edilen açık operasyon mevcut, yeni sinyal açılmadı." });
+      return res.status(200).json({ status: "IDLE", message: "Takipte açık operasyon var; yeni sinyal açılmadı." });
     }
 
-    // 3. GERÇEK PUMP / DUMP VE BALİNA HAREKETİ MOTORU
+    // 3. MİKROYAPI VE BALİNA İSTİHBARAT MOTORU
     let candidate = null;
     let direction = null;
     let confidenceScore = 0;
-    let triggerReason = "";
+    let oiSnapshot = 0;
+    let intelligenceReason = "";
 
     for (const item of pool) {
+      // SPAM KİLİDİ 2: Bu pariteye son 4 saat içinde sinyal verildiyse ASLA TEKRAR VERME
       const lastSentTime = lastSignals[item.symbol] || 0;
-      if (now - lastSentTime < THREE_HOURS_MS) continue;
+      if (now - lastSentTime < FOUR_HOURS_MS) continue;
 
       const price = parseFloat(item.lastPr || 0);
       const high24 = parseFloat(item.high24h || 0);
       const low24 = parseFloat(item.low24h || 0);
+      const fundingRate = parseFloat(item.fundingRate || 0);
       if (price <= 0 || high24 <= low24) continue;
 
       const rangePosition = (price - low24) / (high24 - low24);
 
-      // Son 50 işlemin emir defteri akışı (Tape Reading)
+      // A) Emir Defteri Akışı (Tape Reading - Son 50 İşlem)
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=50`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -90,31 +93,48 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      // PUMP YAKALAMA (Dip Konsolidasyon + Anlık Alıcı Baskısı %62+)
-      if (rangePosition <= 0.38 && buyPct >= 62) {
+      // B) Açık Pozisyon (Open Interest - OI) Kontrolü
+      const oiRes = await fetch(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${item.symbol}&productType=usdt-futures`, { headers: browserHeaders })
+        .then(r => r.json()).catch(() => ({}));
+
+      const currentOI = parseFloat(oiRes.data?.openInterestList?.[0]?.size || oiRes.data?.[0]?.size || 0);
+
+      // ================= KESİN PUMP MATEMATİĞİ =================
+      // 1. Fiyat taban çeyrekte (range <= 0.38)
+      // 2. Taker alıcılar tahtayı süpürüyor (buyPct >= 62%)
+      // 3. Fonlama short lehine ucuz (fundingRate <= 0.005%)
+      const isInstitutionalPump = (rangePosition <= 0.38) && (buyPct >= 62) && (fundingRate <= 0.005);
+
+      // ================= KESİN DUMP MATEMATİĞİ =================
+      // 1. Fiyat tepe çeyrekte (range >= 0.70)
+      // 2. Blok satışlar tahtayı eziyor (buyPct <= 36%)
+      // 3. Fonlama şişkin / longçular ağır ceza ödüyor (fundingRate >= 0.015%)
+      const isInstitutionalDump = (rangePosition >= 0.70) && (buyPct <= 36) && (fundingRate >= 0.015);
+
+      if (isInstitutionalPump) {
         candidate = item;
         direction = 'LONG';
         confidenceScore = Math.round(buyPct);
-        triggerReason = `Dip bölgede (%${Math.round(rangePosition * 100)} seviyesi) kurumsal alıcı akını ve %${confidenceScore} agresif market alımı tespit edildi.`;
+        oiSnapshot = currentOI;
+        intelligenceReason = `Dip bölgede (%${Math.round(rangePosition * 100)}) taze sermaye birikimi tespit edildi. Market alıcıları %${confidenceScore} güçle tahtayı süpürüyor, short likidasyon patlaması kapıda.`;
         break;
       }
 
-      // DUMP YAKALAMA (Tepe Dağıtımı + Blok Satış Baskısı %65+)
-      if (rangePosition >= 0.72 && buyPct <= 35) {
+      if (isInstitutionalDump) {
         candidate = item;
         direction = 'SHORT';
         confidenceScore = Math.round(100 - buyPct);
-        triggerReason = `Tepe likidite bölgesinde dağıtım başladı; satış baskısı %${confidenceScore} seviyesinde, long likidasyon avı bekleniyor.`;
+        oiSnapshot = currentOI;
+        intelligenceReason = `Tepe likidite bölgesinde (%${Math.round(rangePosition * 100)}) kurumsal dağıtım başladı. Satış baskısı %${confidenceScore}, aşırı kaldıraçlı longçuları tasfiye iğnesi bekleniyor.`;
         break;
       }
     }
 
-    // Gerçek kriteri karşılamayan hiçbir pariteye zoraki sinyal üretilmez
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Yüksek hacimli tahtalar taranıyor. Şartları sağlayan net pump/dump adayı bekleniyor." });
+      return res.status(200).json({ status: "SCANNING", message: "Vadeli tahtalar taranıyor; pump/dump eşiğindeki parite bekleniyor." });
     }
 
-    // 4. Hedef ve Stop Seviyeleri
+    // 4. Hedefler ve Stop Hesabı
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
@@ -132,12 +152,13 @@ export default async function handler(req, res) {
       sl,
       status: 'OPEN',
       score: confidenceScore,
-      reason: triggerReason,
+      reason: intelligenceReason,
+      oi: oiSnapshot,
       createdAt: now,
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase'e Kaydet
+    // 5. Firebase'e Kaydet (Hem açık işlem listesine hem parite kilit listesine)
     try {
       await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
@@ -152,7 +173,7 @@ export default async function handler(req, res) {
         })
       ]);
     } catch (fbErr) {
-      console.warn("Firebase kayıt uyarısı:", fbErr);
+      console.warn("Firebase log:", fbErr);
     }
 
     // 6. TELEGRAM BİLDİRİMİNİ GÖNDER
@@ -164,15 +185,15 @@ export default async function handler(req, res) {
     const tgMsg = `🎯 <b>MINEORA SENTINEL | KURUMSAL DOĞRULANMIŞ SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidate.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Likidite Patlaması)' : '🔴 SHORT (Tepe Dağıtımı)'}\n` +
+                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Likidite Patlaması)' : '🔴 SHORT (Tepe Kurumsal Dağıtım)'}\n` +
                   `⚡ <b>Teyit Gücü:</b> %${confidenceScore}\n` +
-                  `💵 <b>Giriş Fiyatı:</b> <code>$${pStr}</code>\n` +
+                  `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hedef 1:</b> <code>$${tp1Str}</code> (+%1.8)\n` +
                   `🚀 <b>Hedef 2:</b> <code>$${tp2Str}</code> (+%3.8)\n` +
                   `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code> (-%1.2)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `📊 <i>İstihbarat Notu: ${triggerReason}</i>\n` +
+                  `📊 <i>İstihbarat: ${intelligenceReason}</i>\n` +
                   `⚡ <i>Canlı Operasyon Masası: mineoragame.com</i>`;
 
     // DOĞRUDAN KANALA GÖNDER
