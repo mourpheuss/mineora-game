@@ -8,6 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- OCR Kütüphanesi (Ekran resminden coin adını otomatik okumak için) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- HTML2CANVAS (Analiz Kartını Tek Tıkla PNG Olarak İndirmek İçin) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -387,8 +389,15 @@
 
         const pStr = data.price < 1 ? data.price.toFixed(6) : data.price.toFixed(4);
 
+        // KART HTML (GÖRSEL ÇIKTISINA HAZIR İMZALI VE BUTONLU)
         area.innerHTML = `
-          <div class="bg-slate-950 p-6 sm:p-7 rounded-2xl border-2 border-slate-800 space-y-6 font-mono text-xs">
+          <div class="flex justify-end mb-2">
+            <button onclick="downloadAnalysisCard('${data.symbol}')" id="btnDownloadCard" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 font-mono text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-camera"></i> <span>Analiz Kartını İndir (PNG)</span>
+            </button>
+          </div>
+
+          <div id="exportableCard" class="bg-slate-950 p-6 sm:p-7 rounded-2xl border-2 border-slate-800 space-y-6 font-mono text-xs relative overflow-hidden">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-5">
               <div>
                 <div class="flex items-center gap-3">
@@ -465,9 +474,16 @@
               </div>
             </div>
 
-            <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/80 flex justify-between">
-              <span>Mineora Cross-Exchange İstihbarat Motoru</span>
-              <span>Saniyeler İçinde Çift Borsa Taraması</span>
+            <!-- ALT MARKA & SİTE İMZASI (GÖRSELDE ÇIKACAK BÖLÜM) -->
+            <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-slate-400">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span class="font-display font-black text-xs text-white">mineoragame.com</span>
+                <span class="text-[10px] text-slate-500 hidden sm:inline">| Kurumsal X-Ray & Balina İstihbaratı</span>
+              </div>
+              <div class="text-[10px] text-amber-400/90 font-mono font-bold">
+                ⚡ Gerçek Zamanlı Cross-Exchange Taraması
+              </div>
             </div>
 
           </div>
@@ -477,6 +493,35 @@
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>`;
+      }
+    }
+
+    // ================= ANALİZ KARTINI PNG OLARAK İNDİRME FONKSİYONU =================
+    async function downloadAnalysisCard(symbol) {
+      const card = document.getElementById('exportableCard');
+      const btn = document.getElementById('btnDownloadCard');
+      if (!card) return;
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Görsel Hazırlanıyor...`;
+
+      try {
+        const canvas = await html2canvas(card, {
+          backgroundColor: '#020617', // Koyu slate-950 arka plan
+          scale: 2, // Retinal / Yüksek Çözünürlüklü Kalite
+          useCORS: true
+        });
+
+        const image = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `MINEORA_XRAY_${symbol}_${new Date().toISOString().slice(0,10)}.png`;
+        link.click();
+      } catch (err) {
+        alert("Görsel oluşturulurken bir hata oluştu: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-camera"></i> <span>Analiz Kartını İndir (PNG)</span>`;
       }
     }
 
@@ -500,8 +545,7 @@
       try {
         const { data: { text } } = await Tesseract.recognize(file, 'eng');
         
-        // Yaygın parite regex eşleştirmesi
-        const matches = text.match(/\b(BTC|ETH|SOL|BNB|XRP|DOGE|ADA|AVAX|LINK|SUI|PEPE|NEAR|IOST|MTL|WIF|FET|APT|ARB|OP|RENDER|TAO|TREE|SHIB|TIA|INJ|SEI|CFX|GALA)[A-Z0-9]*\b/i);
+        const matches = text.match(/\b(BTC|ETH|SOL|BNB|XRP|DOGE|ADA|AVAX|LINK|SUI|PEPE|NEAR|IOST|MTL|WIF|FET|APT|ARB|OP|RENDER|TAO|TREE|SHIB|TIA|INJ|SEI|CFX|GALA|AAOI)[A-Z0-9]*\b/i);
         
         if (matches && matches[0]) {
           let foundCoin = matches[0].toUpperCase().replace('USDT', '').replace('PERP', '').trim();
