@@ -77,7 +77,7 @@ export default async function handler(req, res) {
                        `🏁 <b>Kapanış:</b> <code>$${curPriceStr}</code>\n` +
                        `🏆 <b>Net Kâr:</b> <b>+%2.00</b> <i>(10x: +%20 | 20x: +%40)</i>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                       `✨ <i>Ön-patlama hareketi hedefe ulaştı.</i>\n` +
+                       `✨ <i>Destek sıçrama dalgası tam hedefe ulaştı.</i>\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `⚡ <b>Anlık Fiyat:</b> <code>$${curPriceStr}</code>\n` +
                        `💰 <b>Kâr:</b> <b>+%1.00</b> <i>(Pozisyonun %50'si kârla kapatılabilir)</i>\n` +
-                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss giriş seviyesine çekildi. Kalan kısım sıfır risk!\n` +
+                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss başabaş seviyesine çekildi. Kalan miktar risksiz!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -139,9 +139,9 @@ export default async function handler(req, res) {
                         `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                         `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                         `🛑 <b>Çıkış:</b> <code>$${curPriceStr}</code>\n` +
-                        `📉 <b>Zarar-Kes:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : '-%1.20'}\n` +
+                        `📉 <b>Zarar-Kes:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : 'Destek Altı Disiplin Çıkışı'}\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `🛡️ <i>Sermaye korundu. Yeni kurumsal dengesizlik taranıyor.</i>`;
+                        `🛡️ <i>Sermaye korundu. Yeni ana destek seviyesi taranıyor.</i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: 1-3 DAKİKA ÖNCEDEN "PATLAMA ÖNCESİ DENGESİZLİK" TESPİT MOTORU
+    // MODÜL 2: 15M DESTEK/DİRENÇ + 1M Z-SCORE VE BALİNA AKIŞ MOTORU
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -187,19 +187,28 @@ export default async function handler(req, res) {
       return true;
     }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
 
+    function calculateZScore(series, currentVal) {
+      if (!series || series.length < 5) return 0;
+      const n = series.length;
+      const mean = series.reduce((a, b) => a + b, 0) / n;
+      const variance = series.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+      const stdDev = Math.sqrt(variance);
+      return stdDev === 0 ? 0 : (currentVal - mean) / stdDev;
+    }
+
     let candidateTrade = null;
 
-    for (const item of pool.slice(0, 40)) {
+    for (const item of pool.slice(0, 35)) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      // 1. ADIM: SON 15 MUM (1m Periyot - Mikro 180 Saniyelik Dinamik)
-      const candlesRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=15`, { headers: browserHeaders })
+      // 1. ADIM: 15 DAKİKALIK MUMLARI ÇEK (GRAFİK DESTEK / DİRENÇ HARİTASI)
+      const candles15mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=15m&limit=40`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
-      if (candlesRes.code !== '00000' || !Array.isArray(candlesRes.data) || candlesRes.data.length < 10) continue;
+      if (candles15mRes.code !== '00000' || !Array.isArray(candles15mRes.data) || candles15mRes.data.length < 25) continue;
 
-      const candles = candlesRes.data.map(c => ({
+      const candles15m = candles15mRes.data.map(c => ({
         time: Math.floor(Number(c[0]) / 1000),
         open: Number(c[1]),
         high: Number(c[2]),
@@ -208,82 +217,99 @@ export default async function handler(req, res) {
         volume: Number(c[5])
       })).sort((a, b) => a.time - b.time);
 
-      const current = candles[candles.length - 1];
-      const c3mBack = candles[candles.length - 3]; // 3 dakika önceki mum
+      const cur15m = candles15m[candles15m.length - 1];
+      const prev15mList = candles15m.slice(0, -1);
 
-      // ŞART 1: FİYAT TAMAMEN KİLİTLİ OLMALI (Son 3 dakikalık değişim <= %0.25)
-      // Fiyat fırlamamış olacak, kuluçkada bekleyecek!
-      const priceChange3m = Math.abs(((current.close - c3mBack.close) / c3mBack.close) * 100);
-      if (priceChange3m > 0.25) continue;
+      // 15m Grafik Destek ve Direnç Seviyeleri (Son 30 mumun tepeleri ve dipleri)
+      const pastLows = prev15mList.map(c => c.low);
+      const pastHighs = prev15mList.map(c => c.high);
+      const majorSupport15m = Math.min(...pastLows.slice(-20)); // 15m Majör Destek
+      const majorResistance15m = Math.max(...pastHighs.slice(-20)); // 15m Majör Direnç
 
-      // ŞART 2: DERİNLİK TAHTASI ASİMETRİSİ (Satış duvarı çekilmiş mi?)
-      const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/merge-depth?symbol=${item.symbol}&productType=usdt-futures&limit=15`, { headers: browserHeaders })
+      // ŞART 1: FİYAT BOŞLUKTA OLAMAZ! 15m Majör Desteğe Temas Etmiş veya Taban Yapmış Olmalı
+      // Fiyat desteğe %0.35 kadar yakın veya temas edip tepki vermiş mi?
+      const isAtSupport = (cur15m.low <= majorSupport15m * 1.0035) && (cur15m.close >= majorSupport15m * 0.998);
+      if (!isAtSupport) continue; // Destekte değilse düşen bıçağı tutma, doğrudan atla!
+
+      // 2. ADIM: 1 DAKİKALIK MİKRO TAHTA VE Z-SCORE TETİKLEYİCİSİ (PUSULA)
+      const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=20`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
-      const bids = depthRes.data?.bids || [];
-      const asks = depthRes.data?.asks || [];
-      if (!bids.length || !asks.length) continue;
+      if (candles1mRes.code !== '00000' || !Array.isArray(candles1mRes.data) || candles1mRes.data.length < 15) continue;
 
-      let top5BidVol = 0;
-      let top5AskVol = 0;
-      for (let i = 0; i < Math.min(5, bids.length); i++) top5BidVol += parseFloat(bids[i][1] || 0);
-      for (let i = 0; i < Math.min(5, asks.length); i++) top5AskVol += parseFloat(asks[i][1] || 0);
+      const candles1m = candles1mRes.data.map(c => ({
+        time: Math.floor(Number(c[0]) / 1000),
+        open: Number(c[1]),
+        high: Number(c[2]),
+        low: Number(c[3]),
+        close: Number(c[4]),
+        volume: Number(c[5])
+      })).sort((a, b) => a.time - b.time);
 
-      // İlk 5 kademede önü tıkalı mı? Satıcı duvarı, alıcı desteğinin en fazla %60'ı kadar olmalı (Önü açık)
-      if (top5AskVol > top5BidVol * 0.60) continue;
+      const cur1m = candles1m[candles1m.length - 1];
+      const prev1m = candles1m.slice(0, -1);
 
-      // ŞART 3: SON TAPE AKIŞINDA GİZLİ SÜPÜRME (Absorption / Taker Surge)
+      // Mikro Z-Score Hacim Sapması (Destekte hacim patladı mı?)
+      const volZScore = calculateZScore(prev1m.map(c => c.volume), cur1m.volume);
+      if (volZScore < 1.8) continue; // Destekte anormal hacim alışı yoksa girme!
+
+      // 3. ADIM: TAPE READING & BALİNA AKIŞI (KURUMSAL ALICI TEYİDİ)
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       const fills = fillsRes.data?.fillList || fillsRes.data || [];
-      if (!Array.isArray(fills) || fills.length < 20) continue;
+      let buyUsd = 0;
+      let sellUsd = 0;
 
-      let recentBuyVol = 0;
-      let recentSellVol = 0;
-      let activeTradeCount = 0;
+      if (Array.isArray(fills)) {
+        fills.forEach(f => {
+          const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
+          if (val >= 250) {
+            if (f.side === 'buy') buyUsd += val;
+            else sellUsd += val;
+          }
+        });
+      }
 
-      fills.forEach(f => {
-        const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
-        if (val >= 250) { // Mikro bot gürültüsünü filtrele
-          activeTradeCount++;
-          if (f.side === 'buy') recentBuyVol += val;
-          else recentSellVol += val;
-        }
-      });
-
-      const totalRecentVol = recentBuyVol + recentSellVol;
-      if (totalRecentVol <= 0) continue;
-
-      const takerBuyRatio = (recentBuyVol / totalRecentVol) * 100;
+      const totalFlow = buyUsd + sellUsd;
+      const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
       const fundingRate = parseFloat(item.fundingRate || 0);
 
-      // ŞART 4: BÜYÜK PATLAMA ÖNCESİ TETİĞİ (Taker Alış Oranı >= %75 & Fiyat Kilitli)
-      // Fiyat son 3 dakikada %0.25 dahi oynamadı ama piyasa alımları %75+ güçle tahtayı emiyor!
-      if (takerBuyRatio >= 75 && activeTradeCount >= 12 && fundingRate <= 0.005) {
+      // KESİN KURUMSAL DESTEK SIÇRAMA KURALI
+      // 1. Fiyat 15 dakikalık ana destekte
+      // 2. Destekte 1.8σ+ Z-Score hacim patlaması var
+      // 3. Destek seviyesinde kurumsal işlemlerin en az %70'i alıcı yönünde
+      // 4. Fonlama şişmemiş (FR <= 0.005)
+      if (takerBuyRatio >= 70 && fundingRate <= 0.005) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
-          price: current.close,
+          price: cur1m.close,
+          supportLevel: majorSupport15m,
+          volZScore: parseFloat(volZScore.toFixed(2)),
           takerBuyRatio: Math.round(takerBuyRatio),
-          priceChange3m: priceChange3m.toFixed(2),
           fundingRate: (fundingRate * 100).toFixed(4),
-          reason: `Son 3 dk fiyat değişimi sadece %${priceChange3m.toFixed(2)} (Kilitli Taban). Tahtada satış duvarı çekildi ve son akışta %${Math.round(takerBuyRatio)} agresif piyasa alımıyla kurumsal emilim (absorption) başladı.`
+          reason: `15m grafiğindeki ana destek seviyesine ($${majorSupport15m < 1 ? majorSupport15m.toFixed(6) : majorSupport15m.toFixed(4)}) temas gerçekleşti. Destekte ${volZScore.toFixed(1)}σ Z-Score hacim anomalisi ve %${Math.round(takerBuyRatio)} balina alıcı süpürmesiyle taban sıçraması teyit edildi.`
         };
         break;
       }
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Kilitli taban ve 1-3 dk öncesi kurumsal emilim aranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "15m majör destek temasları ve hacim anomalileri taranıyor..." });
     }
 
-    // 4. HEDEF VE STOP MATEMATİĞİ
+    // 4. HEDEF VE STOP MATEMATİĞİ (DESTEK ALTI AKILLI STOP)
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.010 : entryPrice * 0.990; // +%1.00 Net
     const tp2 = isLong ? entryPrice * 1.020 : entryPrice * 0.980; // +%2.00 Net
-    const sl = isLong ? entryPrice * 0.988 : entryPrice * 1.012;  // -%1.20 Güvenli Stop
+
+    // Akıllı Destek Stopu: 15m Desteğinin %0.4 altı veya standart -%1.20 (Hangisi daha güvenliyse)
+    const supportBasedSl = candidateTrade.supportLevel * 0.996;
+    const sl = (supportBasedSl < entryPrice && supportBasedSl > entryPrice * 0.980) 
+      ? supportBasedSl 
+      : entryPrice * 0.988;
 
     const tradeId = `trade_${Date.now()}`;
     const newTrade = {
@@ -323,21 +349,23 @@ export default async function handler(req, res) {
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
+    const supStr = candidateTrade.supportLevel < 1 ? candidateTrade.supportLevel.toFixed(6) : candidateTrade.supportLevel.toFixed(4);
 
-    const tgMsg = `⚡ <b>MINEORA SENTINEL | 1-3 DK ÖNCESİ PATLAMA ALARMI</b>\n` +
+    const tgMsg = `⚡ <b>MINEORA SENTINEL | 15M DESTEK SIÇRAMA SİNYALİ</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-                  `🧭 <b>Yön:</b> 🟢 LONG (Kilitli Taban Emilimi)\n` +
-                  `⚡ <b>Agresif Alıcı Gücü:</b> %${candidateTrade.takerBuyRatio}\n` +
-                  `🔒 <b>3 Dakikalık Fiyat Oynaklığı:</b> %${candidateTrade.priceChange3m} (Hareket henüz başlamadı)\n` +
+                  `🧭 <b>Yön:</b> 🟢 LONG (Majör Destek Teması & Tepki)\n` +
+                  `🧱 <b>15M Destek Seviyesi:</b> <code>$${supStr}</code>\n` +
+                  `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
+                  `⚡ <b>Balina Alıcı Gücü:</b> %${candidateTrade.takerBuyRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%1.00)\n` +
                   `🚀 <b>Hızlı TP 2:</b> <code>$${tp2Str}</code> (+%2.00)\n` +
-                  `🛑 <b>Güvenli Stop:</b> <code>$${slStr}</code> (-%1.20)\n` +
+                  `🛑 <b>Destek Altı Stop:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `📊 <i>İstihbarat: ${candidateTrade.reason}</i>\n` +
-                  `💡 <i>Kural: TP1 alındığında stop girişe çekilir, kalan pozisyon sıfır riskle izlenir.</i>\n` +
+                  `💡 <i>Strateji: Destekten sekme anında TP1 alındığında stop girişe çekilir, kalan kısım sıfır riskle izlenir.</i>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                   `📢 <i>Ücretsiz Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
