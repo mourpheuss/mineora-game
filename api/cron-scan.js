@@ -10,9 +10,8 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";     // Mourpheus Özel
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    // HIZLI SCALP ZAMAN AYARLARI
-    const LOCK_WINDOW_MS = 20 * 60 * 1000;       // 20 dakika işlem kilidi
-    const SAME_COIN_LOCK_MS = 45 * 60 * 1000;   // Aynı pariteye 45 dakika kilit
+    const LOCK_WINDOW_MS = 30 * 60 * 1000;       // 30 dk aktif takip
+    const SAME_COIN_LOCK_MS = 60 * 60 * 1000;   // Aynı coine 1 saat kilit
     const now = Date.now();
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -23,13 +22,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
     }
 
-    const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT"];
-    // Canlı Likidite Havuzu: 600.000 USDT üzeri tüm hareketli pariteler
-    const pool = tickersJson.data.filter(t => 
-      t.symbol.endsWith("USDT") && 
-      !EXCLUDED.includes(t.symbol) && 
-      parseFloat(t.usdtVolume || 0) >= 600000
-    );
+    const priceMap = {};
+    tickersJson.data.forEach(t => {
+      priceMap[t.symbol] = parseFloat(t.lastPr || 0);
+    });
 
     // 2. Firebase Aktif İşlemleri ve Geçmiş Sinyalleri Oku
     let activeTrades = {};
@@ -46,18 +42,141 @@ export default async function handler(req, res) {
       lastSignals = {};
     }
 
-    // SPAM KİLİDİ: Masada aynı anda en fazla 2 hızlı operasyona izin ver
+    // =========================================================================
+    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1 / TP2 / STOP DENETİMİ)
+    // =========================================================================
+    let tradeUpdates = [];
+    for (const [tradeKey, trade] of Object.entries(activeTrades)) {
+      if (!trade || trade.status !== 'OPEN') continue;
+
+      const curPrice = priceMap[trade.symbol];
+      if (!curPrice || curPrice <= 0) continue;
+
+      const isLong = trade.direction === 'LONG';
+      const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
+      const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
+
+      // A) TP 2 KONTROLÜ (TAM HEDEF BAŞARISI)
+      const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
+      if (isTp2Hit) {
+        trade.status = 'TP2_HIT';
+        trade.closedAt = now;
+        tradeUpdates.push(
+          fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(trade)
+          })
+        );
+
+        const tp2Msg = `🚀 <b>MINEORA SENTINEL | TP 2 TAM HEDEF VURULDU!</b>\n` +
+                       `━━━━━━━━━━━━━━━━━━━━\n` +
+                       `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                       `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
+                       `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
+                       `🏁 <b>Kapanış Fiyatı:</b> <code>$${curPriceStr}</code>\n` +
+                       `🏆 <b>Net Kâr:</b> <b>+%1.60</b> <i>(10x Kaldıraç: +%16 | 20x: +%32)</i>\n` +
+                       `━━━━━━━━━━━━━━━━━━━━\n` +
+                       `✨ <i>Tüm hedeflere ulaşıldı, operasyon başarıyla tamamlandı.</i>\n` +
+                       `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
+
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tp2Msg, parse_mode: 'HTML' })
+        }).catch(() => {});
+        continue;
+      }
+
+      // B) TP 1 KONTROLÜ (İLK KÂR ALINDI & STOP GİRİŞE ÇEKİLDİ)
+      const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
+      if (isTp1Hit && !trade.tp1Hit) {
+        trade.tp1Hit = true;
+        trade.sl = trade.entryPrice; // Stop seviyesi başa başa (Break-even) çekildi
+        tradeUpdates.push(
+          fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(trade)
+          })
+        );
+
+        const tp1Msg = `🎯 <b>MINEORA SENTINEL | HEDEF 1 (TP1) ALINDI!</b>\n` +
+                       `━━━━━━━━━━━━━━━━━━━━\n` +
+                       `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                       `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
+                       `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
+                       `⚡ <b>Anlık Fiyat:</b> <code>$${curPriceStr}</code>\n` +
+                       `💰 <b>Kâr:</b> <b>+%0.80</b> <i>(Pozisyonun %50'si kârla kapatılabilir)</i>\n` +
+                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss giriş seviyesine (<code>$${entryPriceStr}</code>) çekildi. İşlem risksiz izleniyor!\n` +
+                       `━━━━━━━━━━━━━━━━━━━━\n` +
+                       `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
+
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tp1Msg, parse_mode: 'HTML' })
+        }).catch(() => {});
+        continue;
+      }
+
+      // C) STOP-LOSS KONTROLÜ
+      const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
+      if (isStopHit) {
+        trade.status = 'STOPPED';
+        trade.closedAt = now;
+        tradeUpdates.push(
+          fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(trade)
+          })
+        );
+
+        const stopMsg = `🛑 <b>MINEORA SENTINEL | STOP SEVİYESİ TETİKLENDİ</b>\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
+                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
+                        `🛑 <b>Çıkış:</b> <code>$${curPriceStr}</code>\n` +
+                        `📉 <b>Zarar-Kes:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : '-%0.70'}\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `🛡️ <i>Sermaye korundu. Yeni kurumsal fırsat taranıyor.</i>`;
+
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: stopMsg, parse_mode: 'HTML' })
+        }).catch(() => {});
+        continue;
+      }
+    }
+
+    if (tradeUpdates.length > 0) {
+      await Promise.all(tradeUpdates);
+    }
+
+    // =========================================================================
+    // MODÜL 2: YENİ SİNYAL ÜRETİMİ (DİPTEN SNIPE EDEN YENİ NESİL RADAR)
+    // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
-      const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
+      const tTime = t.createdAt || 0;
       return (now - tTime) <= LOCK_WINDOW_MS;
     }).length;
 
+    // Masada en fazla 2 aktif işleme izin ver
     if (openTradesCount >= 2) {
-      return res.status(200).json({ status: "IDLE", message: "Masada 2 aktif scalp işlem var, bekleniyor." });
+      return res.status(200).json({ status: "IDLE", message: "Takipte aktif operasyonlar var; yeni sinyal beklemede." });
     }
 
-    // 3. MİKRO ATEŞLEME & TAPE SIKIŞMA MOTORU
+    const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT"];
+    const pool = tickersJson.data.filter(t => 
+      t.symbol.endsWith("USDT") && 
+      !EXCLUDED.includes(t.symbol) && 
+      parseFloat(t.usdtVolume || 0) >= 600000
+    );
+
     let candidate = null;
     let direction = null;
     let confidenceScore = 0;
@@ -76,7 +195,7 @@ export default async function handler(req, res) {
 
       const rangePosition = (price - low24) / (high24 - low24);
 
-      // Son 40 Mikro Emir Akışı (Anlık Taker Agresifliği)
+      // Son 40 Mikro Emir Akışı (Alıcı/Satıcı Baskısı)
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=40`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -98,45 +217,42 @@ export default async function handler(req, res) {
       // Açık Pozisyon (OI)
       const oiRes = await fetch(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${item.symbol}&productType=usdt-futures`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
-
       const currentOI = parseFloat(oiRes.data?.openInterestList?.[0]?.size || oiRes.data?.[0]?.size || 0);
 
-      // ================= 3-5 DK HIZLI PUMP SCALP KRİTERİ =================
-      // Taker alış gücü %58 üstünde ve tahta aşırı tepeye çıkmamış (range <= 0.58)
-      const isFastPump = (rangePosition <= 0.58) && (buyPct >= 58) && (fundingRate <= 0.010);
+      // ================= YENİ: DİP DÖNÜŞ SNIPER (LONG) =================
+      // Fiyat tabanın hemen üzerinde (range <= 0.35), alıcılar %57+ üstün, fonlama şişmemiş
+      const isReversalSniperLong = (rangePosition <= 0.35) && (buyPct >= 57) && (fundingRate <= 0.008);
 
-      // ================= 3-5 DK HIZLI DUMP SCALP KRİTERİ =================
-      // Taker satış baskısı %58 üstünde ve fiyat dipten kopmuş (range >= 0.45)
-      const isFastDump = (rangePosition >= 0.45) && (buyPct <= 42) && (fundingRate >= 0.005);
+      // ================= YENİ: TEPE RET SNIPER (SHORT) =================
+      // Fiyat tepede (range >= 0.70), satıcılar %59+ üstün
+      const isReversalSniperShort = (rangePosition >= 0.70) && (buyPct <= 41) && (fundingRate >= 0.010);
 
-      if (isFastPump) {
+      if (isReversalSniperLong) {
         candidate = item;
         direction = 'LONG';
         confidenceScore = Math.round(buyPct);
         oiSnapshot = currentOI;
-        intelligenceReason = `Anlık taker hacim patlaması (%${confidenceScore} Alıcı Baskısı). Tahta kademeleri süpürülüyor, 3-5 dk içinde likidite sıçraması bekleniyor.`;
+        intelligenceReason = `Dip bölgede (%${Math.round(rangePosition * 100)}) satıcılar tükendi. Market alıcıları %${confidenceScore} güçle tahtayı süpürüyor; sıçrama tabandan yakalandı.`;
         break;
       }
 
-      if (isFastDump) {
+      if (isReversalSniperShort) {
         candidate = item;
         direction = 'SHORT';
         confidenceScore = Math.round(100 - buyPct);
         oiSnapshot = currentOI;
-        intelligenceReason = `Anlık kurumsal blok satış baskısı (%${confidenceScore}). Destek kademeleri eriyor, ani tasfiye iğnesi bekleniyor.`;
+        intelligenceReason = `Tepe dirençte (%${Math.round(rangePosition * 100)}) kurumsal blok satış başladı. Alıcı gücü kırıldı, hızlı geri çekilme eşiğinde.`;
         break;
       }
     }
 
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Hızlı scalp fırsatları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Açık pozisyonlar izlendi; yeni dip fırsatı bekleniyor." });
     }
 
-    // 4. HIZLI HEDEFLER (VUR-KAÇ SCALP SEVİYELERİ)
+    // 4. HEDEF VE STOP MATEMATİĞİ (HIZLI VE NET SEVİYELER)
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
-    
-    // HIZLI TP ORANLARI: TP1 +%0.8, TP2 +%1.6, SL -%0.7
     const tp1 = isLong ? entryPrice * 1.008 : entryPrice * 0.992;
     const tp2 = isLong ? entryPrice * 1.016 : entryPrice * 0.984;
     const sl = isLong ? entryPrice * 0.993 : entryPrice * 1.007;
@@ -151,6 +267,7 @@ export default async function handler(req, res) {
       tp2,
       sl,
       status: 'OPEN',
+      tp1Hit: false,
       score: confidenceScore,
       reason: intelligenceReason,
       oi: oiSnapshot,
@@ -158,7 +275,7 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase Kaydı
+    // 5. Firebase'e Kaydet
     try {
       await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
@@ -176,24 +293,23 @@ export default async function handler(req, res) {
       console.warn("Firebase log:", fbErr);
     }
 
-    // 6. TELEGRAM BİLDİRİMİ (HIZLI SCALP ŞABLONU)
+    // 6. TELEGRAM BİLDİRİMİNİ GÖNDER
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
 
-    const tgMsg = `⚡ <b>MINEORA FLASH SCALP | ANLIK HIZLI OPERASYON</b>\n` +
+    const tgMsg = `⚡ <b>MINEORA FLASH SCALP | DİPTEN ONAYLI İŞLEM</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidate.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Hızlı Patlama)' : '🔴 SHORT (Hızlı Dökülme)'}\n` +
-                  `⚡ <b>Süpürme Gücü:</b> %${confidenceScore}\n` +
+                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Sıçrama)' : '🔴 SHORT (Tepe Reddi)'}\n` +
+                  `⚡ <b>Teyit Gücü:</b> %${confidenceScore}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.80)\n` +
                   `🚀 <b>Hızlı TP 2:</b> <code>$${tp2Str}</code> (+%1.60)\n` +
                   `🛑 <b>Sıkı Stop:</b> <code>$${slStr}</code> (-%0.70)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `⏱ <i>Beklenen Hareket: 3 - 5 Dakika İçi</i>\n` +
                   `📊 <i>İstihbarat: ${intelligenceReason}</i>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
