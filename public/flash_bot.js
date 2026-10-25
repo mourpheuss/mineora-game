@@ -6,7 +6,7 @@ const TELEGRAM_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
 const TELEGRAM_CHAT_ID = "-1004404988937";
 const FIREBASE_DB_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
-// HİSSELER, EMTİALAR VE MAJÖR COİNLERİ ENGELLEME
+// KRİPTO DIŞI VE MAJÖR TAHTALARI ENGELLEME
 const EXCLUDED = [
   "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT",
   "XAUUSDT", "XAGUSDT", "WTIUSDT", "BRENTUSDT",
@@ -14,11 +14,10 @@ const EXCLUDED = [
   "COINUSDT", "MSTRUSDT", "SPXUSDT", "NDXUSDT"
 ];
 
-let globalLastSignalTime = 0; // Peş peşe sinyal yağmasını önleyen kilit
-const GLOBAL_COOLDOWN_MS = 4 * 60 * 1000; // En az 4 dakika yeni sinyal üretemez
+let globalLastSignalTime = 0;
+const GLOBAL_COOLDOWN_MS = 5 * 60 * 1000; // İki sinyal arası en az 5 dakika soğuma
 const pairCooldown = new Map();
 
-// Telegram Bildirim Fonksiyonu
 async function sendTelegramAlert(text) {
   if (!TELEGRAM_BOT_TOKEN) return;
   try {
@@ -29,143 +28,91 @@ async function sendTelegramAlert(text) {
       parse_mode: 'HTML',
       disable_web_page_preview: true
     });
-    console.log("📲 [TELEGRAM] Sinyal kanala başarıyla iletildi.");
+    console.log("📲 [TELEGRAM] Sinyal iletildi.");
   } catch (err) {
-    console.error("❌ Telegram hatası:", err.response?.data || err.message);
+    console.error("Telegram hatası:", err.message);
   }
 }
 
-// Bitget v2 REST API İmzalama Motoru
-function signBitgetV2(secretKey, timestamp, method, requestPath, queryString = "", body = "") {
-  const message = timestamp + method.toUpperCase() + requestPath + (queryString ? "?" + queryString : "") + (body ? body : "");
-  return crypto.createHmac('sha256', secretKey).update(message).digest('base64');
-}
-
-// Otomatik Emir Motoru
-async function executeAutoTradesForUsers(symbol, price) {
-  try {
-    const res = await axios.get(`${FIREBASE_DB_URL}/users.json`);
-    const users = res.data;
-    if (!users) return;
-
-    for (const [userId, user] of Object.entries(users)) {
-      if (user.autoTradeEnabled && user.bitgetApi?.key && user.bitgetApi?.secret && user.bitgetApi?.passphrase) {
-        openBitgetFlashOrder(userId, user.bitgetApi, symbol, price).catch(e => {
-          console.error(`[${userId}] Oto-emir hatası:`, e.message);
-        });
-      }
-    }
-  } catch (err) {
-    console.error("Firebase kullanıcı okuma hatası:", err.message);
-  }
-}
-
-async function openBitgetFlashOrder(userId, api, symbol, currentPrice) {
-  const timestamp = Date.now().toString();
-  const path = "/api/v2/mix/order/place-order";
-  
-  const bodyData = {
-    symbol: symbol,
-    productType: "USDT-FUTURES",
-    marginMode: "isolated",
-    marginCoin: "USDT",
-    size: "1",
-    side: "buy",
-    orderType: "market"
-  };
-
-  const bodyStr = JSON.stringify(bodyData);
-  const sign = signBitgetV2(api.secret, timestamp, "POST", path, "", bodyStr);
-
-  const headers = {
-    'ACCESS-KEY': api.key,
-    'ACCESS-SIGN': sign,
-    'ACCESS-PASSPHRASE': api.passphrase,
-    'ACCESS-TIMESTAMP': timestamp,
-    'locale': 'en-US',
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    const res = await axios.post(`https://api.bitget.com${path}`, bodyData, { headers });
-    if (res.data.code === "00000") {
-      console.log(`✅ [${userId}] ${symbol} market emri iletildi.`);
-    }
-  } catch (e) {
-    console.error(`❌ [${userId}] İşlem açılamadı:`, e.response?.data || e.message);
-  }
-}
-
-// GERÇEK BALİNA & BORSA HAREKETİ ANALİZİ
+// PUMP & DUMP ÖNCESİ KESTİRİM MOTORU
 async function evaluateTicker(ticker) {
   const symbol = ticker.symbol;
   const now = Date.now();
 
-  // Tekil parite için 60 dakika bekleme süresi
-  if (pairCooldown.has(symbol)) {
-    if (now - pairCooldown.get(symbol) < 60 * 60 * 1000) return null;
+  if (pairCooldown.has(symbol) && (now - pairCooldown.get(symbol) < 60 * 60 * 1000)) {
+    return null;
   }
 
   const price = parseFloat(ticker.lastPr);
   const vol24h = parseFloat(ticker.usdtVolume || 0);
-  if (vol24h < 2000000) return null; // En az $2M hacimli tahtalar
+  if (vol24h < 1500000) return null;
 
   try {
-    // 1. KONTROL: KOŞMUŞ COIN ENGELİ (Zaten yürümüş, doymuş coine binilmez!)
-    // Son 1 dakikalık ve 5 dakikalık en son fiyat farkına bakıyoruz.
-    // Eğer fiyat son anlarda zaten yukarı fırladıysa bu balinanın malı tepede yıkmasıdır.
-    const priceChange24h = parseFloat(ticker.change24h || 0) * 100;
-    if (priceChange24h > 15) return null; // Zaten %15+ uçmuş coinleri ele
+    // 1. KONTROL: FİYAT HENÜZ PATLAMAMIŞ OLMALI (UYKU / SIKIŞMA EVRESİ)
+    // Son 15 dakikalık mumları kontrol ediyoruz; fiyat zaten %1.5'tan fazla koşmuşsa İPTAL
+    const klinesRes = await axios.get(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${symbol}&productType=USDT-FUTURES&granularity=15m&limit=2`);
+    if (klinesRes.data.code !== "00000" || !klinesRes.data.data) return null;
+    
+    const candle = klinesRes.data.data[0];
+    const openP = parseFloat(candle[1]);
+    const highP = parseFloat(candle[2]);
+    const lowP = parseFloat(candle[3]);
+    const candleSpread = ((highP - lowP) / openP) * 100;
+    
+    // Eğer mum son 15 dakikada zaten %1.8'den fazla dalgalanmışsa hareket başlamıştır, girilmez!
+    if (candleSpread > 1.8) return null;
 
-    // 2. KONTROL: BALİNA BLOK ALIMLARI (Tape Analizi)
-    const fillsRes = await axios.get(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${symbol}&productType=USDT-FUTURES&limit=60`);
-    if (fillsRes.data.code !== "00000" || !fillsRes.data.data) return null;
+    // 2. KONTROL: FONLAMA BASKISI (LİKİDASYON YIĞILMASI)
+    const fundingRate = parseFloat(ticker.fundingRate || 0) * 100;
 
-    const fills = fillsRes.data.data.fillList || fillsRes.data.data;
-    let whaleBuyCount = 0;
-    let whaleBuyVolume = 0;
-    let totalTapeVolume = 0;
-
-    fills.forEach(f => {
-      const val = parseFloat(f.price) * parseFloat(f.size);
-      totalTapeVolume += val;
-      // En az $3,500 büyüklüğündeki piyasa alımları balina kabul edilir
-      if (f.side === 'buy' && val >= 3500) {
-        whaleBuyCount++;
-        whaleBuyVolume += val;
-      }
-    });
-
-    // Son 60 işlemde EN AZ 3 farklı büyük balina blok alımı olmalı ve toplam hacmin %60'ı bu bloklardan gelmeli
-    if (whaleBuyCount < 3 || (whaleBuyVolume / totalTapeVolume) < 0.60) {
-      return null;
-    }
-
-    // 3. KONTROL: EMİR DEFTERİNDE GERÇEK HAVA BOŞLUĞU
-    const depthRes = await axios.get(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${symbol}&productType=USDT-FUTURES&limit=15`);
+    // 3. KONTROL: EMİR DEFTERİ DERİNLİĞİ & TUZAK ANALİZİ
+    const depthRes = await axios.get(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${symbol}&productType=USDT-FUTURES&limit=20`);
     if (depthRes.data.code !== "00000" || !depthRes.data.data) return null;
 
     const asks = depthRes.data.data.asks || [];
     const bids = depthRes.data.data.bids || [];
 
-    let totalAskDepth = 0;
-    let totalBidDepth = 0;
-    asks.slice(0, 10).forEach(a => totalAskDepth += parseFloat(a[1]));
-    bids.slice(0, 10).forEach(b => totalBidDepth += parseFloat(b[1]));
+    let totalAskDepth = 0, totalBidDepth = 0;
+    asks.slice(0, 15).forEach(a => totalAskDepth += parseFloat(a[1]));
+    bids.slice(0, 15).forEach(b => totalBidDepth += parseFloat(b[1]));
 
-    // Satış tahtası bomboş olmalı (Alış desteği satışın en az 2.5 katı)
-    if (totalAskDepth === 0 || (totalBidDepth / totalAskDepth) < 2.5) {
-      return null;
+    const depthRatio = totalAskDepth > 0 ? (totalBidDepth / totalAskDepth) : 1;
+
+    // 4. KONTROL: TAPE'TE SESSİZ ÖNCÜ BALİNA İŞLEMLERİ
+    const fillsRes = await axios.get(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${symbol}&productType=USDT-FUTURES&limit=50`);
+    if (fillsRes.data.code !== "00000" || !fillsRes.data.data) return null;
+
+    const fills = fillsRes.data.data.fillList || fillsRes.data.data;
+    let buyVol = 0, sellVol = 0;
+    fills.forEach(f => {
+      const val = parseFloat(f.price) * parseFloat(f.size);
+      if (f.side === 'buy') buyVol += val;
+      else sellVol += val;
+    });
+    const totalFillsVol = buyVol + sellVol || 1;
+    const buyRatio = (buyVol / totalFillsVol) * 100;
+
+    let signalType = null;
+    let narrative = "";
+
+    // PUMP ÖNCESİ SIKIŞMA (Short Squeeze Hazırlığı):
+    // Fonlama negatif (Short yığılması var), satış tahtası boşaltılmış (derinlik oranı > 2.2) ve alıcılar tahtayı sessizce topluyor
+    if (fundingRate < -0.025 && depthRatio >= 2.2 && buyRatio >= 65) {
+      signalType = "PUMP ÖNCESİ SIKIŞMA (LONG)";
+      narrative = "Short pozisyonlar aşırı birikmişken satış kademeleri boşaltıldı. Borsa short tasfiyesi için sert yukarı vurmak üzere!";
+    }
+    // DUMP ÖNCESİ TUZAK (Long Squeeze Hazırlığı):
+    // Fonlama aşırı pozitif (millet Long'da), alış kademeleri çekilmiş (derinlik oranı < 0.45) ve satış baskısı başlamış
+    else if (fundingRate > 0.035 && depthRatio <= 0.45 && buyRatio <= 35) {
+      signalType = "DUMP ÖNCESİ TUZAK (SHORT)";
+      narrative = "Küçük yatırımcı kütlesi Long'da rehin kalmışken tahtadaki alış desteği geri çekildi. Sert tasfiye iğnesi aşağı bekleniyor!";
     }
 
-    // 4. KONTROL: FONLAMA BASKISI
-    const fundingRate = parseFloat(ticker.fundingRate || 0) * 100;
-    // Fonlama aşırı pozitif olmamalı (Yani piyasa long yığılması yaşayıp kusmaya hazır olmamalı)
-    if (fundingRate > 0.04) return null;
+    if (!signalType) return null;
 
-    // Hedefler (Net Scalp: +%1.3 TP, -%0.6 Katı SL)
-    const tp = price * 1.013;
-    const sl = price * 0.994;
+    const isLong = signalType.includes("LONG");
+    const tp = isLong ? price * 1.018 : price * 0.982;
+    const sl = isLong ? price * 0.993 : price * 1.007;
 
     pairCooldown.set(symbol, now);
     globalLastSignalTime = now;
@@ -175,9 +122,11 @@ async function evaluateTicker(ticker) {
       price,
       tp,
       sl,
-      whaleCount: whaleBuyCount,
-      whaleVolK: Math.round(whaleBuyVolume / 1000),
+      signalType,
+      narrative,
       fundingRate: fundingRate.toFixed(4),
+      depthRatio: depthRatio.toFixed(2),
+      buyRatio: Math.round(buyRatio),
       detectedAt: now
     };
   } catch (err) {
@@ -185,13 +134,9 @@ async function evaluateTicker(ticker) {
   }
 }
 
-// Ana Tarama Döngüsü
 async function runRadarCycle() {
   const now = Date.now();
-  // Sinyalden sonraki 4 dakika boyunca sistemi kilitler; piyasa genelinde peş peşe 10 coin patlamasını engeller
-  if (now - globalLastSignalTime < GLOBAL_COOLDOWN_MS) {
-    return;
-  }
+  if (now - globalLastSignalTime < GLOBAL_COOLDOWN_MS) return;
 
   try {
     const res = await axios.get("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES");
@@ -206,28 +151,26 @@ async function runRadarCycle() {
     for (const ticker of tickers) {
       const match = await evaluateTicker(ticker);
       if (match) {
-        console.log(`\n🚨 [GERÇEK BALİNA KIVILCIMI] #${match.symbol} bulundu!`);
+        console.log(`\n🎯 [PUMP/DUMP KESTİRİMİ] ${match.symbol} -> ${match.signalType}`);
 
         const pStr = match.price < 1 ? match.price.toFixed(6) : match.price.toFixed(4);
         const tpStr = match.tp < 1 ? match.tp.toFixed(6) : match.tp.toFixed(4);
         const slStr = match.sl < 1 ? match.sl.toFixed(6) : match.sl.toFixed(4);
 
         const msg = 
-`⚡ <b>MINEORA FLASH 5M | BALİNA ATEŞLEMESİ</b>
+`🚨 <b>MINEORA SNIPER | ${match.signalType}</b>
 ━━━━━━━━━━━━━━━━━━━━
-💎 <b>Parite:</b> <code>#${match.symbol}</code> (LONG)
+💎 <b>Parite:</b> <code>#${match.symbol}</code>
 💰 <b>Giriş:</b> <code>$${pStr}</code>
-⏱️ <b>Zaman Penceresi:</b> <code>3 - 8 Dakika</code>
+⏱️ <b>Zaman Penceresi:</b> <code>5 - 15 Dakika (Patlama Öncesi)</code>
 
-🎯 <b>Hızlı Kâr (TP):</b> <code>$${tpStr}</code> (+%1.3)
-🛑 <b>Sert Stop (SL):</b> <code>$${slStr}</code> (-%0.6)
+🎯 <b>Hedef Kâr (TP):</b> <code>$${tpStr}</code> (±%1.8)
+🛑 <b>Sert Stop (SL):</b> <code>$${slStr}</code> (±%0.7)
 
-🐋 <b>BALİNA İSTİHBARATI:</b>
-• Son 60 işlemde <b>${match.whaleCount} adet</b> kurumsal blok piyasa alımı ($${match.whaleVolK}K).
-• Satış kademeleri temizlendi (Alış baskısı 2.5x üstün).
-• Fonlama: <b>%${match.fundingRate}</b> (Short sıkışma potansiyeli).
-
-⏳ <b>ZAMAN AŞIMI: 8:00 Dakika.</b>
+🔬 <b>TAHTA İSTİHBARATI:</b>
+• ${match.narrative}
+• Fonlama Oranı: <b>%${match.fundingRate}</b>
+• Tahta Baskı Çarpanı: <b>${match.depthRatio}x</b>
 ━━━━━━━━━━━━━━━━━━━━
 🌐 <b>Canlı Panel:</b> mineoragame.com`;
 
@@ -236,20 +179,15 @@ async function runRadarCycle() {
         // Firebase Güncellemesi
         try {
           await axios.put(`${FIREBASE_DB_URL}/activeFlashSignal.json`, match);
-          console.log(`📡 [FIREBASE] ${match.symbol} canlı panele aktarıldı.`);
-        } catch (fbErr) {
-          console.error("❌ Firebase hatası:", fbErr.message);
-        }
+        } catch (e) {}
 
-        // Otomatik Emir
-        await executeAutoTradesForUsers(match.symbol, match.price);
-        break; // Bir turda yalnızca en temiz tek bir balina sinyali üretilir
+        break;
       }
     }
   } catch (err) {
-    console.error("Döngü hatası:", err.message);
+    console.error("Hata:", err.message);
   }
 }
 
-console.log("🛡️ Mineora Saf Balina & Borsa Radarı Devrede...");
-setInterval(runRadarCycle, 8000);
+console.log("🛡️ Mineora Pump & Dump Kestirim Radarı Başlatıldı...");
+setInterval(runRadarCycle, 7000);
