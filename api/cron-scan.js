@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: KURUMSAL LEVEL-2 TAHTA & ENGEL DUVALARI KONTROLÜ
+    // MODÜL 2: KURUMSAL LEVEL-2 TAHTA & ENGEL DUVARI DENETİMİ
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -169,12 +169,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte aktif operasyonlar var; yeni sinyal beklemede." });
     }
 
-    const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT"];
-    // GERÇEK LİKİDİTE FİLTRESİ: En az 800.000 USDT hacim (Sığ pariteler elenir)
+    // KRİPTO DIŞI EMTİALAR (PETROL, ALTIN, ENDEKSLER) VE MAJÖRLER ENGELLENDİ
+    const EXCLUDED = [
+      "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT",
+      "CLUSDT", "XAUUSDT", "XAGUSDT", "SPXUSDT", "NDXUSDT", "DJIUSDT", "BGBUSDT"
+    ];
+
+    // YÜKSEK LİKİDİTE FİLTRESİ: En az 1.500.000 USDT hacimli gerçek vadeli altcoinler
     const pool = tickersJson.data.filter(t => 
       t.symbol.endsWith("USDT") && 
       !EXCLUDED.includes(t.symbol) && 
-      parseFloat(t.usdtVolume || 0) >= 800000
+      parseFloat(t.usdtVolume || 0) >= 1500000
     );
 
     let candidate = null;
