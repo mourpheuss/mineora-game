@@ -6,12 +6,9 @@
   <title>Mineora Sentinel | Kurumsal Operasyon & X-Ray Terminali</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <!-- OCR Kütüphanesi -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <!-- HTML2CANVAS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -25,12 +22,11 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-amber-500 selection:text-black">
 
-  <!-- ÜST HEADER -->
   <header class="bg-slate-900/95 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
       
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-amber-500/20">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg">
           <i class="fa-solid fa-shield-halved"></i>
         </div>
         <div>
@@ -40,8 +36,12 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <a id="adminPanelLink" href="admin.html" class="hidden items-center gap-1.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
+          <i class="fa-solid fa-crown text-amber-400"></i> <span>Admin Masası</span>
+        </a>
+
         <button onclick="openRefModal()" class="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
-          <i class="fa-solid fa-handshake"></i> <span>%30 Referans Kazancı</span>
+          <i class="fa-solid fa-handshake"></i> <span>%30 Referans</span>
         </button>
 
         <button onclick="openApiSettingsModal()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 font-mono text-xs px-3 py-1.5 rounded-xl transition shadow">
@@ -61,13 +61,10 @@
     </div>
   </header>
 
-  <!-- ANA ALAN -->
-  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-8">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-8">
 
-    <!-- 1. MERKEZİ AKTİF OPERASYON MASASI -->
+    <!-- 1. CANLI OPERASYON MASASI -->
     <section class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-      <div class="absolute -right-16 -top-16 w-52 h-52 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
         <div>
           <div class="flex items-center gap-2.5">
@@ -76,15 +73,15 @@
           </div>
           <p class="text-xs text-slate-400 font-mono mt-1">Gelen sinyaller anlık işlenir; TP/SL durumuna göre en fazla 3 saat sonra arşivlenir.</p>
         </div>
-        <div class="font-mono text-xs px-3.5 py-1.5 rounded-xl bg-slate-950 text-slate-300 border border-slate-800 flex items-center gap-2 self-start sm:self-auto">
-          <i class="fa-solid fa-satellite-dish text-amber-400"></i> <span>Durum:</span> <strong id="sentinelStatusText" class="text-emerald-400">Canlı İzleniyor</strong>
+        <div class="font-mono text-xs px-3.5 py-1.5 rounded-xl bg-slate-950 text-slate-300 border border-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-satellite-dish text-amber-400"></i> <span>Durum:</span> <strong class="text-emerald-400">Canlı İzleniyor</strong>
         </div>
       </div>
 
       <div id="liveSignalContainer" class="pt-6"></div>
     </section>
 
-    <!-- 2. X-RAY İNDİKATÖR DOĞRULAYICI VE PARİTE ARAMA -->
+    <!-- 2. X-RAY İSTİHBARAT & İNDİKATÖR DOĞRULAYICI -->
     <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
         <div>
@@ -113,6 +110,7 @@
         </div>
       </div>
 
+      <!-- X-RAY ZENGİN DETAY KARTI (ESKİSİ GİBİ DOLU DOLU) -->
       <div id="searchResultArea" class="hidden"></div>
     </section>
 
@@ -123,7 +121,6 @@
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
       <button onclick="closeRefModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
       <div class="text-center space-y-1">
-        <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2"><i class="fa-solid fa-handshake"></i></div>
         <h3 class="font-display font-black text-lg text-white">%30 Referans Ortaklığı</h3>
         <p class="text-slate-400 text-[11px]">Linkinle gelen her 200$ VIP satışından anında <b>60 USDT</b> kazan.</p>
       </div>
@@ -147,12 +144,11 @@
     </div>
   </div>
 
-  <!-- BİTGET API MODAL -->
+  <!-- BITGET BOT MODAL -->
   <div id="apiSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs">
       <button onclick="closeApiSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
       <div class="text-center space-y-1">
-        <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-lg mb-2"><i class="fa-solid fa-robot"></i></div>
         <h3 class="font-display font-black text-lg text-white">Bitget Otomatik Alım Botu</h3>
       </div>
       <div class="space-y-3 pt-2">
@@ -185,10 +181,14 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ================= DÜZELTİLEN OTURUM KONTROLÜ (SENİ ASLA ATMAZ) =================
     const currentUser = sessionStorage.getItem('currentUser') || 'mourpheus';
-    sessionStorage.setItem('currentUser', currentUser);
-    sessionStorage.setItem('isVip', 'true'); // Panele giriş yapıldığında VIP'yi doğrudan aktif tut
+    const isAdmin = ['mourpheus', 'ersinulasduzyol@gmail.com'].includes(currentUser.toLowerCase()) || sessionStorage.getItem('isAdmin') === 'true';
+
+    // Admin ise üst bara "Admin Masası" butonunu çıkar
+    if (isAdmin) {
+      const adminLink = document.getElementById('adminPanelLink');
+      if (adminLink) adminLink.classList.remove('hidden');
+    }
 
     function handleLogout() {
       sessionStorage.clear();
@@ -249,35 +249,37 @@
             const isLong = String(signal.direction || 'LONG').toUpperCase().includes('LONG');
             const ep = parseFloat(signal.entryPrice || 0);
             const tp1 = parseFloat(signal.tp1 || (ep * (isLong ? 1.018 : 0.982)));
+            const tp2 = parseFloat(signal.tp2 || (ep * (isLong ? 1.038 : 0.962)));
             const sl = parseFloat(signal.sl || (ep * (isLong ? 0.988 : 1.012)));
 
             const pStr = ep < 1 ? ep.toFixed(6) : ep.toFixed(4);
-            const tpStr = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
+            const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
+            const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
             const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
             const cleanSym = String(signal.symbol).replace('USDT', '').replace('#', '');
 
             html += `
-              <div class="bg-slate-950 p-5 rounded-2xl border-2 ${isLong ? 'border-emerald-500/60' : 'border-rose-500/60'} space-y-4 font-mono shadow-lg">
+              <div class="bg-slate-950 p-6 rounded-2xl border-2 ${isLong ? 'border-emerald-500/60' : 'border-rose-500/60'} space-y-4 font-mono shadow-xl">
                 <div class="flex items-center justify-between border-b border-slate-900 pb-3">
                   <div class="flex items-center gap-3">
                     <strong class="font-display text-2xl font-black text-white">#${cleanSym}USDT</strong>
-                    <span class="text-xs px-2.5 py-0.5 rounded-lg font-bold ${isLong ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${isLong ? 'LONG' : 'SHORT'}</span>
+                    <span class="text-xs px-2.5 py-0.5 rounded-lg font-bold ${isLong ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${isLong ? '🟢 LONG' : '🔴 SHORT'}</span>
                   </div>
                   <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">⏳ TAKİPTE</span>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div class="bg-slate-900 p-2 rounded-xl border border-slate-800"><div class="text-slate-500 text-[10px]">GİRİŞ</div><strong class="text-slate-200">$${pStr}</strong></div>
-                  <div class="bg-emerald-950/30 p-2 rounded-xl border border-emerald-900/40"><div class="text-emerald-400 text-[10px]">HEDEF</div><strong class="text-emerald-300">$${tpStr}</strong></div>
-                  <div class="bg-rose-950/30 p-2 rounded-xl border border-rose-900/40"><div class="text-rose-400 text-[10px]">STOP</div><strong class="text-rose-300">$${slStr}</strong></div>
+                <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800"><div class="text-slate-500 text-[10px]">GİRİŞ</div><strong class="text-slate-200 text-sm">$${pStr}</strong></div>
+                  <div class="bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-900/40"><div class="text-emerald-400 text-[10px]">HEDEF 1</div><strong class="text-emerald-300 text-sm">$${tp1Str}</strong></div>
+                  <div class="bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-900/40"><div class="text-emerald-400 text-[10px]">HEDEF 2</div><strong class="text-emerald-300 text-sm">$${tp2Str}</strong></div>
+                  <div class="bg-rose-950/30 p-2.5 rounded-xl border border-rose-900/40"><div class="text-rose-400 text-[10px]">STOP-LOSS</div><strong class="text-rose-300 text-sm">$${slStr}</strong></div>
                 </div>
               </div>
             `;
           });
-          container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${html}</div>`;
+          container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${html}</div>`;
           return;
         }
 
-        // Aktif sinyal yoksa 6'lı piyasa radarı
         showFallbackWatchlist(container);
       } catch (err) {
         showFallbackWatchlist(container);
@@ -297,15 +299,15 @@
       let cardsHtml = '';
       defaultWatchlist.forEach(item => {
         cardsHtml += `
-          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition font-mono space-y-3 flex flex-col justify-between">
+          <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition font-mono space-y-3 flex flex-col justify-between shadow-lg">
             <div>
               <div class="flex justify-between items-center">
-                <strong class="text-lg font-display font-black text-white">#${item.symbol}USDT</strong>
-                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-bold ${item.color}">${item.bias}</span>
+                <strong class="text-xl font-display font-black text-white">#${item.symbol}USDT</strong>
+                <span class="text-[10px] px-2.5 py-0.5 rounded bg-slate-900 border border-slate-800 font-bold ${item.color}">${item.bias}</span>
               </div>
-              <div class="text-[11px] text-slate-400 mt-1">${item.name} • <span class="text-slate-500">${item.tag}</span></div>
+              <div class="text-xs text-slate-400 mt-1">${item.name} • <span class="text-slate-500">${item.tag}</span></div>
             </div>
-            <button onclick="document.getElementById('inputSearchSymbol').value='${item.symbol}'; analyzeSingleCoin('${item.symbol}');" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-slate-300 border border-slate-800 text-[11px] font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <button onclick="document.getElementById('inputSearchSymbol').value='${item.symbol}'; analyzeSingleCoin('${item.symbol}');" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-slate-300 border border-slate-800 text-xs font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer shadow">
               <i class="fa-solid fa-bolt text-amber-400"></i> Röntgen Çek
             </button>
           </div>
@@ -316,14 +318,14 @@
         <div class="space-y-4">
           <div class="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
             <span>⚡ RADARDAKİ ÖNCELİKLİ PARİTELER (Anlık Analiz İçin Tıkla):</span>
-            <span class="text-[11px] text-emerald-400 font-bold">7/24 Aktif Tarama</span>
+            <span class="text-xs text-emerald-400 font-bold">7/24 Aktif Tarama</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${cardsHtml}</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">${cardsHtml}</div>
         </div>
       `;
     }
 
-    // ================= X-RAY VE CANLI RÖNTGEN =================
+    // ================= X-RAY RÖNTGENİ (ESKİ ZENGİN METRİKLER GERİ GELDİ) =================
     async function analyzeSingleCoin(customSymbol = null) {
       const input = document.getElementById('inputSearchSymbol');
       const area = document.getElementById('searchResultArea');
@@ -343,25 +345,80 @@
         if (!data.success) throw new Error(data.error);
 
         const pStr = data.price < 1 ? data.price.toFixed(6) : data.price.toFixed(4);
+        const magnetStr = data.bitget.magnetWickPrice ? (data.bitget.magnetWickPrice < 1 ? data.bitget.magnetWickPrice.toFixed(6) : data.bitget.magnetWickPrice.toFixed(4)) : 'N/A';
 
+        // ESKİ DETAYLI METRİK KARTININ DÖNÜŞÜ:
         area.innerHTML = `
-          <div class="bg-slate-950 p-6 rounded-2xl border-2 border-slate-800 space-y-4 font-mono text-xs">
-            <div class="flex justify-between items-center border-b border-slate-900 pb-3">
-              <strong class="text-2xl text-white font-display">#${data.symbol}</strong>
-              <strong class="text-2xl text-white font-display">$${pStr}</strong>
+          <div id="xrayCardExport" class="bg-slate-950 p-6 sm:p-8 rounded-3xl border-2 border-slate-800 space-y-6 font-mono text-xs shadow-2xl relative">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-4">
+              <div>
+                <span class="text-[10px] text-slate-500 uppercase block font-bold">RÖNTGEN ÇEKİLEN PARİTE</span>
+                <div class="flex items-center gap-3">
+                  <strong class="text-3xl text-white font-display font-black">#${data.symbol}</strong>
+                  <strong class="text-2xl text-emerald-400 font-display">$${pStr}</strong>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="downloadXrayCard()" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-2">
+                  <i class="fa-solid fa-download text-amber-400"></i> PNG İndir
+                </button>
+              </div>
             </div>
-            <div class="p-4 rounded-xl border" style="border-color:${data.statusColor}; background:${data.statusColor}15;">
-              <span class="font-bold" style="color:${data.statusColor};">${data.statusLabel} (%${data.score} Teyit)</span>
-              <p class="text-slate-300 mt-1">${data.decisionNote}</p>
+
+            <!-- KARAR KUTUSU -->
+            <div class="p-4 rounded-2xl border" style="border-color:${data.statusColor}; background:${data.statusColor}15;">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-sm" style="color:${data.statusColor};">${data.statusLabel} (%${data.score} Doğruluk Teyidi)</span>
+                <span class="text-[10px] bg-slate-950 px-2 py-0.5 rounded font-bold" style="color:${data.statusColor};">MINEORA X-RAY</span>
+              </div>
+              <p class="text-slate-300 mt-2 leading-relaxed text-xs">${data.decisionNote}</p>
+            </div>
+
+            <!-- ÇİFT BORSA DERİNLİK & BALİNA METRİKLERİ -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-1">
+                <span class="text-[10px] text-slate-500 block uppercase font-bold">BINANCE BALİNA ORANI</span>
+                <strong class="text-lg text-white font-display">${data.binance.topTraderLongRatio}% Long</strong>
+                <div class="text-[10px] text-slate-400">Top Trader Pozisyonu</div>
+              </div>
+
+              <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-1">
+                <span class="text-[10px] text-slate-500 block uppercase font-bold">BITGET TAHTA DERİNLİĞİ</span>
+                <strong class="text-lg text-white font-display">%${data.bitget.depthBidRatio} Alış Duvarı</strong>
+                <div class="text-[10px] text-slate-400">Alış vs Satış Duvarı</div>
+              </div>
+
+              <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-1">
+                <span class="text-[10px] text-slate-500 block uppercase font-bold">FONLAMA ORANI (FR)</span>
+                <strong class="text-lg ${parseFloat(data.fundingRate) < 0 ? 'text-emerald-400' : 'text-rose-400'} font-display">${(parseFloat(data.fundingRate) * 100).toFixed(4)}%</strong>
+                <div class="text-[10px] text-slate-400">${parseFloat(data.fundingRate) < 0 ? 'Shortçular Fonluyor' : 'Longçular Fonluyor'}</div>
+              </div>
+
+              <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-1">
+                <span class="text-[10px] text-slate-500 block uppercase font-bold">LİKİDASYON MIKNATISI</span>
+                <strong class="text-lg text-amber-300 font-display">$${magnetStr}</strong>
+                <div class="text-[10px] text-slate-400">Muhtemel İğne Seviyesi</div>
+              </div>
             </div>
           </div>
         `;
       } catch (err) {
-        area.innerHTML = `<div class="p-4 bg-rose-950/40 border border-rose-900 text-rose-300 text-xs font-mono">Hata: ${err.message}</div>`;
+        area.innerHTML = `<div class="p-4 bg-rose-950/40 border border-rose-900 text-rose-300 text-xs font-mono rounded-2xl">Hata: ${err.message}</div>`;
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>Röntgen Çek</span>`;
       }
+    }
+
+    function downloadXrayCard() {
+      const el = document.getElementById('xrayCardExport');
+      if (!el) return;
+      html2canvas(el, { backgroundColor: '#020617' }).then(canvas => {
+        const a = document.createElement('a');
+        a.download = `mineora-xray-${Date.now()}.png`;
+        a.href = canvas.toDataURL();
+        a.click();
+      });
     }
 
     function openApiSettingsModal() { document.getElementById('apiSettingsModal').classList.remove('hidden'); }
@@ -390,9 +447,9 @@
           document.getElementById('inputSearchSymbol').value = coin;
           analyzeSingleCoin(coin);
         } else {
-          alert("Parite adı tespit edilemedi.");
+          alert("Grafikte parite adı okunamadı.");
         }
-      } catch(e) { alert("OCR hatası"); }
+      } catch(e) { alert("OCR hatası oluştu."); }
       document.getElementById('dropZoneText').textContent = "TradingView Grafiği Yükle (OCR Oku)";
     }
 
