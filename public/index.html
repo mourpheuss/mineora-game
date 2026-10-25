@@ -11,7 +11,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
@@ -23,9 +22,9 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white relative overflow-x-hidden">
 
-  <!-- ================= ARKA PLAN ================= -->
+  <!-- ARKA PLAN IŞIKLANDIRMASI -->
   <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-    <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-45 scale-100 transition duration-700" 
+    <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 scale-100 transition duration-700" 
          style="background-image: url('https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=2560&auto=format&fit=crop');">
     </div>
     <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-b from-amber-500/30 via-orange-600/15 to-transparent rounded-full blur-[140px]"></div>
@@ -34,7 +33,7 @@
     <div class="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-slate-950/60 to-slate-950/95"></div>
   </div>
 
-  <!-- ÜST HEADER / NAV -->
+  <!-- ÜST MENÜ -->
   <header class="bg-slate-950/70 border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl relative">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       
@@ -60,7 +59,7 @@
     </div>
   </header>
 
-  <!-- VİTRİN HERO BÖLÜMÜ -->
+  <!-- ANA ALAN -->
   <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16 relative z-10">
 
     <div class="text-center max-w-3xl mx-auto space-y-6">
@@ -88,7 +87,7 @@
       </div>
     </div>
 
-    <!-- ================= ÜCRETSİZ CANLI ARAÇ: WICK-SHIELD STOP & İĞNE RADARI ================= -->
+    <!-- ================= WICK-SHIELD & AKILLI KALDIRAÇ / POZİSYON HESAPLAYICI ================= -->
     <section class="max-w-4xl mx-auto bg-slate-900/80 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-orange-500/10 space-y-6">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
         <div>
@@ -105,7 +104,6 @@
         </span>
       </div>
 
-      <!-- Tarama Formu -->
       <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
         <div class="sm:col-span-5">
           <label class="text-[10px] font-mono text-slate-400 block mb-1">PARİTE ADI:</label>
@@ -122,14 +120,13 @@
         </div>
       </div>
 
-      <!-- Yükleniyor Kutusu -->
       <div id="publicWickLoading" class="hidden text-center py-8 space-y-2 font-mono text-xs text-slate-400">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-amber-400"></i>
         <div>Vadeli emir defterleri ve likidasyon mıknatısı taranıyor...</div>
       </div>
 
-      <!-- Sonuç Kartı -->
-      <div id="publicWickResult" class="hidden space-y-5 font-mono">
+      <!-- SONUÇ BLOKLARI -->
+      <div id="publicWickResult" class="hidden space-y-6 font-mono">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
           <div>
             <span class="text-[10px] text-slate-500 uppercase block font-bold">ANALİZ EDİLEN TAHTA</span>
@@ -181,6 +178,50 @@
 
         <div id="userStopVerdictBox" class="hidden p-4 rounded-2xl border text-xs"></div>
 
+        <!-- AKILLI KALDIRAÇ & POZİSYON BOYUTU HESAPLAYICI -->
+        <div class="bg-slate-950 p-5 rounded-2xl border-2 border-indigo-500/40 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+              <strong class="font-display text-sm text-white">🧮 AKILLI KALDIRAÇ & POZİSYON BOYUTU HESAPLAYICI</strong>
+            </div>
+            <span class="text-[10px] text-indigo-300 bg-indigo-950/60 border border-indigo-800 px-2.5 py-0.5 rounded-lg">Kasa Koruma Zırhı</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">TOPLAM KASAN ($ USDT):</label>
+              <input type="number" id="calcBalanceInput" value="500" class="bg-slate-900 border border-slate-700 text-white font-mono text-xs rounded-xl px-3 py-2 w-full focus:outline-none focus:border-indigo-400" oninput="calculateSmartPosition()" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">RİSKE EDİLECEK TUTAR ($ USDT):</label>
+              <input type="number" id="calcRiskInput" value="20" class="bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-xl px-3 py-2 w-full focus:outline-none focus:border-indigo-400" oninput="calculateSmartPosition()" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-center text-xs">
+            <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 block">ÖNERİLEN İZOLE KALDIRAÇ</span>
+              <strong id="calcLevDisplay" class="text-indigo-400 font-display text-lg">12x</strong>
+            </div>
+            <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 block">POZİSYON BÜYÜKLÜĞÜ</span>
+              <strong id="calcPosDisplay" class="text-white font-display text-lg">$166</strong>
+            </div>
+            <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 block">STOPTAKİ MAKS KAYIP</span>
+              <strong id="calcLossDisplay" class="text-rose-400 font-display text-lg">-$20.00</strong>
+            </div>
+            <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-500 block">HEDEF 1 NET KÂR</span>
+              <strong id="calcProfitDisplay" class="text-emerald-400 font-display text-lg">+$36.50</strong>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-relaxed italic">
+            * Güvenli stop mesafesine göre hesaplanmıştır. İğne gelse bile kaybınız belirlediğiniz riski aşmaz.
+          </p>
+        </div>
+
         <div class="bg-gradient-to-r from-slate-950 to-slate-900 p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <span class="text-slate-300">
             🤖 Bu iğneleri 7/24 otomatik avlayan <b>Bitget Botu</b> ve <b>Canlı Sinyal Masası</b> için:
@@ -192,7 +233,7 @@
       </div>
     </section>
 
-    <!-- VIP FİYATLANDIRMA & REFERANS ORTAKLIĞI KARTI -->
+    <!-- VIP FİYATLANDIRMA -->
     <div class="max-w-xl mx-auto bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-950/95 border-2 border-amber-500/60 rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl shadow-orange-500/20 relative overflow-hidden text-center backdrop-blur-2xl ring-1 ring-white/10">
       <div class="absolute -right-12 -top-12 w-52 h-52 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -left-12 -bottom-12 w-52 h-52 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -234,166 +275,112 @@
     © 2026 Mineora Sentinel. Tüm hakları saklıdır. Finansal yatırım tavsiyesi içermez.
   </footer>
 
-  <!-- ================= AUTH MODAL (GİRİŞ & KAYIT) ================= -->
+  <!-- AUTH MODAL -->
   <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-slate-900/95 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 relative">
-      
-      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
       <div class="text-center space-y-1">
         <h3 class="font-display font-black text-xl text-white">MINEORA SENTINEL</h3>
         <p class="text-xs text-amber-400/90 font-mono">Üye Portalı</p>
       </div>
-
       <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-white/10 font-mono text-xs">
         <button id="modalTabLoginBtn" onclick="switchAuthTab('login')" class="py-2 rounded-xl font-bold bg-orange-600 text-white transition">Giriş Yap</button>
         <button id="modalTabRegBtn" onclick="switchAuthTab('register')" class="py-2 rounded-xl font-bold text-slate-400 hover:text-white transition">Kayıt Ol</button>
       </div>
-
-      <!-- Giriş Formu -->
       <form id="modalFormLogin" onsubmit="event.preventDefault(); submitLogin();" class="space-y-3 font-mono text-xs">
         <div>
           <label class="text-slate-300 block font-bold mb-1">Kullanıcı Adı:</label>
-          <input type="text" id="loginUsername" required placeholder="kullanici_adi" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+          <input type="text" id="loginUsername" required class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
         </div>
         <div>
           <label class="text-slate-300 block font-bold mb-1">Şifre:</label>
-          <input type="password" id="loginPassword" required placeholder="••••••••" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+          <input type="password" id="loginPassword" required class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
         </div>
-        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-600/20">
-          Giriş Yap
-        </button>
+        <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition">Giriş Yap</button>
       </form>
-
-      <!-- Kayıt Formu (REFERANS KODU ENTEGRELİ) -->
       <form id="modalFormRegister" onsubmit="event.preventDefault(); submitRegister();" class="hidden space-y-3 font-mono text-xs">
         <div>
           <label class="text-slate-300 block font-bold mb-1">Kullanıcı Adı:</label>
-          <input type="text" id="regUsername" required placeholder="Örn: TraderAli" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+          <input type="text" id="regUsername" required class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
         </div>
         <div>
           <label class="text-slate-300 block font-bold mb-1">E-Posta:</label>
-          <input type="email" id="regEmail" required placeholder="ali@gmail.com" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+          <input type="email" id="regEmail" required class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
         </div>
         <div>
           <label class="text-slate-300 block font-bold mb-1">Şifre:</label>
-          <input type="password" id="regPassword" required placeholder="••••••••" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+          <input type="password" id="regPassword" required class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
         </div>
         <div>
-          <label class="text-slate-300 block font-bold mb-1">Referans Kodu / Davet Eden (Opsiyonel):</label>
-          <input type="text" id="regRefCode" placeholder="Varsa referans kodu girin (yoksa boş bırakın)" class="bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-2.5 w-full text-amber-300 focus:outline-none focus:border-amber-400 uppercase" />
+          <label class="text-slate-300 block font-bold mb-1">Referans Kodu (Opsiyonel):</label>
+          <input type="text" id="regRefCode" class="bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-2.5 w-full text-amber-300 uppercase focus:outline-none" />
         </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">
-          Hesap Oluştur & Abonelik Adımına Geç
-        </button>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition">Hesap Oluştur</button>
       </form>
-
     </div>
   </div>
 
-  <!-- ================= VIP ÖDEME MODALI ================= -->
+  <!-- VIP MODAL -->
   <div id="vipPaymentModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900/95 border border-white/15 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
-      
-      <button onclick="closeVipModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-
+    <div class="bg-slate-900/95 border border-white/15 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative font-mono text-xs">
+      <button onclick="closeVipModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
       <div class="text-center space-y-1">
-        <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-xl mb-2 shadow-lg shadow-amber-500/20">
-          <i class="fa-solid fa-crown"></i>
-        </div>
         <h3 class="font-display text-xl font-black text-white">MINEORA SENTINEL VIP</h3>
-        <p class="text-xs text-amber-400/90 font-mono">30 Günlük Lisans Aktivasyonu</p>
+        <p class="text-xs text-amber-400">30 Günlük Lisans</p>
       </div>
-
-      <div class="bg-slate-950 border border-white/10 p-3.5 rounded-2xl flex justify-between items-center font-mono">
-        <span class="text-xs text-slate-300">Abonelik Bedeli:</span>
-        <span class="text-base font-black text-emerald-400">200 USDT</span>
+      <div class="bg-slate-950 border border-white/10 p-3 rounded-xl flex justify-between">
+        <span class="text-slate-300">Tutar:</span>
+        <strong class="text-emerald-400">200 USDT</strong>
       </div>
-
-      <div class="space-y-2 font-mono text-xs">
-        <div class="flex justify-between items-center">
-          <label class="text-slate-300 font-bold">USDT (TRC-20) Yatırma Adresi:</label>
-          <span class="text-[10px] bg-red-950 border border-red-800 text-red-300 px-2 py-0.5 rounded font-bold">Sadece TRC20</span>
-        </div>
-        <div class="flex items-center gap-2 bg-slate-950 border border-white/10 p-2.5 rounded-xl">
-          <input type="text" id="usdtWalletAddress" value="TDJiWDhEfbeF3ckg1zvTF8VUht6TrkbXY5" readonly class="bg-transparent text-slate-200 text-[11px] w-full focus:outline-none select-all font-mono" />
-          <button onclick="copyWalletAddress()" id="copyBtn" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg transition text-[11px] shrink-0 font-bold">
-            Kopyala
-          </button>
-        </div>
-        <p class="text-[10px] text-amber-400/90 leading-relaxed">
-          ⚠️ <strong>Önemli:</strong> Sadece <strong>TRC-20 (Tron)</strong> ağını kullanın.
-        </p>
+      <div>
+        <label class="text-slate-300 block mb-1">USDT (TRC-20) Adresi:</label>
+        <input type="text" id="usdtWalletAddress" value="TDJiWDhEfbeF3ckg1zvTF8VUht6TrkbXY5" readonly class="bg-slate-950 border border-white/10 text-[11px] p-2.5 rounded-xl w-full text-slate-200 select-all" />
       </div>
-
-      <div class="space-y-2 font-mono text-xs">
-        <label class="text-slate-300 font-bold block">İşlem Kodu (TxID / TxHash):</label>
-        <input type="text" id="inputTxHash" placeholder="Örn: 4f8b9... (Borsadan gelen transfer hash kodu)" class="bg-slate-950 border border-white/10 text-slate-200 text-xs rounded-xl p-2.5 w-full focus:outline-none focus:border-orange-500 font-mono" />
+      <div>
+        <label class="text-slate-300 block mb-1">İşlem Kodu (TxID):</label>
+        <input type="text" id="inputTxHash" placeholder="Transfer hash kodu" class="bg-slate-950 border border-white/10 text-xs p-2.5 rounded-xl w-full text-white" />
       </div>
-
-      <button onclick="submitVipPayment()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
-        <i class="fa-solid fa-paper-plane"></i> Ödemeyi Bildir & Onaya Gönder
-      </button>
-
+      <button onclick="submitVipPayment()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition">Ödemeyi Bildir</button>
     </div>
   </div>
 
   <script>
-    const firebaseConfig = {
-      databaseURL: "https://mineora-web-default-rtdb.firebaseio.com/"
-    };
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
+    const firebaseConfig = { databaseURL: "https://mineora-web-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_ADMIN_ID = "6457294906";
 
-    // URL'den varsa Referans Kodunu Yakala (?ref=XYZ)
+    let currentScanData = null;
+
     window.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(window.location.search);
-      const refParam = params.get('ref');
-      if (refParam) {
-        sessionStorage.setItem('pendingRefCode', refParam.toUpperCase());
-        const refInput = document.getElementById('regRefCode');
-        if (refInput) refInput.value = refParam.toUpperCase();
+      const p = new URLSearchParams(window.location.search);
+      const r = p.get('ref');
+      if (r) {
+        sessionStorage.setItem('pendingRefCode', r.toUpperCase());
+        const el = document.getElementById('regRefCode');
+        if (el) el.value = r.toUpperCase();
       }
     });
 
-    function openAuthModal(tab) {
+    function openAuthModal(t) {
       document.getElementById('authModal').classList.remove('hidden');
-      const savedRef = sessionStorage.getItem('pendingRefCode');
-      if (savedRef) {
-        document.getElementById('regRefCode').value = savedRef;
-      }
-      switchAuthTab(tab || 'login');
+      const s = sessionStorage.getItem('pendingRefCode');
+      if (s) document.getElementById('regRefCode').value = s;
+      switchAuthTab(t || 'login');
     }
-    function closeAuthModal() {
-      document.getElementById('authModal').classList.add('hidden');
-    }
-    function openVipModal() {
-      document.getElementById('vipPaymentModal').classList.remove('hidden');
-    }
-    function closeVipModal() {
-      document.getElementById('vipPaymentModal').classList.add('hidden');
-    }
+    function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); }
+    function openVipModal() { document.getElementById('vipPaymentModal').classList.remove('hidden'); }
+    function closeVipModal() { document.getElementById('vipPaymentModal').classList.add('hidden'); }
 
     function switchAuthTab(t) {
       if (t === 'login') {
         document.getElementById('modalFormLogin').classList.remove('hidden');
         document.getElementById('modalFormRegister').classList.add('hidden');
-        document.getElementById('modalTabLoginBtn').className = "py-2 rounded-xl font-bold bg-orange-600 text-white transition";
-        document.getElementById('modalTabRegBtn').className = "py-2 rounded-xl font-bold text-slate-400 hover:text-white transition";
       } else {
         document.getElementById('modalFormLogin').classList.add('hidden');
         document.getElementById('modalFormRegister').classList.remove('hidden');
-        document.getElementById('modalTabRegBtn').className = "py-2 rounded-xl font-bold bg-orange-600 text-white transition";
-        document.getElementById('modalTabLoginBtn').className = "py-2 rounded-xl font-bold text-slate-400 hover:text-white transition";
       }
     }
 
@@ -401,158 +388,71 @@
       const u = document.getElementById('regUsername').value.trim();
       const e = document.getElementById('regEmail').value.trim();
       const p = document.getElementById('regPassword').value.trim();
-      const refCode = document.getElementById('regRefCode').value.trim().toUpperCase();
+      const r = document.getElementById('regRefCode').value.trim().toUpperCase();
 
-      if (!u || !e || !p) { alert("Lütfen tüm alanları doldurun."); return; }
+      if (!u || !e || !p) return alert("Alanları doldurun.");
+      const snap = await db.ref('users/' + u).once('value');
+      if (snap.exists()) return alert("Kullanıcı adı alınmış!");
 
-      try {
-        const ref = db.ref('users/' + u);
-        const snap = await ref.once('value');
-        if (snap.exists()) { alert("Bu kullanıcı adı zaten alınmış!"); return; }
-
-        let validReferrer = null;
-        if (refCode && refCode !== u) {
-          const refSnap = await db.ref('users/' + refCode).once('value');
-          if (refSnap.exists()) {
-            validReferrer = refCode;
-          }
-        }
-
-        await ref.set({
-          username: u,
-          email: e,
-          password: p,
-          isVip: false,
-          referredBy: validReferrer || null,
-          refEarningsUsdt: 0,
-          totalReferredCount: 0,
-          createdAt: Date.now()
-        });
-
-        // Eğer geçerli bir davet eden varsa, sayacını 1 artır
-        if (validReferrer) {
-          const refUserRef = db.ref('users/' + validReferrer);
-          await refUserRef.child('totalReferredCount').transaction(c => (c || 0) + 1);
-        }
-
-        try {
-          const regMsg = `👤 <b>YENİ KULLANICI KAYIT OLDU!</b>\n` +
-                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `🆔 <b>Kullanıcı:</b> <code>${u}</code>\n` +
-                         `📧 <b>E-Posta:</b> <code>${e}</code>\n` +
-                         `🤝 <b>Davet Eden (Referans):</b> ${validReferrer ? `<code>${validReferrer}</code>` : 'Yok (Organik)'}\n` +
-                         `📅 <b>Tarih:</b> ${new Date().toLocaleString('tr-TR')}\n` +
-                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `ℹ️ <i>Kullanıcı Admin Paneli'ne beklemede olarak eklendi.</i>`;
-
-          fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: regMsg, parse_mode: 'HTML' })
-          });
-        } catch(tgErr) {}
-
-        sessionStorage.setItem('currentUser', u);
-        sessionStorage.setItem('isVip', 'false');
-
-        closeAuthModal();
-        alert("Hesabınız açıldı! VIP Sentinel Radara erişmek için lütfen 200 USDT lisans ödemenizi bildirin.");
-        openVipModal();
-      } catch(err) {
-        alert("Kayıt hatası: " + err.message);
+      let validRef = null;
+      if (r && r !== u) {
+        const refSnap = await db.ref('users/' + r).once('value');
+        if (refSnap.exists()) validRef = r;
       }
+
+      await db.ref('users/' + u).set({
+        username: u, email: e, password: p, isVip: false, referredBy: validRef, refEarningsUsdt: 0, totalReferredCount: 0, createdAt: Date.now()
+      });
+
+      if (validRef) {
+        await db.ref('users/' + validRef + '/totalReferredCount').transaction(c => (c || 0) + 1);
+      }
+
+      sessionStorage.setItem('currentUser', u);
+      sessionStorage.setItem('isVip', 'false');
+      closeAuthModal();
+      openVipModal();
     }
 
     async function submitLogin() {
       const u = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value.trim();
+      if (!u || !p) return alert("Bilgileri girin.");
 
-      if (!u || !p) { alert("Bilgileri girin."); return; }
-
-      const adminUsers = ['mourpheus', 'ersinulasduzyol@gmail.com'];
-      
-      if (adminUsers.includes(u) && p.length >= 6) {
+      if (['mourpheus', 'ersinulasduzyol@gmail.com'].includes(u) && p.length >= 6) {
         sessionStorage.setItem('currentUser', 'mourpheus');
         sessionStorage.setItem('isVip', 'true');
-        sessionStorage.setItem('isAdmin', 'true');
-        closeAuthModal();
-        alert("Yönetici girişi başarılı! Admin Masasına aktarılıyorsunuz.");
         window.location.href = 'admin.html';
         return;
       }
 
-      try {
-        const ref = db.ref('users/' + u);
-        const snap = await ref.once('value');
-        const user = snap.val();
+      const snap = await db.ref('users/' + u).once('value');
+      const usr = snap.val();
+      if (!usr || usr.password !== p) return alert("Hatalı bilgi!");
 
-        if (!user || user.password !== p) {
-          alert("Hatalı kullanıcı adı veya şifre!");
-          return;
-        }
+      sessionStorage.setItem('currentUser', usr.username);
+      sessionStorage.setItem('isVip', usr.isVip ? 'true' : 'false');
+      closeAuthModal();
 
-        sessionStorage.setItem('currentUser', user.username);
-        sessionStorage.setItem('isVip', user.isVip ? 'true' : 'false');
-
-        closeAuthModal();
-
-        if (!user.isVip) {
-          alert("Aboneliğiniz henüz onaylanmamış. Lütfen ödemeyi bildirin.");
-          openVipModal();
-        } else {
-          window.location.href = 'dashboard.html';
-        }
-      } catch(err) {
-        alert("Giriş hatası: " + err.message);
-      }
-    }
-
-    function copyWalletAddress() {
-      const addr = document.getElementById('usdtWalletAddress').value;
-      navigator.clipboard.writeText(addr).then(() => {
-        const btn = document.getElementById('copyBtn');
-        btn.innerText = "Kopyalandı!";
-        btn.classList.remove('bg-orange-600');
-        btn.classList.add('bg-emerald-600');
-        setTimeout(() => {
-          btn.innerText = "Kopyala";
-          btn.classList.remove('bg-emerald-600');
-          btn.classList.add('bg-orange-600');
-        }, 2000);
-      });
+      if (!usr.isVip) openVipModal();
+      else window.location.href = 'dashboard.html';
     }
 
     async function submitVipPayment() {
       const tx = document.getElementById('inputTxHash').value.trim();
-      if (!tx) { alert("Lütfen TxID kodunu girin."); return; }
-
-      const user = sessionStorage.getItem('currentUser') || 'Ziyaretçi';
-      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($200 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${tx}</code>\n\n🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${tx}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz. (Varsa referans sahibine 60 USDT %30 komisyon yansıtılacaktır.)`;
-
-      try {
-        const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: TG_ADMIN_ID,
-            text: msg,
-            parse_mode: 'HTML'
-          })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          alert("Ödeme bildiriminiz iletildi! Transfer kontrol edildikten sonra VIP erişiminiz açılacaktır.");
-          document.getElementById('inputTxHash').value = '';
-          closeVipModal();
-        } else {
-          alert("Bildirim iletilemedi. Lütfen Telegram'da botunuza /start verin.");
-        }
-      } catch(e) {
-        alert("Bağlantı hatası: " + e.message);
-      }
+      if (!tx) return alert("TxID girin.");
+      const u = sessionStorage.getItem('currentUser') || 'Ziyaretçi';
+      const msg = `💰 <b>VIP ÖDEME BİLDİRİMİ</b>\nKullanıcı: ${u}\nTxID: <code>${tx}</code>`;
+      await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: msg, parse_mode: 'HTML' })
+      });
+      alert("Ödeme bildiriminiz alındı!");
+      closeVipModal();
     }
 
-    // ================= WICK-SHIELD ÜCRETSİZ STOP & İĞNE RADARI ÇALIŞTIRICI =================
+    // WICK-SHIELD ÇALIŞTIRICI
     async function runPublicWickShield() {
       const input = document.getElementById('publicParityInput');
       const userStopInput = document.getElementById('publicUserStopInput');
@@ -560,12 +460,8 @@
       const result = document.getElementById('publicWickResult');
       const btn = document.getElementById('btnPublicScan');
 
-      let sym = input.value.trim().toUpperCase();
-      if (!sym) {
-        alert("Lütfen bir parite girin (örn: SOL, BTC, PEPE)");
-        return;
-      }
-      sym = sym.replace('USDT', '').replace('PERP', '').trim();
+      let sym = input.value.trim().toUpperCase().replace('USDT', '').replace('PERP', '').trim();
+      if (!sym) return alert("Parite girin.");
 
       loading.classList.remove('hidden');
       result.classList.add('hidden');
@@ -574,14 +470,9 @@
       try {
         const res = await fetch(`/api/xray-scan?symbol=${encodeURIComponent(sym)}`);
         const data = await res.json();
+        if (!data.success) throw new Error(data.error);
 
-        if (!data.success) {
-          alert("Hata: " + (data.error || "Parite verisi alınamadı."));
-          loading.classList.add('hidden');
-          btn.disabled = false;
-          return;
-        }
-
+        currentScanData = data;
         const price = parseFloat(data.price);
         const magnetPrice = parseFloat(data.bitget.magnetWickPrice);
 
@@ -589,53 +480,48 @@
         const safeStopPrice = magnetPrice * 0.992;
         const sniperEntryPrice = magnetPrice * 1.002;
 
-        const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
-        const trapStr = trapStopPrice < 1 ? trapStopPrice.toFixed(6) : trapStopPrice.toFixed(4);
-        const safeStr = safeStopPrice < 1 ? safeStopPrice.toFixed(6) : safeStopPrice.toFixed(4);
-        const sniperStr = sniperEntryPrice < 1 ? sniperEntryPrice.toFixed(6) : sniperEntryPrice.toFixed(4);
-
         document.getElementById('wResSymbol').textContent = '#' + data.symbol;
-        document.getElementById('wResPrice').textContent = '$' + pStr;
-        document.getElementById('wTrapStop').textContent = '$' + trapStr;
-        document.getElementById('wSafeStop').textContent = '$' + safeStr;
-        document.getElementById('wSniperEntry').textContent = '$' + sniperStr;
+        document.getElementById('wResPrice').textContent = '$' + (price < 1 ? price.toFixed(6) : price.toFixed(4));
+        document.getElementById('wTrapStop').textContent = '$' + (trapStopPrice < 1 ? trapStopPrice.toFixed(6) : trapStopPrice.toFixed(4));
+        document.getElementById('wSafeStop').textContent = '$' + (safeStopPrice < 1 ? safeStopPrice.toFixed(6) : safeStopPrice.toFixed(4));
+        document.getElementById('wSniperEntry').textContent = '$' + (sniperEntryPrice < 1 ? sniperEntryPrice.toFixed(6) : sniperEntryPrice.toFixed(4));
 
-        const isShortWick = data.score <= 45;
-        const biasEl = document.getElementById('wResBias');
-        if (isShortWick) {
-          biasEl.textContent = "Aşağı İğne (Long Avı Riski Yüksek)";
-          biasEl.className = "text-xs font-bold text-rose-400";
-        } else {
-          biasEl.textContent = "Alıcı Duvarı Güçlü (İğne Yukarı İtiyor)";
-          biasEl.className = "text-xs font-bold text-emerald-400";
-        }
-
-        const userStopVal = parseFloat(userStopInput.value);
-        const verdictBox = document.getElementById('userStopVerdictBox');
-        if (!isNaN(userStopVal) && userStopVal > 0) {
-          verdictBox.classList.remove('hidden');
-          if (userStopVal >= magnetPrice && userStopVal <= price) {
-            verdictBox.className = "p-4 rounded-2xl border bg-rose-950/50 border-rose-800 text-rose-300 text-xs";
-            verdictBox.innerHTML = `⚠️ <b>STOPUN PATLAYABİLİR!</b> Girdiğin $${userStopVal} seviyesi balinaların likidasyon iğnesi menzilinde ($${magnetPrice.toFixed(4)}). Fiyat orayı patlatıp dönebilir. Güvenli bölge: <b>$${safeStr}</b>`;
-          } else if (userStopVal < magnetPrice) {
-            verdictBox.className = "p-4 rounded-2xl border bg-emerald-950/50 border-emerald-800 text-emerald-300 text-xs";
-            verdictBox.innerHTML = `🛡️ <b>STOPUN GÜVENLİ BÖLGEDE!</b> $${userStopVal} seviyen likidasyon iğnesi mıknatısının ($${magnetPrice.toFixed(4)}) altında kalıyor. Balina tuzağına takılma riskin düşük.`;
-          } else {
-            verdictBox.className = "p-4 rounded-2xl border bg-amber-950/50 border-amber-800 text-amber-300 text-xs";
-            verdictBox.innerHTML = `ℹ️ Girdiğin seviye mevcut fiyattan yüksek görünüyor. Lütfen Long pozisyon için fiyatın altındaki stop seviyeni gir.`;
-          }
-        } else {
-          verdictBox.classList.add('hidden');
-        }
+        calculateSmartPosition();
 
         loading.classList.add('hidden');
         result.classList.remove('hidden');
       } catch (err) {
-        alert("Bağlantı hatası: " + err.message);
+        alert("Tarama hatası: " + err.message);
         loading.classList.add('hidden');
       } finally {
         btn.disabled = false;
       }
+    }
+
+    // AKILLI KALDIRAÇ & POZİSYON BOYUTU HESAPLAMA MOTORU
+    function calculateSmartPosition() {
+      if (!currentScanData) return;
+      const price = parseFloat(currentScanData.price);
+      const magnetPrice = parseFloat(currentScanData.bitget.magnetWickPrice);
+      const safeStopPrice = magnetPrice * 0.992;
+
+      const balance = parseFloat(document.getElementById('calcBalanceInput').value) || 500;
+      const riskAmount = parseFloat(document.getElementById('calcRiskInput').value) || 20;
+
+      const stopDistancePct = Math.abs(price - safeStopPrice) / price;
+      
+      // Stop mesafesine göre güvenli izole kaldıraç hesabı
+      let safeLev = Math.floor(0.18 / stopDistancePct);
+      if (safeLev < 2) safeLev = 2;
+      if (safeLev > 25) safeLev = 25;
+
+      const posSize = riskAmount / stopDistancePct;
+      const profitTarget1 = posSize * 0.018 * 1.2;
+
+      document.getElementById('calcLevDisplay').textContent = `${safeLev}x`;
+      document.getElementById('calcPosDisplay').textContent = `$${Math.round(posSize)}`;
+      document.getElementById('calcLossDisplay').textContent = `-$${riskAmount.toFixed(2)}`;
+      document.getElementById('calcProfitDisplay').textContent = `+$${profitTarget1.toFixed(2)}`;
     }
   </script>
 </body>
