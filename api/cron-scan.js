@@ -6,7 +6,8 @@ export default async function handler(req, res) {
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_ADMIN_ID = "6457294906";
+    const TG_CHANNEL_ID = "-1003180299696"; // Ana Telegram Kanalın
+    const TG_ADMIN_ID = "6457294906";     // Yönetici Özel Bildirimi
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
     const now = Date.now();
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
       parseFloat(t.usdtVolume || 0) >= 800000
     );
 
-    // 2. Firebase'deki Son Sinyalleri Oku
+    // 2. Firebase Aktif İşlem ve Son Sinyal Kontrolü
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
       lastSignals = {};
     }
 
-    // SPAM KİLİDİ 1: Halihazırda son 2 saatte açılmış ve durumu OPEN olan işlem varsa bekle
+    // Açık işlem kontrolü
     const hasOpenTrade = Object.values(activeTrades).some(t => {
       if (!t || t.status !== 'OPEN') return false;
       const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
@@ -49,15 +50,14 @@ export default async function handler(req, res) {
     });
 
     if (hasOpenTrade) {
-      return res.status(200).json({ status: "IDLE", message: "Takip edilen açık işlem bulunuyor, yeni sinyal kilitli." });
+      return res.status(200).json({ status: "IDLE", message: "Takip edilen açık işlem bulunuyor." });
     }
 
-    // 3. ANLIK HAREKET & İLK MUM DÖNÜŞ MOTORU (5. MUMU BEKLEMEYEN ALGORİTMA)
+    // 3. Ham Tape / Emir Akışı Taraması
     let candidate = null;
     let direction = null;
 
     for (const item of pool) {
-      // SPAM KİLİDİ 2: Bu pariteye son 2 saatte bildirim gittiyse ASLA tekrar atma
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < TWO_HOURS_MS) continue;
 
@@ -66,10 +66,8 @@ export default async function handler(req, res) {
       const low24 = parseFloat(item.low24h || 0);
       if (price <= 0 || high24 <= low24) continue;
 
-      // Fiyatın gün içi bandındaki yeri (0 = Günün Dibi, 1 = Günün Tepesi)
       const rangePosition = (price - low24) / (high24 - low24);
 
-      // Son 50 İşlemdeki Piyasa Alış / Satış Akışı (Tape Flow)
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=40`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -88,11 +86,9 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      // HAREKETİ İLK MUMDA YAKALAMA KURALLARI:
-      // LONG (Dipte Dönüş): Fiyat günün alt çeyreğinde (rangePosition <= 0.35) ve son işlemlerde ani alıcı akını var (%62+ alım)
+      // LONG: Fiyat günün alt çeyreğinde ve piyasa alıcıları agresif (%62+ alım)
       const isEarlyLongReversal = (rangePosition <= 0.35) && (buyPct >= 62);
-
-      // SHORT (Tepede Dönüş): Fiyat günün üst çeyreğinde (rangePosition >= 0.70) ve aniden satış baskısı başladı (%38 altı alım)
+      // SHORT: Fiyat günün üst çeyreğinde ve ani satış baskısı başladı (%38 altı alım)
       const isEarlyShortReversal = (rangePosition >= 0.70) && (buyPct <= 38);
 
       if (isEarlyLongReversal) {
@@ -109,10 +105,10 @@ export default async function handler(req, res) {
     }
 
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "İlk mum dönüşü ve dip/tepe hacim patlaması taranıyor." });
+      return res.status(200).json({ status: "SCANNING", message: "Uygun sinyal taranıyor." });
     }
 
-    // 4. Hedef ve Stop Seviyeleri (Dar Stop, Geniş TP)
+    // 4. Seviye Hesapları
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
@@ -133,48 +129,54 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. KESİN KİLİTLEME: Önce Firebase'e Yaz, Onay Alınmadan Telegram'a ASLA Mesaj Atma
-    const fbTradePromise = fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTrade)
-    });
-
-    const fbLockPromise = fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(now)
-    });
-
-    const [fbRes1, fbRes2] = await Promise.all([fbTradePromise, fbLockPromise]);
+    // 5. Firebase'e Yaz (Kilit Mekanizması)
+    const [fbRes1] = await Promise.all([
+      fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTrade)
+      }),
+      fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(now)
+      })
+    ]);
 
     if (!fbRes1.ok) {
-      return res.status(500).json({ error: "Firebase veritabanına kayıt yapılamadı, bildirim iptal edildi." });
+      return res.status(500).json({ error: "Firebase veritabanı kayıt hatası." });
     }
 
-    // 6. Firebase Onaylandıktan Sonra Telegram Bildirimini Fırlat (Spam İmkansız)
+    // 6. Kanala ve Yöneticiye Gönder
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
 
-    const tgMsg = `🎯 <b>MINEORA SENTINEL | ANLIK ERKEN SİNYAL</b>\n` +
+    const tgMsg = `🎯 <b>MINEORA SENTINEL | DOĞRULANMIŞ SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidate.symbol}\n` +
                   `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Dönüşü)' : '🔴 SHORT (Tepe Dağıtımı)'}\n` +
-                  `💵 <b>Giriş Seviyesi:</b> <code>$${pStr}</code>\n` +
+                  `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hedef 1:</b> <code>$${tp1Str}</code> (+%1.8)\n` +
                   `🚀 <b>Hedef 2:</b> <code>$${tp2Str}</code> (+%3.8)\n` +
                   `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code> (-%1.2)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `⚡ <i>Hacim patlaması 1. mumda yakalanmıştır.</i>`;
+                  `⚡ <i>Canlı Radar & Panel: mineoragame.com</i>`;
 
-    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: tgMsg, parse_mode: 'HTML' })
-    }).catch(() => {});
+    await Promise.all([
+      fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgMsg, parse_mode: 'HTML' })
+      }),
+      fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: tgMsg, parse_mode: 'HTML' })
+      })
+    ]).catch(() => {});
 
     return res.status(200).json({ success: true, trade: newTrade });
 
