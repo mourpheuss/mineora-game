@@ -93,6 +93,40 @@
       </div>
     </div>
 
+    <!-- ================= CANLI X-RAY İSTİHBARAT RÖNTGENİ MODÜLÜ (3 ÜCRETSİZ HAK) ================= -->
+    <section class="max-w-4xl mx-auto w-full font-mono">
+      <div class="bg-gradient-to-b from-slate-900/90 via-slate-900/95 to-slate-950 border-2 border-amber-500/40 p-6 sm:p-8 rounded-3xl shadow-2xl shadow-orange-500/10 backdrop-blur-2xl space-y-5 ring-1 ring-white/10 relative overflow-hidden">
+        <div class="absolute -right-16 -top-16 w-48 h-48 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+              <h2 class="font-display font-black text-xl text-white">X-RAY İSTİHBARAT RÖNTGENİ</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Merak ettiğin herhangi bir vadeli coinin derin tahta tuzağını ve balina yönünü çöz.</p>
+          </div>
+          <div class="inline-flex items-center gap-2 bg-slate-950/80 border border-white/10 px-3.5 py-1.5 rounded-xl self-start sm:self-auto">
+            <span class="text-xs text-slate-400">Kalan Ücretsiz Hak:</span>
+            <strong id="freeCreditBadge" class="text-amber-400 text-sm font-bold">3 / 3</strong>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <div class="relative flex-1">
+            <input type="text" id="publicSearchInput" placeholder="Örn: TREE, SUI, DOGE, PEPE..." class="bg-slate-950 border border-slate-700/80 text-white text-xs sm:text-sm rounded-xl px-4 py-3 uppercase w-full focus:outline-none focus:border-amber-500 placeholder-slate-600 font-mono tracking-wider" onkeydown="if(event.key==='Enter') executePublicXRay()" />
+          </div>
+          <button onclick="executePublicXRay()" id="btnPublicSearch" class="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-xs sm:text-sm font-black px-6 py-3 rounded-xl transition shrink-0 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 cursor-pointer transform hover:-translate-y-0.5">
+            <i class="fa-solid fa-radiation"></i> <span>Röntgen Çek</span>
+          </button>
+        </div>
+
+        <!-- Röntgen Çıktı Kartı -->
+        <div id="publicResultArea" class="hidden pt-2"></div>
+      </div>
+    </section>
+    <!-- ========================================================================================= -->
+
     <!-- SİSTEM ÖZELLİKLERİ (Şeffaf Cam Görünümlü Kartlar) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
@@ -453,6 +487,228 @@
         alert("Bağlantı hatası: " + e.message);
       }
     }
+
+    // ================= X-RAY VE CİHAZ PARMAK İZİ GÜVENLİK MOTORU =================
+    const MAX_FREE_CREDITS = 3;
+
+    // Gizli sekme veya çerez temizliğinde bile değişmeyen donanım bazlı parmak izi
+    function generateDeviceFingerprint() {
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl');
+        let debugInfo = "";
+        if (gl) {
+          const ext = gl.getExtension('WEBGL_debug_renderer_info');
+          debugInfo = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : "";
+        }
+        const rawString = `${navigator.userAgent}_${screen.width}x${screen.height}_${navigator.hardwareConcurrency}_${debugInfo}_${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+        let hash = 0;
+        for (let i = 0; i < rawString.length; i++) {
+          hash = ((hash << 5) - hash) + rawString.charCodeAt(i);
+          hash |= 0;
+        }
+        return 'dev_' + Math.abs(hash);
+      } catch (e) {
+        return 'dev_fallback_' + Math.floor(Math.random() * 100000);
+      }
+    }
+
+    const deviceId = generateDeviceFingerprint();
+
+    async function getRemainingCredits() {
+      try {
+        const snap = await db.ref('deviceUsage/' + deviceId).once('value');
+        const used = snap.val() || 0;
+        const remaining = Math.max(0, MAX_FREE_CREDITS - used);
+        const badge = document.getElementById('freeCreditBadge');
+        if (badge) badge.textContent = `${remaining} / ${MAX_FREE_CREDITS}`;
+        return remaining;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    async function incrementUsage() {
+      try {
+        const snap = await db.ref('deviceUsage/' + deviceId).once('value');
+        const used = snap.val() || 0;
+        await db.ref('deviceUsage/' + deviceId).set(used + 1);
+      } catch (e) {}
+    }
+
+    async function executePublicXRay() {
+      const input = document.getElementById('publicSearchInput');
+      const area = document.getElementById('publicResultArea');
+      const btn = document.getElementById('btnPublicSearch');
+
+      let query = input.value.trim().toUpperCase();
+      if (!query) return;
+      if (!query.endsWith("USDT")) query += "USDT";
+
+      const remaining = await getRemainingCredits();
+      if (remaining <= 0) {
+        area.classList.remove('hidden');
+        area.innerHTML = `
+          <div class="p-6 bg-amber-500/10 border-2 border-amber-500/50 rounded-2xl text-center space-y-3 font-mono">
+            <i class="fa-solid fa-lock text-amber-400 text-3xl"></i>
+            <h4 class="font-display font-black text-lg text-white">ÜCRETSİZ RÖNTGEN HAKKINIZ DOLDU</h4>
+            <p class="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+              Bu cihaz için tanımlanan 3 ücretsiz istihbarat hakkı tamamlandı. Sınırsız röntgen çekmek, gizli balina akışını izlemek ve 7/24 Telegram VIP sinyallerine erişmek için lisans başlatın.
+            </p>
+            <button onclick="openVipModal()" class="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-xs px-6 py-3 rounded-xl transition shadow-lg shadow-orange-500/30 transform hover:-translate-y-0.5">
+              <i class="fa-solid fa-crown mr-1"></i> VIP Lisansı Başlat ($500)
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      area.classList.remove('hidden');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Taranıyor...`;
+      area.innerHTML = `
+        <div class="text-center py-8 text-xs font-mono text-slate-400 space-y-2">
+          <i class="fa-solid fa-circle-notch fa-spin text-amber-400 text-xl block"></i>
+          <div><b>${query}</b> tahtasının derinlik röntgeni çekiliyor...</div>
+        </div>
+      `;
+
+      try {
+        const tRes = await fetch(`https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES&symbol=${query}`);
+        const tData = await tRes.json();
+        if (tData.code !== "00000" || !tData.data || tData.data.length === 0) {
+          area.innerHTML = `<div class="p-4 bg-rose-950/40 border border-rose-900 rounded-xl text-xs font-mono text-rose-300"><b>${query}</b> vadeli tahtada bulunamadı veya parite ismi hatalı.</div>`;
+          return;
+        }
+
+        const ticker = tData.data[0];
+        const price = parseFloat(ticker.lastPr);
+        const fundingRate = parseFloat(ticker.fundingRate || 0) * 100;
+        const change24h = (parseFloat(ticker.change24h || 0) * 100).toFixed(2);
+
+        // Son 50 işlem Tape akışı
+        const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${query}&productType=USDT-FUTURES&limit=50`);
+        const fillsData = await fillsRes.json();
+        const fills = fillsData.data?.fillList || fillsData.data || [];
+        let buyVol = 0, sellVol = 0;
+        fills.forEach(f => {
+          const val = parseFloat(f.price) * parseFloat(f.size);
+          if (f.side === 'buy') buyVol += val; else sellVol += val;
+        });
+        const totalV = buyVol + sellVol || 1;
+        const buyP = Math.round((buyVol / totalV) * 100);
+
+        // Derinlik Oranı
+        const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/orderbook?symbol=${query}&productType=USDT-FUTURES&limit=15`);
+        const depthData = await depthRes.json();
+        const asks = depthData.data?.asks || [];
+        const bids = depthData.data?.bids || [];
+        let totalAsk = 0, totalBid = 0;
+        asks.forEach(a => totalAsk += parseFloat(a[1]));
+        bids.forEach(b => totalBid += parseFloat(b[1]));
+        const depthRatio = totalAsk > 0 ? (totalBid / totalAsk).toFixed(2) : "1.00";
+
+        let action = "NÖTR / BEKLE";
+        let actionCol = "text-amber-400 border-amber-500/60 bg-amber-500/10";
+        let reason = "Tahtada belirgin bir sıkışma veya borsa tuzağı tespit edilmedi; genel piyasa trendini takip ediyor.";
+        let tp = price * 1.015, sl = price * 0.993;
+
+        if (fundingRate < -0.02 && buyP >= 60) {
+          action = "🟢 GÜÇLÜ LONG (SHORT TASFİYE TUZAĞI)";
+          actionCol = "text-emerald-400 border-emerald-500/80 bg-emerald-950/60";
+          reason = `Fonlama oranı aşırı negatif (%${fundingRate.toFixed(4)}), yani içerideki kitle tamamen Short'ta rehin kalmış durumda. Borsa bu Short'çuları patlatmak için yukarı iğneleyecek. Sürüye karşı Long yönünde yer alın.`;
+          tp = price * 1.020; sl = price * 0.992;
+        } else if (fundingRate > 0.03 && buyP <= 40) {
+          action = "🔴 GÜÇLÜ SHORT (LONG TASFİYE TUZAĞI)";
+          actionCol = "text-rose-400 border-rose-500/80 bg-rose-950/60";
+          reason = `Küçük yatırımcı kitlesi Long yığmış (%${fundingRate.toFixed(4)}), ancak tahtada kurumsal alıcı yok. Borsa Long kütlesini temizlemek için sert aşağı vurabilir; Long girmek büyük risk!`;
+          tp = price * 0.980; sl = price * 1.008;
+        } else if (buyP >= 75) {
+          action = "🟢 HIZLI LONG (TAPE SÜPÜRÜLÜYOR)";
+          actionCol = "text-emerald-400 border-emerald-500/80 bg-emerald-950/60";
+          reason = `Son 50 işlemde piyasa alıcıları ezici (%${buyP}). Satış kademeleri market emirleriyle süpürülüyor, hızlı yukarı sıçrama bekleniyor.`;
+          tp = price * 1.015; sl = price * 0.993;
+        }
+
+        const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
+        const tpStr = tp < 1 ? tp.toFixed(6) : tp.toFixed(4);
+        const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
+
+        area.innerHTML = `
+          <div class="bg-slate-950 p-6 rounded-2xl border border-white/10 space-y-5 font-mono text-xs">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900 pb-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-display font-black text-xl text-white">#${ticker.symbol}</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">VADELİ</span>
+                </div>
+                <span class="text-[11px] text-slate-400">Bitget USDT-Margined Canlı Tahtası</span>
+              </div>
+              <div class="text-left sm:text-right">
+                <div class="font-display text-2xl font-bold text-white">$${pStr}</div>
+                <span class="text-xs font-bold ${change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${change24h >= 0 ? '+' : ''}${change24h}% (24s)
+                </span>
+              </div>
+            </div>
+
+            <div class="p-5 rounded-2xl border-2 ${actionCol} space-y-3">
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">SİSTEMİN NET İŞLEM ÖNERİSİ:</span>
+              <div class="font-display text-xl font-black">${action}</div>
+              
+              <div class="grid grid-cols-3 gap-2 text-center pt-1 text-[11px]">
+                <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                  <span class="text-[10px] text-slate-400 block">ÖNERİLEN GİRİŞ</span>
+                  <strong class="text-white text-xs">$${pStr}</strong>
+                </div>
+                <div class="bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-900/70">
+                  <span class="text-[10px] text-emerald-400 block">KÂR AL (TP)</span>
+                  <strong class="text-emerald-300 text-xs">$${tpStr}</strong>
+                </div>
+                <div class="bg-rose-950/50 p-2.5 rounded-xl border border-rose-900/70">
+                  <span class="text-[10px] text-rose-400 block">KATI STOP (SL)</span>
+                  <strong class="text-rose-300 text-xs">$${slStr}</strong>
+                </div>
+              </div>
+
+              <p class="text-[11px] leading-relaxed pt-2 border-t border-slate-800/80 text-slate-200">
+                💡 <b>Neden Bu Karar?</b> ${reason}
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-center text-[11px]">
+              <div class="bg-slate-900/80 p-3 rounded-xl border border-white/5">
+                <span class="text-[10px] text-slate-400 block mb-0.5">FONLAMA ORANI</span>
+                <strong class="${fundingRate <= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fundingRate.toFixed(4)}%</strong>
+              </div>
+              <div class="bg-slate-900/80 p-3 rounded-xl border border-white/5">
+                <span class="text-[10px] text-slate-400 block mb-0.5">ALICI BASKISI (TAPE)</span>
+                <strong class="text-emerald-400">%${buyP} Alıcı</strong>
+              </div>
+              <div class="bg-slate-900/80 p-3 rounded-xl border border-white/5 col-span-2 sm:col-span-1">
+                <span class="text-[10px] text-slate-400 block mb-0.5">TAHTA BASKI ORANI</span>
+                <strong class="text-amber-400">${depthRatio}x</strong>
+              </div>
+            </div>
+
+          </div>
+        `;
+
+        await incrementUsage();
+        await getRemainingCredits();
+      } catch (err) {
+        area.innerHTML = `<div class="p-4 bg-rose-950/40 border border-rose-900 rounded-xl text-xs font-mono text-rose-300">Tahta verisi çekilirken hata oluştu: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-radiation"></i> <span>Röntgen Çek</span>`;
+      }
+    }
+
+    // Sayfa açıldığında kalan hakkı otomatik oku
+    window.addEventListener('DOMContentLoaded', () => {
+      getRemainingCredits();
+    });
   </script>
 </body>
 </html>
