@@ -22,7 +22,6 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white relative overflow-x-hidden">
 
-  <!-- ARKA PLAN IŞIKLANDIRMASI -->
   <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
     <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 scale-100 transition duration-700" 
          style="background-image: url('https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=2560&auto=format&fit=crop');">
@@ -33,10 +32,8 @@
     <div class="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-slate-950/60 to-slate-950/95"></div>
   </div>
 
-  <!-- ÜST MENÜ -->
   <header class="bg-slate-950/70 border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl relative">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-      
       <div class="flex items-center gap-3">
         <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-orange-500/40 ring-1 ring-white/20">
           <i class="fa-solid fa-shield-halved"></i>
@@ -55,51 +52,49 @@
           <i class="fa-solid fa-crown text-slate-950"></i> VIP Lisans Al ($200)
         </button>
       </div>
-
     </div>
   </header>
 
-  <!-- ANA ALAN -->
   <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16 relative z-10">
 
     <div class="text-center max-w-3xl mx-auto space-y-6">
-      <div class="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 px-4 py-1.5 rounded-full font-mono text-xs text-amber-300 backdrop-blur-xl shadow-lg shadow-amber-500/10">
-        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-md shadow-emerald-400"></span>
+      <div class="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 px-4 py-1.5 rounded-full font-mono text-xs text-amber-300 backdrop-blur-xl shadow-lg">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
         7/24 Otonom Kripto Tahta & Balina Taraması
       </div>
 
-      <h1 class="font-display text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight drop-shadow-2xl">
+      <h1 class="font-display text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
         Piyasa Harekete Geçmeden, <br/>
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-yellow-300">Yönü Masanda Gör.</span>
       </h1>
 
-      <p class="text-slate-200 text-base sm:text-lg leading-relaxed font-medium drop-shadow">
+      <p class="text-slate-200 text-base sm:text-lg leading-relaxed font-medium">
         Mineora Sentinel; vadeli tahtalardaki gizli likidite akışlarını ve balina tuzaklarını tarar, sert hareketler başlamadan önce masanıza kurumsal istihbaratı serer.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-        <button onclick="openAuthModal('register')" class="w-full sm:w-auto bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-mono text-sm font-black px-8 py-4 rounded-2xl transition shadow-2xl shadow-orange-500/40 flex items-center justify-center gap-2 ring-1 ring-white/30 transform hover:-translate-y-0.5">
-          <i class="fa-solid fa-bolt text-slate-950"></i> Hemen Katıl & Lisans Başlat
+        <button onclick="openAuthModal('register')" class="w-full sm:w-auto bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-mono text-sm font-black px-8 py-4 rounded-2xl transition shadow-2xl flex items-center justify-center gap-2">
+          <i class="fa-solid fa-bolt"></i> Hemen Katıl & Lisans Başlat
         </button>
-        <button onclick="openVipModal()" class="w-full sm:w-auto bg-slate-900/80 hover:bg-slate-800/90 text-white border border-white/20 font-mono text-sm font-bold px-8 py-4 rounded-2xl transition flex items-center justify-center gap-2 backdrop-blur-xl shadow-lg hover:border-amber-400/40">
+        <button onclick="openVipModal()" class="w-full sm:w-auto bg-slate-900/80 hover:bg-slate-800/90 text-white border border-white/20 font-mono text-sm font-bold px-8 py-4 rounded-2xl transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-crown text-amber-400"></i> VIP Plan Detayları
         </button>
       </div>
     </div>
 
-    <!-- ================= WICK-SHIELD & AKILLI KALDIRAÇ / POZİSYON HESAPLAYICI ================= -->
-    <section class="max-w-4xl mx-auto bg-slate-900/80 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-orange-500/10 space-y-6">
+    <!-- WICK-SHIELD VE KALDIRAÇ HESAPLAYICI -->
+    <section class="max-w-4xl mx-auto bg-slate-900/80 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-2xl space-y-6">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
         <div>
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
-            <h2 class="font-display font-black text-xl text-white flex items-center gap-2">
+            <h2 class="font-display font-black text-xl text-white">
               🛡️ WICK-SHIELD | Stop Avcısı & Likidasyon İğnesi Radarı
             </h2>
           </div>
           <p class="text-xs text-slate-400 font-mono mt-1">Ücretsiz kullan: Balinaların stop patlatacağı seviyeyi gör, kasanı koru.</p>
         </div>
-        <span class="text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full self-start md:self-auto font-bold">
+        <span class="text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full font-bold">
           CANLI & ÜCRETSİZ
         </span>
       </div>
@@ -114,7 +109,7 @@
           <input type="number" step="any" id="publicUserStopInput" placeholder="Örn: 99.50" class="bg-slate-950 border border-slate-700 text-white font-mono text-xs rounded-xl px-4 py-3 w-full focus:outline-none focus:border-amber-500" onkeydown="if(event.key==='Enter') runPublicWickShield()" />
         </div>
         <div class="sm:col-span-3 flex items-end">
-          <button onclick="runPublicWickShield()" id="btnPublicScan" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-mono text-xs font-black py-3 rounded-xl transition shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 cursor-pointer">
+          <button onclick="runPublicWickShield()" id="btnPublicScan" class="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-mono text-xs font-black py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2 cursor-pointer">
             <i class="fa-solid fa-radar"></i> <span>İğneyi Tara</span>
           </button>
         </div>
@@ -125,7 +120,6 @@
         <div>Vadeli emir defterleri ve likidasyon mıknatısı taranıyor...</div>
       </div>
 
-      <!-- SONUÇ BLOKLARI -->
       <div id="publicWickResult" class="hidden space-y-6 font-mono">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
           <div>
@@ -149,7 +143,7 @@
             </div>
             <div id="wTrapStop" class="font-display text-2xl font-black text-white">$99.85</div>
             <p class="text-[10px] text-slate-300 leading-relaxed">
-              Küçük yatırımcı stoplarını buraya yığmış. Borsa tek bir iğneyle bu seviyeyi temizleyip yukarı dönebilir.
+              Küçük yatırımcı stoplarını buraya yığmış. Borsa tek bir iğneyle bu seviyeyi temizleyip dönebilir.
             </p>
           </div>
 
@@ -160,7 +154,7 @@
             </div>
             <div id="wSafeStop" class="font-display text-2xl font-black text-white">$98.40</div>
             <p class="text-[10px] text-slate-300 leading-relaxed">
-              Büyük alış duvarının arkasındaki seviye. İğne buraya kadar inmekte zorlanır; stop olsan bile haklı olursun.
+              Büyük alış duvarının arkasındaki seviye. İğne buraya kadar inmekte zorlanır.
             </p>
           </div>
 
@@ -176,13 +170,10 @@
           </div>
         </div>
 
-        <!-- AKILLI KALDIRAÇ & POZİSYON BOYUTU HESAPLAYICI -->
+        <!-- AKILLI KALDIRAÇ & RİSK HESAPLAYICI -->
         <div class="bg-slate-950 p-5 rounded-2xl border-2 border-indigo-500/40 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
-              <strong class="font-display text-sm text-white">🧮 AKILLI KALDIRAÇ & POZİSYON BOYUTU HESAPLAYICI</strong>
-            </div>
+            <strong class="font-display text-sm text-white">🧮 AKILLI KALDIRAÇ & POZİSYON BOYUTU HESAPLAYICI</strong>
             <span class="text-[10px] text-indigo-300 bg-indigo-950/60 border border-indigo-800 px-2.5 py-0.5 rounded-lg">Kasa Koruma Zırhı</span>
           </div>
 
@@ -215,9 +206,6 @@
               <strong id="calcProfitDisplay" class="text-emerald-400 font-display text-lg">+$36.50</strong>
             </div>
           </div>
-          <p class="text-[10px] text-slate-400 leading-relaxed italic">
-            * Güvenli stop mesafesine göre hesaplanmıştır. İğne gelse bile kaybınız belirlediğiniz riski aşmaz.
-          </p>
         </div>
 
         <div class="bg-gradient-to-r from-slate-950 to-slate-900 p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -231,49 +219,34 @@
       </div>
     </section>
 
-    <!-- VIP FİYATLANDIRMA -->
-    <div class="max-w-xl mx-auto bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-950/95 border-2 border-amber-500/60 rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl shadow-orange-500/20 relative overflow-hidden text-center backdrop-blur-2xl ring-1 ring-white/10">
-      <div class="absolute -right-12 -top-12 w-52 h-52 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="absolute -left-12 -bottom-12 w-52 h-52 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div class="inline-block bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 font-mono text-xs font-bold px-3.5 py-1 rounded-full border border-amber-500/40 shadow">
+    <!-- VIP FİYATLANDIRMA KARTI -->
+    <div class="max-w-xl mx-auto bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-950/95 border-2 border-amber-500/60 rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl relative overflow-hidden text-center backdrop-blur-2xl">
+      <div class="inline-block bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 font-mono text-xs font-bold px-3.5 py-1 rounded-full border border-amber-500/40">
         PROFESYONEL ERİŞİM LİSANSI
       </div>
-
-      <h3 class="font-display text-3xl font-black text-white tracking-wide">SENTINEL VIP PASS</h3>
-      
+      <h3 class="font-display text-3xl font-black text-white">SENTINEL VIP PASS</h3>
       <div class="flex items-baseline justify-center gap-2 font-mono">
-        <span class="text-5xl font-black text-white tracking-tight drop-shadow">$200</span>
+        <span class="text-5xl font-black text-white">$200</span>
         <span class="text-amber-200/70 text-sm font-semibold">/ 30 Günlük Lisans (USDT TRC-20)</span>
       </div>
-
       <ul class="text-left font-mono text-xs text-slate-200 space-y-3 py-4 border-y border-white/10">
-        <li class="flex items-center gap-3">
-          <i class="fa-solid fa-circle-check text-emerald-400"></i> Tüm vadeli tahtalarda anlık kurumsal radar masası
-        </li>
-        <li class="flex items-center gap-3">
-          <i class="fa-solid fa-circle-check text-emerald-400"></i> Wick-Shield derinlik ve tuzak iğne filtreleme
-        </li>
-        <li class="flex items-center gap-3">
-          <i class="fa-solid fa-circle-check text-emerald-400"></i> Bitget vadeli otomatik emir entegrasyonu
-        </li>
-        <li class="flex items-center gap-3 text-amber-300 font-bold">
-          <i class="fa-solid fa-handshake text-amber-400"></i> Her Davet Edilen Üyeden %30 Komisyon (60 USDT)
-        </li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-emerald-400"></i> Tüm vadeli tahtalarda anlık kurumsal radar masası</li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-emerald-400"></i> Wick-Shield derinlik ve tuzak iğne filtreleme</li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-emerald-400"></i> Bitget vadeli otomatik emir entegrasyonu</li>
+        <li class="flex items-center gap-3 text-amber-300 font-bold"><i class="fa-solid fa-handshake text-amber-400"></i> Her Davet Edilen Üyeden %30 Komisyon (60 USDT)</li>
       </ul>
-
-      <button onclick="openVipModal()" class="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-mono font-black text-sm py-4 rounded-xl transition shadow-2xl shadow-orange-500/30 ring-1 ring-white/30 transform hover:-translate-y-0.5">
+      <button onclick="openVipModal()" class="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-mono font-black text-sm py-4 rounded-xl transition shadow-2xl">
         Hemen Abone Ol & Lisansını Başlat
       </button>
     </div>
 
   </main>
 
-  <footer class="border-t border-white/10 py-8 text-center text-xs text-slate-400 font-mono relative z-10 bg-slate-950/60 backdrop-blur-md">
+  <footer class="border-t border-white/10 py-8 text-center text-xs text-slate-400 font-mono relative z-10 bg-slate-950/60">
     © 2026 Mineora Sentinel. Tüm hakları saklıdır. Finansal yatırım tavsiyesi içermez.
   </footer>
 
-  <!-- AUTH MODAL (GİRİŞ / KAYIT) -->
+  <!-- AUTH MODAL -->
   <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-slate-900/95 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 relative">
       <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -286,7 +259,6 @@
         <button id="modalTabRegBtn" onclick="switchAuthTab('register')" class="py-2 rounded-xl font-bold text-slate-400 hover:text-white transition">Kayıt Ol</button>
       </div>
 
-      <!-- Giriş Formu -->
       <form id="modalFormLogin" onsubmit="event.preventDefault(); submitLogin();" class="space-y-3 font-mono text-xs">
         <div>
           <label class="text-slate-300 block font-bold mb-1">Kullanıcı Adı:</label>
@@ -299,7 +271,6 @@
         <button type="submit" id="btnLoginSubmit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition cursor-pointer">Giriş Yap</button>
       </form>
 
-      <!-- Kayıt Formu -->
       <form id="modalFormRegister" onsubmit="event.preventDefault(); submitRegister();" class="hidden space-y-3 font-mono text-xs">
         <div>
           <label class="text-slate-300 block font-bold mb-1">Kullanıcı Adı:</label>
@@ -322,7 +293,7 @@
     </div>
   </div>
 
-  <!-- VIP MODAL -->
+  <!-- VIP ÖDEME MODAL -->
   <div id="vipPaymentModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-slate-900/95 border border-white/15 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative font-mono text-xs">
       <button onclick="closeVipModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -353,7 +324,6 @@
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_ADMIN_ID = "6457294906";
-
     let currentScanData = null;
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -422,14 +392,13 @@
         closeAuthModal();
         window.location.href = 'dashboard.html';
       } catch (err) {
-        alert("Kayıt oluşturuldu, panele yönlendiriliyorsunuz.");
         sessionStorage.setItem('currentUser', u);
         sessionStorage.setItem('isVip', 'true');
         window.location.href = 'dashboard.html';
       }
     }
 
-    // ================= DÜZELTİLEN KESİN GİRİŞ FONKSİYONU =================
+    // ================= KESİN VE DOĞRU GİRİŞ FONKSİYONU =================
     async function submitLogin() {
       const uInput = document.getElementById('loginUsername');
       const pInput = document.getElementById('loginPassword');
@@ -444,17 +413,17 @@
       btn.disabled = true;
       btn.textContent = "Giriş yapılıyor...";
 
-      // 1. Yönetici Hesabı (Hemen Yetkilendir & Doğrudan Dashboard'a Geç)
-      const ADMINS = ['mourpheus', 'ersinulasduzyol@gmail.com', 'admin'];
+      // 1. ADMİN HESABI: DOĞRUDAN admin.html'e GEÇİRİR
+      const ADMINS = ['mourpheus', 'ersinulasduzyol@gmail.com'];
       if (ADMINS.includes(u.toLowerCase()) || u === 'mourpheus') {
-        sessionStorage.setItem('currentUser', u);
+        sessionStorage.setItem('currentUser', 'mourpheus');
         sessionStorage.setItem('isVip', 'true');
         sessionStorage.setItem('isAdmin', 'true');
-        window.location.href = 'dashboard.html';
+        window.location.href = 'admin.html';
         return;
       }
 
-      // 2. Normal Kullanıcı Girişi
+      // 2. NORMAL KULLANICI GİRİŞİ
       try {
         const snap = await db.ref('users/' + u).once('value');
         const usr = snap.val();
@@ -472,13 +441,16 @@
         }
 
         sessionStorage.setItem('currentUser', usr.username || u);
-        sessionStorage.setItem('isVip', 'true');
+        sessionStorage.setItem('isVip', usr.isVip ? 'true' : 'false');
         closeAuthModal();
-        window.location.href = 'dashboard.html';
+
+        if (usr.isVip) {
+          window.location.href = 'dashboard.html';
+        } else {
+          openVipModal();
+        }
 
       } catch (err) {
-        // Firebase okuma hatası olsa dahi oturumu aç ve dashboard'a yönlendir
-        console.warn("Giriş esnasında Firebase hatası, oturum açılıyor:", err);
         sessionStorage.setItem('currentUser', u);
         sessionStorage.setItem('isVip', 'true');
         window.location.href = 'dashboard.html';
@@ -495,11 +467,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: msg, parse_mode: 'HTML' })
       });
-      alert("Ödeme bildiriminiz alındı! Onaylandığında erişiminiz aktif edilecektir.");
+      alert("Ödeme bildiriminiz alındı!");
       closeVipModal();
     }
 
-    // WICK-SHIELD ÇALIŞTIRICI
     async function runPublicWickShield() {
       const input = document.getElementById('publicParityInput');
       const loading = document.getElementById('publicWickLoading');
@@ -544,7 +515,6 @@
       }
     }
 
-    // AKILLI KALDIRAÇ & POZİSYON BOYUTU HESAPLAMA MOTORU
     function calculateSmartPosition() {
       if (!currentScanData) return;
       const price = parseFloat(currentScanData.price);
