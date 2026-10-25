@@ -49,6 +49,9 @@
         </div>
 
         <div id="userNav" class="hidden items-center gap-2">
+          <a id="adminNavBtn" href="admin.html" class="hidden items-center gap-1 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-mono text-xs px-2.5 py-1.5 rounded-xl transition">
+            <i class="fa-solid fa-crown text-amber-400"></i> <span>Admin</span>
+          </a>
           <span id="navUsername" class="text-xs font-mono text-amber-400 font-bold bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl"></span>
           <a href="dashboard.html" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-3.5 py-1.5 rounded-xl transition shadow">
             Terminale Gir
@@ -105,16 +108,16 @@
       </a>
     </section>
 
-    <!-- 🎯 CANLI İĞNE TAHMİNLERİ (LİKİDASYON MIKNATISI) -->
+    <!-- 🎯 CANLI İĞNE TAHMİNLERİ (ÖZEL COİN ARAMA + LİKİDASYON MIKNATISI) -->
     <section class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-            <h2 class="font-display font-black text-lg text-white">🧲 CANLI İĞNE TAHMİNLERİ (LİKİDASYON MIKNATISI)</h2>
+            <h2 class="font-display font-black text-lg text-white">🧲 CANLI İĞNE TAHMİNLERİ & LİKİDASYON MIKNATISI</h2>
           </div>
           <p class="text-xs text-slate-400 font-mono mt-0.5">
-            Borsaların tasfiye motorlarının vadeli piyasada vurması muhtemel anlık fitil/iğne seviyeleri.
+            İstediğiniz pariteyi sorgulayın; vadeli tahtanın atacağı olası tasfiye fitilini ve hedef fiyatını görün.
           </p>
         </div>
         <div class="text-[10px] font-mono text-slate-400 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl self-start sm:self-auto">
@@ -122,9 +125,28 @@
         </div>
       </div>
 
-      <div id="wickSignalsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
-        <div class="p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center text-slate-500 col-span-3">
-          <i class="fa-solid fa-spinner fa-spin text-amber-400 mr-2"></i> İğne tahminleri ve likidasyon havuzları hesaplanıyor...
+      <!-- KULLANICININ İSTEDİĞİ COİNİ ARAMA KUTUSU -->
+      <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+        <div class="flex flex-col sm:flex-row items-center gap-2">
+          <div class="relative w-full">
+            <input type="text" id="customWickSymbol" placeholder="Örn: SOL, PEPE, BTC, ETH, LINK, SUI, DOGE..." class="w-full bg-slate-900 border border-slate-700 text-white font-mono text-xs rounded-xl px-4 py-3 uppercase focus:outline-none focus:border-amber-500" onkeydown="if(event.key==='Enter') searchCustomWick()" />
+          </div>
+          <button onclick="searchCustomWick()" id="btnSearchWick" class="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-6 py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shrink-0 shadow">
+            <i class="fa-solid fa-crosshairs"></i> <span>İğne Seviyesi Hesapla</span>
+          </button>
+        </div>
+
+        <!-- ÖZEL SORGULANAN COİNİN SONUÇ ALANI -->
+        <div id="customWickResult" class="hidden"></div>
+      </div>
+
+      <!-- POPÜLER PARİTELERİN CANLI İĞNE KARTLARI -->
+      <div class="space-y-2">
+        <span class="text-[11px] font-mono text-slate-400 uppercase font-bold tracking-wider block">Canlı İzlenen Piyasa İğne Radarı:</span>
+        <div id="wickSignalsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+          <div class="p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center text-slate-500 col-span-3">
+            <i class="fa-solid fa-spinner fa-spin text-amber-400 mr-2"></i> Canlı iğne tahminleri yükleniyor...
+          </div>
         </div>
       </div>
     </section>
@@ -177,7 +199,7 @@
     </div>
   </div>
 
-  <!-- VIP KAYIT OL & USDT ÖDEME MODALI (ORİJİNAL MİMARİ GERİ GETİRİLDİ) -->
+  <!-- VIP KAYIT OL & USDT ÖDEME MODALI -->
   <div id="registerModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative font-mono text-xs my-8">
       <button onclick="closeModal('registerModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -190,7 +212,7 @@
         <p class="text-slate-400 text-[11px]">Ömür boyu sınırsız erişim & otomatik bot entegrasyonu.</p>
       </div>
 
-      <!-- FİYAT VE TETHER ÖDEME BİLGİSİ KUTUSU -->
+      <!-- FİYAT VE TETHER ÖDEME BİLGİSİ -->
       <div class="bg-slate-950 p-4 rounded-2xl border border-emerald-500/40 space-y-3">
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <span class="text-slate-400">VIP Lisans Bedeli:</span>
@@ -254,21 +276,26 @@
     // AUTH KONTROLÜ
     function checkAuthStatus() {
       const user = sessionStorage.getItem('currentUser');
+      const isAdmin = sessionStorage.getItem('isAdmin') === 'true';
       const guestNav = document.getElementById('guestNav');
       const userNav = document.getElementById('userNav');
       const navUsername = document.getElementById('navUsername');
+      const adminNavBtn = document.getElementById('adminNavBtn');
 
       if (user) {
         guestNav.classList.add('hidden');
         userNav.classList.remove('hidden');
         navUsername.textContent = user;
+        if (isAdmin && adminNavBtn) {
+          adminNavBtn.classList.remove('hidden');
+          adminNavBtn.classList.add('flex');
+        }
       } else {
         guestNav.classList.remove('hidden');
         userNav.classList.add('hidden');
       }
     }
 
-    // KORUMALI TERMİNAL YÖNLENDİRMESİ
     function goToTerminalProtected() {
       const user = sessionStorage.getItem('currentUser');
       if (user) {
@@ -281,9 +308,9 @@
     function logoutUser() {
       sessionStorage.clear();
       checkAuthStatus();
+      window.location.reload();
     }
 
-    // MODAL YÖNETİMİ
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
     function switchModal(fromId, toId) {
@@ -300,49 +327,61 @@
       });
     }
 
-    // ================= GİRİŞ İŞLEMİ (ONAY KONTROLLÜ) =================
+    // ================= GİRİŞ İŞLEMİ (MASTER ADMIN DOĞRUDAN GEÇİŞLİ) =================
     async function handleLoginSubmit(e) {
       e.preventDefault();
-      const u = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const rawUser = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value.trim();
       const err = document.getElementById('loginError');
       err.classList.add('hidden');
 
-      if (!u || !p) return;
+      if (!rawUser) return;
+      const uLower = rawUser.toLowerCase();
 
+      // MASTER ADMIN GİRİŞİ (SENİ ASLA KİLİTLEMEZ)
+      if (uLower === 'mourpheus' || uLower === 'ersinulasduzyol@gmail.com') {
+        sessionStorage.setItem('currentUser', 'mourpheus');
+        sessionStorage.setItem('isAdmin', 'true');
+        closeModal('loginModal');
+        checkAuthStatus();
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      // NORMAL KULLANICI DOĞRULAMASI
       try {
-        const snap = await db.ref(`users/${u}`).once('value');
-        const userData = snap.val();
+        let snap = await db.ref(`users/${rawUser}`).once('value');
+        if (!snap.exists()) {
+          snap = await db.ref(`users/${uLower}`).once('value');
+        }
 
-        if (!userData || userData.password !== p) {
+        const userData = snap.val();
+        const savedPass = userData ? (userData.password || userData.pass) : null;
+
+        if (!userData || savedPass !== p) {
           err.textContent = "Kullanıcı adı veya şifre hatalı!";
           err.classList.remove('hidden');
           return;
         }
 
-        // YÖNETİCİ HESABI DEĞİLSE ONAY KONTROLÜ YAP
-        const isAdmin = ['mourpheus', 'ersinulasduzyol@gmail.com'].includes(u);
-        if (!isAdmin && userData.isApproved !== true) {
-          err.innerHTML = `⚠️ <b>Hesabınız henüz onaylanmadı.</b><br>USDT transferiniz yönetici tarafından inceleniyor. Onaylandığında giriş yapabilirsiniz.`;
+        if (userData.isApproved !== true && userData.status !== 'APPROVED') {
+          err.innerHTML = `⚠️ <b>Hesabınız henüz onaylanmadı.</b><br>USDT transferiniz yönetici tarafından inceleniyor.`;
           err.classList.remove('hidden');
           return;
         }
 
-        sessionStorage.setItem('currentUser', u);
-        if (isAdmin) {
-          sessionStorage.setItem('isAdmin', 'true');
-        }
-
+        sessionStorage.setItem('currentUser', userData.username || rawUser);
         closeModal('loginModal');
         checkAuthStatus();
         window.location.href = 'dashboard.html';
+
       } catch (error) {
         err.textContent = "Giriş yapılırken hata oluştu: " + error.message;
         err.classList.remove('hidden');
       }
     }
 
-    // ================= KAYIT İŞLEMİ (ONAY BEKLEYEN MİMARİ) =================
+    // ================= VIP KAYIT İŞLEMİ (TXID GÖNDERİMİ) =================
     async function handleRegisterSubmit(e) {
       e.preventDefault();
       const u = document.getElementById('regUsername').value.trim().toLowerCase();
@@ -380,17 +419,15 @@
           return;
         }
 
-        // URL'den referans kodu kontrolü
         const urlParams = new URLSearchParams(window.location.search);
         const refBy = urlParams.get('ref') || null;
 
-        // VERİTABANINA ONAY BEKLİYOR OLARAK KAYDET
         await db.ref(`users/${u}`).set({
           username: u,
           password: p,
           txId: tx,
           plan: 'VIP_LIFETIME',
-          isApproved: false, // SEN ONAY VERENE KADAR FALSE
+          isApproved: false,
           status: 'PENDING',
           createdAt: Date.now(),
           referredBy: refBy
@@ -400,7 +437,7 @@
           db.ref(`users/${refBy}/totalReferredCount`).transaction(c => (c || 0) + 1);
         }
 
-        succ.innerHTML = `✅ <b>Kayıt ve ödeme bildiriminiz alındı!</b><br>TxID kodunuz yönetici masasına iletildi. Onay verildikten sonra belirlediğiniz bilgilerle giriş yapabilirsiniz.`;
+        succ.innerHTML = `✅ <b>Kayıt ve ödeme bildiriminiz alındı!</b><br>TxID kodunuz yönetici onayına iletildi. Onaylandıktan sonra giriş yapabilirsiniz.`;
         succ.classList.remove('hidden');
         
         document.getElementById('regUsername').value = '';
@@ -421,7 +458,85 @@
       }
     }
 
-    // ================= CANLI İĞNE TAHMİNLERİ (LİKİDASYON MIKNATISI) =================
+    // ================= İSTEDİĞİ COİNİ ARAMA (ÖZEL İĞNE HESAPLAYICI) =================
+    async function searchCustomWick() {
+      const input = document.getElementById('customWickSymbol');
+      const resBox = document.getElementById('customWickResult');
+      const btn = document.getElementById('btnSearchWick');
+
+      let query = input.value.trim().toUpperCase();
+      if (!query) return;
+      query = query.replace('USDT', '').replace('PERP', '').trim() + 'USDT';
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Hesaplanıyor...`;
+      resBox.classList.remove('hidden');
+      resBox.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin mr-2"></i> ${query} vadeli tahtası taranıyor...</div>`;
+
+      try {
+        const res = await fetch(`https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES&symbol=${query}`);
+        const json = await res.json();
+
+        if (json.code !== '00000' || !Array.isArray(json.data) || json.data.length === 0) {
+          throw new Error("Parite bulunamadı veya Bitget vadeli tahtasında işlem görmüyor.");
+        }
+
+        const coin = json.data[0];
+        const p = parseFloat(coin.lastPr || 0);
+        const fr = parseFloat(coin.fundingRate || 0);
+        const frPct = (fr * 100).toFixed(4);
+
+        // Likidasyon İğnesi Yön ve Seviye Hesabı
+        const isUpWick = fr < 0;
+        const magnetPrice = isUpWick ? p * 1.025 : p * 0.975;
+        const magnetDist = isUpWick ? "+%2.5" : "-%2.5";
+
+        const pStr = p < 1 ? p.toFixed(6) : p.toFixed(2);
+        const magStr = magnetPrice < 1 ? magnetPrice.toFixed(6) : magnetPrice.toFixed(2);
+
+        resBox.innerHTML = `
+          <div class="bg-slate-900 border-2 ${isUpWick ? 'border-emerald-500/60' : 'border-rose-500/60'} p-4 rounded-xl space-y-3 font-mono">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div class="flex items-center gap-2">
+                <strong class="text-white text-base font-display">#${coin.symbol}</strong>
+                <span class="text-[10px] px-2 py-0.5 rounded font-bold ${isUpWick ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">
+                  ${isUpWick ? '🟢 YUKARI LİKİDASYON İĞNESİ' : '🔴 AŞAĞI LİKİDASYON İĞNESİ'}
+                </span>
+              </div>
+              <span class="text-emerald-400 text-sm font-bold font-display">$${pStr}</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <span class="text-slate-500 text-[10px] block">CANLI FİYAT</span>
+                <strong class="text-white">$${pStr}</strong>
+              </div>
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-amber-500/40">
+                <span class="text-amber-400 text-[10px] block font-bold">BEKLENEN İĞNE SEVİYESİ</span>
+                <strong class="text-amber-300 text-sm font-bold">$${magStr} (${magnetDist})</strong>
+              </div>
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <span class="text-slate-500 text-[10px] block">FONLAMA BASKISI</span>
+                <strong class="${fr < 0 ? 'text-emerald-400' : 'text-rose-400'}">${frPct}% (${fr < 0 ? 'Short Sıkışması' : 'Long Yığılması'})</strong>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] pt-1 text-slate-400">
+              <span>Bu paritenin derinlik röntgenini terminalden tek tıkla inceleyebilirsiniz.</span>
+              <button onclick="goToTerminalProtected()" class="text-amber-400 font-bold hover:underline cursor-pointer">Terminale Git &rarr;</button>
+            </div>
+          </div>
+        `;
+
+      } catch (err) {
+        resBox.innerHTML = `<div class="p-3 bg-rose-950/50 border border-rose-900 text-rose-300 text-xs rounded-xl">${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-crosshairs"></i> <span>İğne Seviyesi Hesapla</span>`;
+      }
+    }
+
+    // ================= CANLI POPÜLER İĞNE TAHMİNLERİ GRID =================
     async function loadWickSignals() {
       const grid = document.getElementById('wickSignalsGrid');
       if (!grid) return;
@@ -442,7 +557,6 @@
           const fr = parseFloat(coin.fundingRate || 0);
           const frPct = (fr * 100).toFixed(4);
 
-          // Likidasyon İğne Çekim Seviyesi Hesabı
           const isUpWick = fr < 0;
           const magnetPrice = isUpWick ? p * 1.022 : p * 0.978;
           const magnetDist = isUpWick ? "+%2.2" : "-%2.2";
@@ -469,8 +583,8 @@
                 </div>
               </div>
               <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-900">
-                <span>Fonlama Oranı: <b class="${fr < 0 ? 'text-emerald-400' : 'text-rose-400'}">${frPct}%</b></span>
-                <button onclick="goToTerminalProtected()" class="text-amber-400 hover:underline cursor-pointer">Röntgen Çek &rarr;</button>
+                <span>Fonlama: <b class="${fr < 0 ? 'text-emerald-400' : 'text-rose-400'}">${frPct}%</b></span>
+                <button onclick="goToTerminalProtected()" class="text-amber-400 hover:underline cursor-pointer">Terminale Git &rarr;</button>
               </div>
             </div>
           `;
@@ -478,7 +592,7 @@
 
         if (html) grid.innerHTML = html;
       } catch (e) {
-        console.warn("İğne verisi alınamadı:", e);
+        console.warn("İğne verisi hatası:", e);
       }
     }
 
