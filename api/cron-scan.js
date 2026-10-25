@@ -130,7 +130,7 @@ export default async function handler(req, res) {
       if (!trade || trade.status !== 'OPEN') continue;
 
       const tradeAgeMinutes = (now - (trade.openedAt || 0)) / (1000 * 60);
-      if (tradeAgeMinutes < 3) continue;
+      if (tradeAgeMinutes < 2) continue;
 
       const currentPrice = priceMap[symbol];
       if (!currentPrice) continue;
@@ -171,7 +171,7 @@ export default async function handler(req, res) {
         } else if (currentPrice <= trade.tp2) {
           isClosed = true;
           closeReason = 'TP 2 (TÜM HEDEFLER ALINDI)';
-        } else if (currentPrice <= trade.tp1 && !trade.tp1Hit) {
+        } else if (currentPrice >= trade.tp1 && !trade.tp1Hit) {
           trade.tp1Hit = true;
           fetch(`${FIREBASE_BASE}/active_trades/${symbol}/tp1Hit.json`, {
             method: 'PUT',
@@ -207,30 +207,30 @@ export default async function handler(req, res) {
       }
     }
 
-    // Likidite Filtresi ($800k üzeri)
+    // Likidite Filtresi: $500k üzeri USDT vadeli pariteler
     const liquidPool = json.data.filter(t => {
       return t.symbol.endsWith("USDT") &&
              !EXCLUDED.includes(t.symbol) &&
-             parseFloat(t.usdtVolume || 0) >= 800000;
+             parseFloat(t.usdtVolume || 0) >= 500000;
     });
 
     const candidateSignals = [];
 
-    // LONG Adayları
+    // LONG Adayları: Fonlama <= -0.05% (-0.0005) ve Değişim -8% ile +12% arası
     const longCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-      return funding <= -0.0035 && chg >= -5.0 && chg <= 8.0;
+      return funding <= -0.0005 && chg >= -8.0 && chg <= 12.0;
     }).sort((a, b) => parseFloat(a.fundingRate) - parseFloat(b.fundingRate));
 
     longCandidates.forEach(c => candidateSignals.push({ item: c, direction: 'LONG' }));
 
-    // SHORT Adayları (Hiper-Pump Kalkanlı)
+    // SHORT Adayları: Şişmiş veya aşırı Long fonlaması olan tahtalar
     const shortCandidates = liquidPool.filter(t => {
       const chg = parseFloat(t.change24h || 0) * 100;
       const funding = parseFloat(t.fundingRate || 0);
-      if (chg > 45.0 || funding <= 0.0003) return false;
-      return (chg >= 18.0 && chg <= 45.0 && funding >= 0.0005) || (funding >= 0.0010 && chg >= 10.0);
+      if (chg > 45.0 || funding <= 0.0001) return false;
+      return (chg >= 10.0 && chg <= 45.0 && funding >= 0.0003) || (funding >= 0.0006 && chg >= 6.0);
     }).sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
 
     shortCandidates.forEach(c => candidateSignals.push({ item: c, direction: 'SHORT' }));
@@ -238,7 +238,7 @@ export default async function handler(req, res) {
     const sentSymbols = [];
 
     // ====================================================
-    // 4. MİKRO-AKIS VE GERÇEK TAPE SÜZGEÇLİ SİNYAL MOTORU
+    // 4. MİKRO-AKIS VE GERÇEK TAPE ELEME DÖNGÜSÜ
     // ====================================================
     for (const signal of candidateSignals) {
       const item = signal.item;
@@ -246,8 +246,10 @@ export default async function handler(req, res) {
       const symbol = item.symbol;
 
       if (activeTrades[symbol] && activeTrades[symbol].status === 'OPEN') continue;
-      if ((now - (cronLocks[symbol] || 0)) / (1000 * 60) < 180) continue;
-      if ((now - (memoryLocks[symbol] || 0)) / (1000 * 60) < 180) continue;
+      
+      // 60 Dakika Kilit Kontrolü
+      if ((now - (cronLocks[symbol] || 0)) / (1000 * 60) < 60) continue;
+      if ((now - (memoryLocks[symbol] || 0)) / (1000 * 60) < 60) continue;
 
       const price = parseFloat(item.lastPr);
       const rawFunding = parseFloat(item.fundingRate || 0);
@@ -255,11 +257,11 @@ export default async function handler(req, res) {
       const chg = parseFloat(item.change24h || 0) * 100;
       const volM = (parseFloat(item.usdtVolume || 0) / 1000000).toFixed(2);
 
-      // --- GERÇEK BORSA MİKRO-VERİ ÇEKİMİ (Tape + OI + Depth) ---
+      // Bitget Mikro-Tape Verisi (Son 100 işlem)
       let realWhaleVolume = 0;
       let totalFillsVolume = 0;
       let realOIUsd = 0;
-      let wickTarget = dir === 'LONG' ? price * 0.988 : price * 1.018;
+      let wickTarget = dir === 'LONG' ? price * 0.990 : price * 1.015;
 
       try {
         const [fillsRes, oiRes, depthRes] = await Promise.all([
@@ -273,7 +275,7 @@ export default async function handler(req, res) {
           list.forEach(f => {
             const notional = parseFloat(f.price || 0) * parseFloat(f.size || 0);
             totalFillsVolume += notional;
-            if (notional >= 3000) realWhaleVolume += notional;
+            if (notional >= 1200) realWhaleVolume += notional; // $1.200 üzeri bloklar
           });
         }
 
@@ -294,23 +296,21 @@ export default async function handler(req, res) {
                 maxBidPrice = parseFloat(b[0]);
               }
             });
-            wickTarget = maxBidPrice * 0.994;
+            wickTarget = maxBidPrice * 0.995;
           }
         }
       } catch (err) {
         console.warn("Mikro veri hatası:", err);
       }
 
-      // Gerçek Oranlar
-      const realWhalePct = totalFillsVolume > 0 ? Math.round((realWhaleVolume / totalFillsVolume) * 100) : 60;
+      const realWhalePct = totalFillsVolume > 0 ? Math.round((realWhaleVolume / totalFillsVolume) * 100) : 50;
       const realRetailPct = 100 - realWhalePct;
 
-      // 🛑 KALKAN KONTROLÜ: Eğer paritede kurumsal balina baskısı (%55 altı) yoksa ve sadece küçükler alıyorsa SİNYAL ÜRETME!
-      if (dir === 'LONG' && realWhalePct < 55) {
+      // Balina Baskısı Kontrolü (%45 üstü onay)
+      if (dir === 'LONG' && realWhalePct < 45) {
         continue;
       }
 
-      // Dinamik Yakıt (OI + Fonlama)
       let dynamicFuel = 50;
       if (realOIUsd > 0 && parseFloat(item.usdtVolume || 0) > 0) {
         const oiToVolRatio = realOIUsd / parseFloat(item.usdtVolume);
@@ -319,7 +319,7 @@ export default async function handler(req, res) {
         dynamicFuel = Math.round(Math.min(96, Math.max(10, 50 - (rawFunding * 8000))));
       }
 
-      const dynamicScore = Math.min(97, Math.max(75, Math.round((realWhalePct * 0.6) + (dynamicFuel * 0.4))));
+      const dynamicScore = Math.min(97, Math.max(70, Math.round((realWhalePct * 0.6) + (dynamicFuel * 0.4))));
 
       // Kilitleri mühürle
       memoryLocks[symbol] = now;
@@ -332,15 +332,15 @@ export default async function handler(req, res) {
 
       let tp1, tp2, sl, rr;
       if (dir === 'LONG') {
-        const isExtreme = rawFunding <= -0.005;
+        const isExtreme = rawFunding <= -0.002;
         tp1 = price * 1.018;
-        tp2 = isExtreme ? price * 1.048 : price * 1.038;
+        tp2 = isExtreme ? price * 1.045 : price * 1.035;
         sl = price * 0.986;
         rr = ((tp1 - price) / (price - sl)).toFixed(1);
       } else {
         tp1 = price * 0.982;
-        tp2 = price * 0.955;
-        sl = price * 1.015;
+        tp2 = price * 0.958;
+        sl = price * 1.014;
         rr = ((price - tp1) / (sl - price)).toFixed(1);
       }
 
@@ -387,7 +387,7 @@ export default async function handler(req, res) {
       const oiStr = realOIUsd > 0 ? `$${(realOIUsd / 1000000).toFixed(2)}M` : 'Aktif';
 
       const isLong = dir === 'LONG';
-      const msg = `🔬 <b>MINEORA X-RAY | DOĞRULANMIŞ RÖNTGEN SİNYALİ</b>\n` +
+      const msg = `🔬 <b>MINEORA SENTINEL | KURUMSAL SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> <code>#${symbol}</code>\n` +
                   `${isLong ? '🟢 <b>YÖN:</b> <b>LONG (SHORT SIKIŞMASI & PUMP) 🚀</b>' : '🔴 <b>YÖN:</b> <b>SHORT (TEPE DAĞITIMI & DUMP) 🩸</b>'}\n` +
@@ -401,12 +401,12 @@ export default async function handler(req, res) {
                   `🎯 <b>Likidite Duvarı & İğne (Wick):</b> <code>$${pWick}</code>\n\n` +
                   `🎯 <b>LİKİDASYON & İŞLEM PLANI:</b>\n` +
                   `🎯 <b>Giriş:</b> <code>$${pEntry}</code>\n` +
-                  `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (${isLong ? '-%1.4' : '+%1.5'})\n` +
+                  `🛑 <b>Stop-Loss (SL):</b> <code>$${pSl}</code> (${isLong ? '-%1.4' : '+%1.4'})\n` +
                   `🎯 <b>TP 1:</b> <code>$${pTp1}</code> (${isLong ? '+%1.8' : '-%1.8'})\n` +
-                  `🚀 <b>TP 2:</b> <code>$${pTp2}</code> (${isLong ? '+%3.8+' : '-%4.5+'})\n` +
+                  `🚀 <b>TP 2:</b> <code>$${pTp2}</code> (${isLong ? '+%3.5+' : '-%4.2+'})\n` +
                   `⚖️ <b>Risk/Ödül (R:R):</b> <code>1 : ${rr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🌐 <b>Canlı Röntgen:</b> <a href="https://mineoragame.com">mineoragame.com</a>\n` +
+                  `🌐 <b>Canlı Terminal:</b> <a href="https://mineoragame.com">mineoragame.com</a>\n` +
                   `💡 <i>TP1 seviyesinde kasanın %50'si nakde geçmeli, stop maliyete çekilmelidir.</i>`;
 
       await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
