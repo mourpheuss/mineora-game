@@ -6,18 +6,18 @@ export default async function handler(req, res) {
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_CHANNEL_ID = "-1003180299696"; // Senin Ana Telegram Kanalın
-    const TG_ADMIN_ID = "6457294906";     // Yönetici Özel Sohbetin
+    const TG_CHANNEL_ID = "-1003180299696"; // Hedef Telegram Kanalı
+    const TG_ADMIN_ID = "6457294906";     // Yönetici ID
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
     const now = Date.now();
 
-    // 1. Bitget Vadeli Ticker Verilerini Çek
+    // 1. Bitget Vadeli Ticker Verilerini Al
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
     const tickersJson = await tickersRes.json();
 
     if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
-      return res.status(500).json({ error: "Bitget verisi alınamadı." });
+      return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
     }
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       parseFloat(t.usdtVolume || 0) >= 600000
     );
 
-    // 2. Firebase Aktif İşlemleri Oku
+    // 2. Firebase Kontrolü
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -40,16 +40,6 @@ export default async function handler(req, res) {
     } catch (e) {
       activeTrades = {};
       lastSignals = {};
-    }
-
-    const hasOpenTrade = Object.values(activeTrades).some(t => {
-      if (!t || t.status !== 'OPEN') return false;
-      const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
-      return (now - tTime) <= TWO_HOURS_MS;
-    });
-
-    if (hasOpenTrade) {
-      return res.status(200).json({ status: "IDLE", message: "Takip edilen açık işlem bulunuyor." });
     }
 
     // 3. Emir Akışı ve Dönüş Taraması
@@ -85,8 +75,8 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      const isEarlyLong = (rangePosition <= 0.40) && (buyPct >= 55);
-      const isEarlyShort = (rangePosition >= 0.65) && (buyPct <= 44);
+      const isEarlyLong = (rangePosition <= 0.45) && (buyPct >= 52);
+      const isEarlyShort = (rangePosition >= 0.60) && (buyPct <= 46);
 
       if (isEarlyLong) {
         candidate = item;
@@ -101,11 +91,17 @@ export default async function handler(req, res) {
       }
     }
 
-    if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Uygun işlem taranıyor." });
+    // Aday yoksa havuzdan en yüksek hacimli ilk pariteyi test için al
+    if (!candidate && pool.length > 0) {
+      candidate = pool[0];
+      direction = 'LONG';
     }
 
-    // 4. Seviyeleri Belirle
+    if (!candidate) {
+      return res.status(200).json({ status: "SCANNING", message: "Uygun parite bulunamadı." });
+    }
+
+    // 4. Hedef ve Stop Seviyeleri
     const entryPrice = parseFloat(candidate.lastPr);
     const isLong = direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.018 : entryPrice * 0.982;
@@ -126,21 +122,25 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase'e Yaz
-    await Promise.all([
-      fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTrade)
-      }),
-      fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(now)
-      })
-    ]).catch(() => {});
+    // 5. Firebase Veri Kaydı
+    try {
+      await Promise.all([
+        fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTrade)
+        }),
+        fetch(`${FIREBASE_BASE_URL}/last_signals/${candidate.symbol}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(now)
+        })
+      ]);
+    } catch (fbErr) {
+      console.warn("Firebase kayıt uyarısı:", fbErr);
+    }
 
-    // 6. TELEGRAM KANALINA VE YÖNETİCİYE GÖNDER
+    // 6. Telegram Mesajı ve Kanal Gönderimi
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
@@ -158,21 +158,29 @@ export default async function handler(req, res) {
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: mineoragame.com</i>`;
 
-    // Önce kanala gönder
-    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+    // Kanala Gönder ve Telegram Yanıtını Al
+    const channelRes = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgMsg, parse_mode: 'HTML' })
-    }).catch(() => {});
+    });
+    const channelJson = await channelRes.json();
 
-    // Ardından özel sohbete gönder
+    // Özel Sohbete Gönder
     await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: tgMsg, parse_mode: 'HTML' })
     }).catch(() => {});
 
-    return res.status(200).json({ success: true, trade: newTrade });
+    // Kanala gönderim sonucunu ve Telegram cevabını doğrudan ekrana dön
+    return res.status(200).json({
+      success: true,
+      trade: newTrade,
+      telegram_channel_id: TG_CHANNEL_ID,
+      telegram_channel_ok: channelJson.ok,
+      telegram_channel_response: channelJson
+    });
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
