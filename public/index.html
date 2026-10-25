@@ -58,7 +58,7 @@
           Üye Girişi
         </button>
         <button onclick="openVipModal()" class="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-mono text-xs font-black px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-xl shadow-orange-500/30 ring-1 ring-white/30 transform hover:-translate-y-0.5">
-          <i class="fa-solid fa-crown text-slate-950"></i> VIP Lisans Al ($500)
+          <i class="fa-solid fa-crown text-slate-950"></i> VIP Lisans Al ($200)
         </button>
       </div>
 
@@ -140,7 +140,7 @@
       <h3 class="font-display text-3xl font-black text-white tracking-wide">SENTINEL VIP PASS</h3>
       
       <div class="flex items-baseline justify-center gap-2 font-mono">
-        <span class="text-5xl font-black text-white tracking-tight drop-shadow">$500</span>
+        <span class="text-5xl font-black text-white tracking-tight drop-shadow">$200</span>
         <span class="text-amber-200/70 text-sm font-semibold">/ 30 Günlük Lisans (USDT TRC-20)</span>
       </div>
 
@@ -244,7 +244,7 @@
 
       <div class="bg-slate-950 border border-white/10 p-3.5 rounded-2xl flex justify-between items-center font-mono">
         <span class="text-xs text-slate-300">Abonelik Bedeli:</span>
-        <span class="text-base font-black text-emerald-400">500 USDT</span>
+        <span class="text-base font-black text-emerald-400">200 USDT</span>
       </div>
 
       <div class="space-y-2 font-mono text-xs">
@@ -358,7 +358,7 @@
         sessionStorage.setItem('isVip', 'false');
 
         closeAuthModal();
-        alert("Hesabınız açıldı! VIP Sentinel Radara erişmek için lütfen 500 USDT lisans ödemenizi bildirin.");
+        alert("Hesabınız açıldı! VIP Sentinel Radara erişmek için lütfen 200 USDT lisans ödemenizi bildirin.");
         openVipModal();
       } catch(err) {
         alert("Kayıt hatası: " + err.message);
@@ -429,7 +429,7 @@
       if (!tx) { alert("Lütfen TxID kodunu girin."); return; }
 
       const user = sessionStorage.getItem('currentUser') || 'Ziyaretçi';
-      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($500 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${tx}</code>\n\n🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${tx}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz.`;
+      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($200 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${tx}</code>\n\n🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${tx}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz.`;
 
       try {
         const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -456,13 +456,3 @@
   </script>
 </body>
 </html>
-```<FollowUp>
-<Suggestions>
-<Suggestion>Kodu kaydedip ana sayfanın eski temiz haline döndüğünü tarayıcıda doğrulayalım.</Suggestion>
-<Suggestion>Sadece VIP üyelerin girebildiği dashboard.html'deki X-Ray ve Flash 5M radarına odaklanalım mı?</Suggestion>
-</Suggestions>
-</FollowUp>
-<ElicitationsGroup>
-<Elicitation>Ana sayfayı tamamen bu sade haline bıraktık; ana sayfaya başka bir vitrin öğesi (örneğin son Telegram sinyallerinin ekran görüntüsü galerisi) eklemek ister misin?</Elicitation>
-<Elicitation>Şimdi doğrudan sunucuda arka planda çalışan Flash 5M sinyal motorunun loglarına ve isabetine mi bakalım?</Elicitation>
-</ElicitationsGroup>
