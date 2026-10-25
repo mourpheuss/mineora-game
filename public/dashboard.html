@@ -115,7 +115,7 @@
         </div>
       </div>
 
-      <!-- X-RAY SONUÇLARI (4 KUTULU ZENGİN METRİK ALANI) -->
+      <!-- X-RAY SONUÇLARI -->
       <div id="searchResultArea" class="hidden"></div>
     </section>
 
@@ -221,7 +221,7 @@
       });
     }
 
-    // ================= CANLI İŞLEM VE RADAR GÖRÜNÜMÜ =================
+    // ================= CANLI İŞLEM VE RADAR GÖRÜNÜMÜ (TP1 / STOP OLANLARI GİZLER) =================
     async function checkActiveSignals() {
       const container = document.getElementById('liveSignalContainer');
       if (!container) return;
@@ -241,12 +241,21 @@
         }
 
         const now = Date.now();
-        const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+        const MAX_ACTIVE_WINDOW_MS = 60 * 60 * 1000; // En fazla 1 saatlik aktif takip
 
+        // SADECE HALEN AÇIK OLAN, TP1 ALMAMIŞ VE STOP OLMAMIŞ İŞLEMLERİ FİLTRELE
         const validTrades = tradeList.filter(item => {
           if (!item || !item.symbol) return false;
+          
+          // 1. KURAL: Durumu OPEN olmalı (TP1_HIT, TP2_HIT, STOPPED veya COMPLETED olanlar doğrudan elenir)
+          if (item.status && item.status !== 'OPEN') return false;
+
+          // 2. KURAL: TP1 almışsa (tp1Hit === true) listeden hemen düşsün
+          if (item.tp1Hit === true || item.tp1Hit === 'true') return false;
+
+          // 3. KURAL: Zaman aşımı kontrolü (1 saatten eski ise düşsün)
           let itemTime = item.createdAt || (item.timestamp ? new Date(item.timestamp).getTime() : now);
-          return (now - itemTime) <= FOUR_HOURS_MS;
+          return (now - itemTime) <= MAX_ACTIVE_WINDOW_MS;
         });
 
         if (validTrades.length > 0) {
@@ -254,9 +263,9 @@
           validTrades.forEach(signal => {
             const isLong = String(signal.direction || 'LONG').toUpperCase().includes('LONG');
             const ep = parseFloat(signal.entryPrice || 0);
-            const tp1 = parseFloat(signal.tp1 || (ep * (isLong ? 1.018 : 0.982)));
-            const tp2 = parseFloat(signal.tp2 || (ep * (isLong ? 1.038 : 0.962)));
-            const sl = parseFloat(signal.sl || (ep * (isLong ? 0.988 : 1.012)));
+            const tp1 = parseFloat(signal.tp1 || (ep * (isLong ? 1.008 : 0.992)));
+            const tp2 = parseFloat(signal.tp2 || (ep * (isLong ? 1.016 : 0.984)));
+            const sl = parseFloat(signal.sl || (ep * (isLong ? 0.993 : 1.007)));
 
             const pStr = ep < 1 ? ep.toFixed(6) : ep.toFixed(4);
             const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
@@ -288,6 +297,7 @@
           return;
         }
 
+        // Açık işlem kalmadığında veya hedefe ulaşıldığında gösterilen temiz durum
         container.innerHTML = `
           <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-8 text-center space-y-3 font-mono">
             <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/30 mb-1">
@@ -295,7 +305,7 @@
             </div>
             <h3 class="text-white font-display font-bold text-base">Otonom Tarayıcı Aktif Olarak İzliyor</h3>
             <p class="text-xs text-slate-400 max-w-md mx-auto">
-              Bitget vadeli tahtalarında emir akışı, dip/tepe hacim patlaması ve Açık Pozisyon (OI) taranıyor. Doğrulanan yeni pump/dump sinyali doğrudan buraya işlenecektir.
+              Önceki hedefler tamamlandı veya stop ile temizlendi. Vadeli tahtalardaki taze dip akışı taranıyor; yeni kurumsal işlem açıldığında doğrudan buraya düşecektir.
             </p>
           </div>
         `;
