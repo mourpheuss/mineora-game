@@ -6,25 +6,26 @@ export default async function handler(req, res) {
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_CHANNEL_ID = "-1003180299696"; // Senin Kanalın
-    const TG_ADMIN_ID = "6457294906";     // Yönetici Sohbetin
+    const TG_CHANNEL_ID = "-1004404988937"; // Mineora Balina Sinyal VIP Kanalı
+    const TG_ADMIN_ID = "6457294906";     // Mourpheus Özel
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
-    const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
     const now = Date.now();
 
-    // 1. Bitget Ticker Verilerini Çek
+    // 1. Bitget Vadeli Ticker Verilerini Çek
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
     const tickersJson = await tickersRes.json();
 
     if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
-      return res.status(500).json({ error: "Bitget verisi alınamadı." });
+      return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
     }
 
-    const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
+    // Ana coinleri hariç tut, kurumsal hacim filtresi (1.5M+ USDT)
+    const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT"];
     const pool = tickersJson.data.filter(t => 
       t.symbol.endsWith("USDT") && 
       !EXCLUDED.includes(t.symbol) && 
-      parseFloat(t.usdtVolume || 0) >= 600000
+      parseFloat(t.usdtVolume || 0) >= 1500000
     );
 
     // 2. Firebase Aktif İşlemleri Oku
@@ -42,13 +43,26 @@ export default async function handler(req, res) {
       lastSignals = {};
     }
 
-    // 3. Piyasa Taraması
+    // Takipte açık işlem varsa bekle (Spam ve risk engeli)
+    const hasOpenTrade = Object.values(activeTrades).some(t => {
+      if (!t || t.status !== 'OPEN') return false;
+      const tTime = t.createdAt || (t.timestamp ? new Date(t.timestamp).getTime() : 0);
+      return (now - tTime) <= THREE_HOURS_MS;
+    });
+
+    if (hasOpenTrade) {
+      return res.status(200).json({ status: "IDLE", message: "Takip edilen açık operasyon mevcut, yeni sinyal açılmadı." });
+    }
+
+    // 3. GERÇEK PUMP / DUMP VE BALİNA HAREKETİ MOTORU
     let candidate = null;
     let direction = null;
+    let confidenceScore = 0;
+    let triggerReason = "";
 
     for (const item of pool) {
       const lastSentTime = lastSignals[item.symbol] || 0;
-      if (now - lastSentTime < TWO_HOURS_MS) continue;
+      if (now - lastSentTime < THREE_HOURS_MS) continue;
 
       const price = parseFloat(item.lastPr || 0);
       const high24 = parseFloat(item.high24h || 0);
@@ -57,7 +71,8 @@ export default async function handler(req, res) {
 
       const rangePosition = (price - low24) / (high24 - low24);
 
-      const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=40`, { headers: browserHeaders })
+      // Son 50 işlemin emir defteri akışı (Tape Reading)
+      const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=50`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       const fills = fillsRes.data?.fillList || fillsRes.data || [];
@@ -75,29 +90,28 @@ export default async function handler(req, res) {
       const totalFlow = buyVol + sellVol;
       const buyPct = totalFlow > 0 ? (buyVol / totalFlow) * 100 : 50;
 
-      const isEarlyLong = (rangePosition <= 0.45) && (buyPct >= 52);
-      const isEarlyShort = (rangePosition >= 0.60) && (buyPct <= 46);
-
-      if (isEarlyLong) {
+      // PUMP YAKALAMA (Dip Konsolidasyon + Anlık Alıcı Baskısı %62+)
+      if (rangePosition <= 0.38 && buyPct >= 62) {
         candidate = item;
         direction = 'LONG';
+        confidenceScore = Math.round(buyPct);
+        triggerReason = `Dip bölgede (%${Math.round(rangePosition * 100)} seviyesi) kurumsal alıcı akını ve %${confidenceScore} agresif market alımı tespit edildi.`;
         break;
       }
 
-      if (isEarlyShort) {
+      // DUMP YAKALAMA (Tepe Dağıtımı + Blok Satış Baskısı %65+)
+      if (rangePosition >= 0.72 && buyPct <= 35) {
         candidate = item;
         direction = 'SHORT';
+        confidenceScore = Math.round(100 - buyPct);
+        triggerReason = `Tepe likidite bölgesinde dağıtım başladı; satış baskısı %${confidenceScore} seviyesinde, long likidasyon avı bekleniyor.`;
         break;
       }
     }
 
-    if (!candidate && pool.length > 0) {
-      candidate = pool[0];
-      direction = 'LONG';
-    }
-
+    // Gerçek kriteri karşılamayan hiçbir pariteye zoraki sinyal üretilmez
     if (!candidate) {
-      return res.status(200).json({ status: "SCANNING", message: "Uygun parite bulunamadı." });
+      return res.status(200).json({ status: "SCANNING", message: "Yüksek hacimli tahtalar taranıyor. Şartları sağlayan net pump/dump adayı bekleniyor." });
     }
 
     // 4. Hedef ve Stop Seviyeleri
@@ -117,6 +131,8 @@ export default async function handler(req, res) {
       tp2,
       sl,
       status: 'OPEN',
+      score: confidenceScore,
+      reason: triggerReason,
       createdAt: now,
       timestamp: new Date().toISOString()
     };
@@ -136,7 +152,7 @@ export default async function handler(req, res) {
         })
       ]);
     } catch (fbErr) {
-      console.warn("Firebase uyarısı:", fbErr);
+      console.warn("Firebase kayıt uyarısı:", fbErr);
     }
 
     // 6. TELEGRAM BİLDİRİMİNİ GÖNDER
@@ -148,36 +164,30 @@ export default async function handler(req, res) {
     const tgMsg = `🎯 <b>MINEORA SENTINEL | KURUMSAL DOĞRULANMIŞ SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidate.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Likidite Tepkisi)' : '🔴 SHORT (Tepe Dağıtımı)'}\n` +
-                  `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
+                  `🧭 <b>Yön:</b> ${direction === 'LONG' ? '🟢 LONG (Dip Likidite Patlaması)' : '🔴 SHORT (Tepe Dağıtımı)'}\n` +
+                  `⚡ <b>Teyit Gücü:</b> %${confidenceScore}\n` +
+                  `💵 <b>Giriş Fiyatı:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hedef 1:</b> <code>$${tp1Str}</code> (+%1.8)\n` +
                   `🚀 <b>Hedef 2:</b> <code>$${tp2Str}</code> (+%3.8)\n` +
                   `🛑 <b>Stop-Loss:</b> <code>$${slStr}</code> (-%1.2)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `⚡ <i>Canlı Terminal: mineoragame.com</i>`;
+                  `📊 <i>İstihbarat Notu: ${triggerReason}</i>\n` +
+                  `⚡ <i>Canlı Operasyon Masası: mineoragame.com</i>`;
 
-    // DOĞRUDAN SENİN KANALINA GÖNDERİM
+    // DOĞRUDAN KANALA GÖNDER
     const channelRes = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: TG_CHANNEL_ID,
-        text: tgMsg,
-        parse_mode: 'HTML'
-      })
+      body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgMsg, parse_mode: 'HTML' })
     });
     const channelData = await channelRes.json();
 
-    // ÖZEL SOHBETE GÖNDERİM
+    // YÖNETİCİYE YEDEK BİLGİ GÖNDER
     await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: TG_ADMIN_ID,
-        text: tgMsg,
-        parse_mode: 'HTML'
-      })
+      body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: tgMsg, parse_mode: 'HTML' })
     }).catch(() => {});
 
     return res.status(200).json({
