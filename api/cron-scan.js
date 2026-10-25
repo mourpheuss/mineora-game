@@ -6,12 +6,12 @@ export default async function handler(req, res) {
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_CHANNEL_ID = "-1004404988937"; // Mineora Balina Sinyal VIP Kanalı
-    const TG_ADMIN_ID = "6457294906";     // Mourpheus Özel
+    const TG_CHANNEL_ID = "-1004404988937";
+    const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    const LOCK_WINDOW_MS = 45 * 60 * 1000;       // 45 dk aktif takip
-    const SAME_COIN_LOCK_MS = 90 * 60 * 1000;   // Aynı coine 90 dk kilit
+    const LOCK_WINDOW_MS = 45 * 60 * 1000;
+    const SAME_COIN_LOCK_MS = 90 * 60 * 1000;
     const now = Date.now();
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       priceMap[t.symbol] = parseFloat(t.lastPr || 0);
     });
 
-    // 2. Firebase Aktif İşlemleri ve Geçmiş Sinyalleri Oku
+    // 2. Firebase Aktif İşlemleri Oku
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1 / TP2 / STOP DENETİMİ)
+    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1 / TP2 / STOP)
     // =========================================================================
     let tradeUpdates = [];
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
       const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // A) TP 2 KONTROLÜ (TAM HEDEF BAŞARISI)
+      // TP 2 KONTROLÜ
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
@@ -74,10 +74,10 @@ export default async function handler(req, res) {
                        `💎 <b>Parite:</b> #${trade.symbol}\n` +
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
-                       `🏁 <b>Kapanış Fiyatı:</b> <code>$${curPriceStr}</code>\n` +
+                       `🏁 <b>Kapanış:</b> <code>$${curPriceStr}</code>\n` +
                        `🏆 <b>Net Kâr:</b> <b>+%2.00</b> <i>(10x: +%20 | 20x: +%40)</i>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                       `✨ <i>Balina akış hedefi başarıyla tamamlandı.</i>\n` +
+                       `✨ <i>Ön-patlama hareketi hedefe ulaştı.</i>\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -88,11 +88,11 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // B) TP 1 KONTROLÜ (İLK KÂR ALINDI & STOP GİRİŞE ÇEKİLDİ)
+      // TP 1 KONTROLÜ
       const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
-        trade.sl = trade.entryPrice; // Stop girişe (Break-even) çekildi
+        trade.sl = trade.entryPrice;
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
             method: 'PUT',
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `⚡ <b>Anlık Fiyat:</b> <code>$${curPriceStr}</code>\n` +
                        `💰 <b>Kâr:</b> <b>+%1.00</b> <i>(Pozisyonun %50'si kârla kapatılabilir)</i>\n` +
-                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss giriş seviyesine çekildi. Kalan kısım sıfır riskle taşınıyor!\n` +
+                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss giriş seviyesine çekildi. Kalan kısım sıfır risk!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // C) STOP-LOSS KONTROLÜ
+      // STOP KONTROLÜ
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
         trade.status = 'STOPPED';
@@ -141,7 +141,7 @@ export default async function handler(req, res) {
                         `🛑 <b>Çıkış:</b> <code>$${curPriceStr}</code>\n` +
                         `📉 <b>Zarar-Kes:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : '-%1.20'}\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `🛡️ <i>Sermaye korundu. Yeni kurumsal birikim taranıyor.</i>`;
+                        `🛡️ <i>Sermaye korundu. Yeni kurumsal dengesizlik taranıyor.</i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: KURUMSAL Z-SCORE + SIKIŞMA + FONLAMA + BALİNA AKIŞ MOTORU
+    // MODÜL 2: 1-3 DAKİKA ÖNCEDEN "PATLAMA ÖNCESİ DENGESİZLİK" TESPİT MOTORU
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -169,38 +169,35 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte aktif operasyonlar var; yeni sinyal beklemede." });
     }
 
-    // TradFi, Emtialar ve Düşük Likidite Hariç
-    const EXCLUDED = [
-      "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "USDCUSDT",
-      "CLUSDT", "XAUUSDT", "XAGUSDT", "SPXUSDT", "NDXUSDT", "DJIUSDT", "BGBUSDT"
+    // KESİN SAF KRİPTO KORUMASI (HİSSE, ETF, EMTİA VE SAHTE TÜREVLERİ ELER)
+    const TRADFI_BLACKLIST = [
+      "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
+      "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
+      "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT"
     ];
 
-    // Minimum 1.500.000 USDT hacimli, gerçek akıcı altcoin havuzu
-    const pool = tickersJson.data
-      .filter(c => Number(c.usdtVolume || c.quoteVolume || 0) >= 1500000 && c.symbol.endsWith('USDT') && !EXCLUDED.includes(c.symbol))
-      .sort((a, b) => Number(b.usdtVolume || 0) - Number(a.usdtVolume || 0));
+    const pool = tickersJson.data.filter(c => {
+      if (!c.symbol.endsWith("USDT")) return false;
+      const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
+      if (vol < 800000) return false;
 
-    // Z-Score Matematiksel Fonksiyonu
-    function calculateZScore(series, currentVal) {
-      if (!series || series.length < 5) return 0;
-      const n = series.length;
-      const mean = series.reduce((a, b) => a + b, 0) / n;
-      const variance = series.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
-      const stdDev = Math.sqrt(variance);
-      return stdDev === 0 ? 0 : (currentVal - mean) / stdDev;
-    }
+      for (const b of TRADFI_BLACKLIST) {
+        if (c.symbol.startsWith(b)) return false;
+      }
+      return true;
+    }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
 
     let candidateTrade = null;
 
-    for (const item of pool.slice(0, 35)) {
+    for (const item of pool.slice(0, 40)) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      // 1. ADIM: SON 25 MUMU ÇEK (1m Mumlar - Mikro Dinamik)
-      const candlesRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
+      // 1. ADIM: SON 15 MUM (1m Periyot - Mikro 180 Saniyelik Dinamik)
+      const candlesRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=15`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
-      if (candlesRes.code !== '00000' || !Array.isArray(candlesRes.data) || candlesRes.data.length < 20) continue;
+      if (candlesRes.code !== '00000' || !Array.isArray(candlesRes.data) || candlesRes.data.length < 10) continue;
 
       const candles = candlesRes.data.map(c => ({
         time: Math.floor(Number(c[0]) / 1000),
@@ -212,99 +209,76 @@ export default async function handler(req, res) {
       })).sort((a, b) => a.time - b.time);
 
       const current = candles[candles.length - 1];
-      const previous = candles.slice(0, candles.length - 1);
+      const c3mBack = candles[candles.length - 3]; // 3 dakika önceki mum
 
-      // A) Z-Score Hacim Sapması
-      const pastVolumes = previous.map(c => c.volume);
-      const volZScore = calculateZScore(pastVolumes, current.volume);
+      // ŞART 1: FİYAT TAMAMEN KİLİTLİ OLMALI (Son 3 dakikalık değişim <= %0.25)
+      // Fiyat fırlamamış olacak, kuluçkada bekleyecek!
+      const priceChange3m = Math.abs(((current.close - c3mBack.close) / c3mBack.close) * 100);
+      if (priceChange3m > 0.25) continue;
 
-      // B) Volatilite Sıkışması (Squeeze Kontrolü - Fiyat Henüz Patlamamış Olmalı)
-      const recentRanges = previous.slice(-5).map(c => (c.high - c.low) / (c.close || 1));
-      const avgRange = recentRanges.reduce((a, b) => a + b, 0) / recentRanges.length;
-      const currentRange = (current.high - current.low) / (current.close || 1);
-      const isSqueezed = currentRange < (avgRange * 0.90);
+      // ŞART 2: DERİNLİK TAHTASI ASİMETRİSİ (Satış duvarı çekilmiş mi?)
+      const depthRes = await fetch(`https://api.bitget.com/api/v2/mix/market/merge-depth?symbol=${item.symbol}&productType=usdt-futures&limit=15`, { headers: browserHeaders })
+        .then(r => r.json()).catch(() => ({}));
 
-      // C) Son 5 Mumdaki Fiyat Değişimi (Zirveye atlamama garantisi)
-      const price5mAgo = previous[previous.length - 5].close;
-      const priceChange5m = ((current.close - price5mAgo) / price5mAgo) * 100;
-      if (Math.abs(priceChange5m) > 0.65) continue; // Fiyat zaten %0.65'ten fazla uçtuysa ASLA girme!
+      const bids = depthRes.data?.bids || [];
+      const asks = depthRes.data?.asks || [];
+      if (!bids.length || !asks.length) continue;
 
-      // 2. ADIM: FONLAMA ORANI (FUNDING RATE) ANALİZİ
-      const fundingRate = parseFloat(item.fundingRate || 0);
+      let top5BidVol = 0;
+      let top5AskVol = 0;
+      for (let i = 0; i < Math.min(5, bids.length); i++) top5BidVol += parseFloat(bids[i][1] || 0);
+      for (let i = 0; i < Math.min(5, asks.length); i++) top5AskVol += parseFloat(asks[i][1] || 0);
 
-      // 3. ADIM: BALİNA BLOK İŞLEMLERİNİ SÜZME (1.000$ ve Üzeri Kurumsal Emirler)
+      // İlk 5 kademede önü tıkalı mı? Satıcı duvarı, alıcı desteğinin en fazla %60'ı kadar olmalı (Önü açık)
+      if (top5AskVol > top5BidVol * 0.60) continue;
+
+      // ŞART 3: SON TAPE AKIŞINDA GİZLİ SÜPÜRME (Absorption / Taker Surge)
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       const fills = fillsRes.data?.fillList || fillsRes.data || [];
-      let whaleBuyUsd = 0;
-      let whaleSellUsd = 0;
+      if (!Array.isArray(fills) || fills.length < 20) continue;
 
-      if (Array.isArray(fills)) {
-        fills.forEach(f => {
-          const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
-          if (val >= 1000) { // 1.000 USDT üzerindeki gerçek balina blok emirleri
-            if (f.side === 'buy') whaleBuyUsd += val;
-            else whaleSellUsd += val;
-          }
-        });
-      }
+      let recentBuyVol = 0;
+      let recentSellVol = 0;
+      let activeTradeCount = 0;
 
-      const totalWhaleFlow = whaleBuyUsd + whaleSellUsd;
-      const whaleBuyPct = totalWhaleFlow > 0 ? (whaleBuyUsd / totalWhaleFlow) * 100 : 50;
+      fills.forEach(f => {
+        const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
+        if (val >= 250) { // Mikro bot gürültüsünü filtrele
+          activeTradeCount++;
+          if (f.side === 'buy') recentBuyVol += val;
+          else recentSellVol += val;
+        }
+      });
 
-      // ================= LONG TEYİT KURALI (PRE-PUMP KURUMSAL PATLAMA ÖNCESİ) =================
-      // 1. Hacim Anormalliği var (Z-Score >= 2.0)
-      // 2. Fiyat henüz patlamamış, sıkışmış (isSqueezed veya priceChange5m < %0.4)
-      // 3. Balina emirleri %65+ Alıcı yönünde (Whale Buy Flow)
-      // 4. Fonlama şişmemiş (FR <= 0.005, Short sıkışmasına uygun)
-      const isPrePumpLong = (volZScore >= 2.0) && 
-                            (isSqueezed || Math.abs(priceChange5m) < 0.40) && 
-                            (whaleBuyPct >= 65) && 
-                            (fundingRate <= 0.005);
+      const totalRecentVol = recentBuyVol + recentSellVol;
+      if (totalRecentVol <= 0) continue;
 
-      // ================= SHORT TEYİT KURALI (PRE-DUMP KURUMSAL BOŞALTMA ÖNCESİ) =================
-      // 1. Hacim Anormalliği var (Z-Score >= 2.0)
-      // 2. Fiyat sıkışmış ancak balina satışı var
-      // 3. Balina emirleri %65+ Satıcı yönünde (Whale Buy <= %35)
-      // 4. Longçular şişkin fonlama ödüyor (FR >= 0.015)
-      const isPreDumpShort = (volZScore >= 2.0) && 
-                             (isSqueezed || Math.abs(priceChange5m) < 0.40) && 
-                             (whaleBuyPct <= 35) && 
-                             (fundingRate >= 0.015);
+      const takerBuyRatio = (recentBuyVol / totalRecentVol) * 100;
+      const fundingRate = parseFloat(item.fundingRate || 0);
 
-      if (isPrePumpLong) {
+      // ŞART 4: BÜYÜK PATLAMA ÖNCESİ TETİĞİ (Taker Alış Oranı >= %75 & Fiyat Kilitli)
+      // Fiyat son 3 dakikada %0.25 dahi oynamadı ama piyasa alımları %75+ güçle tahtayı emiyor!
+      if (takerBuyRatio >= 75 && activeTradeCount >= 12 && fundingRate <= 0.005) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
           price: current.close,
-          volZScore: parseFloat(volZScore.toFixed(2)),
-          whaleBuyPct: Math.round(whaleBuyPct),
+          takerBuyRatio: Math.round(takerBuyRatio),
+          priceChange3m: priceChange3m.toFixed(2),
           fundingRate: (fundingRate * 100).toFixed(4),
-          reason: `Volatilite sıkıştı (Son 5 dk: %${priceChange5m.toFixed(2)}). Hacim anomalisi (Z-Score: ${volZScore.toFixed(1)}σ) ve 1.000$+ kurumsal emirlerde %${Math.round(whaleBuyPct)} alıcı süpürmesi başladı.`
-        };
-        break;
-      }
-
-      if (isPreDumpShort) {
-        candidateTrade = {
-          symbol: item.symbol,
-          direction: 'SHORT',
-          price: current.close,
-          volZScore: parseFloat(volZScore.toFixed(2)),
-          whaleBuyPct: Math.round(100 - whaleBuyPct),
-          fundingRate: (fundingRate * 100).toFixed(4),
-          reason: `Şişkin fonlamada (${(fundingRate * 100).toFixed(3)}%) kurumsal dağıtım başladı. Hacim anomalisi (Z-Score: ${volZScore.toFixed(1)}σ) ve %${Math.round(100 - whaleBuyPct)} balina satış blokları tespit edildi.`
+          reason: `Son 3 dk fiyat değişimi sadece %${priceChange3m.toFixed(2)} (Kilitli Taban). Tahtada satış duvarı çekildi ve son akışta %${Math.round(takerBuyRatio)} agresif piyasa alımıyla kurumsal emilim (absorption) başladı.`
         };
         break;
       }
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Z-Score, Sıkışma ve Balina Blok akışları taranıyor; patlama öncesi bekleniyor." });
+      return res.status(200).json({ status: "SCANNING", message: "Kilitli taban ve 1-3 dk öncesi kurumsal emilim aranıyor..." });
     }
 
-    // 4. HEDEF VE STOP MATEMATİĞİ (GÜVENLİ VE GERÇEKÇİ MARJLAR)
+    // 4. HEDEF VE STOP MATEMATİĞİ
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
     const tp1 = isLong ? entryPrice * 1.010 : entryPrice * 0.990; // +%1.00 Net
@@ -322,7 +296,7 @@ export default async function handler(req, res) {
       sl,
       status: 'OPEN',
       tp1Hit: false,
-      score: candidateTrade.whaleBuyPct,
+      score: candidateTrade.takerBuyRatio,
       reason: candidateTrade.reason,
       createdAt: now,
       timestamp: new Date().toISOString()
@@ -350,12 +324,12 @@ export default async function handler(req, res) {
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
 
-    const tgMsg = `⚡ <b>MINEORA SENTINEL | PATLAMA ÖNCESİ (PRE-PUMP) SİNYALİ</b>\n` +
+    const tgMsg = `⚡ <b>MINEORA SENTINEL | 1-3 DK ÖNCESİ PATLAMA ALARMI</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG (Sıkışma & Balina Birikimi)' : '🔴 SHORT (Şişkin Fonlama Dağıtımı)'}\n` +
-                  `⚡ <b>Balina Gücü:</b> %${candidateTrade.whaleBuyPct}\n` +
-                  `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
+                  `🧭 <b>Yön:</b> 🟢 LONG (Kilitli Taban Emilimi)\n` +
+                  `⚡ <b>Agresif Alıcı Gücü:</b> %${candidateTrade.takerBuyRatio}\n` +
+                  `🔒 <b>3 Dakikalık Fiyat Oynaklığı:</b> %${candidateTrade.priceChange3m} (Hareket henüz başlamadı)\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%1.00)\n` +
@@ -363,7 +337,7 @@ export default async function handler(req, res) {
                   `🛑 <b>Güvenli Stop:</b> <code>$${slStr}</code> (-%1.20)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `📊 <i>İstihbarat: ${candidateTrade.reason}</i>\n` +
-                  `💡 <i>Strateji: TP1 alındığında stop girişe çekilir, kalan kısım sıfır riskle izlenir.</i>\n` +
+                  `💡 <i>Kural: TP1 alındığında stop girişe çekilir, kalan pozisyon sıfır riskle izlenir.</i>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                   `📢 <i>Ücretsiz Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
