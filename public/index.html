@@ -23,16 +23,14 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white relative overflow-x-hidden">
 
-  <!-- ================= FERAH VE CANLI KRİPTO ARKA PLANI ================= -->
+  <!-- ================= ARKA PLAN ================= -->
   <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
     <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-45 scale-100 transition duration-700" 
          style="background-image: url('https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=2560&auto=format&fit=crop');">
     </div>
-
     <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-b from-amber-500/30 via-orange-600/15 to-transparent rounded-full blur-[140px]"></div>
     <div class="absolute top-1/3 -left-20 w-[500px] h-[500px] bg-indigo-600/25 rounded-full blur-[150px]"></div>
     <div class="absolute top-2/3 -right-20 w-[550px] h-[550px] bg-amber-500/25 rounded-full blur-[160px]"></div>
-
     <div class="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-slate-950/60 to-slate-950/95"></div>
   </div>
 
@@ -146,9 +144,7 @@
           </div>
         </div>
 
-        <!-- 3'lü Kurumsal Seviye Kartları -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          <!-- 1. Tuzak Stop -->
           <div class="bg-rose-950/30 border border-rose-900/60 p-4 rounded-2xl space-y-2">
             <div class="flex items-center justify-between text-rose-400 text-[11px] font-bold">
               <span>🚨 TUZAK STOP BÖLGESİ</span>
@@ -160,7 +156,6 @@
             </p>
           </div>
 
-          <!-- 2. Güvenli Stop -->
           <div class="bg-emerald-950/30 border border-emerald-900/60 p-4 rounded-2xl space-y-2">
             <div class="flex items-center justify-between text-emerald-400 text-[11px] font-bold">
               <span>🎯 KURUMSAL GÜVENLİ STOP</span>
@@ -172,7 +167,6 @@
             </p>
           </div>
 
-          <!-- 3. Dip Avcı Pusu -->
           <div class="bg-amber-950/30 border border-amber-900/60 p-4 rounded-2xl space-y-2">
             <div class="flex items-center justify-between text-amber-400 text-[11px] font-bold">
               <span>⚡ DİP AVCI PUSU EMRİ</span>
@@ -185,10 +179,8 @@
           </div>
         </div>
 
-        <!-- Kullanıcının Kendi Stop Değerlendirmesi (Varsa) -->
         <div id="userStopVerdictBox" class="hidden p-4 rounded-2xl border text-xs"></div>
 
-        <!-- VIP Çağrısı -->
         <div class="bg-gradient-to-r from-slate-950 to-slate-900 p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <span class="text-slate-300">
             🤖 Bu iğneleri 7/24 otomatik avlayan <b>Bitget Botu</b> ve <b>Canlı Sinyal Masası</b> için:
@@ -200,42 +192,7 @@
       </div>
     </section>
 
-    <!-- SİSTEM ÖZELLİKLERİ (Şeffaf Cam Görünümlü Kartlar) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-      <div class="bg-slate-900/60 border border-white/10 p-8 rounded-3xl space-y-4 hover:border-emerald-500/40 transition backdrop-blur-xl shadow-2xl hover:-translate-y-1 duration-300 group">
-        <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-xl shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition">
-          <i class="fa-solid fa-bolt-lightning"></i>
-        </div>
-        <h3 class="font-display font-bold text-xl text-white">Yüksek Hızlı Piyasa Radarı</h3>
-        <p class="text-slate-300 text-sm leading-relaxed">
-          Tüm vadeli pariteleri saniyeler içinde tarayan özel algoritmik filtreleme ile piyasadaki ani yön değişimlerini ilk siz öğrenin.
-        </p>
-      </div>
-
-      <div class="bg-slate-900/60 border border-white/10 p-8 rounded-3xl space-y-4 hover:border-rose-500/40 transition backdrop-blur-xl shadow-2xl hover:-translate-y-1 duration-300 group">
-        <div class="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center text-xl shadow-lg shadow-rose-500/20 group-hover:scale-110 transition">
-          <i class="fa-solid fa-shield-halved"></i>
-        </div>
-        <h3 class="font-display font-bold text-xl text-white">Sermaye Koruma Kalkanı</h3>
-        <p class="text-slate-300 text-sm leading-relaxed">
-          Ters yönde risk taşıyan ve tuzak kurulan pariteleri erkenden işaretleyerek kasanızı sert dalgalanmalardan koruma altına alır.
-        </p>
-      </div>
-
-      <div class="bg-slate-900/60 border border-white/10 p-8 rounded-3xl space-y-4 hover:border-sky-500/40 transition backdrop-blur-xl shadow-2xl hover:-translate-y-1 duration-300 group">
-        <div class="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center text-xl shadow-lg shadow-sky-500/20 group-hover:scale-110 transition">
-          <i class="fa-brands fa-telegram"></i>
-        </div>
-        <h3 class="font-display font-bold text-xl text-white">7/24 Kesintisiz VIP Bildirimleri</h3>
-        <p class="text-slate-300 text-sm leading-relaxed">
-          Bilgisayar başında beklemenize gerek yok. Bulut motorumuz tespit ettiği her kritik fırsatı anında özel VIP kanalınıza fırlatır.
-        </p>
-      </div>
-
-    </div>
-
-    <!-- VIP FİYATLANDIRMA KARTI -->
+    <!-- VIP FİYATLANDIRMA & REFERANS ORTAKLIĞI KARTI -->
     <div class="max-w-xl mx-auto bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-950/95 border-2 border-amber-500/60 rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl shadow-orange-500/20 relative overflow-hidden text-center backdrop-blur-2xl ring-1 ring-white/10">
       <div class="absolute -right-12 -top-12 w-52 h-52 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -left-12 -bottom-12 w-52 h-52 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -256,13 +213,13 @@
           <i class="fa-solid fa-circle-check text-emerald-400"></i> Tüm vadeli tahtalarda anlık kurumsal radar masası
         </li>
         <li class="flex items-center gap-3">
-          <i class="fa-solid fa-circle-check text-emerald-400"></i> Erken uyarı fırsat ve risk tespit masaları
+          <i class="fa-solid fa-circle-check text-emerald-400"></i> Wick-Shield derinlik ve tuzak iğne filtreleme
         </li>
         <li class="flex items-center gap-3">
-          <i class="fa-solid fa-circle-check text-emerald-400"></i> Tek tıkla parite risk ve X-Ray röntgen kontrolü
+          <i class="fa-solid fa-circle-check text-emerald-400"></i> Bitget vadeli otomatik emir entegrasyonu
         </li>
-        <li class="flex items-center gap-3">
-          <i class="fa-solid fa-circle-check text-emerald-400"></i> 7/24 Otonom Telegram VIP sinyal akışı
+        <li class="flex items-center gap-3 text-amber-300 font-bold">
+          <i class="fa-solid fa-handshake text-amber-400"></i> Her Davet Edilen Üyeden %30 Komisyon (60 USDT)
         </li>
       </ul>
 
@@ -273,7 +230,6 @@
 
   </main>
 
-  <!-- FOOTER -->
   <footer class="border-t border-white/10 py-8 text-center text-xs text-slate-400 font-mono relative z-10 bg-slate-950/60 backdrop-blur-md">
     © 2026 Mineora Sentinel. Tüm hakları saklıdır. Finansal yatırım tavsiyesi içermez.
   </footer>
@@ -296,6 +252,7 @@
         <button id="modalTabRegBtn" onclick="switchAuthTab('register')" class="py-2 rounded-xl font-bold text-slate-400 hover:text-white transition">Kayıt Ol</button>
       </div>
 
+      <!-- Giriş Formu -->
       <form id="modalFormLogin" onsubmit="event.preventDefault(); submitLogin();" class="space-y-3 font-mono text-xs">
         <div>
           <label class="text-slate-300 block font-bold mb-1">Kullanıcı Adı:</label>
@@ -310,6 +267,7 @@
         </button>
       </form>
 
+      <!-- Kayıt Formu (REFERANS KODU ENTEGRELİ) -->
       <form id="modalFormRegister" onsubmit="event.preventDefault(); submitRegister();" class="hidden space-y-3 font-mono text-xs">
         <div>
           <label class="text-slate-300 block font-bold mb-1">Kullanıcı Adı:</label>
@@ -322,6 +280,10 @@
         <div>
           <label class="text-slate-300 block font-bold mb-1">Şifre:</label>
           <input type="password" id="regPassword" required placeholder="••••••••" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 w-full text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label class="text-slate-300 block font-bold mb-1">Referans Kodu / Davet Eden (Opsiyonel):</label>
+          <input type="text" id="regRefCode" placeholder="Varsa referans kodu girin (yoksa boş bırakın)" class="bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-2.5 w-full text-amber-300 focus:outline-none focus:border-amber-400 uppercase" />
         </div>
         <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">
           Hesap Oluştur & Abonelik Adımına Geç
@@ -392,8 +354,23 @@
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_ADMIN_ID = "6457294906";
 
+    // URL'den varsa Referans Kodunu Yakala (?ref=XYZ)
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const refParam = params.get('ref');
+      if (refParam) {
+        sessionStorage.setItem('pendingRefCode', refParam.toUpperCase());
+        const refInput = document.getElementById('regRefCode');
+        if (refInput) refInput.value = refParam.toUpperCase();
+      }
+    });
+
     function openAuthModal(tab) {
       document.getElementById('authModal').classList.remove('hidden');
+      const savedRef = sessionStorage.getItem('pendingRefCode');
+      if (savedRef) {
+        document.getElementById('regRefCode').value = savedRef;
+      }
       switchAuthTab(tab || 'login');
     }
     function closeAuthModal() {
@@ -424,6 +401,7 @@
       const u = document.getElementById('regUsername').value.trim();
       const e = document.getElementById('regEmail').value.trim();
       const p = document.getElementById('regPassword').value.trim();
+      const refCode = document.getElementById('regRefCode').value.trim().toUpperCase();
 
       if (!u || !e || !p) { alert("Lütfen tüm alanları doldurun."); return; }
 
@@ -432,20 +410,37 @@
         const snap = await ref.once('value');
         if (snap.exists()) { alert("Bu kullanıcı adı zaten alınmış!"); return; }
 
+        let validReferrer = null;
+        if (refCode && refCode !== u) {
+          const refSnap = await db.ref('users/' + refCode).once('value');
+          if (refSnap.exists()) {
+            validReferrer = refCode;
+          }
+        }
+
         await ref.set({
           username: u,
           email: e,
           password: p,
           isVip: false,
+          referredBy: validReferrer || null,
+          refEarningsUsdt: 0,
+          totalReferredCount: 0,
           createdAt: Date.now()
         });
+
+        // Eğer geçerli bir davet eden varsa, sayacını 1 artır
+        if (validReferrer) {
+          const refUserRef = db.ref('users/' + validReferrer);
+          await refUserRef.child('totalReferredCount').transaction(c => (c || 0) + 1);
+        }
 
         try {
           const regMsg = `👤 <b>YENİ KULLANICI KAYIT OLDU!</b>\n` +
                          `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `🆔 <b>Kullanıcı Adı:</b> <code>${u}</code>\n` +
+                         `🆔 <b>Kullanıcı:</b> <code>${u}</code>\n` +
                          `📧 <b>E-Posta:</b> <code>${e}</code>\n` +
-                         `🔑 <b>Şifre:</b> <code>[GÜVENLİ VE ŞİFRELİ]</code>\n` +
+                         `🤝 <b>Davet Eden (Referans):</b> ${validReferrer ? `<code>${validReferrer}</code>` : 'Yok (Organik)'}\n` +
                          `📅 <b>Tarih:</b> ${new Date().toLocaleString('tr-TR')}\n` +
                          `━━━━━━━━━━━━━━━━━━━━\n` +
                          `ℹ️ <i>Kullanıcı Admin Paneli'ne beklemede olarak eklendi.</i>`;
@@ -455,9 +450,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: regMsg, parse_mode: 'HTML' })
           });
-        } catch(tgErr) {
-          console.error("TG Hatası:", tgErr);
-        }
+        } catch(tgErr) {}
 
         sessionStorage.setItem('currentUser', u);
         sessionStorage.setItem('isVip', 'false');
@@ -534,7 +527,7 @@
       if (!tx) { alert("Lütfen TxID kodunu girin."); return; }
 
       const user = sessionStorage.getItem('currentUser') || 'Ziyaretçi';
-      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($200 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${tx}</code>\n\n🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${tx}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz.`;
+      const msg = `💰 <b>YENİ VIP ÖDEME BİLDİRİMİ ($200 USDT)</b>\n\n👤 <b>Kullanıcı:</b> ${user}\n🌐 <b>Ağ:</b> TRC-20 (Tron)\n🔗 <b>TxID:</b> <code>${tx}</code>\n\n🔍 <b>Tronscan:</b> https://tronscan.org/#/transaction/${tx}\n\n✅ Ödemeyi cüzdanda doğruladıktan sonra Admin panelinden üyeliği onaylayabilirsiniz. (Varsa referans sahibine 60 USDT %30 komisyon yansıtılacaktır.)`;
 
       try {
         const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -592,10 +585,9 @@
         const price = parseFloat(data.price);
         const magnetPrice = parseFloat(data.bitget.magnetWickPrice);
 
-        // Hesaplanan Kurumsal Seviyeler
-        const trapStopPrice = price * 0.993; // %0.7 altı (küçük yatırımcı kümelenmesi)
-        const safeStopPrice = magnetPrice * 0.992; // Likidasyon iğnesinin de altı
-        const sniperEntryPrice = magnetPrice * 1.002; // İğnenin temas edeceği tam giriş yeri
+        const trapStopPrice = price * 0.993;
+        const safeStopPrice = magnetPrice * 0.992;
+        const sniperEntryPrice = magnetPrice * 1.002;
 
         const pStr = price < 1 ? price.toFixed(6) : price.toFixed(4);
         const trapStr = trapStopPrice < 1 ? trapStopPrice.toFixed(6) : trapStopPrice.toFixed(4);
@@ -618,7 +610,6 @@
           biasEl.className = "text-xs font-bold text-emerald-400";
         }
 
-        // Kullanıcı kendi stopunu girdiyse test et
         const userStopVal = parseFloat(userStopInput.value);
         const verdictBox = document.getElementById('userStopVerdictBox');
         if (!isNaN(userStopVal) && userStopVal > 0) {
@@ -649,13 +640,3 @@
   </script>
 </body>
 </html>
-```<FollowUp>
-<Suggestions>
-<Suggestion>`public/index.html` dosyasını bu kodla güncelleyip ana sayfada 'İğneyi Tara' kutusunu test edelim.</Suggestion>
-<Suggestion>Kendi belirleyeceğin bir stop fiyatını girerek 'Stopun Patlayabilir' ya da 'Güvenli Bölgede' uyarısını kontrol edelim.</Suggestion>
-</Suggestions>
-</FollowUp>
-<ElicitationsGroup>
-<Elicitation>`public/index.html` dosyasını güncelledikten sonra ana sayfada Wick-Shield kutusunu açıp `SOL` veya `BTC` ile bir deneme taraması yaptın mı?</Elicitation>
-<Elicitation>Opsiyonel stop kutusuna bir fiyat girdiğinde çıkan koruma teşhisini beğendin mi?</Elicitation>
-</ElicitationsGroup>
