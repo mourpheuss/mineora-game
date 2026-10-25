@@ -6,18 +6,18 @@ export default async function handler(req, res) {
     };
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
-    const TG_CHANNEL_ID = "-1003180299696"; // Hedef Telegram Kanalı
-    const TG_ADMIN_ID = "6457294906";     // Yönetici ID
+    const TG_CHANNEL_ID = "-1003180299696"; // Senin Kanalın
+    const TG_ADMIN_ID = "6457294906";     // Yönetici Sohbetin
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
     const now = Date.now();
 
-    // 1. Bitget Vadeli Ticker Verilerini Al
+    // 1. Bitget Ticker Verilerini Çek
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
     const tickersJson = await tickersRes.json();
 
     if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
-      return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
+      return res.status(500).json({ error: "Bitget verisi alınamadı." });
     }
 
     const EXCLUDED = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       parseFloat(t.usdtVolume || 0) >= 600000
     );
 
-    // 2. Firebase Kontrolü
+    // 2. Firebase Aktif İşlemleri Oku
     let activeTrades = {};
     let lastSignals = {};
     try {
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       lastSignals = {};
     }
 
-    // 3. Emir Akışı ve Dönüş Taraması
+    // 3. Piyasa Taraması
     let candidate = null;
     let direction = null;
 
@@ -91,7 +91,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Aday yoksa havuzdan en yüksek hacimli ilk pariteyi test için al
     if (!candidate && pool.length > 0) {
       candidate = pool[0];
       direction = 'LONG';
@@ -122,7 +121,7 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     };
 
-    // 5. Firebase Veri Kaydı
+    // 5. Firebase'e Kaydet
     try {
       await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
@@ -137,10 +136,10 @@ export default async function handler(req, res) {
         })
       ]);
     } catch (fbErr) {
-      console.warn("Firebase kayıt uyarısı:", fbErr);
+      console.warn("Firebase uyarısı:", fbErr);
     }
 
-    // 6. Telegram Mesajı ve Kanal Gönderimi
+    // 6. TELEGRAM BİLDİRİMİNİ GÖNDER
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
@@ -158,28 +157,34 @@ export default async function handler(req, res) {
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: mineoragame.com</i>`;
 
-    // Kanala Gönder ve Telegram Yanıtını Al
+    // DOĞRUDAN SENİN KANALINA GÖNDERİM
     const channelRes = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgMsg, parse_mode: 'HTML' })
+      body: JSON.stringify({
+        chat_id: TG_CHANNEL_ID,
+        text: tgMsg,
+        parse_mode: 'HTML'
+      })
     });
-    const channelJson = await channelRes.json();
+    const channelData = await channelRes.json();
 
-    // Özel Sohbete Gönder
+    // ÖZEL SOHBETE GÖNDERİM
     await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_ADMIN_ID, text: tgMsg, parse_mode: 'HTML' })
+      body: JSON.stringify({
+        chat_id: TG_ADMIN_ID,
+        text: tgMsg,
+        parse_mode: 'HTML'
+      })
     }).catch(() => {});
 
-    // Kanala gönderim sonucunu ve Telegram cevabını doğrudan ekrana dön
     return res.status(200).json({
       success: true,
       trade: newTrade,
-      telegram_channel_id: TG_CHANNEL_ID,
-      telegram_channel_ok: channelJson.ok,
-      telegram_channel_response: channelJson
+      channel_sent: channelData.ok,
+      telegram_response: channelData
     });
 
   } catch (error) {
