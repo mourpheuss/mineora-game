@@ -559,7 +559,7 @@
       }
     }
 
-    // ================= İSTEDİĞİ COİNİ ARAMA (ÖZEL İĞNE HESAPLAYICI) =================
+    // ================= İSTEDİĞİ COİNİ ARAMA (DÜZELTİLMİŞ FİLTRE) =================
     async function searchCustomWick() {
       const input = document.getElementById('customWickSymbol');
       const resBox = document.getElementById('customWickResult');
@@ -567,32 +567,41 @@
 
       let query = input.value.trim().toUpperCase();
       if (!query) return;
-      query = query.replace('USDT', '').replace('PERP', '').trim() + 'USDT';
+      
+      const baseCoin = query.replace('USDT', '').replace('PERP', '').trim();
+      const targetSymbol = baseCoin + 'USDT';
 
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Hesaplanıyor...`;
       resBox.classList.remove('hidden');
-      resBox.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin mr-2"></i> ${query} vadeli tahtası taranıyor...</div>`;
+      resBox.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i> #${targetSymbol} vadeli tahtası taranıyor...</div>`;
 
       try {
-        const res = await fetch(`https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES&symbol=${query}`);
+        const res = await fetch(`https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES`);
         const json = await res.json();
 
-        if (json.code !== '00000' || !Array.isArray(json.data) || json.data.length === 0) {
-          throw new Error("Parite bulunamadı veya Bitget vadeli tahtasında işlem görmüyor.");
+        if (json.code !== '00000' || !Array.isArray(json.data)) {
+          throw new Error("Bitget piyasa verisi alınamadı.");
         }
 
-        const coin = json.data[0];
+        // TAM EŞLEŞEN COİNİ LİSTEDEN ÇEK
+        const coin = json.data.find(t => t.symbol === targetSymbol);
+
+        if (!coin) {
+          throw new Error(`#${targetSymbol} paritesi bulunamadı veya vadeli tahtada işlem görmüyor.`);
+        }
+
         const p = parseFloat(coin.lastPr || 0);
         const fr = parseFloat(coin.fundingRate || 0);
         const frPct = (fr * 100).toFixed(4);
 
+        // Likidasyon İğnesi Yön ve Seviye Hesabı
         const isUpWick = fr < 0;
         const magnetPrice = isUpWick ? p * 1.025 : p * 0.975;
         const magnetDist = isUpWick ? "+%2.5" : "-%2.5";
 
-        const pStr = p < 1 ? p.toFixed(6) : p.toFixed(2);
-        const magStr = magnetPrice < 1 ? magnetPrice.toFixed(6) : magnetPrice.toFixed(2);
+        const pStr = p < 1 ? p.toFixed(6) : p.toFixed(4);
+        const magStr = magnetPrice < 1 ? magnetPrice.toFixed(6) : magnetPrice.toFixed(4);
 
         resBox.innerHTML = `
           <div class="bg-slate-900 border-2 ${isUpWick ? 'border-emerald-500/60' : 'border-rose-500/60'} p-4 rounded-xl space-y-3 font-mono">
@@ -629,7 +638,7 @@
         `;
 
       } catch (err) {
-        resBox.innerHTML = `<div class="p-3 bg-rose-950/50 border border-rose-900 text-rose-300 text-xs rounded-xl">${err.message}</div>`;
+        resBox.innerHTML = `<div class="p-3 bg-rose-950/50 border border-rose-900 text-rose-300 text-xs rounded-xl font-mono">${err.message}</div>`;
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-crosshairs"></i> <span>İğne Seviyesi Hesapla</span>`;
