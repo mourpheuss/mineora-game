@@ -75,9 +75,9 @@ export default async function handler(req, res) {
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `🏁 <b>Kapanış:</b> <code>$${curPriceStr}</code>\n` +
-                       `🏆 <b>Net Kâr:</b> <b>+%2.00</b> <i>(10x: +%20 | 20x: +%40)</i>\n` +
+                       `🏆 <b>Net Sonuç:</b> Trend yönünde ana hedef tamamlandı!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                       `✨ <i>Seviye tepki operasyonu başarıyla tamamlandı.</i>\n` +
+                       `✨ <i>EMA Trend ve ATR Dalga Koruması Başarıyla Çalıştı.</i>\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -107,8 +107,7 @@ export default async function handler(req, res) {
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `⚡ <b>Anlık Fiyat:</b> <code>$${curPriceStr}</code>\n` +
-                       `💰 <b>Kâr:</b> <b>+%1.00</b> <i>(Pozisyonun %50'si kârla kapatılabilir)</i>\n` +
-                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss başabaş seviyesine çekildi. Risk sıfırlandı!\n` +
+                       `🛡️ <b>Risk Yönetimi:</b> Stop-Loss başa baş seviyesine çekildi. Kalan kısım sıfır risk!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -133,15 +132,15 @@ export default async function handler(req, res) {
           })
         );
 
-        const stopMsg = `🛑 <b>MINEORA SENTINEL | STOP SEVİYESİ TETİKLENDİ</b>\n` +
+        const stopMsg = `🛑 <b>MINEORA SENTINEL | DİSİPLİN STOPU TETİKLENDİ</b>\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
                         `💎 <b>Parite:</b> #${trade.symbol}\n` +
                         `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                         `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                         `🛑 <b>Çıkış:</b> <code>$${curPriceStr}</code>\n` +
-                        `📉 <b>Zarar-Kes:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : 'Seviye İhlali Koruma Çıkışı'}\n` +
+                        `📉 <b>Durum:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : 'ATR Seviye Koruma Çıkışı'}\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `🛡️ <i>Sermaye korundu. Yeni majör seviye taranıyor.</i>`;
+                        `🛡️ <i>Sermaye disiplini korundu. Yeni trend teyidi aranıyor.</i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -157,7 +156,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: TÜM HAVUZ (600K+ HACİM) 15M DESTEK/DİRENÇ + PARABOLİK KALKAN
+    // MODÜL 2: 15M EMA TREND + ATR DİNAMİK STOP + Z-SCORE PUSULASI
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -176,7 +175,7 @@ export default async function handler(req, res) {
       "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT"
     ];
 
-    // 600.000$ ve üzeri hacimli tüm gerçek kriptolar
+    // 600.000$ ve üzeri hacimli gerçek kripto altcoinler
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol.endsWith("USDT")) return false;
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
@@ -187,6 +186,34 @@ export default async function handler(req, res) {
       }
       return true;
     }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
+
+    // Matematiksel İndikatör Hesaplayıcıları
+    function calculateEMA(prices, period) {
+      if (prices.length < period) return prices[prices.length - 1];
+      const k = 2 / (period + 1);
+      let ema = prices.slice(0, period).reduce((a, b) => a + b, 0) / period;
+      for (let i = period; i < prices.length; i++) {
+        ema = prices[i] * k + ema * (1 - k);
+      }
+      return ema;
+    }
+
+    function calculateATR(candles, period = 14) {
+      if (candles.length < period + 1) return candles[candles.length - 1].close * 0.012;
+      const trs = [];
+      for (let i = 1; i < candles.length; i++) {
+        const cur = candles[i];
+        const prev = candles[i - 1];
+        const tr = Math.max(
+          cur.high - cur.low,
+          Math.abs(cur.high - prev.close),
+          Math.abs(cur.low - prev.close)
+        );
+        trs.push(tr);
+      }
+      const slice = trs.slice(-period);
+      return slice.reduce((a, b) => a + b, 0) / period;
+    }
 
     function calculateZScore(series, currentVal) {
       if (!series || series.length < 5) return 0;
@@ -199,19 +226,17 @@ export default async function handler(req, res) {
 
     let candidateTrade = null;
 
-    // TÜM HAVUZU TARA
     for (const item of pool) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      // 24 SAATLİK DEĞİŞİM ORANI (PARABOLİK PUMP/DUMP KALKANI)
       const chg24h = parseFloat(item.change24h || 0) * 100;
 
-      // 1. ADIM: 15 DAKİKALIK MUMLAR (DESTEK & DİRENÇ HARİTASI)
-      const candles15mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=15m&limit=35`, { headers: browserHeaders })
+      // 1. ADIM: 15 DAKİKALIK MUMLAR (EMA 50 & DESTEK/DİRENÇ HARİTASI)
+      const candles15mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=15m&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
-      if (candles15mRes.code !== '00000' || !Array.isArray(candles15mRes.data) || candles15mRes.data.length < 20) continue;
+      if (candles15mRes.code !== '00000' || !Array.isArray(candles15mRes.data) || candles15mRes.data.length < 40) continue;
 
       const candles15m = candles15mRes.data.map(c => ({
         time: Math.floor(Number(c[0]) / 1000),
@@ -222,23 +247,30 @@ export default async function handler(req, res) {
         volume: Number(c[5])
       })).sort((a, b) => a.time - b.time);
 
+      const closes15m = candles15m.map(c => c.close);
+      const ema50 = calculateEMA(closes15m, 50);
+      const atr15m = calculateATR(candles15m, 14);
+
       const cur15m = candles15m[candles15m.length - 1];
       const prev15mList = candles15m.slice(0, -1);
 
       const pastLows = prev15mList.map(c => c.low);
       const pastHighs = prev15mList.map(c => c.high);
-      const majorSupport15m = Math.min(...pastLows.slice(-18));
-      const majorResistance15m = Math.max(...pastHighs.slice(-18));
+      const majorSupport15m = Math.min(...pastLows.slice(-20));
+      const majorResistance15m = Math.max(...pastHighs.slice(-20));
 
-      // Konum Testi: Destekte mi yoksa Dirençte mi?
       const isAtSupport = (cur15m.low <= majorSupport15m * 1.004) && (cur15m.close >= majorSupport15m * 0.997);
       const isAtResistance = (cur15m.high >= majorResistance15m * 0.996) && (cur15m.close <= majorResistance15m * 1.003);
 
       if (!isAtSupport && !isAtResistance) continue;
 
-      // PARABOLİK TREND KORUMASI:
-      // - 24 saatte %8'den fazla fırlamışsa ASLA SHORT açma (CAPUSDT hatası)
-      // - 24 saatte %8'den fazla çökmüşse ASLA LONG açma (Düşen bıçak)
+      // ================= KORUMA 1: EMA 50 TREND YASAĞI =================
+      // Fiyat EMA 50'nin altındaysa asla LONG açılamaz (Düşüş trendidir, destekleri kırar).
+      // Fiyat EMA 50'nin üzerindeyse asla SHORT açılamaz (Yükseliş trendidir, dirençleri deler).
+      if (isAtSupport && cur15m.close < ema50) continue;
+      if (isAtResistance && cur15m.close > ema50) continue;
+
+      // Parabolik Pump/Dump koruması
       if (isAtResistance && chg24h >= 8.0) continue;
       if (isAtSupport && chg24h <= -8.0) continue;
 
@@ -285,48 +317,56 @@ export default async function handler(req, res) {
       const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
       const fundingRate = parseFloat(item.fundingRate || 0);
 
-      // ================= SENARYO A: DESTEKTEN LONG (ICNT MODELİ) =================
+      // ================= SENARYO A: EMA ÜSTÜ DESTEK LONG =================
       if (isAtSupport && takerBuyRatio >= 68 && fundingRate <= 0.006) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
           price: cur1m.close,
           keyLevel: majorSupport15m,
+          atr: atr15m,
+          ema50: ema50,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `15m majör destek seviyesine ($${majorSupport15m < 1 ? majorSupport15m.toFixed(6) : majorSupport15m.toFixed(4)}) temas etti. Destekte ${volZScore.toFixed(1)}σ Z-Score hacim patlaması ve %${Math.round(takerBuyRatio)} kurumsal alıcı süpürmesi teyit edildi.`
+          reason: `15m EMA 50 ($${ema50.toFixed(4)}) üzerinde yükseliş trendi teyitli. Majör desteğe ($${majorSupport15m.toFixed(4)}) temas etti, ${volZScore.toFixed(1)}σ Z-Score hacim anomalisi ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
 
-      // ================= SENARYO B: DİRENÇTEN SHORT (DENGELİ DİRENÇ MODELİ) =================
+      // ================= SENARYO B: EMA ALTI DİRENÇ SHORT =================
       if (isAtResistance && takerBuyRatio <= 32 && fundingRate >= 0.002) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'SHORT',
           price: cur1m.close,
           keyLevel: majorResistance15m,
+          atr: atr15m,
+          ema50: ema50,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `15m majör direnç seviyesine ($${majorResistance15m < 1 ? majorResistance15m.toFixed(6) : majorResistance15m.toFixed(4)}) temas etti. Dirençte kurumsal satış duvarı oluştu ve %${Math.round(100 - takerBuyRatio)} satıcı baskısıyla reddedilme başladı.`
+          reason: `15m EMA 50 ($${ema50.toFixed(4)}) altında düşüş trendi teyitli. Majör dirence ($${majorResistance15m.toFixed(4)}) vurdu ve %${Math.round(100 - takerBuyRatio)} satıcı baskısıyla kurumsal reddedilme teyit edildi.`
         };
         break;
       }
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Tüm vadeli havuzda (600k+ hacim) 15m destek/direnç fırsatları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "EMA 50 trend korumalı ve ATR destek/direnç fırsatları taranıyor..." });
     }
 
-    // 4. HEDEF VE STOP SEVİYELERİ
+    // 4. HEDEF VE DINAMIK ATR STOP MOTORU
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
-    const tp1 = isLong ? entryPrice * 1.010 : entryPrice * 0.990;
-    const tp2 = isLong ? entryPrice * 1.020 : entryPrice * 0.980;
+    const atr = candidateTrade.atr;
 
-    let sl = isLong ? candidateTrade.keyLevel * 0.996 : candidateTrade.keyLevel * 1.004;
-    if (isLong && (sl >= entryPrice || sl < entryPrice * 0.985)) sl = entryPrice * 0.988;
-    if (!isLong && (sl <= entryPrice || sl > entryPrice * 1.015)) sl = entryPrice * 1.012;
+    // Hedefler ve Stop ATR katlarıyla dinamik belirlenir (Noise koruması)
+    const tp1 = isLong ? (entryPrice + (atr * 1.2)) : (entryPrice - (atr * 1.2));
+    const tp2 = isLong ? (entryPrice + (atr * 2.4)) : (entryPrice - (atr * 2.4));
+
+    // Stop seviyesi: Seviyenin arkasına 1.5 ATR mesafe bırakılır
+    let sl = isLong 
+      ? Math.min(candidateTrade.keyLevel - (atr * 0.5), entryPrice - (atr * 1.5))
+      : Math.max(candidateTrade.keyLevel + (atr * 0.5), entryPrice + (atr * 1.5));
 
     const tradeId = `trade_${Date.now()}`;
     const newTrade = {
@@ -367,19 +407,21 @@ export default async function handler(req, res) {
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
     const lvlStr = candidateTrade.keyLevel < 1 ? candidateTrade.keyLevel.toFixed(6) : candidateTrade.keyLevel.toFixed(4);
+    const emaStr = candidateTrade.ema50 < 1 ? candidateTrade.ema50.toFixed(6) : candidateTrade.ema50.toFixed(4);
 
-    const tgMsg = `⚡ <b>MINEORA SENTINEL | ${isLong ? '15M DESTEK SIÇRAMA' : '15M DİRENÇ REDDİ'}</b>\n` +
+    const tgMsg = `⚡ <b>MINEORA SENTINEL | EMA TREND & ATR KORUMALI SİNYAL</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-                  `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG (Majör Destek Sekmesi)' : '🔴 SHORT (Majör Direnç Dağıtımı)'}\n` +
-                  `🧱 <b>Kritik 15M Seviye:</b> <code>$${lvlStr}</code>\n` +
+                  `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG (EMA 50 Üzeri Destek Tepkisi)' : '🔴 SHORT (EMA 50 Altı Direnç Reddi)'}\n` +
+                  `📈 <b>15M EMA 50 Trendi:</b> <code>$${emaStr}</code>\n` +
+                  `🧱 <b>Majör Seviye:</b> <code>$${lvlStr}</code>\n` +
                   `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
                   `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%1.00)\n` +
-                  `🚀 <b>Hızlı TP 2:</b> <code>$${tp2Str}</code> (+%2.00)\n` +
-                  `🛑 <b>Seviye Stopu:</b> <code>$${slStr}</code>\n` +
+                  `🎯 <b>Dinamik TP 1:</b> <code>$${tp1Str}</code>\n` +
+                  `🚀 <b>Dinamik TP 2:</b> <code>$${tp2Str}</code>\n` +
+                  `🛡️ <b>ATR Dalga Stopu:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `📊 <i>İstihbarat: ${candidateTrade.reason}</i>\n` +
                   `💡 <i>Kural: TP1 alındığında stop girişe çekilir, kalan pozisyon sıfır riskle izlenir.</i>\n` +
