@@ -10,8 +10,8 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    const LOCK_WINDOW_MS = 30 * 60 * 1000;      // Hızlı döngü (30 dk)
-    const SAME_COIN_LOCK_MS = 25 * 60 * 1000;   // 25 dk parite kilidi
+    const LOCK_WINDOW_MS = 25 * 60 * 1000;      // 25 dk canlı takip penceresi
+    const SAME_COIN_LOCK_MS = 20 * 60 * 1000;   // Aynı coine 20 dk tekrar giriş yasağı
     const now = Date.now();
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (HIZLI TP1 / TP2 / STOP)
+    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1: +%0.60 | TP2: +%1.20)
     // =========================================================================
     let tradeUpdates = [];
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
       const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // TP 2 KONTROLÜ (+%1.50)
+      // TP 2 KONTROLÜ (+%1.20)
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
@@ -69,15 +69,15 @@ export default async function handler(req, res) {
           })
         );
 
-        const tp2Msg = `🚀 <b>MINEORA FLASH | TP 2 TAM HEDEF ALINDI!</b>\n` +
+        const tp2Msg = `🚀 <b>MINEORA SNIPER | TP 2 TAM HEDEF VURULDU!</b>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `💎 <b>Parite:</b> #${trade.symbol}\n` +
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `🏁 <b>Kapanış:</b> <code>$${curPriceStr}</code>\n` +
-                       `🏆 <b>Net Kâr:</b> <b>+%1.50</b> <i>(10x: +%15 | 20x: +%30)</i>\n` +
+                       `🏆 <b>Net Kâr:</b> <b>+%1.20</b> <i>(10x: +%12 | 20x: +%24)</i>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                       `⚡ <i>Patlama dalgası zirvede nakde dönüştü. Vur ve kaç!</i>\n` +
+                       `✨ <i>Sniper likidite dalgası zirvede nakde dönüştü.</i>\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -88,11 +88,11 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // TP 1 KONTROLÜ (+%0.80)
+      // TP 1 KONTROLÜ (+%0.60) -> STOPU ANINDA GİRİŞE KİLİTLE
       const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
-        trade.sl = trade.entryPrice; // Stop doğrudan girişe çekilir
+        trade.sl = trade.entryPrice;
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
             method: 'PUT',
@@ -101,14 +101,14 @@ export default async function handler(req, res) {
           })
         );
 
-        const tp1Msg = `🎯 <b>MINEORA FLASH | HEDEF 1 (TP1) VURULDU!</b>\n` +
+        const tp1Msg = `🎯 <b>MINEORA SNIPER | HEDEF 1 (TP1) ALINDI!</b>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `💎 <b>Parite:</b> #${trade.symbol}\n` +
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `⚡ <b>Anlık:</b> <code>$${curPriceStr}</code>\n` +
-                       `💰 <b>Hızlı Kâr:</b> <b>+%0.80</b> <i>(Pozisyonun yarısı kapatılabilir)</i>\n` +
-                       `🛡️ <b>Savunma:</b> Stop başa baş seviyesine çekildi. Risk sıfırlandı!\n` +
+                       `💰 <b>Hızlı Kâr:</b> <b>+%0.60</b> <i>(Pozisyonun yarısı kapatılabilir)</i>\n` +
+                       `🛡️ <b>Savunma:</b> Stop-Loss başabaş ($${entryPriceStr}) seviyesine çekildi. Risk: SIFIR!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // STOP KONTROLÜ (-%0.85)
+      // STOP KONTROLÜ
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
         trade.status = 'STOPPED';
@@ -133,15 +133,15 @@ export default async function handler(req, res) {
           })
         );
 
-        const stopMsg = `🛑 <b>MINEORA FLASH | HIZLI STOP ÇIKIŞI</b>\n` +
+        const stopMsg = `🛑 <b>MINEORA SNIPER | DİSİPLİN ÇIKIŞI</b>\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
                         `💎 <b>Parite:</b> #${trade.symbol}\n` +
                         `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                         `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                         `🛑 <b>Çıkış:</b> <code>$${curPriceStr}</code>\n` +
-                        `📉 <b>Durum:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : '-%0.85 Disiplin Çıkışı'}\n` +
+                        `📉 <b>Durum:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : 'Fitil Kırılma Çıkışı'}\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `🛡️ <i>Beklenen ivme 3 dakikada gelmedi, sermaye korundu. Yeni patlama taranıyor.</i>`;
+                        `🛡️ <i>Sermaye disiplini korundu. Yeni likidite avı taranıyor.</i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: 3 DAKİKALIK PATLAMA RADARI (FLASH-SCALP DENGESİZLİK MOTORU)
+    // MODÜL 2: SNIPER LİKİDİTE AVI (TÜM HACİMLİ VADELİLER)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -165,22 +165,21 @@ export default async function handler(req, res) {
       return (now - tTime) <= LOCK_WINDOW_MS;
     }).length;
 
-    if (openTradesCount >= 3) {
-      return res.status(200).json({ status: "IDLE", message: "Takipte 3 aktif hızlı operasyon var." });
+    if (openTradesCount >= 4) {
+      return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var." });
     }
 
-    // TradFi, Hisse, ETF ve Emtia Filtresi
     const TRADFI_BLACKLIST = [
       "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
       "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
       "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT"
     ];
 
-    // 600.000$ ve üzeri hacimli gerçek kripto altcoinler
+    // Hacmi 1.500.000$ ve üzeri olan kaliteli likit pariteler
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol.endsWith("USDT")) return false;
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      if (vol < 600000) return false;
+      if (vol < 1500000) return false;
 
       for (const b of TRADFI_BLACKLIST) {
         if (c.symbol.startsWith(b)) return false;
@@ -203,11 +202,11 @@ export default async function handler(req, res) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      // 1. ADIM: SON 15 MUM (1m Periyot - Mikro 180 Saniyelik Dinamik)
-      const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=15`, { headers: browserHeaders })
+      // 1 DAKİKALIK MUMLAR (Son 25 Mum = ~25 Dakikalık Mikro Harita)
+      const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
-      if (candles1mRes.code !== '00000' || !Array.isArray(candles1mRes.data) || candles1mRes.data.length < 10) continue;
+      if (candles1mRes.code !== '00000' || !Array.isArray(candles1mRes.data) || candles1mRes.data.length < 20) continue;
 
       const candles1m = candles1mRes.data.map(c => ({
         time: Math.floor(Number(c[0]) / 1000),
@@ -218,86 +217,101 @@ export default async function handler(req, res) {
         volume: Number(c[5])
       })).sort((a, b) => a.time - b.time);
 
-      const cur1m = candles1m[candles1m.length - 1];
-      const c3mBack = candles1m[candles1m.length - 3]; // 3 dakika önceki mum
-      const prev1m = candles1m.slice(0, -1);
+      const cur1m = candles1m[candles1m.length - 1];   // Anlık mum
+      const sweep1m = candles1m[candles1m.length - 2]; // Likiditeyi süpüren teyit mumu
+      const pastList = candles1m.slice(0, -2);         // Referans tepe/dip aralığı
 
-      // ŞART 1: FİYAT TAM KİLİTLİ OLMALI (Son 3 dk dalgalanma <= %0.35)
-      // Fiyat fırlamışsa trene binilmez; kuluçkada bekleyecek!
-      const priceChange3m = Math.abs(((cur1m.close - c3mBack.close) / c3mBack.close) * 100);
-      if (priceChange3m > 0.35) continue;
+      // 20 DAKİKALIK UÇ NOKTALAR (ORTADA İŞLEM AÇMAK YASAK)
+      const rangeHigh = Math.max(...pastList.map(c => c.high));
+      const rangeLow  = Math.min(...pastList.map(c => c.low));
 
-      // ŞART 2: HACİM PATLAMASI (1m Hacim Z-Score >= 2.0σ)
-      const volZScore = calculateZScore(prev1m.map(c => c.volume), cur1m.volume);
-      if (volZScore < 2.0) continue; // Fiyat kıpırdamazken hacim şoku yaşanmıyorsa atla
+      const sweepRange = sweep1m.high - sweep1m.low;
+      if (sweepRange <= 0) continue;
 
-      // ŞART 3: SON TAPE AKIŞINDA GİZLİ SÜPÜRME (Absorption / Taker Surge)
+      const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
+      const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
+
+      // KURAL 1: LİKİDİTE SÜPÜRMESİ & İÇERİ GERİ KAPANIŞ (FAKE BREAKOUT)
+      // Dip Avı (Long): Dibi deldi ama altında kalamadı, seviye üstüne dönüp fitil bıraktı.
+      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.48) && (cur1m.close > sweep1m.close);
+      
+      // Tepe Avı (Short): Tepeyi deldi ama üstünde kalamadı, seviye altına dönüp fitil bıraktı.
+      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.48) && (cur1m.close < sweep1m.close);
+
+      if (!isBullishSweep && !isBearishSweep) continue;
+
+      // KURAL 2: HACİM ANOMALİSİ (Z-Score >= 1.8σ)
+      const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
+      if (volZScore < 1.8) continue;
+
+      // KURAL 3: TAHTA AKIŞ TEYİDİ (Son saniyelerde piyasa alıcı/satıcı gücü)
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       const fills = fillsRes.data?.fillList || fillsRes.data || [];
-      if (!Array.isArray(fills) || fills.length < 15) continue;
-
       let buyUsd = 0;
       let sellUsd = 0;
-      let tradeCount = 0;
 
-      fills.forEach(f => {
-        const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
-        if (val >= 200) {
-          tradeCount++;
-          if (f.side === 'buy') buyUsd += val;
-          else sellUsd += val;
-        }
-      });
+      if (Array.isArray(fills)) {
+        fills.forEach(f => {
+          const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
+          if (val >= 250) {
+            if (f.side === 'buy') buyUsd += val;
+            else sellUsd += val;
+          }
+        });
+      }
 
       const totalFlow = buyUsd + sellUsd;
-      if (totalFlow <= 0 || tradeCount < 10) continue;
+      const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
 
-      const takerBuyRatio = (buyUsd / totalFlow) * 100;
-      const fundingRate = parseFloat(item.fundingRate || 0);
-
-      // ================= TETİK A: 3 DK ÖNCESİ LONG PATLAMASI =================
-      // Fiyat kilitli + Hacim 2.0σ+ patlamış + Alıcılar %72+ baskın + Fonlama şişmemiş
-      if (takerBuyRatio >= 72 && fundingRate <= 0.005) {
+      // LONG TETİĞİ
+      if (isBullishSweep && takerBuyRatio >= 65) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
           price: cur1m.close,
+          wickPoint: sweep1m.low,
+          level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          priceChange3m: priceChange3m.toFixed(2),
-          reason: `Son 3 dk fiyat dalgalanması sadece %${priceChange3m.toFixed(2)} (Kilitli Taban). Tahtada ${volZScore.toFixed(1)}σ Z-Score hacim şoku ve %${Math.round(takerBuyRatio)} kurumsal piyasa alımıyla fitil başlangıcı teyit edildi.`
+          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) iğnelendi. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar absorbe edildi, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
 
-      // ================= TETİK B: 3 DK ÖNCESİ SHORT PATLAMASI =================
-      // Fiyat kilitli + Hacim 2.0σ+ patlamış + Satıcılar %72+ baskın + Fonlama pozitif şişkin
-      if (takerBuyRatio <= 28 && fundingRate >= 0.001) {
+      // SHORT TETİĞİ
+      if (isBearishSweep && takerBuyRatio <= 35) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'SHORT',
           price: cur1m.close,
+          wickPoint: sweep1m.high,
+          level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          priceChange3m: priceChange3m.toFixed(2),
-          reason: `Son 3 dk fiyat dalgalanması sadece %${priceChange3m.toFixed(2)} (Kilitli Zirve). Tahtada ${volZScore.toFixed(1)}σ Z-Score hacim şoku ve %${Math.round(100 - takerBuyRatio)} kurumsal piyasa satışı ile long tasfiyesi tetiklendi.`
+          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) iğnelendi. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla çöküş başladı.`
         };
         break;
       }
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "3 dakikalık sıkışma ve hacim şokları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Likidite süpürmeleri ve kurumsal ret mumları taranıyor..." });
     }
 
-    // 4. HEDEF VE STOP MATEMATİĞİ (VUR-KAÇ MATEMATİĞİ)
+    // 4. MİKRO HEDEF VE FİTİL ARKASI STOP
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
-    const tp1 = isLong ? entryPrice * 1.0080 : entryPrice * 0.9920; // +%0.80 Hızlı TP
-    const tp2 = isLong ? entryPrice * 1.0150 : entryPrice * 0.9850; // +%1.50 Geniş TP
-    const sl  = isLong ? entryPrice * 0.9915 : entryPrice * 1.0085; // -%0.85 Sıkı Stop
+
+    // Hızlı TP1 (+%0.60) ve Genişletilmiş TP2 (+%1.20)
+    const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
+    const tp2 = isLong ? entryPrice * 1.0120 : entryPrice * 0.9880;
+
+    // Stop seviyesi: Atılan o ret iğnesinin hemen arkası
+    let sl = isLong 
+      ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9930)
+      : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0070);
 
     const tradeId = `trade_${Date.now()}`;
     const newTrade = {
@@ -337,22 +351,23 @@ export default async function handler(req, res) {
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
+    const lvlStr = candidateTrade.level < 1 ? candidateTrade.level.toFixed(6) : candidateTrade.level.toFixed(4);
 
-    const tgMsg = `⚡ <b>MINEORA FLASH | 3 DK VUR-KAÇ ALARMI</b>\n` +
+    const tgMsg = `🎯 <b>MINEORA SNIPER | LİKİDİTE SÜPÜRME ALARMI</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-                  `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG (Kilitli Taban Sıçraması)' : '🔴 SHORT (Kilitli Zirve Çöküşü)'}\n` +
-                  `📊 <b>Hacim Şoku:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
-                  `⚡ <b>Kurumsal Akış:</b> %${candidateTrade.takerRatio}\n` +
-                  `🔒 <b>3 Dk Sıkışma:</b> %${candidateTrade.priceChange3m} (Fitil Henüz Başlamadı)\n` +
+                  `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG (Dip Likidite Avı)' : '🔴 SHORT (Tepe Likidite Avı)'}\n` +
+                  `🧱 <b>Avlanan Seviye:</b> <code>$${lvlStr}</code>\n` +
+                  `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
+                  `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.80)\n` +
-                  `🚀 <b>Hızlı TP 2:</b> <code>$${tp2Str}</code> (+%1.50)\n` +
-                  `🛑 <b>Sıkı Savunma:</b> <code>$${slStr}</code> (-%0.85)\n` +
+                  `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.60)\n` +
+                  `🚀 <b>Hedef TP 2:</b> <code>$${tp2Str}</code> (+%1.20)\n` +
+                  `🛑 <b>Fitil Arkası Stop:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `📊 <i>İstihbarat: ${candidateTrade.reason}</i>\n` +
-                  `💡 <i>Kural: TP1 alındığı an stop girişe çekilir. Hızlı vur ve kârı alıp çekil!</i>\n` +
+                  `💡 <i>Kural: TP1 (+%0.60) alındığı an stop girişe çekilir; kalan pozisyon sıfır riskle izlenir!</i>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                   `📢 <i>Ücretsiz Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
