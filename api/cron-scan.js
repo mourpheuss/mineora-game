@@ -1,9 +1,17 @@
+import crypto from 'crypto';
+
 export default async function handler(req, res) {
   try {
     const browserHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept': 'application/json'
     };
+
+    // Bitget API Kimlik Bilgileri
+    const ADMIN_API_KEY = "bg_f73437198f37d20e56939b82041041d0";
+    const ADMIN_SECRET = "fe44b9c347eb5d9dd0e624876809102bb3ec8bab9481ad7bdb5ddf4d8d332ecd";
+    const ADMIN_PASSPHRASE = "Ers4834754";
+    const BITGET_BASE_URL = 'https://api.bitget.com';
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
@@ -12,7 +20,55 @@ export default async function handler(req, res) {
     
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
+    const LEVERAGE = 20; // Otomatik 20x
     const now = Date.now();
+
+    // =========================================================================
+    // YARDIMCI: BİTGET V2 İMZALAMA VE İSTEK MOTORU
+    // =========================================================================
+    async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}) {
+      const timestamp = Date.now().toString();
+      const bodyStr = method === 'GET' ? '' : JSON.stringify(bodyObj);
+      const message = timestamp + method + endpoint + bodyStr;
+      const signature = crypto.createHmac('sha256', ADMIN_SECRET).update(message).digest('base64');
+
+      const headers = {
+        'ACCESS-KEY': ADMIN_API_KEY,
+        'ACCESS-SIGN': signature,
+        'ACCESS-TIMESTAMP': timestamp,
+        'ACCESS-PASSPHRASE': ADMIN_PASSPHRASE,
+        'Content-Type': 'application/json',
+        'locale': 'en-US'
+      };
+
+      const options = { method, headers };
+      if (method !== 'GET') options.body = bodyStr;
+
+      try {
+        const response = await fetch(`${BITGET_BASE_URL}${endpoint}`, options);
+        return await response.json();
+      } catch (err) {
+        return { code: '-1', msg: err.message };
+      }
+    }
+
+    // =========================================================================
+    // YARDIMCI: BİTGET VADELİ HESAP BAKİYESİNİ (USDT) ÇEKME
+    // =========================================================================
+    async function getFuturesEquity() {
+      try {
+        const accRes = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
+        if (accRes && accRes.code === '00000' && Array.isArray(accRes.data)) {
+          const usdtAcc = accRes.data.find(a => a.marginCoin === 'USDT');
+          if (usdtAcc) {
+            // Toplam net varlık (equity), yoksa kullanılabilir bakiye
+            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
+            if (eq > 10) return eq;
+          }
+        }
+      } catch (e) {}
+      return 2000; // API yanıt vermezse varsayılan güvenlik tabanı: 2.000$
+    }
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
     const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
@@ -43,7 +99,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1: +%0.60 | TP2: +%1.20)
+    // MODÜL 1: CANLI İŞLEM VE BORSA POZİSYON TAKİBİ
     // =========================================================================
     let tradeUpdates = [];
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
@@ -56,11 +112,26 @@ export default async function handler(req, res) {
       const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // TP 2 KONTROLÜ (+%1.20)
+      // TP 2 KONTROLÜ (+%1.20) -> KALAN POZİSYONU BORÇSUZ TAM KAPAT
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
         trade.closedAt = now;
+
+        if (trade.openSize && trade.openSize > 0) {
+          const closeSide = isLong ? 'sell' : 'buy';
+          await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
+            symbol: trade.symbol,
+            productType: 'USDT-FUTURES',
+            marginMode: 'crossed',
+            marginCoin: 'USDT',
+            size: trade.openSize.toString(),
+            side: closeSide,
+            orderType: 'market',
+            reduceOnly: 'YES'
+          });
+        }
+
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
             method: 'PUT',
@@ -75,9 +146,9 @@ export default async function handler(req, res) {
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `🏁 <b>Kapanış:</b> <code>$${curPriceStr}</code>\n` +
-                       `🏆 <b>Net Kâr:</b> <b>+%1.20</b> <i>(10x: +%12 | 20x: +%24)</i>\n` +
+                       `🏆 <b>Net Kâr:</b> <b>+%1.20</b> <i>(20x: +%24 Nakit Kâr Alındı)</i>\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                       `✨ <i>Sniper likidite dalgası zirvede nakde dönüştü.</i>\n` +
+                       `✨ <i>Borsa bakiyesine kâr aktarıldı, işlem tamamlandı.</i>\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
@@ -88,11 +159,28 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // TP 1 KONTROLÜ (+%0.60) -> STOP'U GİRİŞE KİLİTLE
+      // TP 1 KONTROLÜ (+%0.60) -> %50 KÂR AL & STOP'U GİRİŞE KİLİTLE
       const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
         trade.sl = trade.entryPrice;
+
+        if (trade.openSize && trade.openSize > 0) {
+          const halfSize = (trade.openSize / 2);
+          const closeSide = isLong ? 'sell' : 'buy';
+          await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
+            symbol: trade.symbol,
+            productType: 'USDT-FUTURES',
+            marginMode: 'crossed',
+            marginCoin: 'USDT',
+            size: halfSize.toString(),
+            side: closeSide,
+            orderType: 'market',
+            reduceOnly: 'YES'
+          });
+          trade.openSize = halfSize;
+        }
+
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
             method: 'PUT',
@@ -107,8 +195,8 @@ export default async function handler(req, res) {
                        `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                        `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                        `⚡ <b>Anlık:</b> <code>$${curPriceStr}</code>\n` +
-                       `💰 <b>Hızlı Kâr:</b> <b>+%0.60</b> <i>(Pozisyonun yarısı kapatılabilir)</i>\n` +
-                       `🛡️ <b>Savunma:</b> Stop-Loss başabaş ($${entryPriceStr}) seviyesine çekildi. Risk: SIFIR!\n` +
+                       `💰 <b>Hızlı Kâr:</b> <b>+%0.60</b> <i>(Pozisyonun %50'si nakde dönüldü)</i>\n` +
+                       `🛡️ <b>Savunma:</b> Stop seviyesi maliyete ($${entryPriceStr}) çekildi. Risk: SIFIR!\n` +
                        `━━━━━━━━━━━━━━━━━━━━\n` +
                        `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -120,11 +208,26 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // STOP KONTROLÜ
+      // STOP KONTROLÜ -> POZİSYONU BORSADA DERHAL BOŞALT
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
+
+        if (trade.openSize && trade.openSize > 0) {
+          const closeSide = isLong ? 'sell' : 'buy';
+          await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
+            symbol: trade.symbol,
+            productType: 'USDT-FUTURES',
+            marginMode: 'crossed',
+            marginCoin: 'USDT',
+            size: trade.openSize.toString(),
+            side: closeSide,
+            orderType: 'market',
+            reduceOnly: 'YES'
+          });
+        }
+
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
             method: 'PUT',
@@ -139,9 +242,9 @@ export default async function handler(req, res) {
                         `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                         `💵 <b>Giriş:</b> <code>$${entryPriceStr}</code>\n` +
                         `🛑 <b>Çıkış:</b> <code>$${curPriceStr}</code>\n` +
-                        `📉 <b>Durum:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Korundu)' : 'Fitil Kırılma Çıkışı'}\n` +
+                        `📉 <b>Durum:</b> ${trade.tp1Hit ? '0.00% (Başa Baş Güvenli Çıkış)' : 'Fitil Kırılma Çıkışı'}\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `🛡️ <i>Sermaye disiplini korundu. Yeni likidite avı taranıyor.</i>`;
+                        `🛡️ <i>Sermaye disiplini korundu. Yeni likidite taranıyor.</i>`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -165,31 +268,24 @@ export default async function handler(req, res) {
       return (now - tTime) <= LOCK_WINDOW_MS;
     });
 
-    // Kural: Maksimum 4 açık pozisyon
     if (openTrades.length >= 4) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var (Maksimum sınır)." });
     }
 
-    // Kapsamlı Stock / TradFi / Endeks ve Sığ Parite Kara Listesi
     const STOCK_AND_TRADFI_BLACKLIST = [
-      // Borsa Hisseleri & Endeksler (US & Asya Hisse Senetleri)
       "AMD", "MRVL", "TQQQ", "INTW", "CSOP", "HYUNDAI", "SKHYNIX", "NVDA",
       "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN", "BABA",
       "PLTR", "SOXL", "SQQQ", "QQQ", "SPY", "SPX", "NDX", "DJI",
       "XAU", "XAG", "KORU", "OPENAI", "ANTHROPIC", "NIO", "PDD",
-      // Sabit Kriptolar & İtibari Para Birimleri
       "USDCUSDT", "BGBUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT",
-      // Gece Stop Olan Sığ & İğneci Pariteler
       "DOOD", "CAP", "ERA", "ICNT", "APR", "MP", "XP", "CRCL"
     ];
 
-    // Hacmi 1.500.000$ ve üzeri olan saf kripto vadeli pariteleri
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol.endsWith("USDT")) return false;
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
       if (vol < 1500000) return false;
 
-      // Kara listedeki hisse/tradfi paritelerini engelle
       for (const b of STOCK_AND_TRADFI_BLACKLIST) {
         if (c.symbol.includes(b)) return false;
       }
@@ -211,7 +307,6 @@ export default async function handler(req, res) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      // 1 DAKİKALIK MUMLAR (Son 25 Mum)
       const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -239,7 +334,7 @@ export default async function handler(req, res) {
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
 
-      // KURAL 1: LİKİDİTE SÜPÜRMESİ & GÜÇLÜ FİTİL TEYİDİ (%60+ Reddedilme Şartı)
+      // KURAL 1: LİKİDİTE SÜPÜRMESİ & %60+ FİTİL TEYİDİ
       const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.60) && (cur1m.close > sweep1m.close);
       const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.60) && (cur1m.close < sweep1m.close);
 
@@ -270,7 +365,6 @@ export default async function handler(req, res) {
       const totalFlow = buyUsd + sellUsd;
       const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
 
-      // LONG TETİĞİ
       if (isBullishSweep && takerBuyRatio >= 66) {
         candidateTrade = {
           symbol: item.symbol,
@@ -280,12 +374,11 @@ export default async function handler(req, res) {
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) süpürüldü. %${Math.round((sweepLowerWick / sweepRange) * 100)} net alt fitille satıcılar püskürtüldü, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
+          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) süpürüldü. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar püskürtüldü, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
 
-      // SHORT TETİĞİ
       if (isBearishSweep && takerBuyRatio <= 34) {
         candidateTrade = {
           symbol: item.symbol,
@@ -295,7 +388,7 @@ export default async function handler(req, res) {
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) süpürüldü. %${Math.round((sweepUpperWick / sweepRange) * 100)} net üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla düşüş başladı.`
+          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) süpürüldü. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla düşüş başladı.`
         };
         break;
       }
@@ -305,9 +398,38 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "SCANNING", message: "Yalnızca saf kripto paritelerinde sniper fırsatları taranıyor..." });
     }
 
-    // 4. MİKRO HEDEF VE FİTİL ARKASI STOP
+    // =========================================================================
+    // MODÜL 3: DİNAMİK KASA %10 HESABI VE CANLI BORSA EMRİ
+    // =========================================================================
+    const currentEquity = await getFuturesEquity();
+    const dynamicMargin = parseFloat((currentEquity * 0.10).toFixed(2)); // O anki kasanın net %10'u
+    const positionNotional = dynamicMargin * LEVERAGE; // 20x Kaldıraçlı Hacim
+
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
+
+    // Kontrat adedini hesapla
+    let orderSize = parseFloat((positionNotional / entryPrice).toFixed(2));
+    if (orderSize <= 0) orderSize = 1;
+
+    // 1. Kaldıracı ve Marjin Modunu Otomatik 20x Olarak Ayarla
+    await bitgetPrivateRequest('/api/v2/mix/account/set-leverage', 'POST', {
+      symbol: candidateTrade.symbol,
+      productType: 'USDT-FUTURES',
+      marginCoin: 'USDT',
+      leverage: LEVERAGE.toString()
+    });
+
+    // 2. Canlı Piyasa Emrini Borsaya İlet
+    const placeOrderRes = await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
+      symbol: candidateTrade.symbol,
+      productType: 'USDT-FUTURES',
+      marginMode: 'crossed',
+      marginCoin: 'USDT',
+      size: orderSize.toString(),
+      side: isLong ? 'buy' : 'sell',
+      orderType: 'market'
+    });
 
     const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
     const tp2 = isLong ? entryPrice * 1.0120 : entryPrice * 0.9880;
@@ -330,10 +452,14 @@ export default async function handler(req, res) {
       score: candidateTrade.takerRatio,
       reason: candidateTrade.reason,
       createdAt: now,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      walletEquityAtEntry: currentEquity,
+      marginUsed: dynamicMargin,
+      openSize: orderSize,
+      bitgetOrderResult: placeOrderRes.code === '00000' ? 'SUCCESS' : placeOrderRes.msg
     };
 
-    // 5. Firebase Kaydı
+    // 5. Firebase Kayıtları
     try {
       await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
@@ -349,7 +475,7 @@ export default async function handler(req, res) {
       ]);
     } catch (fbErr) {}
 
-    // 6. Telegram Bildirimi
+    // 6. Telegram VIP Bildirimi
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
@@ -364,13 +490,15 @@ export default async function handler(req, res) {
                   `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
                   `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
+                  `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
+                  `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Bitget Emri Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.60)\n` +
                   `🚀 <b>Hedef TP 2:</b> <code>$${tp2Str}</code> (+%1.20)\n` +
                   `🛑 <b>Fitil Arkası Stop:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `📊 <i>İstihbarat: ${candidateTrade.reason}</i>\n` +
-                  `💡 <i>Kural: TP1 (+%0.60) alındığı an stop girişe çekilir; kalan pozisyon sıfır riskle izlenir!</i>\n` +
+                  `💡 <i>Kural: TP1 (+%0.60) alındığı an borsa pozisyonunun %50'si satılır, stop girişe kilitlenir!</i>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `⚡ <i>Canlı Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                   `📢 <i>Ücretsiz Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
@@ -391,6 +519,9 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       trade: newTrade,
+      bitget_order: placeOrderRes,
+      wallet_equity: currentEquity,
+      margin_used: dynamicMargin,
       channel_sent: channelData.ok
     });
 
