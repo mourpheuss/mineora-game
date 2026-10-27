@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     const LOCK_WINDOW_MS = 25 * 60 * 1000;      // 25 dk canlı takip penceresi
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;   // Aynı coine 20 dk tekrar giriş yasağı
     const LEVERAGE = 20;                        // 20x Kaldıraç
-    const MARGIN_RATIO = 0.10;                  // Kasanın %10'u
+    const MARGIN_RATIO = 0.10;                  // Kasanın net %10'u
     const now = Date.now();
 
     // Bitget V2 İmzalı İstek Motoru
@@ -53,19 +53,20 @@ export default async function handler(req, res) {
       }
     }
 
-    // Vadeli Cüzdan Net Bakiyesini Dinamik Sorgula
+    // Birleşik Hesap (Unified) Net Bakiyesini Dinamik Sorgula
     async function getFuturesEquity() {
       try {
+        // Önce Birleşik Hesap V2 sorgusu
         const accRes = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
         if (accRes && accRes.code === '00000' && Array.isArray(accRes.data)) {
           const usdtAcc = accRes.data.find(a => a.marginCoin === 'USDT');
           if (usdtAcc) {
             const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
-            if (eq > 10) return eq;
+            if (eq > 5) return eq;
           }
         }
       } catch (e) {}
-      return 2000; // API yanıt vermezse varsayılan güvenlik tabanı: 2.000$
+      return 2000; // API yanıt vermezse varsayılan güvenlik tabanı
     }
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -97,7 +98,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1: +%0.60 | TP2: +%1.20)
+    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (UNIFIED KAPATMA MOTORU)
     // =========================================================================
     let tradeUpdates = [];
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
@@ -110,7 +111,7 @@ export default async function handler(req, res) {
       const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // TP 2 KONTROLÜ (+%1.20)
+      // TP 2 KONTROLÜ (+%1.20) -> KALAN POZİSYONU UNIFIED HESAPTA TAM KAPAT
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
@@ -121,11 +122,11 @@ export default async function handler(req, res) {
           await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
             symbol: trade.symbol,
             productType: 'USDT-FUTURES',
-            marginMode: 'crossed',
             marginCoin: 'USDT',
             size: trade.openSize.toString(),
             side: closeSide,
             orderType: 'market',
+            tradeSide: 'close',
             reduceOnly: 'YES'
           });
         }
@@ -169,11 +170,11 @@ export default async function handler(req, res) {
           await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
             symbol: trade.symbol,
             productType: 'USDT-FUTURES',
-            marginMode: 'crossed',
             marginCoin: 'USDT',
             size: halfSize.toString(),
             side: closeSide,
             orderType: 'market',
+            tradeSide: 'close',
             reduceOnly: 'YES'
           });
           trade.openSize = trade.openSize - halfSize;
@@ -206,7 +207,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // STOP KONTROLÜ
+      // STOP KONTROLÜ -> POZİSYONU UNIFIED HESAPTA BOŞALT
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
         trade.status = 'STOPPED';
@@ -217,11 +218,11 @@ export default async function handler(req, res) {
           await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
             symbol: trade.symbol,
             productType: 'USDT-FUTURES',
-            marginMode: 'crossed',
             marginCoin: 'USDT',
             size: trade.openSize.toString(),
             side: closeSide,
             orderType: 'market',
+            tradeSide: 'close',
             reduceOnly: 'YES'
           });
         }
@@ -258,7 +259,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SNIPER LİKİDİTE AVI (MAX 4 İŞLEM & SAF KRİPTO FİLTRESİ)
+    // MODÜL 2: SAF KRİPTO SNIPER RADARI (TÜM HİSSE/ETF'LER KÖKTEN ELENDİ)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -270,31 +271,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var." });
     }
 
-    // TradFi, Borsa Endeksleri (SNXX, SXXP vb.), Hisse Senetleri ve Manipülatif Sığ Pariteler
-    const TRADFI_AND_JUNK_BLACKLIST = [
-      // Endeksler & TradFi
-      "SNXX", "SXXP", "STOXX", "XAU", "XAG", "SPX", "NDX", "DJI", "KORU", 
-      "OPENAI", "ANTHROPIC", "TQQQ", "SQQQ", "SOXL", "SPY", "QQQ",
-      // ABD & Asya Borsa Hisseleri
+    const FULL_TRADFI_BLACKLIST = [
+      "SNXX", "SPCX", "INTC", "ARM", "AMD", "MRVL", "EWZ", "TQQQ", "CSOP",
+      "HYUNDAI", "DXYZ", "MP", "BZ", "UVXY", "MSTR", "BE", "SOXL", "ASML",
+      "HOOD", "MU", "MELI", "QQQ", "SPY", "SQQQ", "SKHYNIX", "SOFTBANK",
+      "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
       "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "AMD", "MRVL", "INTW", "CSOP", "HYUNDAI", "SKHYNIX", "BABA", "PLTR", "NIO", "PDD",
-      // Sabit Paralar & İtibari Varlıklar
-      "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT",
-      // Gece Stop Ettiren Sığ Pariteler
-      "DOOD", "CAP", "ERA", "ICNT", "APR", "MP", "XP", "CRCL"
+      "INTW", "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT"
     ];
 
-    // Yalnızca saf kripto pariteleri: Bitişik USDT ile bitecek, alt tire/nokta içermeyecek, kara listede olmayacak
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol || !c.symbol.endsWith("USDT")) return false;
-      
-      // Hisse ve TradFi kontratlarındaki özel sembol karakterlerini (US_ / HK_ vb.) engelle
       if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
 
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
       if (vol < 1500000) return false;
 
-      for (const b of TRADFI_AND_JUNK_BLACKLIST) {
+      for (const b of FULL_TRADFI_BLACKLIST) {
         if (c.symbol.toUpperCase().includes(b)) return false;
       }
       return true;
@@ -315,7 +308,6 @@ export default async function handler(req, res) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      // 1 DAKİKALIK MUMLAR (Son 25 Mum)
       const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -406,11 +398,11 @@ export default async function handler(req, res) {
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Likidite süpürmeleri ve kurumsal ret mumları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Yalnızca saf kripto paritelerinde sniper fırsatları taranıyor..." });
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN O ANKİ %10'U & 20X)
+    // MODÜL 3: CANLI BORSA EMRİ (UNIFIED ACCOUNT UYUMLU EMİR GÖNDERME)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
@@ -422,7 +414,7 @@ export default async function handler(req, res) {
     let orderSize = parseFloat((positionNotional / entryPrice).toFixed(2));
     if (orderSize <= 0) orderSize = 1;
 
-    // 1. Kaldıracı 20x'e ayarla
+    // 1. Kaldıracı Ayarla
     await bitgetPrivateRequest('/api/v2/mix/account/set-leverage', 'POST', {
       symbol: candidateTrade.symbol,
       productType: 'USDT-FUTURES',
@@ -430,18 +422,17 @@ export default async function handler(req, res) {
       leverage: LEVERAGE.toString()
     });
 
-    // 2. Canlı emri borsaya gönder
+    // 2. Birleşik Hesap (Unified) Uyumlu Canlı Market Emri Gönder
     const placeOrderRes = await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
       symbol: candidateTrade.symbol,
       productType: 'USDT-FUTURES',
-      marginMode: 'crossed',
       marginCoin: 'USDT',
       size: orderSize.toString(),
       side: isLong ? 'buy' : 'sell',
+      tradeSide: 'open',
       orderType: 'market'
     });
 
-    // Hedefler ve Stop
     const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
     const tp2 = isLong ? entryPrice * 1.0120 : entryPrice * 0.9880;
 
@@ -470,7 +461,6 @@ export default async function handler(req, res) {
       bitgetOrderResult: placeOrderRes.code === '00000' ? 'SUCCESS' : placeOrderRes.msg
     };
 
-    // Firebase Kayıtları
     try {
       await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
@@ -486,7 +476,6 @@ export default async function handler(req, res) {
       ]);
     } catch (fbErr) {}
 
-    // Telegram VIP Bildirimi
     const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
     const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
     const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
@@ -502,7 +491,7 @@ export default async function handler(req, res) {
                   `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
-                  `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Bitget Emri Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
+                  `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Bitget Unified Emri Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.60)\n` +
                   `🚀 <b>Hedef TP 2:</b> <code>$${tp2Str}</code> (+%1.20)\n` +
