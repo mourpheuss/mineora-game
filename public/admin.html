@@ -35,6 +35,11 @@
         </div>
       </div>
       <div class="flex items-center gap-3">
+        <!-- TEK TUŞLA TELEGRAM RAPOR ATMA BUTONU -->
+        <button id="sendReportBtn" onclick="triggerTelegramReport()" class="bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-sky-600/20 cursor-pointer font-bold border border-sky-400/30">
+          <i class="fa-paper-plane fa-solid"></i> <span>Kanala Rapor At</span>
+        </button>
+
         <a href="dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 border border-slate-700">
           <i class="fa-solid fa-chart-line"></i> Canlı Radara Git
         </a>
@@ -225,6 +230,40 @@
     }
     function closeNewUserModal() {
       document.getElementById('newUserModal').classList.add('hidden');
+    }
+
+    // ================= TEK TUŞLA TELEGRAM'A SEANS RAPORU GÖNDERME =================
+    async function triggerTelegramReport() {
+      const btn = document.getElementById('sendReportBtn');
+      if (!btn) return;
+
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Rapor Hazırlanıyor...</span>`;
+
+      try {
+        const response = await fetch('/api/daily-report');
+        const resData = await response.json();
+
+        if (resData.success) {
+          btn.classList.remove('bg-sky-600', 'hover:bg-sky-500');
+          btn.classList.add('bg-emerald-600');
+          btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>Rapor Gönderildi!</span>`;
+        } else {
+          alert("Rapor gönderilemedi: " + (resData.message || resData.error || "Bilinmeyen hata"));
+          btn.innerHTML = originalHtml;
+        }
+      } catch (err) {
+        alert("Bağlantı hatası: " + err.message);
+        btn.innerHTML = originalHtml;
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.classList.remove('bg-emerald-600');
+          btn.classList.add('bg-sky-600', 'hover:bg-sky-500');
+          btn.innerHTML = originalHtml;
+        }, 3500);
+      }
     }
 
     // ================= GELEN İLETİŞİM MESAJLARINI ÇEKME =================
