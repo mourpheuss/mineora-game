@@ -10,8 +10,8 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    const LOCK_WINDOW_MS = 25 * 60 * 1000;      // 25 dk canlı takip penceresi
-    const SAME_COIN_LOCK_MS = 20 * 60 * 1000;   // Aynı coine 20 dk tekrar giriş yasağı
+    const LOCK_WINDOW_MS = 25 * 60 * 1000;
+    const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const now = Date.now();
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // TP 1 KONTROLÜ (+%0.60) -> STOPU ANINDA GİRİŞE KİLİTLE
+      // TP 1 KONTROLÜ (+%0.60) -> STOP'U GİRİŞE KİLİTLE
       const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
@@ -157,32 +157,36 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SNIPER LİKİDİTE AVI (TÜM HACİMLİ VADELİLER)
+    // MODÜL 2: KORELASYON KORUMALI SNIPER RADARI (MAX 2 İŞLEM)
     // =========================================================================
-    const openTradesCount = Object.values(activeTrades).filter(t => {
+    const openTrades = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
       const tTime = t.createdAt || 0;
       return (now - tTime) <= LOCK_WINDOW_MS;
-    }).length;
+    });
 
-    if (openTradesCount >= 4) {
-      return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var." });
+    // Kural: Maksimum 2 açık pozisyon
+    if (openTrades.length >= 2) {
+      return res.status(200).json({ status: "IDLE", message: "Takipte 2 aktif operasyon var (Maksimum koruma)." });
     }
 
-    const TRADFI_BLACKLIST = [
+    // TradFi, Hisse Senetleri ve Gece Stopuna Neden Olan Sığ Pariteler
+    const TRADFI_AND_JUNK_BLACKLIST = [
       "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
       "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT"
+      "AMD", "MRVL", "TQQQ", "INTW", "CSOP", "HYUNDAI", "SKHYNIX",
+      "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT",
+      "DOOD", "CAP", "ERA", "ICNT", "APR", "MP", "XP", "CRCL"
     ];
 
-    // Hacmi 1.500.000$ ve üzeri olan kaliteli likit pariteler
+    // Hacmi 3.000.000$ ve üzeri olan derin vadeli kripto pariteleri
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol.endsWith("USDT")) return false;
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      if (vol < 1500000) return false;
+      if (vol < 3000000) return false;
 
-      for (const b of TRADFI_BLACKLIST) {
-        if (c.symbol.startsWith(b)) return false;
+      for (const b of TRADFI_AND_JUNK_BLACKLIST) {
+        if (c.symbol.includes(b)) return false;
       }
       return true;
     }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
@@ -202,7 +206,7 @@ export default async function handler(req, res) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      // 1 DAKİKALIK MUMLAR (Son 25 Mum = ~25 Dakikalık Mikro Harita)
+      // 1 DAKİKALIK MUMLAR (Son 25 Mum)
       const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -217,11 +221,10 @@ export default async function handler(req, res) {
         volume: Number(c[5])
       })).sort((a, b) => a.time - b.time);
 
-      const cur1m = candles1m[candles1m.length - 1];   // Anlık mum
-      const sweep1m = candles1m[candles1m.length - 2]; // Likiditeyi süpüren teyit mumu
-      const pastList = candles1m.slice(0, -2);         // Referans tepe/dip aralığı
+      const cur1m = candles1m[candles1m.length - 1];
+      const sweep1m = candles1m[candles1m.length - 2];
+      const pastList = candles1m.slice(0, -2);
 
-      // 20 DAKİKALIK UÇ NOKTALAR (ORTADA İŞLEM AÇMAK YASAK)
       const rangeHigh = Math.max(...pastList.map(c => c.high));
       const rangeLow  = Math.min(...pastList.map(c => c.low));
 
@@ -231,20 +234,17 @@ export default async function handler(req, res) {
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
 
-      // KURAL 1: LİKİDİTE SÜPÜRMESİ & İÇERİ GERİ KAPANIŞ (FAKE BREAKOUT)
-      // Dip Avı (Long): Dibi deldi ama altında kalamadı, seviye üstüne dönüp fitil bıraktı.
-      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.48) && (cur1m.close > sweep1m.close);
-      
-      // Tepe Avı (Short): Tepeyi deldi ama üstünde kalamadı, seviye altına dönüp fitil bıraktı.
-      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.48) && (cur1m.close < sweep1m.close);
+      // KURAL 1: LİKİDİTE SÜPÜRMESİ & FİTİL TEYİDİ
+      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.50) && (cur1m.close > sweep1m.close);
+      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.50) && (cur1m.close < sweep1m.close);
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
-      // KURAL 2: HACİM ANOMALİSİ (Z-Score >= 1.8σ)
+      // KURAL 2: HACİM ANOMALİSİ (Z-Score >= 1.9σ)
       const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
-      if (volZScore < 1.8) continue;
+      if (volZScore < 1.9) continue;
 
-      // KURAL 3: TAHTA AKIŞ TEYİDİ (Son saniyelerde piyasa alıcı/satıcı gücü)
+      // KURAL 3: TAHTA AKIŞ TEYİDİ
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -255,7 +255,7 @@ export default async function handler(req, res) {
       if (Array.isArray(fills)) {
         fills.forEach(f => {
           const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
-          if (val >= 250) {
+          if (val >= 300) {
             if (f.side === 'buy') buyUsd += val;
             else sellUsd += val;
           }
@@ -266,7 +266,7 @@ export default async function handler(req, res) {
       const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
 
       // LONG TETİĞİ
-      if (isBullishSweep && takerBuyRatio >= 65) {
+      if (isBullishSweep && takerBuyRatio >= 66) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
@@ -275,13 +275,13 @@ export default async function handler(req, res) {
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) iğnelendi. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar absorbe edildi, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
+          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) süpürüldü. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar yutuldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
 
       // SHORT TETİĞİ
-      if (isBearishSweep && takerBuyRatio <= 35) {
+      if (isBearishSweep && takerBuyRatio <= 34) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'SHORT',
@@ -290,25 +290,23 @@ export default async function handler(req, res) {
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) iğnelendi. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla çöküş başladı.`
+          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) süpürüldü. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla düşüş başladı.`
         };
         break;
       }
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Likidite süpürmeleri ve kurumsal ret mumları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Yüksek likiditeli paritelerde sniper fırsatları taranıyor..." });
     }
 
     // 4. MİKRO HEDEF VE FİTİL ARKASI STOP
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
 
-    // Hızlı TP1 (+%0.60) ve Genişletilmiş TP2 (+%1.20)
     const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
     const tp2 = isLong ? entryPrice * 1.0120 : entryPrice * 0.9880;
 
-    // Stop seviyesi: Atılan o ret iğnesinin hemen arkası
     let sl = isLong 
       ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9930)
       : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0070);
