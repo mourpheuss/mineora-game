@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     const LOCK_WINDOW_MS = 25 * 60 * 1000;      // 25 dk canlı takip penceresi
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;   // Aynı coine 20 dk tekrar giriş yasağı
     const LEVERAGE = 20;                        // 20x Kaldıraç
-    const MARGIN_RATIO = 0.10;                  // KASANIN %10'U
+    const MARGIN_RATIO = 0.10;                  // Kasanın %10'u
     const now = Date.now();
 
     // Bitget V2 İmzalı İstek Motoru
@@ -110,7 +110,7 @@ export default async function handler(req, res) {
       const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // TP 2 KONTROLÜ (+%1.20) -> KALAN POZİSYONU BORSADA TAM KAPAT
+      // TP 2 KONTROLÜ (+%1.20)
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
@@ -206,7 +206,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // STOP KONTROLÜ -> POZİSYONU BORSADA BOŞALT
+      // STOP KONTROLÜ
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
         trade.status = 'STOPPED';
@@ -258,7 +258,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SNIPER LİKİDİTE AVI (MAX 4 İŞLEM & ARINDIRILMIŞ HAVUZ)
+    // MODÜL 2: SNIPER LİKİDİTE AVI (MAX 4 İŞLEM & SAF KRİPTO FİLTRESİ)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -270,23 +270,32 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var." });
     }
 
-    // Gece stop ettiren hisseler + manipülatif sığ pariteler
+    // TradFi, Borsa Endeksleri (SNXX, SXXP vb.), Hisse Senetleri ve Manipülatif Sığ Pariteler
     const TRADFI_AND_JUNK_BLACKLIST = [
-      "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
+      // Endeksler & TradFi
+      "SNXX", "SXXP", "STOXX", "XAU", "XAG", "SPX", "NDX", "DJI", "KORU", 
+      "OPENAI", "ANTHROPIC", "TQQQ", "SQQQ", "SOXL", "SPY", "QQQ",
+      // ABD & Asya Borsa Hisseleri
       "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "AMD", "MRVL", "TQQQ", "INTW", "CSOP", "HYUNDAI", "SKHYNIX",
+      "AMD", "MRVL", "INTW", "CSOP", "HYUNDAI", "SKHYNIX", "BABA", "PLTR", "NIO", "PDD",
+      // Sabit Paralar & İtibari Varlıklar
       "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT",
+      // Gece Stop Ettiren Sığ Pariteler
       "DOOD", "CAP", "ERA", "ICNT", "APR", "MP", "XP", "CRCL"
     ];
 
-    // Geceki 1.500.000$ hacim tabanı
+    // Yalnızca saf kripto pariteleri: Bitişik USDT ile bitecek, alt tire/nokta içermeyecek, kara listede olmayacak
     const pool = tickersJson.data.filter(c => {
-      if (!c.symbol.endsWith("USDT")) return false;
+      if (!c.symbol || !c.symbol.endsWith("USDT")) return false;
+      
+      // Hisse ve TradFi kontratlarındaki özel sembol karakterlerini (US_ / HK_ vb.) engelle
+      if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
+
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
       if (vol < 1500000) return false;
 
       for (const b of TRADFI_AND_JUNK_BLACKLIST) {
-        if (c.symbol.includes(b)) return false;
+        if (c.symbol.toUpperCase().includes(b)) return false;
       }
       return true;
     }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
@@ -404,13 +413,12 @@ export default async function handler(req, res) {
     // MODÜL 3: CANLI BORSA EMRİ (KASANIN O ANKİ %10'U & 20X)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
-    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2)); // Net %10
-    const positionNotional = dynamicMargin * LEVERAGE;                           // 20x Kaldıraçlı Hacim
+    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
+    const positionNotional = dynamicMargin * LEVERAGE;
 
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
 
-    // Kontrat adedini hesapla
     let orderSize = parseFloat((positionNotional / entryPrice).toFixed(2));
     if (orderSize <= 0) orderSize = 1;
 
