@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-export const config = {
+export const config {
   maxDuration: 60
 };
 
@@ -80,7 +80,29 @@ export default async function handler(req, res) {
         });
         return await response.json();
       } catch (err) {
-        return { code: '-1', msg: err.message };
+        return { code: -1, msg: err.message };
+      }
+    }
+
+    // Pozisyonu Tek Seferde Küsuratsız Sıfırlama Fonksiyonu (Bitget V2/V3 Flash Close)
+    async function closeFullPositionBitget(symbol, isLong, creds = null) {
+      const closeSide = isLong ? 'sell' : 'buy';
+      
+      // 1. Doğrudan Bitget Pozisyon Kapatma Motorunu Tetikle
+      const res1 = await bitgetPrivateRequest('/api/v2/mix/order/close-positions', 'POST', {
+        symbol: symbol,
+        productType: 'USDT-FUTURES'
+      }, creds);
+
+      // 2. Yedek: V3 Market Kapatma (Reduce Only)
+      if (res1.code !== '00000') {
+        await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
+          category: 'USDT-FUTURES',
+          symbol: symbol,
+          side: closeSide,
+          orderType: 'market',
+          reduceOnly: 'yes'
+        }, creds).catch(() => {});
       }
     }
 
@@ -160,8 +182,7 @@ export default async function handler(req, res) {
     }
 
     async function executeUserCloses(symbol, isLong) {
-      const closeSideBitget = isLong ? 'sell' : 'buy';
-      const closeSideBingx  = isLong ? 'SELL' : 'BUY';
+      const closeSideBingx = isLong ? 'SELL' : 'BUY';
 
       for (const [uname, udata] of Object.entries(allUsers)) {
         if (!udata || !udata.autoTradeEnabled) continue;
@@ -170,13 +191,7 @@ export default async function handler(req, res) {
         if (!creds || !creds.key || !creds.secret) continue;
 
         if (ex === 'BITGET') {
-          await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-            category: 'USDT-FUTURES',
-            symbol: symbol,
-            side: closeSideBitget,
-            orderType: 'market',
-            reduceOnly: 'yes'
-          }, creds).catch(() => {});
+          await closeFullPositionBitget(symbol, isLong, creds);
         } else if (ex === 'BINGX') {
           const bingxSym = symbol.replace('USDT', '-USDT');
           await bingxPrivateRequest('/openApi/swap/v2/trade/order', 'POST', {
@@ -203,24 +218,14 @@ export default async function handler(req, res) {
       const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // TP 2 KONTROLÜ (+%1.20)
+      // TP 2 KONTROLÜ (+%1.20) -> %100 TAM KAPATMA
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
         trade.closedAt = now;
 
-        if (trade.openSize && trade.openSize > 0) {
-          const closeSide = isLong ? 'sell' : 'buy';
-          await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-            category: 'USDT-FUTURES',
-            symbol: trade.symbol,
-            side: closeSide,
-            orderType: 'market',
-            qty: trade.openSize.toString(),
-            reduceOnly: 'yes'
-          });
-        }
-
+        // Pozisyonu arkada küsurat kalmayacak şekilde tamamen sıfırla
+        await closeFullPositionBitget(trade.symbol, isLong);
         await executeUserCloses(trade.symbol, isLong);
 
         tradeUpdates.push(
@@ -250,7 +255,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // TP 1 KONTROLÜ (+%0.60)
+      // TP 1 KONTROLÜ (+%0.60) -> %50 KÂR AL & STOP'U GİRİŞE ÇEK
       const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
@@ -297,24 +302,14 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // STOP KONTROLÜ
+      // STOP KONTROLÜ -> %100 TAM SIFIRLAMA
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
 
-        if (trade.openSize && trade.openSize > 0) {
-          const closeSide = isLong ? 'sell' : 'buy';
-          await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-            category: 'USDT-FUTURES',
-            symbol: trade.symbol,
-            side: closeSide,
-            orderType: 'market',
-            qty: trade.openSize.toString(),
-            reduceOnly: 'yes'
-          });
-        }
-
+        // Pozisyonu arkada küsurat bırakmayacak şekilde tamamen sıfırla
+        await closeFullPositionBitget(trade.symbol, isLong);
         await executeUserCloses(trade.symbol, isLong);
 
         tradeUpdates.push(
@@ -361,14 +356,12 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var." });
     }
 
-    // 1. FOREX / DÖVİZ PARİTELERİNİ VE TRADFI EMTİALARINI KESİN ENGELLE
     const FOREX_AND_FIAT = [
       "USDBRL", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDTRY", "USDCAD",
       "USDCHF", "USDCNH", "EURGBP", "EURJPY", "GBPJPY", "XAU", "XAG", "SPX",
       "NDX", "DJI", "CLUSDT", "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT"
     ];
 
-    // 2. ABD HİSSELERİ VE ETF'LERİ KESİN ENGELLE
     const STOCKS_BLACKLIST = [
       "IREN", "LITE", "GLW", "SNXX", "SPCX", "INTC", "ARM", "AMD", "MRVL", "EWZ", "TQQQ", "CSOP",
       "HYUNDAI", "DXYZ", "MP", "BZ", "UVXY", "MSTR", "BE", "SOXL", "ASML",
@@ -383,25 +376,21 @@ export default async function handler(req, res) {
 
       const symUpper = c.symbol.toUpperCase();
 
-      // 1. Filtre: Forex ve Fiat engeli
       for (const fx of FOREX_AND_FIAT) {
         if (symUpper.includes(fx)) return false;
       }
 
-      // 2. Filtre: Hisse ve ETF engeli
       for (const st of STOCKS_BLACKLIST) {
         if (symUpper.includes(st)) return false;
       }
 
-      // 3. Filtre: Bitget Spot Kripto Doğrulaması (Spotta gerçek kripto olarak listeli olmalı!)
+      // Bitget Spot'ta listeli değilse (Forex/Hisse ise) asla geçirme
       if (genuineSpotCryptoSet.size > 0 && !genuineSpotCryptoSet.has(c.symbol)) {
         return false;
       }
 
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      if (vol < 1500000) return false;
-
-      return true;
+      return vol >= 1500000;
     }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
 
     function calculateZScore(series, currentVal) {
