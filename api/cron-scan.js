@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1: +%0.60 | TP2: +%1.20)
     // =========================================================================
     let tradeUpdates = [];
-    for (const [tradeKey, trade] of Object.entries(activeTrades)) {
+    for (const [tradeKey, trade] of Object.entries(tradesData = activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
 
       const curPrice = priceMap[trade.symbol];
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: KORELASYON KORUMALI SNIPER RADARI (MAX 3 İŞLEM & $2M TABAN)
+    // MODÜL 2: KORELASYON KORUMALI SNIPER RADARI (MAX 4 İŞLEM & $1.5M TABAN)
     // =========================================================================
     const openTrades = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -165,27 +165,32 @@ export default async function handler(req, res) {
       return (now - tTime) <= LOCK_WINDOW_MS;
     });
 
-    // Kural: Maksimum 3 açık pozisyon
-    if (openTrades.length >= 3) {
-      return res.status(200).json({ status: "IDLE", message: "Takipte 3 aktif operasyon var (Maksimum koruma)." });
+    // Kural: Maksimum 4 açık pozisyon
+    if (openTrades.length >= 4) {
+      return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var (Maksimum sınır)." });
     }
 
-    // TradFi, Hisse Senetleri ve Gece Stopuna Neden Olan Sığ Pariteler
-    const TRADFI_AND_JUNK_BLACKLIST = [
-      "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
-      "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "AMD", "MRVL", "TQQQ", "INTW", "CSOP", "HYUNDAI", "SKHYNIX",
-      "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT",
+    // Kapsamlı Stock / TradFi / Endeks ve Sığ Parite Kara Listesi
+    const STOCK_AND_TRADFI_BLACKLIST = [
+      // Borsa Hisseleri & Endeksler (US & Asya Hisse Senetleri)
+      "AMD", "MRVL", "TQQQ", "INTW", "CSOP", "HYUNDAI", "SKHYNIX", "NVDA",
+      "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN", "BABA",
+      "PLTR", "SOXL", "SQQQ", "QQQ", "SPY", "SPX", "NDX", "DJI",
+      "XAU", "XAG", "KORU", "OPENAI", "ANTHROPIC", "NIO", "PDD",
+      // Sabit Kriptolar & İtibari Para Birimleri
+      "USDCUSDT", "BGBUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT",
+      // Gece Stop Olan Sığ & İğneci Pariteler
       "DOOD", "CAP", "ERA", "ICNT", "APR", "MP", "XP", "CRCL"
     ];
 
-    // Hacmi 2.000.000$ ve üzeri olan derin vadeli kripto pariteleri
+    // Hacmi 1.500.000$ ve üzeri olan saf kripto vadeli pariteleri
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol.endsWith("USDT")) return false;
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      if (vol < 2000000) return false;
+      if (vol < 1500000) return false;
 
-      for (const b of TRADFI_AND_JUNK_BLACKLIST) {
+      // Kara listedeki hisse/tradfi paritelerini engelle
+      for (const b of STOCK_AND_TRADFI_BLACKLIST) {
         if (c.symbol.includes(b)) return false;
       }
       return true;
@@ -297,7 +302,7 @@ export default async function handler(req, res) {
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Yüksek likiditeli paritelerde sniper fırsatları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Yalnızca saf kripto paritelerinde sniper fırsatları taranıyor..." });
     }
 
     // 4. MİKRO HEDEF VE FİTİL ARKASI STOP
