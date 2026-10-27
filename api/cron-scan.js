@@ -1,5 +1,9 @@
 import crypto from 'crypto';
 
+export const config = {
+  maxDuration: 60
+};
+
 export default async function handler(req, res) {
   try {
     const browserHeaders = {
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const LEVERAGE = 20;
-    const MARGIN_RATIO = 0.10; // Kasanın %10'u
+    const MARGIN_RATIO = 0.10; // Kasanın net %10'u
     const now = Date.now();
 
     // Bitget V3 (UTA) ve V2 İmzalı İstek Motoru
@@ -85,7 +89,6 @@ export default async function handler(req, res) {
     // UTA (Unified Trading Account) Net Bakiyesini Dinamik Sorgula
     async function getFuturesEquity() {
       try {
-        // V3 UTA Varlık Endpoint'i
         const accRes = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
         if (accRes && accRes.code === '00000' && Array.isArray(accRes.data)) {
           const usdtItem = accRes.data.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
@@ -97,7 +100,6 @@ export default async function handler(req, res) {
       } catch (e) {}
 
       try {
-        // Yedek V2 sorgusu
         const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
         if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
           const usdtAcc = accResV2.data.find(a => a.marginCoin === 'USDT');
@@ -108,15 +110,33 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      return 2228; // Screenshot'ta doğrulanan UTA bakiyesi
+      return 2228;
     }
 
-    // 1. Bitget Vadeli Ticker Verilerini Çek
-    const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
-    const tickersJson = await tickersRes.json();
+    // 1. Bitget Vadeli Ticker ve Binance Kripto Doğrulama Listesini Çek
+    const [tickersRes, binanceRes] = await Promise.all([
+      fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
+      fetch("https://fapi.binance.com/fapi/v1/ticker/price", { headers: browserHeaders }).catch(() => null)
+    ]);
 
+    const tickersJson = await tickersRes.json();
     if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
       return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
+    }
+
+    // Binance Vadeli Piyasasında Listeli SAF KRİPTO Beyaz Listesi
+    const binanceCryptoSet = new Set();
+    if (binanceRes && binanceRes.ok) {
+      try {
+        const bList = await binanceRes.json();
+        if (Array.isArray(bList)) {
+          bList.forEach(item => {
+            if (item.symbol && item.symbol.endsWith("USDT")) {
+              binanceCryptoSet.add(item.symbol);
+            }
+          });
+        }
+      } catch (e) {}
     }
 
     const priceMap = {};
@@ -155,7 +175,6 @@ export default async function handler(req, res) {
         if (!creds || !creds.key || !creds.secret) continue;
 
         if (ex === 'BITGET') {
-          // Bitget V3 / V2 Kapatma
           await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
             category: 'USDT-FUTURES',
             symbol: symbol,
@@ -335,7 +354,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO SNIPER RADARI (HİSSELER & TRADFI ENGELLİ)
+    // MODÜL 2: SAF KRİPTO RADARI (BİNANCE DOĞRULAMA KALKANI + TRADFI BLOKAJI)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -348,7 +367,7 @@ export default async function handler(req, res) {
     }
 
     const FULL_TRADFI_BLACKLIST = [
-      "SNXX", "SPCX", "INTC", "ARM", "AMD", "MRVL", "EWZ", "TQQQ", "CSOP",
+      "IREN", "LITE", "GLW", "SNXX", "SPCX", "INTC", "ARM", "AMD", "MRVL", "EWZ", "TQQQ", "CSOP",
       "HYUNDAI", "DXYZ", "MP", "BZ", "UVXY", "MSTR", "BE", "SOXL", "ASML",
       "HOOD", "MU", "MELI", "QQQ", "SPY", "SQQQ", "SKHYNIX", "SOFTBANK",
       "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
@@ -360,12 +379,19 @@ export default async function handler(req, res) {
       if (!c.symbol || !c.symbol.endsWith("USDT")) return false;
       if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
 
-      const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      if (vol < 1500000) return false;
-
+      // 1. Kural: Kara listedeki hisseler
       for (const b of FULL_TRADFI_BLACKLIST) {
         if (c.symbol.toUpperCase().includes(b)) return false;
       }
+
+      // 2. Kural: Binance Futures Doğrulama Kalkanı (Binance'te yoksa bu parite hisse/TradFi türevidir)
+      if (binanceCryptoSet.size > 0 && !binanceCryptoSet.has(c.symbol)) {
+        return false;
+      }
+
+      const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
+      if (vol < 1500000) return false;
+
       return true;
     }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
 
@@ -474,7 +500,7 @@ export default async function handler(req, res) {
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Yalnızca saf kripto paritelerinde sniper fırsatları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Yalnızca Binance onaylı saf kripto paritelerinde sniper fırsatları taranıyor..." });
     }
 
     // =========================================================================
