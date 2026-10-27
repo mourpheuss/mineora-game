@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: KORELASYON KORUMALI SNIPER RADARI (MAX 2 İŞLEM)
+    // MODÜL 2: KORELASYON KORUMALI SNIPER RADARI (MAX 3 İŞLEM & $2M TABAN)
     // =========================================================================
     const openTrades = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -165,9 +165,9 @@ export default async function handler(req, res) {
       return (now - tTime) <= LOCK_WINDOW_MS;
     });
 
-    // Kural: Maksimum 2 açık pozisyon
-    if (openTrades.length >= 2) {
-      return res.status(200).json({ status: "IDLE", message: "Takipte 2 aktif operasyon var (Maksimum koruma)." });
+    // Kural: Maksimum 3 açık pozisyon
+    if (openTrades.length >= 3) {
+      return res.status(200).json({ status: "IDLE", message: "Takipte 3 aktif operasyon var (Maksimum koruma)." });
     }
 
     // TradFi, Hisse Senetleri ve Gece Stopuna Neden Olan Sığ Pariteler
@@ -179,11 +179,11 @@ export default async function handler(req, res) {
       "DOOD", "CAP", "ERA", "ICNT", "APR", "MP", "XP", "CRCL"
     ];
 
-    // Hacmi 3.000.000$ ve üzeri olan derin vadeli kripto pariteleri
+    // Hacmi 2.000.000$ ve üzeri olan derin vadeli kripto pariteleri
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol.endsWith("USDT")) return false;
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      if (vol < 3000000) return false;
+      if (vol < 2000000) return false;
 
       for (const b of TRADFI_AND_JUNK_BLACKLIST) {
         if (c.symbol.includes(b)) return false;
@@ -234,7 +234,7 @@ export default async function handler(req, res) {
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
 
-      // KURAL 1: LİKİDİTE SÜPÜRMESİ & FİTİL TEYİDİ
+      // KURAL 1: LİKİDİTE SÜPÜRMESİ & FİTİL TEYİDİ (%50+ Fitil)
       const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.50) && (cur1m.close > sweep1m.close);
       const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.50) && (cur1m.close < sweep1m.close);
 
