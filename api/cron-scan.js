@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (TP1: +%0.60 | TP2: +%1.20)
     // =========================================================================
     let tradeUpdates = [];
-    for (const [tradeKey, trade] of Object.entries(tradesData = activeTrades)) {
+    for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
 
       const curPrice = priceMap[trade.symbol];
@@ -239,9 +239,9 @@ export default async function handler(req, res) {
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
 
-      // KURAL 1: LİKİDİTE SÜPÜRMESİ & FİTİL TEYİDİ (%50+ Fitil)
-      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.50) && (cur1m.close > sweep1m.close);
-      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.50) && (cur1m.close < sweep1m.close);
+      // KURAL 1: LİKİDİTE SÜPÜRMESİ & GÜÇLÜ FİTİL TEYİDİ (%60+ Reddedilme Şartı)
+      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.60) && (cur1m.close > sweep1m.close);
+      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.60) && (cur1m.close < sweep1m.close);
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
@@ -280,7 +280,7 @@ export default async function handler(req, res) {
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) süpürüldü. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar yutuldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
+          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) süpürüldü. %${Math.round((sweepLowerWick / sweepRange) * 100)} net alt fitille satıcılar püskürtüldü, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
@@ -295,7 +295,7 @@ export default async function handler(req, res) {
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) süpürüldü. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla düşüş başladı.`
+          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) süpürüldü. %${Math.round((sweepUpperWick / sweepRange) * 100)} net üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla düşüş başladı.`
         };
         break;
       }
