@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-export const config {
+export const config = {
   maxDuration: 60
 };
 
@@ -88,13 +88,11 @@ export default async function handler(req, res) {
     async function closeFullPositionBitget(symbol, isLong, creds = null) {
       const closeSide = isLong ? 'sell' : 'buy';
       
-      // 1. Doğrudan Bitget Pozisyon Kapatma Motorunu Tetikle
       const res1 = await bitgetPrivateRequest('/api/v2/mix/order/close-positions', 'POST', {
         symbol: symbol,
         productType: 'USDT-FUTURES'
       }, creds);
 
-      // 2. Yedek: V3 Market Kapatma (Reduce Only)
       if (res1.code !== '00000') {
         await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
           category: 'USDT-FUTURES',
@@ -224,7 +222,6 @@ export default async function handler(req, res) {
         trade.status = 'TP2_HIT';
         trade.closedAt = now;
 
-        // Pozisyonu arkada küsurat kalmayacak şekilde tamamen sıfırla
         await closeFullPositionBitget(trade.symbol, isLong);
         await executeUserCloses(trade.symbol, isLong);
 
@@ -308,7 +305,6 @@ export default async function handler(req, res) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
 
-        // Pozisyonu arkada küsurat bırakmayacak şekilde tamamen sıfırla
         await closeFullPositionBitget(trade.symbol, isLong);
         await executeUserCloses(trade.symbol, isLong);
 
