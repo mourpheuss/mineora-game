@@ -27,10 +27,9 @@ export default async function handler(req, res) {
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const LEVERAGE = 20;
-    const MARGIN_RATIO = 0.10; // Kasanın net %10'u
+    const MARGIN_RATIO = 0.10;
     const now = Date.now();
 
-    // Bitget V3 (UTA) ve V2 İmzalı İstek Motoru
     async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}, customCreds = null) {
       const apiKey = customCreds ? customCreds.key : ADMIN_API_KEY;
       const secret = customCreds ? customCreds.secret : ADMIN_SECRET;
@@ -61,7 +60,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // BingX V2 Swap API İmzalı İstek Motoru (Üyeler İçin)
     async function bingxPrivateRequest(endpoint, method = 'POST', params = {}, creds = {}) {
       if (!creds || !creds.key || !creds.secret) return { code: -1, msg: "BingX API anahtarları eksik" };
       const timestamp = Date.now().toString();
@@ -86,7 +84,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // UTA (Unified Trading Account) Net Bakiyesini Dinamik Sorgula
     async function getFuturesEquity() {
       try {
         const accRes = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
@@ -113,30 +110,11 @@ export default async function handler(req, res) {
       return 2228;
     }
 
-    // 1. Bitget Vadeli Ticker ve Binance Kripto Doğrulama Listesini Çek
-    const [tickersRes, binanceRes] = await Promise.all([
-      fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
-      fetch("https://fapi.binance.com/fapi/v1/ticker/price", { headers: browserHeaders }).catch(() => null)
-    ]);
-
+    const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
     const tickersJson = await tickersRes.json();
+
     if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
       return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
-    }
-
-    // Binance Vadeli Piyasasında Listeli SAF KRİPTO Beyaz Listesi
-    const binanceCryptoSet = new Set();
-    if (binanceRes && binanceRes.ok) {
-      try {
-        const bList = await binanceRes.json();
-        if (Array.isArray(bList)) {
-          bList.forEach(item => {
-            if (item.symbol && item.symbol.endsWith("USDT")) {
-              binanceCryptoSet.add(item.symbol);
-            }
-          });
-        }
-      } catch (e) {}
     }
 
     const priceMap = {};
@@ -144,7 +122,6 @@ export default async function handler(req, res) {
       priceMap[t.symbol] = parseFloat(t.lastPr || 0);
     });
 
-    // 2. Firebase Aktif İşlemleri ve Kayıtlı Kullanıcıları Oku
     let activeTrades = {};
     let lastSignals = {};
     let allUsers = {};
@@ -163,7 +140,6 @@ export default async function handler(req, res) {
       allUsers = {};
     }
 
-    // Üyelerin Pozisyonlarını Otomatik Kapatma Yardımcısı (Bitget & BingX)
     async function executeUserCloses(symbol, isLong) {
       const closeSideBitget = isLong ? 'sell' : 'buy';
       const closeSideBingx  = isLong ? 'SELL' : 'BUY';
@@ -354,7 +330,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI (BİNANCE DOĞRULAMA KALKANI + TRADFI BLOKAJI)
+    // MODÜL 2: SAF KRİPTO RADARI (FOREX & HİSSE TAM BLOKAJI)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -366,27 +342,36 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 4 aktif operasyon var." });
     }
 
-    const FULL_TRADFI_BLACKLIST = [
+    // 1. FOREX / DÖVİZ PARİTELERİNİ VE TRADFI EMTİALARINI KESİN ENGELLE
+    const FOREX_AND_FIAT = [
+      "USDBRL", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDTRY", "USDCAD",
+      "USDCHF", "USDCNH", "EURGBP", "EURJPY", "GBPJPY", "XAU", "XAG", "SPX",
+      "NDX", "DJI", "CLUSDT", "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT"
+    ];
+
+    // 2. ABD HİSSELERİ VE ETF'LERİ KESİN ENGELLE
+    const STOCKS_BLACKLIST = [
       "IREN", "LITE", "GLW", "SNXX", "SPCX", "INTC", "ARM", "AMD", "MRVL", "EWZ", "TQQQ", "CSOP",
       "HYUNDAI", "DXYZ", "MP", "BZ", "UVXY", "MSTR", "BE", "SOXL", "ASML",
       "HOOD", "MU", "MELI", "QQQ", "SPY", "SQQQ", "SKHYNIX", "SOFTBANK",
-      "OPENAI", "ANTHROPIC", "KORU", "XAU", "XAG", "SPX", "NDX", "DJI",
-      "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "INTW", "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT", "CLUSDT"
+      "OPENAI", "ANTHROPIC", "KORU", "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
+      "INTW", "PLTR", "BABA", "NIO", "COIN", "MARA", "RIOT", "CLSK", "CORZ"
     ];
 
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol || !c.symbol.endsWith("USDT")) return false;
       if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
 
-      // 1. Kural: Kara listedeki hisseler
-      for (const b of FULL_TRADFI_BLACKLIST) {
-        if (c.symbol.toUpperCase().includes(b)) return false;
+      const symUpper = c.symbol.toUpperCase();
+
+      // Forex ve Fiat engeli
+      for (const fx of FOREX_AND_FIAT) {
+        if (symUpper.includes(fx)) return false;
       }
 
-      // 2. Kural: Binance Futures Doğrulama Kalkanı (Binance'te yoksa bu parite hisse/TradFi türevidir)
-      if (binanceCryptoSet.size > 0 && !binanceCryptoSet.has(c.symbol)) {
-        return false;
+      // Hisse ve ETF engeli
+      for (const st of STOCKS_BLACKLIST) {
+        if (symUpper.includes(st)) return false;
       }
 
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
@@ -447,7 +432,7 @@ export default async function handler(req, res) {
       const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
       if (volZScore < 1.8) continue;
 
-      // KURAL 3: 250$ EMİR FİLTRESİ İLE TAHTA AKIŞ TEYİDİ
+      // KURAL 3: 250$ EMİR FİLTRESİ
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -500,7 +485,7 @@ export default async function handler(req, res) {
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Yalnızca Binance onaylı saf kripto paritelerinde sniper fırsatları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Yalnızca saf kripto paritelerinde sniper fırsatları taranıyor..." });
     }
 
     // =========================================================================
