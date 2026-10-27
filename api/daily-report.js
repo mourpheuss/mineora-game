@@ -23,8 +23,9 @@ export default async function handler(req, res) {
       periodText = "Bugün (00:00'dan İtibaren)";
     }
 
-    // Sabit Model: İşlem Başına 70$ Teminat / 20x Kaldıraç
-    const MARGIN = 70;
+    // Sabit Model: Kasanın %10'u = 200$ Teminat / 20x Kaldıraç ($4.000 Pozisyon Hacmi)
+    const TOTAL_WALLET = 2000;
+    const MARGIN = 200;
     const LEVERAGE = 20;
 
     let totalTrades = 0;
@@ -45,19 +46,23 @@ export default async function handler(req, res) {
 
       if (trade.status === 'TP2_HIT') {
         tp2Count++;
-        totalProfitUsd += MARGIN * (0.012 * LEVERAGE); // +%24 kâr (+$16.80)
+        // +%1.20 fiyat hareketi x 20x = +%24 kâr -> $200 * 0.24 = +$48.00
+        totalProfitUsd += MARGIN * (0.012 * LEVERAGE);
       } else if (trade.status === 'STOPPED') {
         if (trade.tp1Hit) {
           beCount++;
-          totalProfitUsd += (MARGIN * 0.5) * (0.006 * LEVERAGE); // +$4.20
+          // TP1'de pozisyonun yarısı kapatıldıysa: $100 * (0.006 * 20) = +$12.00 cepte
+          totalProfitUsd += (MARGIN * 0.5) * (0.006 * LEVERAGE);
         } else {
           stopCount++;
-          totalLossUsd += MARGIN * (0.008 * LEVERAGE); // -%16 zarar (-$11.20)
+          // Doğrudan Stop: -%0.80 x 20x = -%16 -> $200 * 0.16 = -$32.00
+          totalLossUsd += MARGIN * (0.008 * LEVERAGE);
         }
       } else if (trade.status === 'OPEN') {
         if (trade.tp1Hit) {
           tp1OpenCount++;
-          totalProfitUsd += MARGIN * (0.006 * LEVERAGE); // +$8.40 ara kâr
+          // TP1 vuruldu, stop girişte: +%0.60 x 20x = +%12 -> $200 * 0.12 = +$24.00 ara kâr
+          totalProfitUsd += MARGIN * (0.006 * LEVERAGE);
         } else {
           waitingOpenCount++;
         }
@@ -66,18 +71,20 @@ export default async function handler(req, res) {
 
     const netPnl = totalProfitUsd - totalLossUsd;
 
-    // GERÇEK WIN RATE HESABI:
-    // Henüz işlem görmemiş yeni açıklar (waitingOpenCount) hariç tutulur.
-    // Sonuçlanan/Kâra geçen işlemler = TP2 + Başa Baş + TP1 Açık + Stop
+    // Gerçek Win Rate: Henüz tetiği çekilmemiş açıklar hariç tutulur
     const evaluatedTrades = tp2Count + beCount + tp1OpenCount + stopCount;
     const successfulTrades = tp2Count + beCount + tp1OpenCount;
     const winRate = evaluatedTrades > 0 ? ((successfulTrades / evaluatedTrades) * 100).toFixed(1) : "0.0";
     const pnlSign = netPnl >= 0 ? "+" : "";
 
+    // Kasaya net yüzde büyüme oranı
+    const walletGrowthPct = ((netPnl / TOTAL_WALLET) * 100).toFixed(2);
+    const growthSign = netPnl >= 0 ? "+" : "";
+
     const reportMsg = `🏆 <b>MINEORA SNIPER | ÖZEL SEANS RAPORU</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `⏱️ <b>Filtre:</b> ${periodText}\n` +
-                      `💼 <b>Hesaplanan Model:</b> $${MARGIN} Teminat | ${LEVERAGE}x Kaldıraç\n` +
+                      `💼 <b>Model:</b> Kasanın %10'u ($${MARGIN}) | ${LEVERAGE}x Kaldıraç\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `📊 <b>Toplam İşlem:</b> ${totalTrades}\n` +
                       `🚀 <b>TP 2 Tam Hedef:</b> ${tp2Count} Adet (+$${(tp2Count * MARGIN * 0.012 * LEVERAGE).toFixed(2)})\n` +
@@ -87,9 +94,10 @@ export default async function handler(req, res) {
                       `⏳ <b>Yeni Açılan (İzlenen):</b> ${waitingOpenCount} Adet\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `🎯 <b>Gerçek Başarı (Win Rate):</b> <b>%${winRate}</b> <i>(${successfulTrades}/${evaluatedTrades} Sonuçlanan)</i>\n` +
+                      `📈 <b>Kasa Büyümesi:</b> <b>${growthSign}%${walletGrowthPct}</b>\n` +
                       `💰 <b>KASAYA NET NAKİT GİRİŞİ:</b> <b>${pnlSign}$${netPnl.toFixed(2)}</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `✨ <i>Win Rate hesabı açıkta bekleyen belirsiz işlemleri hariç tutarak net başarıyı yansıtır.</i>\n` +
+                      `✨ <i>İşlem başına kasanın %10'u ($200) risk disiplini ile modellenmiştir.</i>\n` +
                       `⚡ <i>Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                       `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -109,6 +117,7 @@ export default async function handler(req, res) {
         evaluatedTrades,
         successfulTrades,
         winRate: `${winRate}%`,
+        walletGrowth: `${growthSign}%${walletGrowthPct}`,
         tp2Count,
         tp1OpenCount,
         beCount,
