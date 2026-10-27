@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET API VE TELEGRAM YAPILANDIRMASI
+    // 0. SENİN YÖNETİCİ HESABIN (BİTGET UNIFIED - DOKUNULMADI, SABİT)
     // =========================================================================
     const ADMIN_API_KEY = "bg_f73437198f37d20e56939b82041041d0";
     const ADMIN_SECRET = "fe44b9c347eb5d9dd0e624876809102bb3ec8bab9481ad7bdb5ddf4d8d332ecd";
@@ -20,24 +20,28 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    const LOCK_WINDOW_MS = 25 * 60 * 1000;      // 25 dk canlı takip penceresi
-    const SAME_COIN_LOCK_MS = 20 * 60 * 1000;   // Aynı coine 20 dk tekrar giriş yasağı
-    const LEVERAGE = 20;                        // 20x Kaldıraç
-    const MARGIN_RATIO = 0.10;                  // Kasanın net %10'u
+    const LOCK_WINDOW_MS = 25 * 60 * 1000;
+    const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
+    const LEVERAGE = 20;
+    const MARGIN_RATIO = 0.10; // Kasanın %10'u
     const now = Date.now();
 
-    // Bitget V2 İmzalı İstek Motoru
-    async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}) {
+    // Bitget V2 İmzalı İstek Motoru (Genel)
+    async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}, customCreds = null) {
+      const apiKey = customCreds ? customCreds.key : ADMIN_API_KEY;
+      const secret = customCreds ? customCreds.secret : ADMIN_SECRET;
+      const pass = customCreds ? customCreds.passphrase : ADMIN_PASSPHRASE;
+
       const timestamp = Date.now().toString();
       const bodyStr = method === 'GET' ? '' : JSON.stringify(bodyObj);
       const message = timestamp + method + endpoint + bodyStr;
-      const signature = crypto.createHmac('sha256', ADMIN_SECRET).update(message).digest('base64');
+      const signature = crypto.createHmac('sha256', secret).update(message).digest('base64');
 
       const headers = {
-        'ACCESS-KEY': ADMIN_API_KEY,
+        'ACCESS-KEY': apiKey,
         'ACCESS-SIGN': signature,
         'ACCESS-TIMESTAMP': timestamp,
-        'ACCESS-PASSPHRASE': ADMIN_PASSPHRASE,
+        'ACCESS-PASSPHRASE': pass,
         'Content-Type': 'application/json',
         'locale': 'en-US'
       };
@@ -53,10 +57,34 @@ export default async function handler(req, res) {
       }
     }
 
-    // Birleşik Hesap (Unified) Net Bakiyesini Dinamik Sorgula
+    // BingX V2 Swap API İmzalı İstek Motoru (Üyeler İçin)
+    async function bingxPrivateRequest(endpoint, method = 'POST', params = {}, creds = {}) {
+      if (!creds || !creds.key || !creds.secret) return { code: -1, msg: "BingX API anahtarları eksik" };
+      const timestamp = Date.now().toString();
+      const fullParams = { ...params, timestamp };
+
+      const sortedKeys = Object.keys(fullParams).sort();
+      const queryString = sortedKeys.map(k => `${k}=${encodeURIComponent(fullParams[k])}`).join('&');
+      const signature = crypto.createHmac('sha256', creds.secret).update(queryString).digest('hex');
+      const finalUrl = `https://open-api.bingx.com${endpoint}?${queryString}&signature=${signature}`;
+
+      try {
+        const response = await fetch(finalUrl, {
+          method,
+          headers: {
+            'X-BX-APIKEY': creds.key,
+            'Content-Type': 'application/json'
+          }
+        });
+        return await response.json();
+      } catch (err) {
+        return { code: -1, msg: err.message };
+      }
+    }
+
+    // Senin Bitget Vadeli Bakiye Sorgun
     async function getFuturesEquity() {
       try {
-        // Önce Birleşik Hesap V2 sorgusu
         const accRes = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
         if (accRes && accRes.code === '00000' && Array.isArray(accRes.data)) {
           const usdtAcc = accRes.data.find(a => a.marginCoin === 'USDT');
@@ -66,7 +94,7 @@ export default async function handler(req, res) {
           }
         }
       } catch (e) {}
-      return 2000; // API yanıt vermezse varsayılan güvenlik tabanı
+      return 2000;
     }
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -82,23 +110,62 @@ export default async function handler(req, res) {
       priceMap[t.symbol] = parseFloat(t.lastPr || 0);
     });
 
-    // 2. Firebase Aktif İşlemleri Oku
+    // 2. Firebase Aktif İşlemleri ve Kayıtlı Kullanıcıları Oku
     let activeTrades = {};
     let lastSignals = {};
+    let allUsers = {};
     try {
-      const [atRes, lsRes] = await Promise.all([
+      const [atRes, lsRes, usRes] = await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades.json`),
-        fetch(`${FIREBASE_BASE_URL}/last_signals.json`)
+        fetch(`${FIREBASE_BASE_URL}/last_signals.json`),
+        fetch(`${FIREBASE_BASE_URL}/users.json`)
       ]);
       activeTrades = (await atRes.json()) || {};
       lastSignals = (await lsRes.json()) || {};
+      allUsers = (await usRes.json()) || {};
     } catch (e) {
       activeTrades = {};
       lastSignals = {};
+      allUsers = {};
+    }
+
+    // Üyelerin Pozisyonlarını Otomatik Kapatma Yardımcısı (Bitget & BingX)
+    async function executeUserCloses(symbol, isLong, halfClose = false) {
+      const closeSideBitget = isLong ? 'sell' : 'buy';
+      const closeSideBingx  = isLong ? 'SELL' : 'BUY';
+
+      for (const [uname, udata] of Object.entries(allUsers)) {
+        if (!udata || !udata.autoTradeEnabled) continue;
+        const ex = udata.exchange || 'BITGET';
+        const creds = udata.exchangeApi || udata.bitgetApi;
+        if (!creds || !creds.key || !creds.secret) continue;
+
+        if (ex === 'BITGET') {
+          // Bitget Unified pozisyon kapama
+          await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
+            symbol: symbol,
+            productType: 'USDT-FUTURES',
+            marginCoin: 'USDT',
+            side: closeSideBitget,
+            orderType: 'market',
+            tradeSide: 'close',
+            reduceOnly: 'YES'
+          }, creds).catch(() => {});
+        } else if (ex === 'BINGX') {
+          // BingX Swap pozisyon kapama
+          const bingxSym = symbol.replace('USDT', '-USDT');
+          await bingxPrivateRequest('/openApi/swap/v2/trade/order', 'POST', {
+            symbol: bingxSym,
+            side: closeSideBingx,
+            type: 'MARKET',
+            reduceOnly: 'true'
+          }, creds).catch(() => {});
+        }
+      }
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (UNIFIED KAPATMA MOTORU)
+    // MODÜL 1: CANLI İŞLEM TAKİP MOTORU (SENİN VE ÜYELERİN POZİSYON ÇIKIŞLARI)
     // =========================================================================
     let tradeUpdates = [];
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
@@ -111,12 +178,13 @@ export default async function handler(req, res) {
       const curPriceStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const entryPriceStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // TP 2 KONTROLÜ (+%1.20) -> KALAN POZİSYONU UNIFIED HESAPTA TAM KAPAT
+      // TP 2 KONTROLÜ (+%1.20) -> SENİN HESABIN + ÜYELER TAM KAPAT
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
         trade.closedAt = now;
 
+        // 1. Senin Bitget hesabındaki emri kapat
         if (trade.openSize && trade.openSize > 0) {
           const closeSide = isLong ? 'sell' : 'buy';
           await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
@@ -130,6 +198,9 @@ export default async function handler(req, res) {
             reduceOnly: 'YES'
           });
         }
+
+        // 2. Üyelerin hesaplarını kapat (Bitget & BingX)
+        await executeUserCloses(trade.symbol, isLong, false);
 
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
@@ -207,7 +278,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // STOP KONTROLÜ -> POZİSYONU UNIFIED HESAPTA BOŞALT
+      // STOP KONTROLÜ
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
         trade.status = 'STOPPED';
@@ -226,6 +297,9 @@ export default async function handler(req, res) {
             reduceOnly: 'YES'
           });
         }
+
+        // Üyeleri de stop seviyesinden kapat
+        await executeUserCloses(trade.symbol, isLong, false);
 
         tradeUpdates.push(
           fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
@@ -259,7 +333,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO SNIPER RADARI (TÜM HİSSE/ETF'LER KÖKTEN ELENDİ)
+    // MODÜL 2: SAF KRİPTO SNIPER RADARI (HİSSELER & TRADFI ENGELLİ)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -402,7 +476,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (UNIFIED ACCOUNT UYUMLU EMİR GÖNDERME)
+    // MODÜL 3: CANLI BORSA EMRİ (1. SENİN HESABIN + 2. TÜM ÜYELERİN BORSALARI)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
@@ -414,7 +488,7 @@ export default async function handler(req, res) {
     let orderSize = parseFloat((positionNotional / entryPrice).toFixed(2));
     if (orderSize <= 0) orderSize = 1;
 
-    // 1. Kaldıracı Ayarla
+    // 1. ÖNCE SENİN BİTGET UNIFIED HESABINDA İŞLEM AÇILIR
     await bitgetPrivateRequest('/api/v2/mix/account/set-leverage', 'POST', {
       symbol: candidateTrade.symbol,
       productType: 'USDT-FUTURES',
@@ -422,7 +496,6 @@ export default async function handler(req, res) {
       leverage: LEVERAGE.toString()
     });
 
-    // 2. Birleşik Hesap (Unified) Uyumlu Canlı Market Emri Gönder
     const placeOrderRes = await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
       symbol: candidateTrade.symbol,
       productType: 'USDT-FUTURES',
@@ -432,6 +505,79 @@ export default async function handler(req, res) {
       tradeSide: 'open',
       orderType: 'market'
     });
+
+    // 2. ARDINDAN SİSTEMDEKİ TÜM VIP ÜYELERİN HESAPLARINA PARALEL EMİR İLETİLİR
+    let memberOrdersCount = 0;
+    for (const [uname, udata] of Object.entries(allUsers)) {
+      if (!udata || !udata.autoTradeEnabled) continue;
+      const ex = udata.exchange || 'BITGET';
+      const creds = udata.exchangeApi || udata.bitgetApi;
+      if (!creds || !creds.key || !creds.secret) continue;
+
+      try {
+        if (ex === 'BITGET') {
+          // Üyenin Bitget hesabında 20x kaldıraç ve market emri
+          await bitgetPrivateRequest('/api/v2/mix/account/set-leverage', 'POST', {
+            symbol: candidateTrade.symbol,
+            productType: 'USDT-FUTURES',
+            marginCoin: 'USDT',
+            leverage: LEVERAGE.toString()
+          }, creds);
+
+          // Üyenin bakiyesini sorgula veya 100$ teminatla aç
+          let uSize = 1;
+          try {
+            const uAcc = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET', {}, creds);
+            const uUsdt = uAcc.data?.find(a => a.marginCoin === 'USDT');
+            const uEq = parseFloat(uUsdt?.usdtEquity || 100);
+            uSize = parseFloat(((uEq * MARGIN_RATIO * LEVERAGE) / entryPrice).toFixed(2));
+          } catch(e) { uSize = 1; }
+          if (uSize <= 0) uSize = 1;
+
+          await bitgetPrivateRequest('/api/v2/mix/order/place-order', 'POST', {
+            symbol: candidateTrade.symbol,
+            productType: 'USDT-FUTURES',
+            marginCoin: 'USDT',
+            size: uSize.toString(),
+            side: isLong ? 'buy' : 'sell',
+            tradeSide: 'open',
+            orderType: 'market'
+          }, creds);
+          memberOrdersCount++;
+
+        } else if (ex === 'BINGX') {
+          // Üyenin BingX Swap hesabında 20x kaldıraç ve market emri
+          const bingxSym = candidateTrade.symbol.replace('USDT', '-USDT');
+
+          // BingX Kaldıraç Set Et
+          await bingxPrivateRequest('/openApi/swap/v2/trade/leverage', 'POST', {
+            symbol: bingxSym,
+            side: isLong ? 'LONG' : 'SHORT',
+            leverage: LEVERAGE.toString()
+          }, creds);
+
+          // BingX Bakiye Sorgula
+          let bSize = 1;
+          try {
+            const bBal = await bingxPrivateRequest('/openApi/swap/v2/user/balance', 'GET', {}, creds);
+            const bEq = parseFloat(bBal.data?.balance?.equity || 100);
+            bSize = parseFloat(((bEq * MARGIN_RATIO * LEVERAGE) / entryPrice).toFixed(2));
+          } catch(e) { bSize = 1; }
+          if (bSize <= 0) bSize = 1;
+
+          await bingxPrivateRequest('/openApi/swap/v2/trade/order', 'POST', {
+            symbol: bingxSym,
+            side: isLong ? 'BUY' : 'SELL',
+            positionSide: isLong ? 'LONG' : 'SHORT',
+            type: 'MARKET',
+            quantity: bSize.toString()
+          }, creds);
+          memberOrdersCount++;
+        }
+      } catch(err) {
+        // Bir üyenin API hatası diğerlerini etkilemez
+      }
+    }
 
     const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
     const tp2 = isLong ? entryPrice * 1.0120 : entryPrice * 0.9880;
@@ -458,7 +604,8 @@ export default async function handler(req, res) {
       walletEquityAtEntry: currentEquity,
       marginUsed: dynamicMargin,
       openSize: orderSize,
-      bitgetOrderResult: placeOrderRes.code === '00000' ? 'SUCCESS' : placeOrderRes.msg
+      bitgetOrderResult: placeOrderRes.code === '00000' ? 'SUCCESS' : placeOrderRes.msg,
+      membersExecuted: memberOrdersCount
     };
 
     try {
@@ -492,6 +639,7 @@ export default async function handler(req, res) {
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Bitget Unified Emri Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
+                  `👥 <b>Ayna İşlem (Kullanıcılar):</b> ${memberOrdersCount} Üye Hesabında Açıldı\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1:</b> <code>$${tp1Str}</code> (+%0.60)\n` +
                   `🚀 <b>Hedef TP 2:</b> <code>$${tp2Str}</code> (+%1.20)\n` +
@@ -522,6 +670,7 @@ export default async function handler(req, res) {
       bitget_order: placeOrderRes,
       wallet_equity: currentEquity,
       margin_used: dynamicMargin,
+      members_executed: memberOrdersCount,
       channel_sent: channelData.ok
     });
 
