@@ -23,16 +23,16 @@ export default async function handler(req, res) {
       periodText = "Bugün (00:00'dan İtibaren)";
     }
 
-    // Güncellenen Model: $70 Sabit Teminat / 20x Kaldıraç
+    // Sabit Model: İşlem Başına 70$ Teminat / 20x Kaldıraç
     const MARGIN = 70;
     const LEVERAGE = 20;
 
     let totalTrades = 0;
     let tp2Count = 0;
-    let tp1OpenCount = 0;
-    let beCount = 0;
-    let stopCount = 0;
-    let waitingOpenCount = 0;
+    let tp1OpenCount = 0;     // TP1 vurulmuş, TP2 bekleyen risksiz açık işlemler
+    let beCount = 0;           // TP1 sonrası başabaş kapananlar
+    let stopCount = 0;         // Doğrudan stop olanlar
+    let waitingOpenCount = 0;  // Henüz TP1 almamış yeni açık işlemler
 
     let totalProfitUsd = 0;
     let totalLossUsd = 0;
@@ -65,9 +65,13 @@ export default async function handler(req, res) {
     }
 
     const netPnl = totalProfitUsd - totalLossUsd;
-    const closedTrades = tp2Count + beCount + stopCount;
-    const winTrades = tp2Count + beCount + tp1OpenCount;
-    const winRate = totalTrades > 0 ? ((winTrades / totalTrades) * 100).toFixed(1) : "0.0";
+
+    // GERÇEK WIN RATE HESABI:
+    // Henüz işlem görmemiş yeni açıklar (waitingOpenCount) hariç tutulur.
+    // Sonuçlanan/Kâra geçen işlemler = TP2 + Başa Baş + TP1 Açık + Stop
+    const evaluatedTrades = tp2Count + beCount + tp1OpenCount + stopCount;
+    const successfulTrades = tp2Count + beCount + tp1OpenCount;
+    const winRate = evaluatedTrades > 0 ? ((successfulTrades / evaluatedTrades) * 100).toFixed(1) : "0.0";
     const pnlSign = netPnl >= 0 ? "+" : "";
 
     const reportMsg = `🏆 <b>MINEORA SNIPER | ÖZEL SEANS RAPORU</b>\n` +
@@ -82,10 +86,10 @@ export default async function handler(req, res) {
                       `🛑 <b>Disiplin Stopu:</b> ${stopCount} Adet (-$${totalLossUsd.toFixed(2)})\n` +
                       `⏳ <b>Yeni Açılan (İzlenen):</b> ${waitingOpenCount} Adet\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `🎯 <b>Başarı / Kârda Oranı:</b> <b>%${winRate}</b>\n` +
+                      `🎯 <b>Gerçek Başarı (Win Rate):</b> <b>%${winRate}</b> <i>(${successfulTrades}/${evaluatedTrades} Sonuçlanan)</i>\n` +
                       `💰 <b>KASAYA NET NAKİT GİRİŞİ:</b> <b>${pnlSign}$${netPnl.toFixed(2)}</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `✨ <i>$70 sabit teminat modeliyle gerçek net nakit yansımasıdır.</i>\n` +
+                      `✨ <i>Win Rate hesabı açıkta bekleyen belirsiz işlemleri hariç tutarak net başarıyı yansıtır.</i>\n` +
                       `⚡ <i>Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                       `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -99,7 +103,19 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       period: periodText,
-      stats: { totalTrades, tp2Count, tp1OpenCount, beCount, stopCount, netPnl }
+      marginUsed: MARGIN,
+      stats: {
+        totalTrades,
+        evaluatedTrades,
+        successfulTrades,
+        winRate: `${winRate}%`,
+        tp2Count,
+        tp1OpenCount,
+        beCount,
+        stopCount,
+        waitingOpenCount,
+        netPnl: `${pnlSign}$${netPnl.toFixed(2)}`
+      }
     });
 
   } catch (error) {
