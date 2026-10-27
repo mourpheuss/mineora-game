@@ -80,7 +80,7 @@ export default async function handler(req, res) {
         });
         return await response.json();
       } catch (err) {
-        return { code: -1, msg: err.message };
+        return { code: '-1', msg: err.message };
       }
     }
 
@@ -110,11 +110,30 @@ export default async function handler(req, res) {
       return 2228;
     }
 
-    const tickersRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
-    const tickersJson = await tickersRes.json();
+    // 1. Bitget Vadeli Ticker Verilerini ve Bitget Kendi Spot Kripto Listesini Çek
+    const [tickersRes, spotSymbolsRes] = await Promise.all([
+      fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
+      fetch("https://api.bitget.com/api/v2/spot/public/symbols", { headers: browserHeaders }).catch(() => null)
+    ]);
 
+    const tickersJson = await tickersRes.json();
     if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
       return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
+    }
+
+    // Bitget Spot Tahtasında Listeli Olan SAF KRİPTO Pariteleri
+    const genuineSpotCryptoSet = new Set();
+    if (spotSymbolsRes && spotSymbolsRes.ok) {
+      try {
+        const spotJson = await spotSymbolsRes.json();
+        if (spotJson.code === '00000' && Array.isArray(spotJson.data)) {
+          spotJson.data.forEach(s => {
+            if (s.symbol && s.symbol.endsWith("USDT") && s.status === 'online') {
+              genuineSpotCryptoSet.add(s.symbol);
+            }
+          });
+        }
+      } catch (e) {}
     }
 
     const priceMap = {};
@@ -330,7 +349,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI (FOREX & HİSSE TAM BLOKAJI)
+    // MODÜL 2: SAF KRİPTO RADARI (BİTGET SPOT DOĞRULAMA + FOREX/HİSSE ENGELİ)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -355,7 +374,7 @@ export default async function handler(req, res) {
       "HYUNDAI", "DXYZ", "MP", "BZ", "UVXY", "MSTR", "BE", "SOXL", "ASML",
       "HOOD", "MU", "MELI", "QQQ", "SPY", "SQQQ", "SKHYNIX", "SOFTBANK",
       "OPENAI", "ANTHROPIC", "KORU", "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "INTW", "PLTR", "BABA", "NIO", "COIN", "MARA", "RIOT", "CLSK", "CORZ"
+      "INTW", "PLTR", "BABA", "NIO", "COIN", "MARA", "RIOT", "CLSK", "CORZ", "SNDK"
     ];
 
     const pool = tickersJson.data.filter(c => {
@@ -364,14 +383,19 @@ export default async function handler(req, res) {
 
       const symUpper = c.symbol.toUpperCase();
 
-      // Forex ve Fiat engeli
+      // 1. Filtre: Forex ve Fiat engeli
       for (const fx of FOREX_AND_FIAT) {
         if (symUpper.includes(fx)) return false;
       }
 
-      // Hisse ve ETF engeli
+      // 2. Filtre: Hisse ve ETF engeli
       for (const st of STOCKS_BLACKLIST) {
         if (symUpper.includes(st)) return false;
+      }
+
+      // 3. Filtre: Bitget Spot Kripto Doğrulaması (Spotta gerçek kripto olarak listeli olmalı!)
+      if (genuineSpotCryptoSet.size > 0 && !genuineSpotCryptoSet.has(c.symbol)) {
+        return false;
       }
 
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
@@ -485,7 +509,7 @@ export default async function handler(req, res) {
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Yalnızca saf kripto paritelerinde sniper fırsatları taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Yalnızca Bitget onaylı saf kripto paritelerinde sniper fırsatları taranıyor..." });
     }
 
     // =========================================================================
