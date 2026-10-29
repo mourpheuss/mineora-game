@@ -88,7 +88,7 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // Pozisyon kapatılırken açıkta kalan plan emirlerini de temizle
+      // Pozisyon kapatılırken açıkta bekleyen plan emirlerini de temizle
       await bitgetPrivateRequest('/api/v2/mix/order/cancel-plan-order', 'POST', {
         symbol: symbol,
         productType: 'USDT-FUTURES',
@@ -169,11 +169,11 @@ export default async function handler(req, res) {
     function calculateOrderQuantity(entryPrice, notional) {
       const rawQty = notional / entryPrice;
       if (entryPrice >= 1000) {
-        return parseFloat(rawQty.toFixed(3)); // BTC, PAXG vb. (örn: 0.005)
+        return parseFloat(rawQty.toFixed(3)); // BTC, PAXG vb.
       } else if (entryPrice >= 50) {
-        return parseFloat(rawQty.toFixed(2)); // ETH, SOL, BCH vb. (örn: 2.22)
+        return parseFloat(rawQty.toFixed(2)); // ETH, SOL, BCH vb.
       } else if (entryPrice >= 1) {
-        return parseFloat(rawQty.toFixed(1)); // XRP, SUI, TON vb. (örn: 305.3)
+        return parseFloat(rawQty.toFixed(1)); // XRP, SUI, TON vb.
       } else {
         return Math.max(1, Math.round(rawQty)); // APR, DOGE, PEPE vb.
       }
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
         const precision = trade.entryPrice < 0.1 ? 6 : 4;
         const entryPriceFormatted = trade.entryPrice.toFixed(precision);
 
-        // A) Önce borsadaki eski fitil stopunu temizle (Çakışmayı engeller)
+        // A) Önce borsadaki eski fitil stopunu sil (Borsa çakışmasını engeller)
         await bitgetPrivateRequest('/api/v2/mix/order/cancel-plan-order', 'POST', {
           symbol: trade.symbol,
           productType: 'USDT-FUTURES',
@@ -337,7 +337,7 @@ export default async function handler(req, res) {
           planType: 'pos_loss'
         }).catch(() => {});
 
-        // B) Yeni başabaş stopunu doğrudan borsa pozisyonuna mühürle
+        // B) Yeni başabaş stopunu doğrudan pozisyona mühürle
         await bitgetPrivateRequest('/api/v2/mix/order/place-tpsl-order', 'POST', {
           symbol: trade.symbol,
           productType: 'USDT-FUTURES',
