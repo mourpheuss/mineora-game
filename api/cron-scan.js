@@ -14,8 +14,8 @@ export default async function handler(req, res) {
     // =========================================================================
     // 0. SENİN YÖNETİCİ HESABIN (BİTGET UNIFIED / UTA V3)
     // =========================================================================
-    const ADMIN_API_KEY = "bg_f73437198f37d20e56939b82041041d0";
-    const ADMIN_SECRET = "fe44b9c347eb5d9dd0e624876809102bb3ec8bab9481ad7bdb5ddf4d8d332ecd";
+    const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
+    const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
     const ADMIN_PASSPHRASE = "Ers4834754";
     const BITGET_BASE_URL = 'https://api.bitget.com';
 
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const LEVERAGE = 20;
-    const MARGIN_RATIO = 0.10;
+    const MARGIN_RATIO = 0.03; // KASANIN %3'Ü DİSİPLİNİ
     const now = Date.now();
 
     async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}, customCreds = null) {
@@ -84,13 +84,12 @@ export default async function handler(req, res) {
       }
     }
 
-    // Pozisyonu Bitget Borsasında Kesin Olarak Kapatma (Hatasız V3 QTY ile)
+    // Pozisyonu Bitget UTA V3 Borsasında QTY ile Eksiksiz Kapatma
     async function closeBitgetPosition(symbol, isLong, sizeToClose, creds = null) {
       const closeSide = isLong ? 'sell' : 'buy';
       
       let qty = (sizeToClose && sizeToClose > 0) ? sizeToClose.toString() : null;
 
-      // Eğer qty bilinmiyorsa veya sıfırsa açık pozisyonu borsadan bizzat sor
       if (!qty) {
         try {
           const posRes = await bitgetPrivateRequest(`/api/v3/position/current-position?category=USDT-FUTURES&symbol=${symbol}`, 'GET', {}, creds);
@@ -101,7 +100,7 @@ export default async function handler(req, res) {
         } catch (e) {}
       }
 
-      if (!qty) qty = "1"; // Güvenlik tabanı
+      if (!qty) qty = "1";
 
       return await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
         category: 'USDT-FUTURES',
@@ -139,7 +138,7 @@ export default async function handler(req, res) {
       return 2228;
     }
 
-    // 1. Bitget Vadeli Ticker Verilerini ve Bitget Kendi Spot Kripto Listesini Çek
+    // 1. Bitget Vadeli Ticker Verilerini ve Bitget Spot Onaylı Listesini Çek
     const [tickersRes, spotSymbolsRes] = await Promise.all([
       fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
       fetch("https://api.bitget.com/api/v2/spot/public/symbols", { headers: browserHeaders }).catch(() => null)
@@ -150,6 +149,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
     }
 
+    // Bitget Spot Tahtasında Listeli Olan SAF KRİPTO Pariteleri
     const genuineSpotCryptoSet = new Set();
     if (spotSymbolsRes && spotSymbolsRes.ok) {
       try {
@@ -302,10 +302,8 @@ export default async function handler(req, res) {
       // STOP KONTROLÜ
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
       if (isStopHit) {
-        // BORSADA KAPATMAYI DENE
         const closeRes = await closeBitgetPosition(trade.symbol, isLong, trade.openSize);
 
-        // BORSA EMRİ BAŞARISIZ OLURSA FIREBASE'DE KAPATMA! TEKRAR DENESİN!
         if (closeRes.code !== '00000') {
           console.error("Stop kapama hatası:", closeRes.msg);
           continue; 
@@ -500,7 +498,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (BITGET V3 UTA MOTORU + HARD STOP-LOSS)
+    // MODÜL 3: CANLI BORSA EMRİ (BITGET V3 UTA MOTORU - %3 MARJİN DİSİPLİNİ)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
@@ -649,7 +647,7 @@ export default async function handler(req, res) {
                   `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
                   `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
+                  `💼 <b>Model:</b> Kasanın %3'ü ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Bitget UTA Emri Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `👥 <b>Ayna İşlem (Kullanıcılar):</b> ${memberOrdersCount} Üye Hesabında Açıldı\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
