@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ
+    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ (KİŞİSEL KORUMALI HESAP)
     // =========================================================================
     const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
     const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
@@ -21,6 +21,7 @@ export default async function handler(req, res) {
 
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
+    const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
@@ -28,6 +29,20 @@ export default async function handler(req, res) {
     const LEVERAGE = 20;
     const MARGIN_RATIO = 0.05; // Kasanın kesinlikle %5'i
     const now = Date.now();
+
+    // Çift Kanallı Güvenli Telegram Bildirim Fonksiyonu
+    async function sendTelegramAlert(text) {
+      const targets = [TG_CHANNEL_ID, TG_ADMIN_ID];
+      for (const target of targets) {
+        try {
+          await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: target, text: text, parse_mode: 'HTML' })
+          });
+        } catch (e) {}
+      }
+    }
 
     async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}, customCreds = null) {
       const apiKey = customCreds ? customCreds.key : ADMIN_API_KEY;
@@ -82,9 +97,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // CANLI KASA BAKİYESİNİ KESİN OKUMA MOTORU (UTA V3 + V2 ÇİFT YÖNTEM)
+    // CANLI KASA BAKİYESİNİ DİNAMİK OKUMA MOTORU
     async function getFuturesEquity() {
-      // 1. Yol: Bitget V2 USDT-Futures Hesabı (UTA modunda en stabil bakiye kaynağı)
       try {
         const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
         if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
@@ -96,7 +110,6 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // 2. Yol: Bitget V3 Asset Listesi
       try {
         const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
         if (accResV3 && accResV3.code === '00000' && Array.isArray(accResV3.data)) {
@@ -108,7 +121,6 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // 3. Yol: Tekil USDT V3 sorgusu
       try {
         const singleV3 = await bitgetPrivateRequest('/api/v3/account/assets?coin=USDT', 'GET');
         if (singleV3 && singleV3.code === '00000' && Array.isArray(singleV3.data) && singleV3.data.length > 0) {
@@ -117,7 +129,6 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // Hiçbir bakiye okunamazsa işlem büyüklüğünü minimumda tutmak için güvenli 100$ taban alınır
       return 100;
     }
 
@@ -166,7 +177,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: TP1, TP2 VE STOP KONTROLÜ + ANLIK TELEGRAM BİLDİRİMLERİ
+    // MODÜL 1: TP1, TP2 VE STOP KONTROLÜ + ÇİFT KANALLI TELEGRAM BİLDİRİMLERİ
     // =========================================================================
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
@@ -197,11 +208,7 @@ export default async function handler(req, res) {
                          `💰 <b>Net Kazanç:</b> +%1.20 (20x ile <b>+%24.0 KÂR</b>)\n` +
                          `✅ <i>Pozisyon maksimum kârla tamamen kapatıldı.</i>`;
 
-        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgTp2Msg, parse_mode: 'HTML' })
-        }).catch(() => {});
+        await sendTelegramAlert(tgTp2Msg);
 
         await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
           method: 'PUT',
@@ -230,11 +237,7 @@ export default async function handler(req, res) {
             `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
             `⚠️ <i>Fitil arkası koruma devreye girdi, pozisyon disiplinle kesildi.</i>`;
 
-        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgStopMsg, parse_mode: 'HTML' })
-        }).catch(() => {});
+        await sendTelegramAlert(tgStopMsg);
 
         await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
           method: 'PUT',
@@ -249,12 +252,12 @@ export default async function handler(req, res) {
         trade.tp1Hit = true;
         trade.sl = trade.entryPrice;
 
+        let halfQty = Math.floor(parseFloat(trade.openSize || 1) / 2);
+        if (halfQty <= 0) halfQty = 1;
+
         // Pozisyonun %50'sini Canlı Borsada Kapat
         try {
           const closeSide = isLong ? 'sell' : 'buy';
-          let halfQty = Math.floor(parseFloat(trade.openSize || 1) / 2);
-          if (halfQty <= 0) halfQty = 1;
-
           await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
             category: 'USDT-FUTURES',
             symbol: trade.symbol,
@@ -275,6 +278,9 @@ export default async function handler(req, res) {
           holdSide: isLong ? 'long' : 'short'
         }).catch(() => {});
 
+        // Firebase üzerinde kalan büyüklüğü senkronize et
+        trade.openSize = Math.max(1, parseFloat(trade.openSize || 1) - halfQty);
+
         // Telegram Bildirimi Gönder
         const tgTp1Msg = `🎯 <b>MINEORA SNIPER | TP 1 ALINDI (%50 KÂR KİLİTLENDİ)</b>\n` +
                          `━━━━━━━━━━━━━━━━━━━━\n` +
@@ -282,11 +288,7 @@ export default async function handler(req, res) {
                          `💰 <b>Kâr:</b> +%0.60 (20x ile <b>+%12.0 Net</b>)\n` +
                          `🛡️ <b>Emniyet:</b> Pozisyonun %50'si nakde çevrildi, stop seviyesi <code>$${pEntryStr}</code> (Giriş) seviyesine çekildi. Risk sıfırlandı!`;
 
-        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgTp1Msg, parse_mode: 'HTML' })
-        }).catch(() => {});
+        await sendTelegramAlert(tgTp1Msg);
 
         await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
           method: 'PUT',
@@ -295,7 +297,6 @@ export default async function handler(req, res) {
         });
       }
     }
-    
 
     // =========================================================================
     // MODÜL 2: SAF KRİPTO RADARI (FOREX, XAU VE HİSSE ENGELLİ)
@@ -446,7 +447,6 @@ export default async function handler(req, res) {
     const currentEquity = await getFuturesEquity();
     const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2)); // Kasada ne varsa net %5'i
     
-    // Kaldıraç ayarla
     try {
       await bitgetPrivateRequest('/api/v3/account/set-leverage', 'POST', {
         category: 'USDT-FUTURES',
@@ -486,9 +486,8 @@ export default async function handler(req, res) {
     let stopResult = 'SKIPPED';
     let tpResult = 'SKIPPED';
 
-    // 2. BORSA POZİSYONUNA DOĞRUDAN FULL TP/SL ÇAKMA (Ekranda Full position TP/SL doldurulur)
+    // 2. BORSA POZİSYONUNA DOĞRUDAN FULL TP/SL ÇAKMA
     if (placeOrderRes.code === '00000') {
-      // Pozisyon Stop Loss
       const slRes = await bitgetPrivateRequest('/api/v3/trade/set-tpsl', 'POST', {
         category: 'USDT-FUTURES',
         symbol: candidateTrade.symbol,
@@ -499,7 +498,6 @@ export default async function handler(req, res) {
       });
       stopResult = slRes.code === '00000' ? 'SUCCESS' : slRes.msg;
 
-      // Pozisyon Take Profit (TP2)
       const tpRes = await bitgetPrivateRequest('/api/v3/trade/set-tpsl', 'POST', {
         category: 'USDT-FUTURES',
         symbol: candidateTrade.symbol,
@@ -568,11 +566,7 @@ export default async function handler(req, res) {
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🛡️ <i>TP/SL doğrudan Bitget Full Position TP/SL tablosuna mühürlenmiştir.</i>`;
 
-    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgMsg, parse_mode: 'HTML' })
-    }).catch(() => {});
+    await sendTelegramAlert(tgMsg);
 
     return res.status(200).json({
       success: true,
