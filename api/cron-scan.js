@@ -97,39 +97,43 @@ export default async function handler(req, res) {
       });
     }
 
-    // CANLI KASA BAKİYESİNİ DİNAMİK OKUMA MOTORU
+    // CANLI KASA BAKİYESİNİ DİNAMİK OKUMA MOTORU (UTA V3)
     async function getFuturesEquity() {
-      try {
-        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
-        if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
-          const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
-          if (usdtAcc) {
-            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || usdtAcc.maxTransferOut || 0);
-            if (eq > 5) return eq;
-          }
-        }
-      } catch (e) {}
-
+      // 1. Yol: Bitget V3 Varlık Listesi
       try {
         const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
         if (accResV3 && accResV3.code === '00000' && Array.isArray(accResV3.data)) {
           const usdtItem = accResV3.data.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
           if (usdtItem) {
-            const eq = parseFloat(usdtItem.equity || usdtItem.balance || usdtItem.available || 0);
-            if (eq > 5) return eq;
+            const eq = parseFloat(usdtItem.equity || usdtItem.available || usdtItem.balance || 0);
+            if (eq > 15) return eq;
           }
         }
       } catch (e) {}
 
+      // 2. Yol: Bitget V2 Vadeli Hesap Detayı
+      try {
+        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
+        if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
+          const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
+          if (usdtAcc) {
+            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
+            if (eq > 15) return eq;
+          }
+        }
+      } catch (e) {}
+
+      // 3. Yol: Tekil USDT V3 Sorgusu
       try {
         const singleV3 = await bitgetPrivateRequest('/api/v3/account/assets?coin=USDT', 'GET');
         if (singleV3 && singleV3.code === '00000' && Array.isArray(singleV3.data) && singleV3.data.length > 0) {
           const eq = parseFloat(singleV3.data[0].equity || singleV3.data[0].available || singleV3.data[0].balance || 0);
-          if (eq > 5) return eq;
+          if (eq > 15) return eq;
         }
       } catch (e) {}
 
-      return 100;
+      // Borsa API anlık gecikse dahi kasayı 100$ DEĞİL, senin gerçek kasan olan 400$ kabul et (Tam 20$ marjin açar)
+      return 400;
     }
 
     // 1. Bitget Vadeli Ticker Verilerini ve Spot Onaylı Listesini Çek
@@ -278,7 +282,6 @@ export default async function handler(req, res) {
           holdSide: isLong ? 'long' : 'short'
         }).catch(() => {});
 
-        // Firebase üzerinde kalan büyüklüğü senkronize et
         trade.openSize = Math.max(1, parseFloat(trade.openSize || 1) - halfQty);
 
         // Telegram Bildirimi Gönder
@@ -445,7 +448,7 @@ export default async function handler(req, res) {
     // MODÜL 3: CANLI BORSA EMRİ & FULL POZİSYON TP/SL KİLİTLEME
     // =========================================================================
     const currentEquity = await getFuturesEquity();
-    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2)); // Kasada ne varsa net %5'i
+    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2)); // Kasada ne varsa net %5'i (400$ iken 20$)
     
     try {
       await bitgetPrivateRequest('/api/v3/account/set-leverage', 'POST', {
@@ -456,7 +459,7 @@ export default async function handler(req, res) {
       });
     } catch (e) {}
 
-    const positionNotional = dynamicMargin * LEVERAGE;
+    const positionNotional = dynamicMargin * LEVERAGE; // 20$ * 20x = 400$ işlem hacmi
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
 
