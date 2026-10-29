@@ -23,9 +23,9 @@ export default async function handler(req, res) {
       periodText = "Bugün (00:00'dan İtibaren)";
     }
 
-    // Sabit Model: Kasanın %3'ü = 60$ Teminat / 20x Kaldıraç ($1.200 Pozisyon Hacmi)
-    const TOTAL_WALLET = 2000;
-    const MARGIN = 60; // %3 Marjin Disiplini
+    // Sabit Referans: 1.500$ Kasa x %5 Marjin = 75$ Teminat / 20x Kaldıraç
+    const TOTAL_WALLET = 1500;
+    const MARGIN = 75; // KASANIN %5'İ DİSİPLİNİ
     const LEVERAGE = 20;
 
     let totalTrades = 0;
@@ -46,16 +46,16 @@ export default async function handler(req, res) {
 
       if (trade.status === 'TP2_HIT') {
         tp2Count++;
-        // +%1.20 x 20x = +%24 kâr -> $60 * 0.24 = +$14.40
+        // +%1.20 x 20x = +%24 kâr -> $75 * 0.24 = +$18.00
         totalProfitUsd += MARGIN * (0.012 * LEVERAGE);
       } else if (trade.status === 'STOPPED') {
         if (trade.tp1Hit) {
           beCount++;
-          // TP1 sonrası başabaş: $30 * (0.006 * 20) = +$3.60
+          // TP1 sonrası başabaş: $37.5 * (0.006 * 20) = +$4.50
           totalProfitUsd += (MARGIN * 0.5) * (0.006 * LEVERAGE);
         } else {
           stopCount++;
-          // Doğrudan Stop: -%0.80 x 20x = -%16 -> $60 * 0.16 = -$9.60
+          // Doğrudan Stop: -%0.80 x 20x = -%16 -> $75 * 0.16 = -$12.00
           totalLossUsd += MARGIN * (0.008 * LEVERAGE);
         }
       } else if (trade.status === 'OPEN') {
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     const reportMsg = `🏆 <b>MINEORA SNIPER | ÖZEL SEANS RAPORU</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `⏱️ <b>Filtre:</b> ${periodText}\n` +
-                      `💼 <b>Model:</b> Kasanın %3'ü ($${MARGIN}) | ${LEVERAGE}x Kaldıraç\n` +
+                      `💼 <b>Model:</b> Kasanın %5'i ($${MARGIN}) | ${LEVERAGE}x Kaldıraç\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `📊 <b>Toplam İşlem:</b> ${totalTrades}\n` +
                       `🚀 <b>TP 2 Tam Hedef:</b> ${tp2Count} Adet (+$${(tp2Count * MARGIN * 0.012 * LEVERAGE).toFixed(2)})\n` +
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
                       `📈 <b>Kasa Büyümesi:</b> <b>${growthSign}%${walletGrowthPct}</b>\n` +
                       `💰 <b>KASAYA NET NAKİT GİRİŞİ:</b> <b>${pnlSign}$${netPnl.toFixed(2)}</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `✨ <i>İşlem başına kasanın %3'ü ($60) risk disiplini ile modellenmiştir.</i>\n` +
+                      `✨ <i>İşlem başına kasanın %5'i ($75) risk disiplini ile modellenmiştir.</i>\n` +
                       `⚡ <i>Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                       `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
