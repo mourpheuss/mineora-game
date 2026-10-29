@@ -88,6 +88,21 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
+      // Pozisyon kapatılırken varsa bekleyen plan emirlerini de temizle
+      await bitgetPrivateRequest('/api/v2/mix/order/cancel-plan-order', 'POST', {
+        symbol: symbol,
+        productType: 'USDT-FUTURES',
+        marginCoin: 'USDT',
+        planType: 'pos_loss'
+      }).catch(() => {});
+
+      await bitgetPrivateRequest('/api/v2/mix/order/cancel-plan-order', 'POST', {
+        symbol: symbol,
+        productType: 'USDT-FUTURES',
+        marginCoin: 'USDT',
+        planType: 'pos_profit'
+      }).catch(() => {});
+
       return await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
         category: 'USDT-FUTURES',
         symbol: symbol,
@@ -148,6 +163,20 @@ export default async function handler(req, res) {
         ema = prices[i] * k + ema * (1 - k);
       }
       return ema;
+    }
+
+    // Fiyata Göre Hassas Emir Adedi Hesaplama (BTC, ETH, Altcoin Uyumlu)
+    function calculateOrderQuantity(entryPrice, notional) {
+      const rawQty = notional / entryPrice;
+      if (entryPrice >= 1000) {
+        return parseFloat(rawQty.toFixed(3)); // BTC, PAXG vb. (örn: 0.005)
+      } else if (entryPrice >= 50) {
+        return parseFloat(rawQty.toFixed(2)); // ETH, SOL, BCH vb. (örn: 2.22)
+      } else if (entryPrice >= 1) {
+        return parseFloat(rawQty.toFixed(1)); // XRP, SUI, TON vb. (örn: 305.3)
+      } else {
+        return Math.max(1, Math.round(rawQty)); // APR, DOGE, PEPE vb.
+      }
     }
 
     // 1. Bitget Vadeli Ticker Verilerini ve Spot Onaylı Listesini Çek
@@ -275,14 +304,16 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // 3. TP1 VURULDUĞUNDA (%50 KÂR AL & STOPU GİRİŞE TAŞI)
+      // 3. TP1 VURULDUĞUNDA (%50 KÂR AL & STOPU GARANTİLİ GİRİŞE TAŞI)
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
         trade.sl = trade.entryPrice;
 
-        let halfQty = Math.floor(parseFloat(trade.openSize || 1) / 2);
-        if (halfQty <= 0) halfQty = 1;
+        const totalQty = parseFloat(trade.openSize || 1);
+        let halfQty = totalQty >= 1 ? Math.floor(totalQty / 2) : parseFloat((totalQty / 2).toFixed(3));
+        if (halfQty <= 0) halfQty = totalQty;
 
+        // Pozisyonun %50'sini kapat
         try {
           const closeSide = isLong ? 'sell' : 'buy';
           await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -295,24 +326,35 @@ export default async function handler(req, res) {
           });
         } catch (e) {}
 
-        // Kalan kısmın stopunu borsa seviyesinde başabaşa taşı (Resmi V2 Mix)
+        const precision = trade.entryPrice < 0.1 ? 6 : 4;
+        const entryPriceFormatted = trade.entryPrice.toFixed(precision);
+
+        // A) Önce borsadaki eski fitil stopunu temizle (Çakışmayı önler)
+        await bitgetPrivateRequest('/api/v2/mix/order/cancel-plan-order', 'POST', {
+          symbol: trade.symbol,
+          productType: 'USDT-FUTURES',
+          marginCoin: 'USDT',
+          planType: 'pos_loss'
+        }).catch(() => {});
+
+        // B) Yeni başabaş stopunu doğrudan borsa pozisyonuna mühürle
         await bitgetPrivateRequest('/api/v2/mix/order/place-tpsl-order', 'POST', {
           symbol: trade.symbol,
           productType: 'USDT-FUTURES',
           marginCoin: 'USDT',
           planType: 'pos_loss',
-          triggerPrice: trade.entryPrice.toString(),
+          triggerPrice: entryPriceFormatted,
           triggerType: 'mark_price',
           holdSide: isLong ? 'long' : 'short'
         }).catch(() => {});
 
-        trade.openSize = Math.max(1, parseFloat(trade.openSize || 1) - halfQty);
+        trade.openSize = Math.max(0.001, totalQty - halfQty);
 
         const tgTp1Msg = `🎯 <b>MINEORA SNIPER | TP 1 ALINDI (%50 KÂR KİLİTLENDİ)</b>\n` +
                          `━━━━━━━━━━━━━━━━━━━━\n` +
                          `💎 <b>Parite:</b> #${trade.symbol}\n` +
                          `💰 <b>Kâr:</b> +%0.60 (20x ile <b>+%12.0 Net</b>)\n` +
-                         `🛡️ <b>Emniyet:</b> Pozisyonun %50'si nakde çevrildi, stop seviyesi <code>$${pEntryStr}</code> (Giriş) seviyesine çekildi. Risk sıfırlandı!`;
+                         `🛡️ <b>Emniyet:</b> Pozisyonun %50'si nakde çevrildi, borsa stopu <code>$${pEntryStr}</code> (Giriş) seviyesine kilitlendi. Risk sıfırlandı!`;
 
         await sendTelegramAlert(tgTp1Msg);
 
@@ -510,8 +552,8 @@ export default async function handler(req, res) {
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
 
-    let orderSize = parseFloat((positionNotional / entryPrice).toFixed(0));
-    if (orderSize <= 0) orderSize = 1;
+    // Fiyata Göre Hassas Emir Adedi (BTC/ETH/Altcoin Hatasız)
+    const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
 
     const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
     const tp2 = isLong ? entryPrice * 1.0120 : entryPrice * 0.9880;
@@ -538,7 +580,7 @@ export default async function handler(req, res) {
 
     // 2. FULL POSITION TP/SL MÜHÜRLEME (Resmi V2 Mix Endpoint)
     if (placeOrderRes.code === '00000') {
-      // 150 ms emrin borsada eşleşme toleransı
+      // 150 ms emrin borsada oturma toleransı
       await new Promise(r => setTimeout(r, 150));
 
       // Full Position Stop Loss
