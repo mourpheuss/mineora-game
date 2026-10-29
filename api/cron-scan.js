@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const POST_STOP_COOLDOWN_MS = 45 * 60 * 1000; // Stop sonrası 45 dk soğuma
     const LEVERAGE = 20;
-    const MARGIN_RATIO = 0.05; // KASADA NE VARSA TAM %5'İ (DİNAMİK)
+    const MARGIN_RATIO = 0.10; // KASADA NE VARSA TAM %10'U (DİNAMİK)
     const now = Date.now();
 
     // Çift Kanallı Güvenli Telegram Bildirim Fonksiyonu
@@ -536,7 +536,7 @@ export default async function handler(req, res) {
       body: JSON.stringify(currentEquity)
     }).catch(() => {});
 
-    // KASADA NE KADAR PARA VARSA ANLIK OLARAK TAM %5'İ (DİNAMİK)
+    // KASADA NE KADAR PARA VARSA ANLIK OLARAK TAM %10'U (DİNAMİK)
     const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
     
     try {
@@ -654,7 +654,7 @@ export default async function handler(req, res) {
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
                   `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `💼 <b>Model:</b> Kasanın %5'i ($${dynamicMargin} / Kasa: $${currentEquity.toFixed(1)}) | ${LEVERAGE}x Kaldıraç\n` +
+                  `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin} / Kasa: $${currentEquity.toFixed(1)}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `🛑 <b>Full Stop Loss:</b> ${stopResult === 'SUCCESS' ? '✅ Borsaya İşlendi' : '⚠️ ' + stopResult}\n` +
                   `🚀 <b>Full Take Profit:</b> ${tpResult === 'SUCCESS' ? '✅ Borsaya İşlendi' : '⚠️ ' + tpResult}\n` +
