@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ (KİŞİSEL KORUMALI HESAP)
+    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ (KİŞİSEL DİNAMİK HESAP)
     // =========================================================================
     const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
     const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const POST_STOP_COOLDOWN_MS = 45 * 60 * 1000; // Stop sonrası 45 dk soğuma
     const LEVERAGE = 20;
-    const MARGIN_RATIO = 0.05; // Kasanın kesinlikle %5'i (400$ için 20$)
+    const MARGIN_RATIO = 0.05; // KASADA NE VARSA TAM %5'İ (DİNAMİK)
     const now = Date.now();
 
     // Çift Kanallı Güvenli Telegram Bildirim Fonksiyonu
@@ -98,31 +98,49 @@ export default async function handler(req, res) {
       });
     }
 
-    // CANLI KASA BAKİYESİNİ DİNAMİK OKUMA MOTORU (UTA V3)
+    // CANLI KASA BAKİYESİNİ %100 DİNAMİK OKUMA MOTORU
     async function getFuturesEquity() {
+      // 1. Bitget V3 Varlık Listesi (UTA Güncel Değer)
       try {
         const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
         if (accResV3 && accResV3.code === '00000' && Array.isArray(accResV3.data)) {
           const usdtItem = accResV3.data.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
           if (usdtItem) {
             const eq = parseFloat(usdtItem.equity || usdtItem.available || usdtItem.balance || 0);
-            if (eq > 15) return eq;
+            if (eq > 10) return eq; // Gerçek dinamik bakiye
           }
         }
       } catch (e) {}
 
+      // 2. Bitget V2 Vadeli Hesap Detayı
       try {
         const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
         if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
           const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
           if (usdtAcc) {
             const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
-            if (eq > 15) return eq;
+            if (eq > 10) return eq;
           }
         }
       } catch (e) {}
 
-      return 400; // API gecikirse sabit 400$
+      // 3. Tekil USDT V3 Sorgusu
+      try {
+        const singleV3 = await bitgetPrivateRequest('/api/v3/account/assets?coin=USDT', 'GET');
+        if (singleV3 && singleV3.code === '00000' && Array.isArray(singleV3.data) && singleV3.data.length > 0) {
+          const eq = parseFloat(singleV3.data[0].equity || singleV3.data[0].available || singleV3.data[0].balance || 0);
+          if (eq > 10) return eq;
+        }
+      } catch (e) {}
+
+      // Borsa API anlık yanıt vermezse Firebase'den son bilinen cüzdanı çek
+      try {
+        const lastEqRes = await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`);
+        const savedEq = parseFloat(await lastEqRes.json());
+        if (savedEq > 10) return savedEq;
+      } catch (e) {}
+
+      return 392; // En son bilinen taban
     }
 
     // EMA Hesaplama Fonksiyonu
@@ -232,7 +250,7 @@ export default async function handler(req, res) {
         trade.closedAt = now;
         await closeBitgetPosition(trade.symbol, isLong);
 
-        // Stop yiyen coini 45 dk soğumaya al
+        // Stop yiyen pariteyi 45 dakika soğumaya al
         await fetch(`${FIREBASE_BASE_URL}/last_stopped_coins/${trade.symbol}.json`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -250,7 +268,7 @@ export default async function handler(req, res) {
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `💎 <b>Parite:</b> #${trade.symbol}\n` +
             `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-            `⚠️ <i>Fitil arkası koruma devreye girdi. Coin 45 dk soğumaya alındı.</i>`;
+            `⚠️ <i>Fitil arkası disiplin stopu çalıştı. Parite 45 dk soğumaya alındı.</i>`;
 
         await sendTelegramAlert(tgStopMsg);
 
@@ -270,7 +288,7 @@ export default async function handler(req, res) {
         let halfQty = Math.floor(parseFloat(trade.openSize || 1) / 2);
         if (halfQty <= 0) halfQty = 1;
 
-        // Pozisyonun %50'sini piyasadan kapat
+        // Pozisyonun %50'sini kapat
         try {
           const closeSide = isLong ? 'sell' : 'buy';
           await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -283,7 +301,7 @@ export default async function handler(req, res) {
           });
         } catch (e) {}
 
-        // Kalan kısmın stopunu borsa seviyesinde başabaşa güncelle
+        // Kalan kısmın stopunu borsa seviyesinde başabaşa taşı (Resmi place-tpsl-order)
         await bitgetPrivateRequest('/api/v3/trade/place-tpsl-order', 'POST', {
           category: 'USDT-FUTURES',
           symbol: trade.symbol,
@@ -312,7 +330,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI + TREND FİLTRESİ
+    // MODÜL 2: SAF KRİPTO RADARI + TREND FİLTRESİ (EMA 25/50 + Z-SCORE 2.3)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -474,7 +492,16 @@ export default async function handler(req, res) {
     // MODÜL 3: CANLI BORSA EMRİ & OTOMATİK BORSA TP/SL KİLİTLEME
     // =========================================================================
     const currentEquity = await getFuturesEquity();
-    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2)); // Kasada ne varsa net %5'i (400$ iken 20$)
+    
+    // Son başarılı bakiyeyi Firebase'e de yaz (yedek hafıza)
+    await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentEquity)
+    }).catch(() => {});
+
+    // KASADA NE KADAR PARA VARSA ANLIK OLARAK TAM %5'İ (DİNAMİK)
+    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
     
     try {
       await bitgetPrivateRequest('/api/v3/account/set-leverage', 'POST', {
@@ -485,7 +512,7 @@ export default async function handler(req, res) {
       });
     } catch (e) {}
 
-    const positionNotional = dynamicMargin * LEVERAGE; // 20$ * 20x = 400$ işlem hacmi
+    const positionNotional = dynamicMargin * LEVERAGE;
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
 
@@ -503,7 +530,7 @@ export default async function handler(req, res) {
     const tp2Formatted = tp2.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // 1. Piyasa Açılış Emri (Doğrudan presetStopLoss & presetTakeProfit ile açılır)
+    // 1. Piyasa Açılış Emri (Doğrudan preset parametreleri ile anında mühürlenir)
     const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
@@ -517,7 +544,7 @@ export default async function handler(req, res) {
     let stopResult = 'PRESET_APPLIED';
     let tpResult = 'PRESET_APPLIED';
 
-    // 2. İkincil Doğrulama: Borsa Seviyesinde place-tpsl-order Çağrısı
+    // 2. İkincil Doğrulama: Borsa Seviyesinde place-tpsl-order Çağrısı (Resmi V3 Endpoint)
     if (placeOrderRes.code === '00000') {
       const slRes = await bitgetPrivateRequest('/api/v3/trade/place-tpsl-order', 'POST', {
         category: 'USDT-FUTURES',
@@ -586,7 +613,7 @@ export default async function handler(req, res) {
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
                   `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `💼 <b>Model:</b> Kasanın %5'i ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
+                  `💼 <b>Model:</b> Kasanın %5'i ($${dynamicMargin} / Kasa: $${currentEquity.toFixed(1)}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `🛑 <b>Borsa Stop:</b> ✅ Bitget Kilitlendi\n` +
                   `🚀 <b>Borsa TP2:</b> ✅ Bitget Kilitlendi\n` +
@@ -604,7 +631,9 @@ export default async function handler(req, res) {
       trade: newTrade,
       bitget_order: placeOrderRes,
       stop_result: stopResult,
-      tp_result: tpResult
+      tp_result: tpResult,
+      wallet_equity: currentEquity,
+      margin_used: dynamicMargin
     });
 
   } catch (error) {
