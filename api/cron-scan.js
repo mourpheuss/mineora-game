@@ -166,7 +166,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: TP1 ALINDIĞINDA %50 KÂR KİLİTLE & STOPU GİRİŞE ÇEK
+    // MODÜL 1: TP1, TP2 VE STOP KONTROLÜ + ANLIK TELEGRAM BİLDİRİMLERİ
     // =========================================================================
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
@@ -179,11 +179,30 @@ export default async function handler(req, res) {
       const isTp2Hit = isLong ? (curPrice >= trade.tp2) : (curPrice <= trade.tp2);
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
 
-      // TP2 Tam Hedef
+      const pCurStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
+      const pEntryStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
+
+      // 1. TP2 TAM HEDEF VURULDU
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
         trade.closedAt = now;
         await closeBitgetPosition(trade.symbol, isLong);
+
+        const tgTp2Msg = `🚀 <b>MINEORA SNIPER | TP 2 HEDEF VURULDU!</b>\n` +
+                         `━━━━━━━━━━━━━━━━━━━━\n` +
+                         `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
+                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
+                         `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
+                         `💰 <b>Net Kazanç:</b> +%1.20 (20x ile <b>+%24.0 KÂR</b>)\n` +
+                         `✅ <i>Pozisyon maksimum kârla tamamen kapatıldı.</i>`;
+
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgTp2Msg, parse_mode: 'HTML' })
+        }).catch(() => {});
+
         await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -192,11 +211,31 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // Stop Seviyesi Vuruldu
+      // 2. STOP SEVİYESİ VURULDU
       if (isStopHit) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
         await closeBitgetPosition(trade.symbol, isLong);
+
+        const isBreakEven = trade.tp1Hit;
+        const tgStopMsg = isBreakEven
+          ? `🛡️ <b>MINEORA SNIPER | BAŞABAŞ STOP (RİSKSİZ ÇIKIŞ)</b>\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `💎 <b>Parite:</b> #${trade.symbol}\n` +
+            `💵 <b>Giriş / Stop Fiyatı:</b> <code>$${pEntryStr}</code>\n` +
+            `ℹ️ <i>TP1'de kâr kilitlenmişti; kalan kısım giriş seviyesinde 0 zararla kapatıldı.</i>`
+          : `🛑 <b>MINEORA SNIPER | STOP LOSS ÇALIŞTI</b>\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `💎 <b>Parite:</b> #${trade.symbol}\n` +
+            `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
+            `⚠️ <i>Fitil arkası koruma devreye girdi, pozisyon disiplinle kesildi.</i>`;
+
+        await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: TG_CHANNEL_ID, text: tgStopMsg, parse_mode: 'HTML' })
+        }).catch(() => {});
+
         await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -205,12 +244,12 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // TP1 Vurulduğunda: %50 Kâr Kilitle ve Stopu Başabaşa Çek
+      // 3. TP1 VURULDUĞUNDA (%50 KÂR AL & STOPU GİRİŞE TAŞI)
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
         trade.sl = trade.entryPrice;
 
-        // 1. Pozisyonun %50'sini Piyasa Emriyle Kapat
+        // Pozisyonun %50'sini Canlı Borsada Kapat
         try {
           const closeSide = isLong ? 'sell' : 'buy';
           let halfQty = Math.floor(parseFloat(trade.openSize || 1) / 2);
@@ -226,7 +265,7 @@ export default async function handler(req, res) {
           });
         } catch (e) {}
 
-        // 2. Kalan Kısmın Borsa Stopunu Giriş Seviyesine Revize Et
+        // Kalan Kısmın Borsa Stopunu Doğrudan Girişe Taşı
         await bitgetPrivateRequest('/api/v3/trade/set-tpsl', 'POST', {
           category: 'USDT-FUTURES',
           symbol: trade.symbol,
@@ -236,13 +275,12 @@ export default async function handler(req, res) {
           holdSide: isLong ? 'long' : 'short'
         }).catch(() => {});
 
-        // 3. Telegram Bildirimi
-        const pEntryStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
+        // Telegram Bildirimi Gönder
         const tgTp1Msg = `🎯 <b>MINEORA SNIPER | TP 1 ALINDI (%50 KÂR KİLİTLENDİ)</b>\n` +
                          `━━━━━━━━━━━━━━━━━━━━\n` +
                          `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                         `💰 <b>Kâr:</b> +%0.60 (Kaldıraçla +%12.0 Net)\n` +
-                         `🛡️ <b>Güvenlik:</b> Pozisyonun %50'si cebe atıldı, kalan kısmın stopu giriş seviyesine (<code>$${pEntryStr}</code>) çekildi. Risk sıfırlandı!`;
+                         `💰 <b>Kâr:</b> +%0.60 (20x ile <b>+%12.0 Net</b>)\n` +
+                         `🛡️ <b>Emniyet:</b> Pozisyonun %50'si nakde çevrildi, stop seviyesi <code>$${pEntryStr}</code> (Giriş) seviyesine çekildi. Risk sıfırlandı!`;
 
         await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -257,6 +295,7 @@ export default async function handler(req, res) {
         });
       }
     }
+    
 
     // =========================================================================
     // MODÜL 2: SAF KRİPTO RADARI (FOREX, XAU VE HİSSE ENGELLİ)
