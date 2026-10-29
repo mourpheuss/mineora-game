@@ -391,28 +391,22 @@ export default async function handler(req, res) {
       if (meta && meta.high24h > meta.low24h && meta.low24h > 0) {
         const range24h = meta.high24h - meta.low24h;
         const pos24h = (cur1m.close - meta.low24h) / range24h;
-        // Günün en düşük %25'lik diliminde SHORT YASAK
         if (isBearishSweep && pos24h <= 0.25) continue;
-        // Günün en yüksek %25'lik diliminde LONG YASAK
         if (isBullishSweep && pos24h >= 0.75) continue;
       }
 
-      // Son 1 saatin tepe/dip konumu
       const h1High = Math.max(...candles1m.map(c => c.high));
       const h1Low  = Math.min(...candles1m.map(c => c.low));
       const h1Range = h1High - h1Low;
       if (h1Range > 0) {
         const h1Pos = (cur1m.close - h1Low) / h1Range;
-        // Son 1 saatin dibinde SHORT engellenir
         if (isBearishSweep && h1Pos <= 0.25) continue;
-        // Son 1 saatin tepesinde LONG engellenir
         if (isBullishSweep && h1Pos >= 0.75) continue;
       }
 
       if (isBearishSweep && (cur1m.close > ema50 || ema25 > ema50)) continue;
       if (isBullishSweep && (cur1m.close < ema50 || ema25 < ema50)) continue;
 
-      // Hacim Anomalisi: 2.3 ile 6.0 arasında (6.0 üzeri panik/kapitülasyon elenir)
       const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
       if (volZScore < 2.3 || volZScore > 6.0) continue;
 
@@ -508,7 +502,6 @@ export default async function handler(req, res) {
     const tpFormatted = tp.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // BITGET UTA RESMİ FORMATI (Pozisyon açılırken tek TP ve tek SL doğrudan mühürlenir)
     const orderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
@@ -576,12 +569,13 @@ export default async function handler(req, res) {
     const tpStr = tp < 1 ? tp.toFixed(precision) : tp.toFixed(4);
     const slStr = sl < 1 ? sl.toFixed(precision) : sl.toFixed(4);
 
-    const tgMsg = `🎯 <b>MINEORA SNIPER | BORSA KORUMALI İŞLEM AÇILDI</b>\n` +
+    // KASA BAKİYESİ VE MARJİN TUTARI TAMAMEN GİZLENMİŞ TELEGRAM BİLDİRİMİ
+    const tgMsg = `🎯 <b>MINEORA SNIPER | SCALPİNG</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
                   `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin} / Kasa: $${currentEquity.toFixed(1)}) | ${LEVERAGE}x Kaldıraç\n` +
+                  `💼 <b>Model:</b> Kasanın %10'u | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `🛑 <b>Stop Loss:</b> ${stopResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + stopResult}\n` +
                   `🚀 <b>Take Profit:</b> ${tpResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
