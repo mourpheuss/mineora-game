@@ -87,7 +87,6 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // Bekleyen tüm emirleri iptal et
       await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
         category: 'USDT-FUTURES',
         symbol: symbol
@@ -103,7 +102,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // CANLI KASA BAKİYESİNİ OKUMA MOTORU
     async function getFuturesEquity() {
       try {
         const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
@@ -111,6 +109,17 @@ export default async function handler(req, res) {
           const usdtItem = accResV3.data.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
           if (usdtItem) {
             const eq = parseFloat(usdtItem.equity || usdtItem.available || usdtItem.balance || 0);
+            if (eq > 10) return eq;
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
+        if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
+          const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
+          if (usdtAcc) {
+            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
             if (eq > 10) return eq;
           }
         }
@@ -148,7 +157,16 @@ export default async function handler(req, res) {
       }
     }
 
-    // 1. Bitget Vadeli Ticker Verilerini ve Spot Onaylı Listesini Çek
+    // Paritenin Tahta Ondalık Hassasiyetini Otomatik Belirleme
+    function getPrecision(price) {
+      const str = price.toString();
+      if (str.includes('.')) {
+        return Math.min(6, str.split('.')[1].length);
+      }
+      return 4;
+    }
+
+    // 1. Bitget Vadeli Ticker Verilerini Çek
     const [tickersRes, spotSymbolsRes] = await Promise.all([
       fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
       fetch("https://api.bitget.com/api/v2/spot/public/symbols", { headers: browserHeaders }).catch(() => null)
@@ -174,8 +192,14 @@ export default async function handler(req, res) {
     }
 
     const priceMap = {};
+    const tickerMetaMap = {};
     tickersJson.data.forEach(t => {
       priceMap[t.symbol] = parseFloat(t.lastPr || 0);
+      tickerMetaMap[t.symbol] = {
+        high24h: parseFloat(t.high24h || 0),
+        low24h: parseFloat(t.low24h || 0),
+        lastPr: parseFloat(t.lastPr || 0)
+      };
     });
 
     let activeTrades = {};
@@ -213,7 +237,6 @@ export default async function handler(req, res) {
       const pCurStr = curPrice < 1 ? curPrice.toFixed(6) : curPrice.toFixed(4);
       const pEntryStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(6) : trade.entryPrice.toFixed(4);
 
-      // 1. TP2 TAM HEDEF VURULDU
       if (isTp2Hit) {
         trade.status = 'TP2_HIT';
         trade.closedAt = now;
@@ -238,7 +261,6 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // 2. STOP SEVİYESİ VURULDU
       if (isStopHit) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
@@ -261,7 +283,7 @@ export default async function handler(req, res) {
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `💎 <b>Parite:</b> #${trade.symbol}\n` +
             `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-            `⚠️ <i>Fitil arkası disiplin stopu çalıştı. Parite 45 dk soğumaya alındı.</i>`;
+            `⚠️ <i>Disiplin stopu çalıştı. Parite 45 dk soğumaya alındı.</i>`;
 
         await sendTelegramAlert(tgStopMsg);
 
@@ -273,7 +295,6 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // 3. TP1 VURULDUĞUNDA (%50 KÂR AL & STOPU GARANTİLİ GİRİŞE TAŞI)
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
         trade.sl = trade.entryPrice;
@@ -282,7 +303,6 @@ export default async function handler(req, res) {
         let halfQty = totalQty >= 1 ? Math.floor(totalQty / 2) : parseFloat((totalQty / 2).toFixed(2));
         if (halfQty <= 0) halfQty = totalQty;
 
-        // Pozisyonun %50'sini kapat
         try {
           const closeSide = isLong ? 'sell' : 'buy';
           await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -295,10 +315,10 @@ export default async function handler(req, res) {
           });
         } catch (e) {}
 
-        const precision = trade.entryPrice < 0.1 ? 6 : 4;
+        const precision = getPrecision(trade.entryPrice);
         const entryPriceFormatted = trade.entryPrice.toFixed(precision);
 
-        // Kalan pozisyon için başabaş stop emrini güncelle
+        // Kalan yarıyı başabaş stop seviyesine kilitler
         await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
           category: 'USDT-FUTURES',
           symbol: trade.symbol,
@@ -306,6 +326,7 @@ export default async function handler(req, res) {
           orderType: 'market',
           qty: (totalQty - halfQty).toString(),
           reduceOnly: 'yes',
+          presetStopLossPrice: entryPriceFormatted,
           stopLoss: entryPriceFormatted,
           slOrderType: 'market',
           slTriggerBy: 'mark'
@@ -330,7 +351,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI + TREND FİLTRESİ
+    // MODÜL 2: SAF KRİPTO RADARI + 24H/1H PİYASA YAPISI FİLTRESİ
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -423,11 +444,38 @@ export default async function handler(req, res) {
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
+      // =========================================================================
+      // GÜVENLİK KİLİDİ 1: 24 SAATLİK VE 1 SAATLİK BANT KONUMU (RANGE FILTER)
+      // DİPTE SHORT, TEPEDE LONG AÇILMASINI SİSTEM DÜZEYİNDE ENGELLER
+      // =========================================================================
+      const meta = tickerMetaMap[item.symbol];
+      if (meta && meta.high24h > meta.low24h && meta.low24h > 0) {
+        const range24h = meta.high24h - meta.low24h;
+        const pos24h = (cur1m.close - meta.low24h) / range24h;
+        // Günün en düşük %25'lik diliminde SHORT YASAK
+        if (isBearishSweep && pos24h <= 0.25) continue;
+        // Günün en yüksek %25'lik diliminde LONG YASAK
+        if (isBullishSweep && pos24h >= 0.75) continue;
+      }
+
+      // Son 1 saatin tepe/dip konumu
+      const h1High = Math.max(...candles1m.map(c => c.high));
+      const h1Low  = Math.min(...candles1m.map(c => c.low));
+      const h1Range = h1High - h1Low;
+      if (h1Range > 0) {
+        const h1Pos = (cur1m.close - h1Low) / h1Range;
+        // Son 1 saatin dibinde SHORT açılması engellenir
+        if (isBearishSweep && h1Pos <= 0.25) continue;
+        // Son 1 saatin tepesinde LONG açılması engellenir
+        if (isBullishSweep && h1Pos >= 0.75) continue;
+      }
+
       if (isBearishSweep && (cur1m.close > ema50 || ema25 > ema50)) continue;
       if (isBullishSweep && (cur1m.close < ema50 || ema25 < ema50)) continue;
 
+      // Hacim Anomalisi: 2.3 ile 6.0 arasında olmalıdır (6.0 üzeri panik/kapitülasyon elenir)
       const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
-      if (volZScore < 2.3) continue;
+      if (volZScore < 2.3 || volZScore > 6.0) continue;
 
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
@@ -458,7 +506,7 @@ export default async function handler(req, res) {
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `Son 20 dk dip seviyesi ($${rangeLow < 1 ? rangeLow.toFixed(6) : rangeLow.toFixed(4)}) iğnelendi. EMA trend uyumlu, %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar absorbe edildi, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
+          reason: `1h ve 24h dip bölge dışı teyitli. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar absorbe edildi, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} kurumsal alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
@@ -472,7 +520,7 @@ export default async function handler(req, res) {
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `Son 20 dk tepe seviyesi ($${rangeHigh < 1 ? rangeHigh.toFixed(6) : rangeHigh.toFixed(4)}) iğnelendi. EMA trend uyumlu, %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla çöküş başladı.`
+          reason: `1h ve 24h tepe bölge dışı teyitli. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} kurumsal satıcı akışıyla çöküş başladı.`
         };
         break;
       }
@@ -483,7 +531,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (BITGET UTA RESMİ PRESET TP/SL İLE TEK SEFERDE)
+    // MODÜL 3: CANLI BORSA EMRİ (BITGET UTA RESMİ PRESET + GARANTİLİ TETİKLEME)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -517,20 +565,22 @@ export default async function handler(req, res) {
       ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9930)
       : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0070);
 
-    const precision = entryPrice < 0.1 ? 6 : 4;
+    const precision = getPrecision(entryPrice);
     const tp2Formatted = tp2.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // BITGET UTA RESMİ PRESET FORMATI (Emir anında borsa defterine TP/SL mühürlenir)
+    // BITGET UTA RESMİ FORMATI (Hem preset hem açık alanlar birlikte mühürlenir)
     const orderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
       side: isLong ? 'buy' : 'sell',
       orderType: 'market',
       qty: orderSize.toString(),
+      presetTakeProfitPrice: tp2Formatted,
       takeProfit: tp2Formatted,
       tpOrderType: 'market',
       tpTriggerBy: 'mark',
+      presetStopLossPrice: slFormatted,
       stopLoss: slFormatted,
       slOrderType: 'market',
       slTriggerBy: 'mark'
@@ -585,10 +635,10 @@ export default async function handler(req, res) {
       })
     ]);
 
-    const pStr = entryPrice < 1 ? entryPrice.toFixed(6) : entryPrice.toFixed(4);
-    const tp1Str = tp1 < 1 ? tp1.toFixed(6) : tp1.toFixed(4);
-    const tp2Str = tp2 < 1 ? tp2.toFixed(6) : tp2.toFixed(4);
-    const slStr = sl < 1 ? sl.toFixed(6) : sl.toFixed(4);
+    const pStr = entryPrice < 1 ? entryPrice.toFixed(precision) : entryPrice.toFixed(4);
+    const tp1Str = tp1 < 1 ? tp1.toFixed(precision) : tp1.toFixed(4);
+    const tp2Str = tp2 < 1 ? tp2.toFixed(precision) : tp2.toFixed(4);
+    const slStr = sl < 1 ? sl.toFixed(precision) : sl.toFixed(4);
 
     const tgMsg = `🎯 <b>MINEORA SNIPER | BORSA KORUMALI İŞLEM AÇILDI</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
