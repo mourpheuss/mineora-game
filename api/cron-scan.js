@@ -100,19 +100,17 @@ export default async function handler(req, res) {
 
     // CANLI KASA BAKİYESİNİ %100 DİNAMİK OKUMA MOTORU
     async function getFuturesEquity() {
-      // 1. Bitget V3 Varlık Listesi (UTA Güncel Değer)
       try {
         const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
         if (accResV3 && accResV3.code === '00000' && Array.isArray(accResV3.data)) {
           const usdtItem = accResV3.data.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
           if (usdtItem) {
             const eq = parseFloat(usdtItem.equity || usdtItem.available || usdtItem.balance || 0);
-            if (eq > 10) return eq; // Gerçek dinamik bakiye
+            if (eq > 10) return eq;
           }
         }
       } catch (e) {}
 
-      // 2. Bitget V2 Vadeli Hesap Detayı
       try {
         const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
         if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
@@ -124,7 +122,6 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // 3. Tekil USDT V3 Sorgusu
       try {
         const singleV3 = await bitgetPrivateRequest('/api/v3/account/assets?coin=USDT', 'GET');
         if (singleV3 && singleV3.code === '00000' && Array.isArray(singleV3.data) && singleV3.data.length > 0) {
@@ -133,14 +130,13 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // Borsa API anlık yanıt vermezse Firebase'den son bilinen cüzdanı çek
       try {
         const lastEqRes = await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`);
         const savedEq = parseFloat(await lastEqRes.json());
         if (savedEq > 10) return savedEq;
       } catch (e) {}
 
-      return 392; // En son bilinen taban
+      return 397;
     }
 
     // EMA Hesaplama Fonksiyonu
@@ -250,7 +246,6 @@ export default async function handler(req, res) {
         trade.closedAt = now;
         await closeBitgetPosition(trade.symbol, isLong);
 
-        // Stop yiyen pariteyi 45 dakika soğumaya al
         await fetch(`${FIREBASE_BASE_URL}/last_stopped_coins/${trade.symbol}.json`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -288,7 +283,6 @@ export default async function handler(req, res) {
         let halfQty = Math.floor(parseFloat(trade.openSize || 1) / 2);
         if (halfQty <= 0) halfQty = 1;
 
-        // Pozisyonun %50'sini kapat
         try {
           const closeSide = isLong ? 'sell' : 'buy';
           await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -301,10 +295,11 @@ export default async function handler(req, res) {
           });
         } catch (e) {}
 
-        // Kalan kısmın stopunu borsa seviyesinde başabaşa taşı (Resmi place-tpsl-order)
-        await bitgetPrivateRequest('/api/v3/trade/place-tpsl-order', 'POST', {
-          category: 'USDT-FUTURES',
+        // Kalan kısmın stopunu borsa seviyesinde başabaşa taşı (Resmi V2 Mix)
+        await bitgetPrivateRequest('/api/v2/mix/order/place-tpsl-order', 'POST', {
           symbol: trade.symbol,
+          productType: 'USDT-FUTURES',
+          marginCoin: 'USDT',
           planType: 'pos_loss',
           triggerPrice: trade.entryPrice.toString(),
           triggerType: 'mark_price',
@@ -407,7 +402,7 @@ export default async function handler(req, res) {
 
       const cur1m = candles1m[candles1m.length - 1];
       const sweep1m = candles1m[candles1m.length - 2];
-      const pastList = candles1m.slice(-22, -2); // Son 20 referans mum
+      const pastList = candles1m.slice(-22, -2);
 
       const rangeHigh = Math.max(...pastList.map(c => c.high));
       const rangeLow  = Math.min(...pastList.map(c => c.low));
@@ -489,11 +484,10 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ & OTOMATİK BORSA TP/SL KİLİTLEME
+    // MODÜL 3: CANLI BORSA EMRİ & FULL POSITION TP/SL MÜHÜRLEME (V2 MIX RESMİ ENDPOINT)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
-    // Son başarılı bakiyeyi Firebase'e de yaz (yedek hafıza)
     await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -530,41 +524,46 @@ export default async function handler(req, res) {
     const tp2Formatted = tp2.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // 1. Piyasa Açılış Emri (Doğrudan preset parametreleri ile anında mühürlenir)
+    // 1. Ana Piyasa Giriş Emri
     const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
       side: isLong ? 'buy' : 'sell',
       orderType: 'market',
-      qty: orderSize.toString(),
-      presetStopLossPrice: slFormatted,
-      presetTakeProfitPrice: tp2Formatted
+      qty: orderSize.toString()
     });
 
-    let stopResult = 'PRESET_APPLIED';
-    let tpResult = 'PRESET_APPLIED';
+    let stopResult = 'SKIPPED';
+    let tpResult = 'SKIPPED';
 
-    // 2. İkincil Doğrulama: Borsa Seviyesinde place-tpsl-order Çağrısı (Resmi V3 Endpoint)
+    // 2. FULL POSITION TP/SL MÜHÜRLEME (Resmi V2 Mix Endpoint)
     if (placeOrderRes.code === '00000') {
-      const slRes = await bitgetPrivateRequest('/api/v3/trade/place-tpsl-order', 'POST', {
-        category: 'USDT-FUTURES',
+      // 150 ms emrin borsada eşleşme toleransı
+      await new Promise(r => setTimeout(r, 150));
+
+      // Full Position Stop Loss
+      const slRes = await bitgetPrivateRequest('/api/v2/mix/order/place-tpsl-order', 'POST', {
         symbol: candidateTrade.symbol,
+        productType: 'USDT-FUTURES',
+        marginCoin: 'USDT',
         planType: 'pos_loss',
         triggerPrice: slFormatted,
         triggerType: 'mark_price',
         holdSide: isLong ? 'long' : 'short'
       });
-      stopResult = slRes.code === '00000' ? 'SUCCESS' : (slRes.msg || 'PRESET_ACTIVE');
+      stopResult = slRes.code === '00000' ? 'SUCCESS' : (slRes.msg || 'ERROR');
 
-      const tpRes = await bitgetPrivateRequest('/api/v3/trade/place-tpsl-order', 'POST', {
-        category: 'USDT-FUTURES',
+      // Full Position Take Profit (TP 2)
+      const tpRes = await bitgetPrivateRequest('/api/v2/mix/order/place-tpsl-order', 'POST', {
         symbol: candidateTrade.symbol,
+        productType: 'USDT-FUTURES',
+        marginCoin: 'USDT',
         planType: 'pos_profit',
         triggerPrice: tp2Formatted,
         triggerType: 'mark_price',
         holdSide: isLong ? 'long' : 'short'
       });
-      tpResult = tpRes.code === '00000' ? 'SUCCESS' : (tpRes.msg || 'PRESET_ACTIVE');
+      tpResult = tpRes.code === '00000' ? 'SUCCESS' : (tpRes.msg || 'ERROR');
     }
 
     const tradeId = `trade_${Date.now()}`;
@@ -615,14 +614,14 @@ export default async function handler(req, res) {
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %5'i ($${dynamicMargin} / Kasa: $${currentEquity.toFixed(1)}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
-                  `🛑 <b>Borsa Stop:</b> ✅ Bitget Kilitlendi\n` +
-                  `🚀 <b>Borsa TP2:</b> ✅ Bitget Kilitlendi\n` +
+                  `🛑 <b>Full Stop Loss:</b> ${stopResult === 'SUCCESS' ? '✅ Borsaya İşlendi' : '⚠️ ' + stopResult}\n` +
+                  `🚀 <b>Full Take Profit:</b> ${tpResult === 'SUCCESS' ? '✅ Borsaya İşlendi' : '⚠️ ' + tpResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Ara Kâr (TP 1):</b> <code>$${tp1Str}</code> (+%0.60 | %50 Kapanır)\n` +
                   `🚀 <b>Hedef (TP 2):</b> <code>$${tp2Str}</code> (+%1.20 | Kalan %50)\n` +
                   `🛑 <b>Fitil Stop:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🛡️ <i>EMA trend filtresi ve borsa-içi otomatik emir defteri devrede.</i>`;
+                  `🛡️ <i>TP/SL doğrudan Bitget Full Position TP/SL tablosuna mühürlenmiştir.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
