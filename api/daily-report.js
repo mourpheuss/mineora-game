@@ -17,16 +17,23 @@ export default async function handler(req, res) {
       cutoffTime = now - (h * 60 * 60 * 1000);
       periodText = `Son ${h} Saat`;
     } else {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      cutoffTime = today.getTime();
-      periodText = "Bugün (00:00'dan İtibaren)";
+      // TÜRKİYE SAATİNE (UTC+3) GÖRE 00:00 HESAPLAMA
+      const TURKEY_OFFSET_MS = 3 * 60 * 60 * 1000;
+      const turkeyNow = new Date(now + TURKEY_OFFSET_MS);
+      
+      const year = turkeyNow.getUTCFullYear();
+      const month = turkeyNow.getUTCMonth();
+      const day = turkeyNow.getUTCDate();
+      
+      // Türkiye saatiyle tam bugün 00:00:00 anının UTC karşılığı
+      cutoffTime = Date.UTC(year, month, day, 0, 0, 0) - TURKEY_OFFSET_MS;
+      periodText = "Bugün (00:00 TSİ'den İtibaren)";
     }
 
     // Sabit Disiplin Çarpanları (Kasanın %10'u x 25x Kaldıraç)
-    // Tek TP: %10 marjin x (+%0.60 fiyat hareketi x 25x) = +%1.50 Kasa Büyümesi
+    // Tek TP: %10 marjin x (+%0.60 x 25x) = +%1.50 Kasa Büyümesi
     const TP_PORTFOLIO_GAIN_PCT = 1.50;
-    // Ortalama Disiplin Stopu: %10 marjin x (-%0.75 fitil payı x 25x) = -%1.875 Kasa Kaybı
+    // Ortalama Stop: %10 marjin x (-%0.75 x 25x) = -%1.88 Kasa Kaybı
     const STOP_PORTFOLIO_LOSS_PCT = 1.88;
 
     let totalTrades = 0;
@@ -43,12 +50,10 @@ export default async function handler(req, res) {
 
       totalTrades++;
 
-      // Yeni sistemde 'TP_HIT', eski geriye dönük kayıtlarda 'TP2_HIT'
       if (trade.status === 'TP_HIT' || trade.status === 'TP2_HIT') {
         tpHitCount++;
         totalGainPct += TP_PORTFOLIO_GAIN_PCT;
       } else if (trade.status === 'STOPPED') {
-        // Eski başabaş stoplar varsa nötr kabul edilir, doğrudan stoplar kasadan düşülür
         if (trade.tp1Hit) {
           totalGainPct += 0.60;
         } else {
