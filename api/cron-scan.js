@@ -88,7 +88,7 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // Pozisyon kapatılırken açıkta bekleyen UTA plan emirlerini temizle
+      // Pozisyon kapatılırken açıkta bekleyen tüm plan emirlerini temizle
       await bitgetPrivateRequest('/api/v3/trade/cancel-plan-order', 'POST', {
         category: 'USDT-FUTURES',
         symbol: symbol,
@@ -316,7 +316,7 @@ export default async function handler(req, res) {
         const precision = trade.entryPrice < 0.1 ? 6 : 4;
         const entryPriceFormatted = trade.entryPrice.toFixed(precision);
 
-        // A) Önce borsadaki eski UTA fitil stopunu sil
+        // A) Önce eski UTA stop planını temizle
         await bitgetPrivateRequest('/api/v3/trade/cancel-plan-order', 'POST', {
           category: 'USDT-FUTURES',
           symbol: trade.symbol,
@@ -339,7 +339,7 @@ export default async function handler(req, res) {
                          `━━━━━━━━━━━━━━━━━━━━\n` +
                          `💎 <b>Parite:</b> #${trade.symbol}\n` +
                          `💰 <b>Kâr:</b> +%0.60 (20x ile <b>+%12.0 Net</b>)\n` +
-                         `🛡️ <b>Emniyet:</b> Pozisyonun %50'si nakde çevrildi, UTA stopu <code>$${pEntryStr}</code> (Giriş) seviyesine kilitlendi. Risk sıfırlandı!`;
+                         `🛡️ <b>Emniyet:</b> Pozisyonun %50'si nakde çevrildi, borsa stopu <code>$${pEntryStr}</code> (Giriş) seviyesine kilitlendi. Risk sıfırlandı!`;
 
         await sendTelegramAlert(tgTp1Msg);
 
@@ -511,7 +511,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ & FULL POSITION TP/SL MÜHÜRLEME (UNIFIED UTA V3 RESMİ ENDPOINT)
+    // MODÜL 3: CANLI BORSA EMRİ (UNIFIED PRESET TP/SL MÜHÜRLEME)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -551,24 +551,28 @@ export default async function handler(req, res) {
     const tp2Formatted = tp2.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // 1. Ana Piyasa Giriş Emri
+    // Ana Piyasa Giriş Emri: Doğrudan Preset TP/SL ile Tek Seferde Borsa Emir Defterine Mühürlenir
     const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
       side: isLong ? 'buy' : 'sell',
       orderType: 'market',
-      qty: orderSize.toString()
+      qty: orderSize.toString(),
+      stoploss: slFormatted,
+      takeprofit: tp2Formatted,
+      slTriggerBy: 'mark',
+      tpTriggerBy: 'mark'
     });
 
     let stopResult = 'SKIPPED';
     let tpResult = 'SKIPPED';
 
-    // 2. FULL POSITION TP/SL MÜHÜRLEME (Unified Account UTA V3 Endpoint)
     if (placeOrderRes.code === '00000') {
-      await new Promise(r => setTimeout(r, 150));
-
-      // UTA Full Position Stop Loss
-      const slRes = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', {
+      stopResult = 'SUCCESS (BORSAYA GÖMÜLÜ)';
+      tpResult = 'SUCCESS (BORSAYA GÖMÜLÜ)';
+    } else {
+      // Yedek Emniyet: Eğer Preset parametreleri yerine borsa plan uç noktası isterse anında UTA V3 Plan dener
+      const backupSl = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', {
         category: 'USDT-FUTURES',
         symbol: candidateTrade.symbol,
         planType: 'pos_loss',
@@ -576,10 +580,9 @@ export default async function handler(req, res) {
         triggerType: 'mark_price',
         holdSide: isLong ? 'long' : 'short'
       });
-      stopResult = slRes.code === '00000' ? 'SUCCESS' : (slRes.msg || 'ERROR');
+      stopResult = backupSl.code === '00000' ? 'SUCCESS' : (placeOrderRes.msg || backupSl.msg);
 
-      // UTA Full Position Take Profit (TP 2)
-      const tpRes = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', {
+      const backupTp = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', {
         category: 'USDT-FUTURES',
         symbol: candidateTrade.symbol,
         planType: 'pos_profit',
@@ -587,7 +590,7 @@ export default async function handler(req, res) {
         triggerType: 'mark_price',
         holdSide: isLong ? 'long' : 'short'
       });
-      tpResult = tpRes.code === '00000' ? 'SUCCESS' : (tpRes.msg || 'ERROR');
+      tpResult = backupTp.code === '00000' ? 'SUCCESS' : (placeOrderRes.msg || backupTp.msg);
     }
 
     const tradeId = `trade_${Date.now()}`;
@@ -638,8 +641,8 @@ export default async function handler(req, res) {
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin} / Kasa: $${currentEquity.toFixed(1)}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
-                  `🛑 <b>Full Stop Loss:</b> ${stopResult === 'SUCCESS' ? '✅ Borsaya İşlendi' : '⚠️ ' + stopResult}\n` +
-                  `🚀 <b>Full Take Profit:</b> ${tpResult === 'SUCCESS' ? '✅ Borsaya İşlendi' : '⚠️ ' + tpResult}\n` +
+                  `🛑 <b>Full Stop Loss:</b> ${stopResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + stopResult}\n` +
+                  `🚀 <b>Full Take Profit:</b> ${tpResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Ara Kâr (TP 1):</b> <code>$${tp1Str}</code> (+%0.60 | %50 Kapanır)\n` +
                   `🚀 <b>Hedef (TP 2):</b> <code>$${tp2Str}</code> (+%1.20 | Kalan %50)\n` +
