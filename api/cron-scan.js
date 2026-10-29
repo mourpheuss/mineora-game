@@ -88,7 +88,7 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // Pozisyon kapatılırken varsa bekleyen plan emirlerini de temizle
+      // Pozisyon kapatılırken açıkta kalan plan emirlerini de temizle
       await bitgetPrivateRequest('/api/v2/mix/order/cancel-plan-order', 'POST', {
         symbol: symbol,
         productType: 'USDT-FUTURES',
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
         const precision = trade.entryPrice < 0.1 ? 6 : 4;
         const entryPriceFormatted = trade.entryPrice.toFixed(precision);
 
-        // A) Önce borsadaki eski fitil stopunu temizle (Çakışmayı önler)
+        // A) Önce borsadaki eski fitil stopunu temizle (Çakışmayı engeller)
         await bitgetPrivateRequest('/api/v2/mix/order/cancel-plan-order', 'POST', {
           symbol: trade.symbol,
           productType: 'USDT-FUTURES',
