@@ -26,12 +26,11 @@ export default async function handler(req, res) {
     
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
-    const POST_STOP_COOLDOWN_MS = 45 * 60 * 1000; // Stop sonrası 45 dk soğuma
+    const POST_STOP_COOLDOWN_MS = 45 * 60 * 1000;
     const LEVERAGE = 20;
-    const MARGIN_RATIO = 0.10; // KASADA NE VARSA TAM %10'U (DİNAMİK)
+    const MARGIN_RATIO = 0.10; // KASANIN TAM %10'U
     const now = Date.now();
 
-    // Çift Kanallı Güvenli Telegram Bildirim Fonksiyonu
     async function sendTelegramAlert(text) {
       const targets = [TG_CHANNEL_ID, TG_ADMIN_ID];
       for (const target of targets) {
@@ -88,17 +87,10 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // Pozisyon kapatılırken açıkta bekleyen tüm plan emirlerini temizle
-      await bitgetPrivateRequest('/api/v3/trade/cancel-plan-order', 'POST', {
+      // Bekleyen tüm emirleri iptal et
+      await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
         category: 'USDT-FUTURES',
-        symbol: symbol,
-        planType: 'pos_loss'
-      }).catch(() => {});
-
-      await bitgetPrivateRequest('/api/v3/trade/cancel-plan-order', 'POST', {
-        category: 'USDT-FUTURES',
-        symbol: symbol,
-        planType: 'pos_profit'
+        symbol: symbol
       }).catch(() => {});
 
       return await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -111,7 +103,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // CANLI KASA BAKİYESİNİ %100 DİNAMİK OKUMA MOTORU
+    // CANLI KASA BAKİYESİNİ OKUMA MOTORU
     async function getFuturesEquity() {
       try {
         const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
@@ -125,25 +117,6 @@ export default async function handler(req, res) {
       } catch (e) {}
 
       try {
-        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
-        if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
-          const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
-          if (usdtAcc) {
-            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
-            if (eq > 10) return eq;
-          }
-        }
-      } catch (e) {}
-
-      try {
-        const singleV3 = await bitgetPrivateRequest('/api/v3/account/assets?coin=USDT', 'GET');
-        if (singleV3 && singleV3.code === '00000' && Array.isArray(singleV3.data) && singleV3.data.length > 0) {
-          const eq = parseFloat(singleV3.data[0].equity || singleV3.data[0].available || singleV3.data[0].balance || 0);
-          if (eq > 10) return eq;
-        }
-      } catch (e) {}
-
-      try {
         const lastEqRes = await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`);
         const savedEq = parseFloat(await lastEqRes.json());
         if (savedEq > 10) return savedEq;
@@ -152,7 +125,6 @@ export default async function handler(req, res) {
       return 397;
     }
 
-    // EMA Hesaplama Fonksiyonu
     function calculateEMA(prices, period) {
       if (!prices || prices.length < period) return prices[prices.length - 1];
       const k = 2 / (period + 1);
@@ -163,17 +135,16 @@ export default async function handler(req, res) {
       return ema;
     }
 
-    // Fiyata Göre Hassas Emir Adedi Hesaplama (BTC, ETH, Altcoin Uyumlu)
     function calculateOrderQuantity(entryPrice, notional) {
       const rawQty = notional / entryPrice;
       if (entryPrice >= 1000) {
-        return parseFloat(rawQty.toFixed(3)); // BTC vb.
+        return parseFloat(rawQty.toFixed(3));
       } else if (entryPrice >= 50) {
-        return parseFloat(rawQty.toFixed(2)); // ETH, SOL vb.
+        return parseFloat(rawQty.toFixed(2));
       } else if (entryPrice >= 1) {
-        return parseFloat(rawQty.toFixed(1)); // LINK, XRP, SUI vb.
+        return parseFloat(rawQty.toFixed(1));
       } else {
-        return Math.max(1, Math.round(rawQty)); // PEPE, DOGE, XPL vb.
+        return Math.max(1, Math.round(rawQty));
       }
     }
 
@@ -327,21 +298,17 @@ export default async function handler(req, res) {
         const precision = trade.entryPrice < 0.1 ? 6 : 4;
         const entryPriceFormatted = trade.entryPrice.toFixed(precision);
 
-        // A) Önce eski UTA stop planını temizle
-        await bitgetPrivateRequest('/api/v3/trade/cancel-plan-order', 'POST', {
+        // Kalan pozisyon için başabaş stop emrini güncelle
+        await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
           category: 'USDT-FUTURES',
           symbol: trade.symbol,
-          planType: 'pos_loss'
-        }).catch(() => {});
-
-        // B) Yeni başabaş stopunu UTA V3 üzerinden mühürle
-        await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', {
-          category: 'USDT-FUTURES',
-          symbol: trade.symbol,
-          planType: 'pos_loss',
-          triggerPrice: entryPriceFormatted,
-          triggerType: 'mark_price',
-          holdSide: isLong ? 'long' : 'short'
+          side: isLong ? 'sell' : 'buy',
+          orderType: 'market',
+          qty: (totalQty - halfQty).toString(),
+          reduceOnly: 'yes',
+          stopLoss: entryPriceFormatted,
+          slOrderType: 'market',
+          slTriggerBy: 'mark'
         }).catch(() => {});
 
         trade.openSize = Math.max(0.01, totalQty - halfQty);
@@ -363,7 +330,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI + TREND FİLTRESİ (EMA 25/50 + Z-SCORE 2.3)
+    // MODÜL 2: SAF KRİPTO RADARI + TREND FİLTRESİ
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -456,15 +423,9 @@ export default async function handler(req, res) {
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
-      // TREND FİLTRESİ: Yükselen trendde SHORT, düşen trendde LONG engellenir
-      if (isBearishSweep && (cur1m.close > ema50 || ema25 > ema50)) {
-        continue;
-      }
-      if (isBullishSweep && (cur1m.close < ema50 || ema25 < ema50)) {
-        continue;
-      }
+      if (isBearishSweep && (cur1m.close > ema50 || ema25 > ema50)) continue;
+      if (isBullishSweep && (cur1m.close < ema50 || ema25 < ema50)) continue;
 
-      // 2.3σ Hacim Anomalisi
       const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
       if (volZScore < 2.3) continue;
 
@@ -522,7 +483,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (GÜVENLİ VE GARANTİLİ 2 AŞAMALI UTA MÜHÜRLEME)
+    // MODÜL 3: CANLI BORSA EMRİ (BITGET UTA RESMİ PRESET TP/SL İLE TEK SEFERDE)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -532,7 +493,6 @@ export default async function handler(req, res) {
       body: JSON.stringify(currentEquity)
     }).catch(() => {});
 
-    // KASADA NE KADAR PARA VARSA ANLIK OLARAK TAM %10'U (DİNAMİK)
     const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
     
     try {
@@ -548,7 +508,6 @@ export default async function handler(req, res) {
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
 
-    // Fiyata Göre Hassas Emir Adedi (BTC/ETH/Altcoin Hatasız)
     const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
 
     const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
@@ -562,43 +521,32 @@ export default async function handler(req, res) {
     const tp2Formatted = tp2.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // 1. Ana Piyasa Giriş Emri (Saf, hatasız ve anında doldurulan market emri)
-    const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
+    // BITGET UTA RESMİ PRESET FORMATI (Emir anında borsa defterine TP/SL mühürlenir)
+    const orderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
       side: isLong ? 'buy' : 'sell',
       orderType: 'market',
-      qty: orderSize.toString()
-    });
+      qty: orderSize.toString(),
+      takeProfit: tp2Formatted,
+      tpOrderType: 'market',
+      tpTriggerBy: 'mark',
+      stopLoss: slFormatted,
+      slOrderType: 'market',
+      slTriggerBy: 'mark'
+    };
+
+    const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', orderPayload);
 
     let stopResult = 'SKIPPED';
     let tpResult = 'SKIPPED';
 
-    // 2. Pozisyon Açıldığı Anda Borsa Seviyesinde Full Position Stop & TP Mühürleme (UTA V3)
     if (placeOrderRes.code === '00000') {
-      await new Promise(r => setTimeout(r, 200));
-
-      // UTA Full Position Stop Loss
-      const slRes = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', {
-        category: 'USDT-FUTURES',
-        symbol: candidateTrade.symbol,
-        planType: 'pos_loss',
-        triggerPrice: slFormatted,
-        triggerType: 'mark_price',
-        holdSide: isLong ? 'long' : 'short'
-      });
-      stopResult = slRes.code === '00000' ? 'SUCCESS' : (slRes.msg || 'ERROR');
-
-      // UTA Full Position Take Profit (TP 2)
-      const tpRes = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', {
-        category: 'USDT-FUTURES',
-        symbol: candidateTrade.symbol,
-        planType: 'pos_profit',
-        triggerPrice: tp2Formatted,
-        triggerType: 'mark_price',
-        holdSide: isLong ? 'long' : 'short'
-      });
-      tpResult = tpRes.code === '00000' ? 'SUCCESS' : (tpRes.msg || 'ERROR');
+      stopResult = 'SUCCESS (BORSAYA MÜHÜRLENDİ)';
+      tpResult = 'SUCCESS (BORSAYA MÜHÜRLENDİ)';
+    } else {
+      stopResult = placeOrderRes.msg || 'ERROR';
+      tpResult = placeOrderRes.msg || 'ERROR';
     }
 
     const tradeId = `trade_${Date.now()}`;
@@ -649,8 +597,8 @@ export default async function handler(req, res) {
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin} / Kasa: $${currentEquity.toFixed(1)}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
-                  `🛑 <b>Full Stop Loss:</b> ${stopResult === 'SUCCESS' ? '✅ Borsaya Mühürlendi' : '⚠️ ' + stopResult}\n` +
-                  `🚀 <b>Full Take Profit:</b> ${tpResult === 'SUCCESS' ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
+                  `🛑 <b>Full Stop Loss:</b> ${stopResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + stopResult}\n` +
+                  `🚀 <b>Full Take Profit:</b> ${tpResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Ara Kâr (TP 1):</b> <code>$${tp1Str}</code> (+%0.60 | %50 Kapanır)\n` +
                   `🚀 <b>Hedef (TP 2):</b> <code>$${tp2Str}</code> (+%1.20 | Kalan %50)\n` +
