@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const LEVERAGE = 20;
-    const MARGIN_RATIO = 0.03; // KASANIN %3'Ü DİSİPLİNİ
+    const MARGIN_RATIO = 0.05; // CANLI KASANIN %5'İ DİSİPLİNİ
     const now = Date.now();
 
     async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}, customCreds = null) {
@@ -60,6 +60,7 @@ export default async function handler(req, res) {
       }
     }
 
+    // Canlı Vadeli Cüzdan Bakiyesini Oku
     async function getFuturesEquity() {
       try {
         const accRes = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
@@ -71,6 +72,18 @@ export default async function handler(req, res) {
           }
         }
       } catch (e) {}
+
+      try {
+        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
+        if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
+          const usdtAcc = accResV2.data.find(a => a.marginCoin === 'USDT');
+          if (usdtAcc) {
+            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
+            if (eq > 5) return eq;
+          }
+        }
+      } catch (e) {}
+
       return 1500;
     }
 
@@ -106,24 +119,20 @@ export default async function handler(req, res) {
 
     let activeTrades = {};
     let lastSignals = {};
-    let allUsers = {};
     try {
-      const [atRes, lsRes, usRes] = await Promise.all([
+      const [atRes, lsRes] = await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/active_trades.json`),
-        fetch(`${FIREBASE_BASE_URL}/last_signals.json`),
-        fetch(`${FIREBASE_BASE_URL}/users.json`)
+        fetch(`${FIREBASE_BASE_URL}/last_signals.json`)
       ]);
       activeTrades = (await atRes.json()) || {};
       lastSignals = (await lsRes.json()) || {};
-      allUsers = (await usRes.json()) || {};
     } catch (e) {
       activeTrades = {};
       lastSignals = {};
-      allUsers = {};
     }
 
     // =========================================================================
-    // MODÜL 1: TP1 ALINDIĞINDA STOPU GİRİŞE ÇEKME (BREAK-EVEN KORUMASI)
+    // MODÜL 1: TP1 ALINDIĞINDA STOPU GİRİŞE ÇEKME (BREAK-EVEN)
     // =========================================================================
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
@@ -134,12 +143,10 @@ export default async function handler(req, res) {
       const isLong = trade.direction === 'LONG';
       const isTp1Hit = isLong ? (curPrice >= trade.tp1) : (curPrice <= trade.tp1);
 
-      // TP1 vurulduğunda borsa üzerindeki Stop emrini başabaşa (Giriş Seviyesine) çek
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
         trade.sl = trade.entryPrice;
 
-        // Borsa içi Stop emrini doğrudan girişe güncelle
         await bitgetPrivateRequest('/api/v3/trade/modify-tpsl-order', 'POST', {
           category: 'USDT-FUTURES',
           symbol: trade.symbol,
@@ -156,7 +163,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI VE FIRSAT ARAMA
+    // MODÜL 2: SAF KRİPTO RADARI
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -299,10 +306,10 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: BORSA EMİR MOTORU (DOĞRUDAN DAHİLİ TPSL İLE AÇILIŞ)
+    // MODÜL 3: CANLI BAKİYE x %5 MARJİN VE DOĞRUDAN BORSA TPSL EMİR MOTORU
     // =========================================================================
     const currentEquity = await getFuturesEquity();
-    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
+    const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2)); // O ANKİ KASANIN %5'İ
     const positionNotional = dynamicMargin * LEVERAGE;
 
     const entryPrice = candidateTrade.price;
@@ -311,7 +318,6 @@ export default async function handler(req, res) {
     let orderSize = parseFloat((positionNotional / entryPrice).toFixed(2));
     if (orderSize <= 0) orderSize = 1;
 
-    // Hedef TP ve SL Seviyeleri
     const tp1 = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
     const tp2 = isLong ? entryPrice * 1.0120 : entryPrice * 0.9880;
 
@@ -323,22 +329,22 @@ export default async function handler(req, res) {
     const tp2Formatted = tp2.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // 1. Bitget UTA V3 Kaldıracı Tanımla
+    // 1. Bitget UTA V3 Kaldıraç Ayarla
     await bitgetPrivateRequest('/api/v3/account/set-leverage', 'POST', {
       symbol: candidateTrade.symbol,
       productType: 'usdt-futures',
       leverage: LEVERAGE.toString()
     });
 
-    // 2. BORSAYA EMİR GÖNDER (TP ve SL DOĞRUDAN BORSA MOTORUNA YAZILIR)
+    // 2. Canlı Market Emri ve Dahili Borsa TPSL
     const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
       side: isLong ? 'buy' : 'sell',
       orderType: 'market',
       qty: orderSize.toString(),
-      presetTakeProfitPrice: tp2Formatted, // Borsada hazır bekleyen TP2 emri
-      presetStopLossPrice: slFormatted     // Borsada hazır bekleyen Stop Loss emri
+      presetTakeProfitPrice: tp2Formatted,
+      presetStopLossPrice: slFormatted
     });
 
     const tradeId = `trade_${Date.now()}`;
@@ -385,7 +391,7 @@ export default async function handler(req, res) {
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
                   `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `💼 <b>Model:</b> Kasanın %3'ü ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
+                  `💼 <b>Model:</b> Kasanın %5'i ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Durumu:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Bitget İçinde TP/SL Kilitlendi' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Ara Kâr (TP 1):</b> <code>$${tp1Str}</code> (+%0.60)\n` +
