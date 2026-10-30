@@ -155,15 +155,16 @@ export default async function handler(req, res) {
       }
     }
 
-    // BİTGET TICK SIZE BASAMAK DÜZELTMESİ (SOL, BNB dahil 50$ üzeri coinlerde max 3 basamak!)
+    // BİTGET TICK SIZE BASAMAK DÜZELTMESİ (SOL, BNB DAHİL 50$ ÜZERİ PARİTELERDE KESİN TAVAN!)
     function getPrecision(price, rawPriceStr = null) {
+      if (!price || isNaN(price) || price <= 0) return 4;
+      if (price >= 1000) return 2;
+      if (price >= 50) return 3; // SOL ($94), BNB ($700), ETH için Bitget 0.001 katı (max 3 basamak) şart koşar!
+
       if (rawPriceStr && typeof rawPriceStr === 'string' && rawPriceStr.includes('.')) {
         const decCount = rawPriceStr.split('.')[1].length;
         if (decCount > 0) return Math.min(6, decCount);
       }
-      if (!price || isNaN(price) || price <= 0) return 4;
-      if (price >= 1000) return 2;
-      if (price >= 50) return 3;          // SOL, BNB gibi coinlerde 0.001 katı zorunluluğu!
       if (price >= 0.1) return 4;
       if (price >= 0.001) return 5;
       if (price >= 0.0001) return 6;
@@ -407,16 +408,27 @@ export default async function handler(req, res) {
 
       if (!isBullishTrend && !isBearishTrend) continue;
 
-      // 2. MİKRO GERİ ÇEKİLME & REDDEDİLME FİTİLİ (PULLBACK REJECTION)
+      // 2. MİKRO GERİ ÇEKİLME & GÜÇLÜ GÖVDE TEYİDİ
       const sweepRange = sweep1m.high - sweep1m.low;
       if (sweepRange <= 0) continue;
 
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
+      const sweepMidpoint = (sweep1m.open + sweep1m.close) / 2;
 
-      // Trend yönünde geri çekilme bitişi ve yeşil/kırmızı reaksiyon mumu:
-      const isBullishPullback = isBullishTrend && ((sweepLowerWick / sweepRange) >= 0.42) && (cur1m.close > sweep1m.close) && (cur1m.close >= ema20 * 0.998);
-      const isBearishPullback = isBearishTrend && ((sweepUpperWick / sweepRange) >= 0.42) && (cur1m.close < sweep1m.close) && (cur1m.close <= ema20 * 1.002);
+      // LONG: Alt fitil >= %42, cur1m yeşil mum yakar, önceki mumun orta noktasını aşar ve EMA20 üzerinde tutunur
+      const isBullishPullback = isBullishTrend && 
+        ((sweepLowerWick / sweepRange) >= 0.42) && 
+        (cur1m.close > cur1m.open) && 
+        (cur1m.close >= sweepMidpoint) && 
+        (cur1m.close >= ema20 * 0.998);
+
+      // SHORT: Üst fitil >= %42, cur1m kırmızı mum yakar, önceki mumun orta noktasının altına iner ve EMA20 altında kalır
+      const isBearishPullback = isBearishTrend && 
+        ((sweepUpperWick / sweepRange) >= 0.42) && 
+        (cur1m.close < cur1m.open) && 
+        (cur1m.close <= sweepMidpoint) && 
+        (cur1m.close <= ema20 * 1.002);
 
       if (!isBullishPullback && !isBearishPullback) continue;
 
