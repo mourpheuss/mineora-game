@@ -77,7 +77,7 @@ export default async function handler(req, res) {
 
     async function closeBitgetPosition(symbol, isLong) {
       const closeSide = isLong ? 'sell' : 'buy';
-      let qty = "1";
+      let qty = "0";
 
       try {
         const posRes = await bitgetPrivateRequest(`/api/v3/position/current-position?category=USDT-FUTURES&symbol=${symbol}`, 'GET');
@@ -86,6 +86,11 @@ export default async function handler(req, res) {
           if (actualQty > 0) qty = actualQty.toString();
         }
       } catch (e) {}
+
+      // Pozisyon zaten borsada kapandıysa mükerrer emir gönderme
+      if (qty === "0") {
+        return { code: '00000', msg: 'Pozisyon borsada zaten kapanmış.' };
+      }
 
       await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
         category: 'USDT-FUTURES',
@@ -228,7 +233,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: SABİT TEK TP (+%0.60) %100 TAM KAPANIŞ & STOP KONTROLÜ
+    // MODÜL 1: SABİT TEK TP (+%0.85) %100 TAM KAPANIŞ & AKILLI BORSA TAKİBİ
     // =========================================================================
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
@@ -247,6 +252,8 @@ export default async function handler(req, res) {
       if (isTpHit) {
         trade.status = 'TP_HIT';
         trade.closedAt = now;
+        
+        // Çift kapanış önlemi: Pozisyon Bitget'te açık kalmışsa kapatır
         await closeBitgetPosition(trade.symbol, isLong);
 
         const tgTpMsg = `🚀 <b>MINEORA SNIPER | HEDEF VURULDU (TAM KAPANIŞ)!</b>\n` +
@@ -255,7 +262,7 @@ export default async function handler(req, res) {
                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
                         `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                        `💰 <b>Net Kâr:</b> +%0.60 (${LEVERAGE}x ile <b>+%15.0 KÂR</b>)\n` +
+                        `💰 <b>Net Kâr:</b> +%0.85 (${LEVERAGE}x ile <b>+%21.25 BRÜT / +%18.25 NET KÂR</b>)\n` +
                         `✅ <i>Pozisyon %100 nakde çevrildi, kâr kasaya eklendi.</i>`;
 
         await sendTelegramAlert(tgTpMsg);
@@ -271,6 +278,8 @@ export default async function handler(req, res) {
       if (isStopHit) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
+        
+        // Çift kapanış önlemi: Pozisyon Bitget'te açık kalmışsa kapatır
         await closeBitgetPosition(trade.symbol, isLong);
 
         await fetch(`${FIREBASE_BASE_URL}/last_stopped_coins/${trade.symbol}.json`, {
@@ -518,8 +527,8 @@ export default async function handler(req, res) {
 
     const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
 
-    // KESİN TEK TP: TAM +%0.60 (%100 ÇIKIŞ)
-    const tp = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
+    // KESİN TEK TP: TAM +%0.85 (%100 ÇIKIŞ - KOMİSYON SONRASI POZİTİF R:R)
+    const tp = isLong ? entryPrice * 1.0085 : entryPrice * 0.9915;
 
     // SIKI STOP LİMİTİ: Fitil arkası binde 2.5 tampon, MAKSİMUM -%0.55 tavan sınırı!
     let sl = isLong 
@@ -606,9 +615,9 @@ export default async function handler(req, res) {
                   `💼 <b>Model:</b> Kasanın %10'u | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
                   `🛑 <b>Stop Loss (-%0.55):</b> ${stopResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + stopResult}\n` +
-                  `🚀 <b>Take Profit (+%0.60):</b> ${tpResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
+                  `🚀 <b>Take Profit (+%0.85):</b> ${tpResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🎯 <b>Hedef (TP):</b> <code>$${tpStr}</code> (+%0.60 | <b>%100 Kapanır</b>)\n` +
+                  `🎯 <b>Hedef (TP):</b> <code>$${tpStr}</code> (+%0.85 | <b>%100 Kapanır</b>)\n` +
                   `🛑 <b>Sıkı Stop:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🛡️ <i>TP ve SL emirleri doğrudan Bitget UTA emir defterine mühürlenmiştir.</i>`;
