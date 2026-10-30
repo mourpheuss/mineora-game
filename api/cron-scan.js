@@ -75,29 +75,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // Pozisyon Kapama (Tam veya Kısmi %50)
-    async function closeBitgetPosition(symbol, isLong, closeRatio = 1.0) {
+    async function closeBitgetPosition(symbol, isLong) {
       const closeSide = isLong ? 'sell' : 'buy';
       let qty = "1";
 
       try {
         const posRes = await bitgetPrivateRequest(`/api/v3/position/current-position?category=USDT-FUTURES&symbol=${symbol}`, 'GET');
         if (posRes.code === '00000' && Array.isArray(posRes.data) && posRes.data.length > 0) {
-          const totalQty = parseFloat(posRes.data[0].total || posRes.data[0].available || 0);
-          if (totalQty > 0) {
-            const targetQty = totalQty * closeRatio;
-            qty = formatOrderQuantity(targetQty);
-          }
+          const actualQty = parseFloat(posRes.data[0].total || posRes.data[0].available || 0);
+          if (actualQty > 0) qty = actualQty.toString();
         }
       } catch (e) {}
 
-      // Eski stop emirlerini temizle
-      if (closeRatio >= 0.99) {
-        await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
-          category: 'USDT-FUTURES',
-          symbol: symbol
-        }).catch(() => {});
-      }
+      await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
+        category: 'USDT-FUTURES',
+        symbol: symbol
+      }).catch(() => {});
 
       return await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
         category: 'USDT-FUTURES',
@@ -162,13 +155,6 @@ export default async function handler(req, res) {
       }
     }
 
-    function formatOrderQuantity(qty) {
-      if (qty >= 100) return Math.round(qty).toString();
-      if (qty >= 1) return parseFloat(qty.toFixed(1)).toString();
-      if (qty >= 0.01) return parseFloat(qty.toFixed(2)).toString();
-      return parseFloat(qty.toFixed(3)).toString();
-    }
-
     // BİTGET TICK SIZE BASAMAK DÜZELTMESİ (SOL, BNB dahil 50$ üzeri coinlerde max 3 basamak!)
     function getPrecision(price, rawPriceStr = null) {
       if (rawPriceStr && typeof rawPriceStr === 'string' && rawPriceStr.includes('.')) {
@@ -177,11 +163,11 @@ export default async function handler(req, res) {
       }
       if (!price || isNaN(price) || price <= 0) return 4;
       if (price >= 1000) return 2;
-      if (price >= 50) return 3;          // SOL, BNB, ETH gibi coinlerde Bitget 0.001 katı ister!
-      if (price >= 0.1) return 4;         // ONDO, SUI vb.
+      if (price >= 50) return 3;          // SOL, BNB gibi coinlerde 0.001 katı zorunluluğu!
+      if (price >= 0.1) return 4;
       if (price >= 0.001) return 5;
       if (price >= 0.0001) return 6;
-      return 8;                           // PEPE, SHIB, BONK
+      return 8;
     }
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -241,7 +227,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: İKİ KADEMELİ KÂR (%50 TP1 + BREAKEVEN) & STOP YÖNETİMİ
+    // MODÜL 1: SABİT TEK TP (+%0.60) %100 TAM KAPANIŞ & STOP KONTROLÜ
     // =========================================================================
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
@@ -250,68 +236,28 @@ export default async function handler(req, res) {
       if (!curPrice || curPrice <= 0) continue;
 
       const isLong = trade.direction === 'LONG';
+      const isTpHit = isLong ? (curPrice >= trade.tp) : (curPrice <= trade.tp);
+      const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
+
       const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol]);
       const pCurStr = curPrice.toFixed(prec);
       const pEntryStr = trade.entryPrice.toFixed(prec);
 
-      const tp1Level = trade.tp1 || (isLong ? trade.entryPrice * 1.0050 : trade.entryPrice * 0.9950);
-      const isTp1Hit = isLong ? (curPrice >= tp1Level) : (curPrice <= tp1Level);
-      const isTp2Hit = isLong ? (curPrice >= trade.tp) : (curPrice <= trade.tp);
-      const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
-
-      // 1. KADEME: FİYAT +%0.50 GÖRDÜĞÜNDE %50 KAPAT VE STOPU GİRİŞE ÇEK!
-      if (!trade.tp1Taken && isTp1Hit) {
-        trade.tp1Taken = true;
-        trade.tp1ClosedAt = now;
-        
-        // Pozisyonun tam %50'sini piyasa emriyle nakde çevir
-        await closeBitgetPosition(trade.symbol, isLong, 0.50);
-
-        // Bitget'teki eski -%0.55 stop emrini iptal et
-        await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
-          category: 'USDT-FUTURES',
-          symbol: trade.symbol
-        }).catch(() => {});
-
-        // Stopu sıfır zararla GİRİŞ FİYATINA kilitle (Breakeven)
-        trade.sl = trade.entryPrice;
-
-        const tgTp1Msg = `⚡ <b>MINEORA SNIPER | KÂR ALINDI (%50 NAKİT)!</b>\n` +
-                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
-                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
-                         `🎯 <b>TP1 Seviyesi:</b> <code>$${pCurStr}</code> (+%0.50 | <b>25x ile +%12.5</b>)\n` +
-                         `🛡️ <b>Yeni Stop:</b> <code>$${pEntryStr}</code> (GİRİŞE ÇEKİLDİ - SIFIR RİSK)\n` +
-                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `✅ <i>Pozisyonun %50'si nakde çevrildi, kalan %50 sıfır riskle +%0.90 hedefine koşuyor!</i>`;
-
-        await sendTelegramAlert(tgTp1Msg);
-
-        await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(trade)
-        });
-        continue;
-      }
-
-      // 2. KADEME: FİYAT +%0.90 VURDUĞUNDA KALAN %50'Yİ TAMAMEN KAPAT!
-      if (isTp2Hit) {
+      if (isTpHit) {
         trade.status = 'TP_HIT';
         trade.closedAt = now;
-        await closeBitgetPosition(trade.symbol, isLong, 1.0);
+        await closeBitgetPosition(trade.symbol, isLong);
 
-        const tgTp2Msg = `🚀 <b>MINEORA SNIPER | HEDEF 2 VURULDU (TAM KAPANIŞ)!</b>\n` +
-                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                         `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
-                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
-                         `🎯 <b>Nihai Kapanış:</b> <code>$${pCurStr}</code> (+%0.90)\n` +
-                         `💰 <b>25x Net Kâr:</b> <b>+%22.50 KÂR</b>\n` +
-                         `✅ <i>Kalan pozisyon %100 nakde çevrildi, kâr kasaya mühürlendi.</i>`;
+        const tgTpMsg = `🚀 <b>MINEORA SNIPER | HEDEF VURULDU (TAM KAPANIŞ)!</b>\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                        `🧭 <b>Yön:</b> ${trade.direction}\n` +
+                        `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
+                        `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
+                        `💰 <b>Net Kâr:</b> +%0.60 (${LEVERAGE}x ile <b>+%15.0 KÂR</b>)\n` +
+                        `✅ <i>Pozisyon %100 nakde çevrildi, kâr kasaya eklendi.</i>`;
 
-        await sendTelegramAlert(tgTp2Msg);
+        await sendTelegramAlert(tgTpMsg);
 
         await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
           method: 'PUT',
@@ -321,11 +267,10 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // 3. STOP ÇALIŞMASI (Giriş Öncesi Normal Stop VEYA TP1 Sonrası Sıfır Zararla Çıkış)
       if (isStopHit) {
-        trade.status = trade.tp1Taken ? 'BREAKEVEN_EXIT' : 'STOPPED';
+        trade.status = 'STOPPED';
         trade.closedAt = now;
-        await closeBitgetPosition(trade.symbol, isLong, 1.0);
+        await closeBitgetPosition(trade.symbol, isLong);
 
         await fetch(`${FIREBASE_BASE_URL}/last_stopped_coins/${trade.symbol}.json`, {
           method: 'PUT',
@@ -333,20 +278,11 @@ export default async function handler(req, res) {
           body: JSON.stringify(now)
         }).catch(() => {});
 
-        let tgStopMsg = '';
-        if (trade.tp1Taken) {
-          tgStopMsg = `🛡️ <b>MINEORA SNIPER | BAŞABAŞ KORUMASI DEVREDE</b>\n` +
-                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                      `💵 <b>Çıkış:</b> <code>$${pCurStr}</code> (Giriş Seviyesi)\n` +
-                      `✅ <i>TP1'de kâr cebe atılmıştı, kalan kısım sıfır zararla kapatıldı. Kasada net kâr kaldı!</i>`;
-        } else {
-          tgStopMsg = `🛑 <b>MINEORA SNIPER | SIKI STOP LOSS ÇALIŞTI</b>\n` +
-                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                      `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                      `⚠️ <i>Trend bozulması nedeniyle mikro stop (-%0.55) çalıştırıldı. Parite 20 dk soğumada.</i>`;
-        }
+        const tgStopMsg = `🛑 <b>MINEORA SNIPER | STOP LOSS ÇALIŞTI</b>\n` +
+                          `━━━━━━━━━━━━━━━━━━━━\n` +
+                          `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                          `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
+                          `⚠️ <i>Trend bozulması nedeniyle sıkı stop çalıştı. Parite 20 dk soğumada.</i>`;
 
         await sendTelegramAlert(tgStopMsg);
 
@@ -543,7 +479,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (DİNAMİK MARJİN & SIKI STOP KORUMASI)
+    // MODÜL 3: CANLI BORSA EMRİ (DİNAMİK MARJİN & BORSAYA MÜHÜRLÜ SABİT TP/SL)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -570,25 +506,29 @@ export default async function handler(req, res) {
 
     const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
 
-    // KADEMELİ HEDEFLER
-    const tp1 = isLong ? entryPrice * 1.0050 : entryPrice * 0.9950; // +%0.50'de %50 Nakde Geçiş
-    const tp2 = isLong ? entryPrice * 1.0090 : entryPrice * 0.9910; // +%0.90 Tam Kapanış
+    // KESİN TEK TP: TAM +%0.60 (%100 ÇIKIŞ)
+    const tp = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
 
-    // SIKI STOP LİMİTİ: Fitil arkası binde 2.5 pay, MAKSİMUM -%0.55 tavan sınırı!
+    // SIKI STOP LİMİTİ: Fitil arkası binde 2.5 tampon, MAKSİMUM -%0.55 tavan sınırı!
     let sl = isLong 
       ? Math.max(candidateTrade.wickPoint * 0.9975, entryPrice * 0.9945)
       : Math.min(candidateTrade.wickPoint * 1.0025, entryPrice * 1.0055);
 
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr);
+    const tpFormatted = tp.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // Girişte acil durum stopu borsaya mühürlenir (TP yazılımsal yönetilir)
+    // TP ve SL doğrudan borsa emir defterine mühürlenir
     const orderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
       side: isLong ? 'buy' : 'sell',
       orderType: 'market',
       qty: orderSize.toString(),
+      presetTakeProfitPrice: tpFormatted,
+      takeProfit: tpFormatted,
+      tpOrderType: 'market',
+      tpTriggerBy: 'mark',
       presetStopLossPrice: slFormatted,
       stopLoss: slFormatted,
       slOrderType: 'market',
@@ -597,7 +537,16 @@ export default async function handler(req, res) {
 
     const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', orderPayload);
 
-    let stopResult = (placeOrderRes.code === '00000') ? 'SUCCESS (BORSAYA MÜHÜRLENDİ)' : (placeOrderRes.msg || 'ERROR');
+    let stopResult = 'SKIPPED';
+    let tpResult = 'SKIPPED';
+
+    if (placeOrderRes.code === '00000') {
+      stopResult = 'SUCCESS (BORSAYA MÜHÜRLENDİ)';
+      tpResult = 'SUCCESS (BORSAYA MÜHÜRLENDİ)';
+    } else {
+      stopResult = placeOrderRes.msg || 'ERROR';
+      tpResult = placeOrderRes.msg || 'ERROR';
+    }
 
     const tradeId = `trade_${Date.now()}`;
     const newTrade = {
@@ -605,10 +554,8 @@ export default async function handler(req, res) {
       symbol: candidateTrade.symbol,
       direction: candidateTrade.direction,
       entryPrice,
-      tp1,
-      tp: tp2,
+      tp,
       sl,
-      tp1Taken: false,
       status: 'OPEN',
       score: candidateTrade.takerRatio,
       reason: candidateTrade.reason,
@@ -618,7 +565,8 @@ export default async function handler(req, res) {
       marginUsed: dynamicMargin,
       openSize: orderSize,
       bitgetOrderResult: placeOrderRes.code === '00000' ? 'SUCCESS' : placeOrderRes.msg,
-      stopResult: stopResult
+      stopResult: stopResult,
+      tpResult: tpResult
     };
 
     await Promise.all([
@@ -635,8 +583,7 @@ export default async function handler(req, res) {
     ]);
 
     const pStr = entryPrice.toFixed(precision);
-    const tp1Str = tp1.toFixed(precision);
-    const tp2Str = tp2.toFixed(precision);
+    const tpStr = tp.toFixed(precision);
     const slStr = sl.toFixed(precision);
 
     const tgMsg = `🎯 <b>MINEORA SNIPER | TREND PULLBACK SCALP</b>\n` +
@@ -646,12 +593,13 @@ export default async function handler(req, res) {
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %10'u | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ${newTrade.bitgetOrderResult === 'SUCCESS' ? '✅ Pozisyon Açıldı' : '⚠️ ' + newTrade.bitgetOrderResult}\n` +
-                  `🛑 <b>Sıkı Stop (-%0.55):</b> <code>$${slStr}</code>\n` +
+                  `🛑 <b>Stop Loss (-%0.55):</b> ${stopResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + stopResult}\n` +
+                  `🚀 <b>Take Profit (+%0.60):</b> ${tpResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `⚡ <b>TP1 (+%0.50):</b> <code>$${tp1Str}</code> (%50 Kapatır + Stopu Girişe Çeker)\n` +
-                  `🎯 <b>TP2 (+%0.90):</b> <code>$${tp2Str}</code> (Kalan %50 Tam Kapanır)\n` +
+                  `🎯 <b>Hedef (TP):</b> <code>$${tpStr}</code> (+%0.60 | <b>%100 Kapanır</b>)\n` +
+                  `🛑 <b>Sıkı Stop:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🛡️ <i>Trend arkamızda, kârdan zarara dönüş emniyet kilidi devrede.</i>`;
+                  `🛡️ <i>TP ve SL emirleri doğrudan Bitget UTA emir defterine mühürlenmiştir.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
@@ -660,6 +608,7 @@ export default async function handler(req, res) {
       trade: newTrade,
       bitget_order: placeOrderRes,
       stop_result: stopResult,
+      tp_result: tpResult,
       wallet_equity: currentEquity,
       margin_used: dynamicMargin
     });
