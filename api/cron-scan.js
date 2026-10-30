@@ -333,6 +333,9 @@ export default async function handler(req, res) {
       "INTW", "PLTR", "BABA", "NIO", "MARA", "RIOT", "CLSK", "CORZ", "SNDK"
     ];
 
+    // DÜŞÜK KALDIRAÇ (5x) VEYA AŞIRI KÜÇÜK FİYATLI BORSA LİMİTİ PATLATAN PARİTELER
+    const LOW_LEVERAGE_OR_MICRO_BLACKLIST = ["QUSDT", "SOPHUSDT"];
+
     const pool = tickersJson.data.filter(c => {
       if (!c.symbol || !c.symbol.endsWith("USDT")) return false;
       if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
@@ -340,7 +343,12 @@ export default async function handler(req, res) {
       const symUpper = c.symbol.toUpperCase();
       for (const fx of FOREX_AND_FIAT) if (symUpper.includes(fx)) return false;
       for (const st of STOCKS_BLACKLIST) if (symUpper.includes(st)) return false;
+      for (const low of LOW_LEVERAGE_OR_MICRO_BLACKLIST) if (symUpper === low) return false;
       if (genuineSpotCryptoSet.size > 0 && !genuineSpotCryptoSet.has(c.symbol)) return false;
+
+      // Fiyatı 0.005 altı olan pariteleri Bitget maks kontrat adedi aşımından korumak için eler
+      const p = parseFloat(c.lastPr || 0);
+      if (p > 0 && p < 0.005) return false;
 
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
       return vol >= 1500000;
@@ -484,7 +492,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (DİNAMİK MARJİN & GENİŞ FİTİL TAMPONLU STOP)
+    // MODÜL 3: CANLI BORSA EMRİ (DİNAMİK MARJİN & STOP TAVAN KORUMASI)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -516,10 +524,12 @@ export default async function handler(req, res) {
     // KESİN TEK TP: TAM +%0.60 (%100 ÇIKIŞ)
     const tp = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
 
-    // STOP AVI KORUMASI: Fitil ucunun binde 3.5 arkasına tampon (0.9965 / 1.0035)
+    // STOP TAVAN KORUMASI: Fitil arkası tampon (0.9965/1.0035) ancak MAKSİMUM -%0.80 zarar sınırı!
+    // LONG için: Stop en fazla entryPrice * 0.9920 seviyesine inebilir (Math.max)
+    // SHORT için: Stop en fazla entryPrice * 1.0080 seviyesine çıkabilir (Math.min)
     let sl = isLong 
-      ? Math.min(candidateTrade.wickPoint * 0.9965, entryPrice * 0.9920)
-      : Math.max(candidateTrade.wickPoint * 1.0035, entryPrice * 1.0080);
+      ? Math.max(candidateTrade.wickPoint * 0.9965, entryPrice * 0.9920)
+      : Math.min(candidateTrade.wickPoint * 1.0035, entryPrice * 1.0080);
 
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr);
     const tpFormatted = tp.toFixed(precision);
