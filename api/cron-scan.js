@@ -157,14 +157,18 @@ export default async function handler(req, res) {
       }
     }
 
-    // GÜNCELLENMİŞ PRECISION: PEPE, BONK, SHIB DAHİL TÜM COINLERDE DOĞRU BASAMAK
-    function getPrecision(price) {
+    // BİTGET'İN KABUL ETTİĞİ HASSASİYETİ (TICK SIZE) DİNAMİK OKUMA
+    function getPrecision(price, rawPriceStr = null) {
+      if (rawPriceStr && typeof rawPriceStr === 'string' && rawPriceStr.includes('.')) {
+        const decCount = rawPriceStr.split('.')[1].length;
+        if (decCount > 0) return Math.min(8, decCount);
+      }
       if (!price || isNaN(price) || price <= 0) return 4;
       if (price >= 1000) return 2;
-      if (price >= 1) return 4;
-      if (price >= 0.01) return 5;
+      if (price >= 0.1) return 4;        // ONDO (0.39) dahil 0.1 üzeri paritelerde maksimum 4 basamak!
+      if (price >= 0.001) return 5;
       if (price >= 0.0001) return 6;
-      return 8; // 0.0001'den küçük pariteler için (örn: PEPE 0.00000451) 8 basamak
+      return 8;                          // PEPE, SHIB, BONK gibi bol sıfırlılarda 8 basamak
     }
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -193,9 +197,11 @@ export default async function handler(req, res) {
     }
 
     const priceMap = {};
+    const rawPriceMap = {};
     const tickerMetaMap = {};
     tickersJson.data.forEach(t => {
       priceMap[t.symbol] = parseFloat(t.lastPr || 0);
+      rawPriceMap[t.symbol] = t.lastPr || "";
       tickerMetaMap[t.symbol] = {
         high24h: parseFloat(t.high24h || 0),
         low24h: parseFloat(t.low24h || 0),
@@ -234,11 +240,10 @@ export default async function handler(req, res) {
       const isTpHit = isLong ? (curPrice >= trade.tp) : (curPrice <= trade.tp);
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
 
-      const prec = getPrecision(trade.entryPrice);
+      const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol]);
       const pCurStr = curPrice.toFixed(prec);
       const pEntryStr = trade.entryPrice.toFixed(prec);
 
-      // TP HEDEFİ VURULDU (%100 TAM KAPANIŞ)
       if (isTpHit) {
         trade.status = 'TP_HIT';
         trade.closedAt = now;
@@ -263,7 +268,6 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // STOP SEVİYESİ VURULDU (%100 DİSİPLİN ÇIKIŞI)
       if (isStopHit) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
@@ -386,10 +390,7 @@ export default async function handler(req, res) {
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
-      // =========================================================================
-      // GÜVENLİK KİLİDİ 1: 24 SAATLİK VE 1 SAATLİK BANT KONUMU (RANGE FILTER)
-      // DİPTE SHORT, TEPEDE LONG AÇILMASINI SİSTEM DÜZEYİNDE ENGELLER
-      // =========================================================================
+      // 24 SAATLİK VE 1 SAATLİK BANT KONUMU (RANGE FILTER)
       const meta = tickerMetaMap[item.symbol];
       if (meta && meta.high24h > meta.low24h && meta.low24h > 0) {
         const range24h = meta.high24h - meta.low24h;
@@ -438,6 +439,7 @@ export default async function handler(req, res) {
           symbol: item.symbol,
           direction: 'LONG',
           price: cur1m.close,
+          rawPriceStr: item.lastPr,
           wickPoint: sweep1m.low,
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
@@ -452,6 +454,7 @@ export default async function handler(req, res) {
           symbol: item.symbol,
           direction: 'SHORT',
           price: cur1m.close,
+          rawPriceStr: item.lastPr,
           wickPoint: sweep1m.high,
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
@@ -501,7 +504,7 @@ export default async function handler(req, res) {
       ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9930)
       : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0070);
 
-    const precision = getPrecision(entryPrice);
+    const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr);
     const tpFormatted = tp.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
@@ -568,12 +571,10 @@ export default async function handler(req, res) {
       })
     ]);
 
-    // Hassasiyeti korunan dinamik fiyat dizgeleri
     const pStr = entryPrice.toFixed(precision);
     const tpStr = tp.toFixed(precision);
     const slStr = sl.toFixed(precision);
 
-    // KASA BAKİYESİ VE MARJİN TUTARI TAMAMEN GİZLENMİŞ TELEGRAM BİLDİRİMİ
     const tgMsg = `🎯 <b>MINEORA SNIPER | SCALPİNG</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
