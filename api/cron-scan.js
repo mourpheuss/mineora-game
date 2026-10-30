@@ -307,7 +307,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI + DİNAMİK SCALPING MİMARİSİ
+    // MODÜL 2: SAF KRİPTO RADARI + UÇ BÖLGE SCALPING MİMARİSİ
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -397,7 +397,22 @@ export default async function handler(req, res) {
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
-      // 24 SAATLİK BANT EMNİYET KİLİDİ (%15 Eşik)
+      // =======================================================================
+      // UÇ BÖLGE EMNİYETİ 1: 1 SAATLİK BANT (ZRO TESTERE TUZAĞI ENGELİ)
+      // Dip %20 dışı LONG yasak, Tepe %20 dışı SHORT yasak!
+      // =======================================================================
+      const h1High = Math.max(...candles1m.map(c => c.high));
+      const h1Low  = Math.min(...candles1m.map(c => c.low));
+      const h1Range = h1High - h1Low;
+      if (h1Range > 0) {
+        const h1Pos = (cur1m.close - h1Low) / h1Range;
+        if (isBullishSweep && h1Pos > 0.20) continue; // Dip %20 dışındaki ortalarda LONG açamaz!
+        if (isBearishSweep && h1Pos < 0.80) continue; // Tepe %20 dışındaki ortalarda SHORT açamaz!
+      }
+
+      // =======================================================================
+      // UÇ BÖLGE EMNİYETİ 2: 24 SAATLİK BANT (%15 Çöküş / Tepe Emniyeti)
+      // =======================================================================
       const meta = tickerMetaMap[item.symbol];
       if (meta && meta.high24h > meta.low24h && meta.low24h > 0) {
         const range24h = meta.high24h - meta.low24h;
@@ -443,7 +458,7 @@ export default async function handler(req, res) {
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `%${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar temizlendi. ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} kurumsal alıcı akışıyla sıçrama başladı.`
+          reason: `1h dip %20 teyitli. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar temizlendi. ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} kurumsal alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
@@ -458,7 +473,7 @@ export default async function handler(req, res) {
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `%${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu. ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} kurumsal satıcı akışıyla çöküş başladı.`
+          reason: `1h tepe %20 teyitli. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu. ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} kurumsal satıcı akışıyla çöküş başladı.`
         };
         break;
       }
