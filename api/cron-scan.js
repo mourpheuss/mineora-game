@@ -238,7 +238,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: TEK TP (+%0.60) %100 TAM KAPANIS & STOP KONTROLÜ
+    // MODÜL 1: TEK TP (+%0.90) %100 TAM KAPANIS & STOP KONTROLÜ
     // =========================================================================
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
@@ -265,7 +265,7 @@ export default async function handler(req, res) {
                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
                         `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                        `💰 <b>Net Kâr:</b> +%0.60 (${LEVERAGE}x ile <b>+%15.0 KÂR</b>)\n` +
+                        `💰 <b>Net Kâr:</b> +%0.90 (${LEVERAGE}x ile <b>+%22.5 KÂR</b>)\n` +
                         `✅ <i>Pozisyon %100 nakde çevrildi, kâr kasaya eklendi.</i>`;
 
         await sendTelegramAlert(tgTpMsg);
@@ -521,8 +521,8 @@ export default async function handler(req, res) {
 
     const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
 
-    // KESİN TEK TP: TAM +%0.60 (%100 ÇIKIŞ)
-    const tp = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
+    // KESİN TEK TP: TAM +%0.90 (%100 ÇIKIŞ)
+    const tp = isLong ? entryPrice * 1.0090 : entryPrice * 0.9910;
 
     // STOP TAVAN KORUMASI: Fitil arkası tampon (0.9965/1.0035) ancak MAKSİMUM -%0.80 zarar sınırı!
     // LONG için: Stop en fazla entryPrice * 0.9920 seviyesine inebilir (Math.max)
@@ -612,7 +612,7 @@ export default async function handler(req, res) {
                   `🛑 <b>Stop Loss:</b> ${stopResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + stopResult}\n` +
                   `🚀 <b>Take Profit:</b> ${tpResult.includes('SUCCESS') ? '✅ Borsaya Mühürlendi' : '⚠️ ' + tpResult}\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🎯 <b>Hedef (TP):</b> <code>$${tpStr}</code> (+%0.60 | <b>%100 Kapanır</b>)\n` +
+                  `🎯 <b>Hedef (TP):</b> <code>$${tpStr}</code> (+%0.90 | <b>%100 Kapanır</b>)\n` +
                   `🛑 <b>Fitil Stop:</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🛡️ <i>TP ve SL emirleri doğrudan Bitget UTA emir defterine mühürlenmiştir.</i>`;
