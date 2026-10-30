@@ -170,10 +170,10 @@ export default async function handler(req, res) {
       return 100;
     }
 
-    // POZİSYON KAPAMA (PIYASA REDUCE-ONLY)
+    // POZİSYON KAPAMA (PIYASA REDUCE-ONLY VE PLAN EMİRLERİ TEMİZLEME)
     async function closeMexcPosition(symbol, isLong) {
       try {
-        // Açık plan emirlerini (varsa SL/TP) temizle
+        // Açık plan emirlerini (SL/TP) temizle
         await mexcPrivateRequest('/api/v1/private/planorder/cancel_all', 'POST', { symbol }).catch(() => {});
 
         // Açık pozisyonu sorgula
@@ -182,13 +182,13 @@ export default async function handler(req, res) {
           const pos = posRes.data.find(p => p.symbol === symbol);
           if (pos && parseFloat(pos.holdVol || 0) > 0) {
             const holdVol = parseInt(pos.holdVol, 10);
-            const closeSide = isLong ? 4 : 2; // MEXC: 2 = Open Short/Close Long, 4 = Close Short
+            const closeSide = isLong ? 4 : 2; // MEXC: 2 = Close Long, 4 = Close Short
             return await mexcPrivateRequest('/api/v1/private/order/create', 'POST', {
               symbol: symbol,
               side: closeSide,
               type: 5, // Piyasa emri (Market)
               vol: holdVol,
-              openType: 2 // Çapraz / İzole uyumlu piyasa kapama
+              openType: 2 // Çapraz marjin
             });
           }
         }
@@ -233,6 +233,7 @@ export default async function handler(req, res) {
       const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol], trade.symbol);
       const pCurStr = curPrice.toFixed(prec);
       const pEntryStr = trade.entryPrice.toFixed(prec);
+      const dynamicTpPctStr = (trade.tpTargetPct || 0.85).toFixed(2);
 
       if (isTpHit) {
         trade.status = 'TP_HIT';
@@ -246,7 +247,7 @@ export default async function handler(req, res) {
                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
                         `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                        `💰 <b>Net Kâr:</b> +%0.85 (${LEVERAGE}x ile <b>+%21.25 BRÜT / +%20.25 NET</b>)\n` +
+                        `💰 <b>Dinamik Kâr:</b> +%${dynamicTpPctStr} (${LEVERAGE}x Kaldıraç)\n` +
                         `✅ <i>Pozisyon %100 nakde çevrildi, kâr kasaya eklendi.</i>`;
 
         await sendTelegramAlert(tgTpMsg);
@@ -275,7 +276,7 @@ export default async function handler(req, res) {
                           `💎 <b>Borsa:</b> MEXC CONTRACT\n` +
                           `💎 <b>Parite:</b> #${trade.symbol}\n` +
                           `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                          `⚠️ <i>Trend bozulması nedeniyle sıkı stop çalıştı. Parite 20 dk soğumada.</i>`;
+                          `⚠️ <i>Trend bozulması nedeniyle dinamik stop çalıştı. Parite 20 dk soğumada.</i>`;
 
         await sendTelegramAlert(tgStopMsg);
 
@@ -371,6 +372,7 @@ export default async function handler(req, res) {
       const h1Range = h1High - h1Low;
       if (h1Range <= 0) continue;
       const h1Pos = (cur1m.close - h1Low) / h1Range;
+      const h1RangePct = (h1Range / cur1m.close) * 100; // 1 saatlik oynaklık yüzdesi
 
       // Trend Şartları
       const isBullishTrend = (ema20 >= ema50) && (h1Pos >= 0.40 && h1Pos <= 0.85);
@@ -402,6 +404,14 @@ export default async function handler(req, res) {
       const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
       if (volZScore < 1.8 || volZScore > 6.0) continue;
 
+      // =========================================================================
+      // DİNAMİK TP VE SL HESAPLAMA MOTORU (VOLATİLİTE VE KANAL UYUMLU)
+      // =========================================================================
+      // Oynaklık düşükse hedef %0.65, yüksekse %1.20 bandına kadar açılır:
+      let dynamicTpPct = Math.min(1.20, Math.max(0.65, h1RangePct * 0.35));
+      // Stop mesafesi nefes alanına göre %0.45 ile %0.75 arasında belirlenir:
+      let dynamicSlPct = Math.min(0.75, Math.max(0.45, h1RangePct * 0.22));
+
       if (isBullishPullback) {
         candidateTrade = {
           symbol: item.symbol,
@@ -410,7 +420,10 @@ export default async function handler(req, res) {
           rawPriceStr: item.lastPrice ? item.lastPrice.toString() : "",
           wickPoint: sweep1m.low,
           volZScore: parseFloat(volZScore.toFixed(2)),
-          reason: `Yükseliş trendinde pullback tamamlandı. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitil tepkisi, ${volZScore.toFixed(1)}σ Z-Score hacim ile trende devam!`
+          dynamicTpPct: parseFloat(dynamicTpPct.toFixed(2)),
+          dynamicSlPct: parseFloat(dynamicSlPct.toFixed(2)),
+          h1RangePct: parseFloat(h1RangePct.toFixed(2)),
+          reason: `Yükseliş trendinde pullback tamamlandı. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitil tepkisi, ${volZScore.toFixed(1)}σ Z-Score hacim (Oynaklık: %${h1RangePct.toFixed(1)}).`
         };
         break;
       }
@@ -423,7 +436,10 @@ export default async function handler(req, res) {
           rawPriceStr: item.lastPrice ? item.lastPrice.toString() : "",
           wickPoint: sweep1m.high,
           volZScore: parseFloat(volZScore.toFixed(2)),
-          reason: `Düşüş trendinde tepki yükselişi tıkandı. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitil satışı, ${volZScore.toFixed(1)}σ Z-Score hacim ile düşüşe devam!`
+          dynamicTpPct: parseFloat(dynamicTpPct.toFixed(2)),
+          dynamicSlPct: parseFloat(dynamicSlPct.toFixed(2)),
+          h1RangePct: parseFloat(h1RangePct.toFixed(2)),
+          reason: `Düşüş trendinde tepki yükselişi tıkandı. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitil satışı, ${volZScore.toFixed(1)}σ Z-Score hacim (Oynaklık: %${h1RangePct.toFixed(1)}).`
         };
         break;
       }
@@ -434,7 +450,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (MEXC CONTRACT)
+    // MODÜL 3: CANLI BORSA EMRİ & PLAN EMİRLERİ (MEXC CONTRACT)
     // =========================================================================
     const currentEquity = await getMexcFuturesEquity();
     
@@ -462,34 +478,37 @@ export default async function handler(req, res) {
     let orderVol = Math.round(positionNotional / contractValueInUsdt);
     if (orderVol < cDetail.minVol) orderVol = cDetail.minVol;
 
-    // Hedef ve Stop Seviyeleri (+%0.85 TP, max -%0.55 SL)
-    const tp = isLong ? entryPrice * 1.0085 : entryPrice * 0.9915;
+    // DİNAMİK TP VE SL FİYATLARININ HESAPLANMASI
+    const tpRatio = 1 + (candidateTrade.dynamicTpPct / 100);
+    const slRatio = candidateTrade.dynamicSlPct / 100;
+
+    const tp = isLong ? entryPrice * tpRatio : entryPrice * (2 - tpRatio);
+
+    // Fitil arkası tamponu dinamik tavan ile koru
     let sl = isLong 
-      ? Math.max(candidateTrade.wickPoint * 0.9975, entryPrice * 0.9945)
-      : Math.min(candidateTrade.wickPoint * 1.0025, entryPrice * 1.0055);
+      ? Math.max(candidateTrade.wickPoint * 0.9975, entryPrice * (1 - slRatio))
+      : Math.min(candidateTrade.wickPoint * 1.0025, entryPrice * (1 + slRatio));
 
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr, candidateTrade.symbol);
     const tpFormatted = parseFloat(tp.toFixed(precision));
     const slFormatted = parseFloat(sl.toFixed(precision));
 
-    // MEXC: 1 = Open Long, 3 = Open Short
+    // MEXC Açılış Yönü: 1 = Open Long, 3 = Open Short
     const openSide = isLong ? 1 : 3;
 
-    // Canlı Piyasa Emri Gönder
+    // 1. Ana Piyasa Pozisyon Emrini Gönder
     const orderPayload = {
       symbol: candidateTrade.symbol,
       side: openSide,
       type: 5, // Piyasa emri (Market)
       vol: orderVol,
-      openType: 2,
-      takeProfitPrice: tpFormatted,
-      stopLossPrice: slFormatted
+      openType: 2
     };
 
     const placeOrderRes = await mexcPrivateRequest('/api/v1/private/order/create', 'POST', orderPayload);
 
     // =========================================================================
-    // HAYALET İŞLEM KİLİDİ: Yalnızca borsa onayladıysa Firebase ve Telegram'a yaz!
+    // HAYALET İŞLEM KİLİDİ: Yalnızca borsa onayladıysa devam et!
     // =========================================================================
     if (!placeOrderRes.success || !placeOrderRes.data) {
       const errMsg = placeOrderRes.message || JSON.stringify(placeOrderRes);
@@ -503,6 +522,37 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "ORDER_REJECTED", error: errMsg });
     }
 
+    // 2. MEXC Borsasına TP ve SL Plan Emirlerini Doğrudan Mühürle
+    const closeSide = isLong ? 4 : 2; // MEXC: 2 = Close Long, 4 = Close Short
+    let tpPlanRes = null;
+    let slPlanRes = null;
+
+    try {
+      // Take Profit Plan Emri (Borsaya mühürlü)
+      tpPlanRes = await mexcPrivateRequest('/api/v1/private/planorder/place', 'POST', {
+        symbol: candidateTrade.symbol,
+        side: closeSide,
+        triggerType: 1, // Son fiyat ile tetikleme
+        triggerPrice: tpFormatted,
+        executeCycle: 1,
+        orderType: 5, // Tetiklendiğinde Market emir
+        vol: orderVol,
+        trend: isLong ? 1 : 2 // 1: Yukarı kırılımda tetikle (Long TP), 2: Aşağı kırılımda tetikle (Short TP)
+      });
+
+      // Stop Loss Plan Emri (Borsaya mühürlü)
+      slPlanRes = await mexcPrivateRequest('/api/v1/private/planorder/place', 'POST', {
+        symbol: candidateTrade.symbol,
+        side: closeSide,
+        triggerType: 1,
+        triggerPrice: slFormatted,
+        executeCycle: 1,
+        orderType: 5,
+        vol: orderVol,
+        trend: isLong ? 2 : 1 // 2: Aşağı kırılımda tetikle (Long SL), 1: Yukarı kırılımda tetikle (Short SL)
+      });
+    } catch (e) {}
+
     const tradeId = `trade_${Date.now()}`;
     const newTrade = {
       id: tradeId,
@@ -511,6 +561,8 @@ export default async function handler(req, res) {
       entryPrice,
       tp,
       sl,
+      tpTargetPct: candidateTrade.dynamicTpPct,
+      slTargetPct: candidateTrade.dynamicSlPct,
       status: 'OPEN',
       reason: candidateTrade.reason,
       createdAt: now,
@@ -519,8 +571,8 @@ export default async function handler(req, res) {
       marginUsed: dynamicMargin,
       orderVol: orderVol,
       mexcOrderId: placeOrderRes.data,
-      stopResult: 'SUCCESS (MEXC BORSAYA MÜHÜRLENDİ)',
-      tpResult: 'SUCCESS (MEXC BORSAYA MÜHÜRLENDİ)'
+      tpPlanResult: tpPlanRes?.success ? 'MÜHÜRLENDİ' : 'MANUEL_TAKİP',
+      slPlanResult: slPlanRes?.success ? 'MÜHÜRLENDİ' : 'MANUEL_TAKİP'
     };
 
     await Promise.all([
@@ -540,16 +592,17 @@ export default async function handler(req, res) {
     const tpStr = tp.toFixed(precision);
     const slStr = sl.toFixed(precision);
 
-    const tgMsg = `🎯 <b>MINEORA SNIPER | MEXC TREND PULLBACK SCALP</b>\n` +
+    const tgMsg = `🎯 <b>MINEORA SNIPER | MEXC DİNAMİK PULLBACK SCALP</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Borsa:</b> MEXC CONTRACT\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
                   `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %10'u | ${LEVERAGE}x Kaldıraç\n` +
+                  `📊 <b>Oynaklık (1h Range):</b> %${candidateTrade.h1RangePct}\n` +
                   `🏦 <b>Borsa Emri:</b> ✅ Pozisyon Açıldı\n` +
-                  `🛑 <b>Stop Loss:</b> <code>$${slStr}</code> (Borsaya Mühürlendi)\n` +
-                  `🚀 <b>Take Profit:</b> <code>$${tpStr}</code> (+%0.85 | Borsaya Mühürlendi)\n` +
+                  `🛑 <b>Dinamik Stop (-%${candidateTrade.dynamicSlPct}):</b> <code>$${slStr}</code> (${newTrade.slPlanResult === 'MÜHÜRLENDİ' ? '✅ Borsaya Mühürlendi' : '⚠️ Manuel Koruma'})\n` +
+                  `🚀 <b>Dinamik Hedef (+%${candidateTrade.dynamicTpPct}):</b> <code>$${tpStr}</code> (${newTrade.tpPlanResult === 'MÜHÜRLENDİ' ? '✅ Borsaya Mühürlendi' : '⚠️ Manuel Koruma'})\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🛡️ <i>%0.02 düşük komisyonla sermaye koruması aktif.</i>`;
 
@@ -559,6 +612,8 @@ export default async function handler(req, res) {
       success: true,
       trade: newTrade,
       mexc_order: placeOrderRes,
+      tp_plan: tpPlanRes,
+      sl_plan: slPlanRes,
       wallet_equity: currentEquity,
       margin_used: dynamicMargin
     });
