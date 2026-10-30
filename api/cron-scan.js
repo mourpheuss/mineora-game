@@ -160,11 +160,45 @@ export default async function handler(req, res) {
       }
     }
 
-    // BİTGET TICK SIZE BASAMAK DÜZELTMESİ (SOL, BNB DAHİL 50$ ÜZERİ PARİTELERDE KESİN TAVAN!)
-    function getPrecision(price, rawPriceStr = null) {
-      if (!price || isNaN(price) || price <= 0) return 4;
-      if (price >= 1000) return 2;
-      if (price >= 50) return 3; // SOL ($94), BNB ($700), ETH için Bitget 0.001 katı (max 3 basamak) şart koşar!
+    // 1. Bitget Vadeli Ticker, Spot ve Kontrat Bilgilerini Çek
+    const [tickersRes, spotSymbolsRes, contractsRes] = await Promise.all([
+      fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
+      fetch("https://api.bitget.com/api/v2/spot/public/symbols", { headers: browserHeaders }).catch(() => null),
+      fetch("https://api.bitget.com/api/v2/mix/market/contracts?productType=USDT-FUTURES", { headers: browserHeaders }).catch(() => null)
+    ]);
+
+    const tickersJson = await tickersRes.json();
+    if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
+      return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
+    }
+
+    // Bitget borsa kurallarından kesin virgülden sonraki basamak (tick size) haritası
+    const symbolPrecisionMap = {};
+    if (contractsRes && contractsRes.ok) {
+      try {
+        const contractsJson = await contractsRes.json();
+        if (contractsJson.code === '00000' && Array.isArray(contractsJson.data)) {
+          contractsJson.data.forEach(c => {
+            if (c.symbol && c.pricePlace !== undefined) {
+              symbolPrecisionMap[c.symbol] = parseInt(c.pricePlace, 10);
+            }
+          });
+        }
+      } catch (e) {}
+    }
+
+    // BİTGET TICK SIZE BASAMAK DÜZELTMESİ (BORSA RESMİ KURALI ÖNCELİKLİ)
+    function getPrecision(price, rawPriceStr = null, symbol = null) {
+      // 1. Borsa resmi kontrat kuralı tanımlıysa doğrudan uygula
+      if (symbol && symbolPrecisionMap[symbol] !== undefined) {
+        return symbolPrecisionMap[symbol];
+      }
+
+      if (!price || isNaN(price) || price <= 0) return 2;
+
+      // 2. Fiyat bazlı kesin tavan kuralları
+      if (price >= 100) return 2;          // BCH ($289), BTC, ETH, BNB vb. (0.01 adımı)
+      if (price >= 10) return 3;           // SOL ($94) vb. (0.001 adımı)
 
       if (rawPriceStr && typeof rawPriceStr === 'string' && rawPriceStr.includes('.')) {
         const decCount = rawPriceStr.split('.')[1].length;
@@ -174,17 +208,6 @@ export default async function handler(req, res) {
       if (price >= 0.001) return 5;
       if (price >= 0.0001) return 6;
       return 8;
-    }
-
-    // 1. Bitget Vadeli Ticker Verilerini Çek
-    const [tickersRes, spotSymbolsRes] = await Promise.all([
-      fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
-      fetch("https://api.bitget.com/api/v2/spot/public/symbols", { headers: browserHeaders }).catch(() => null)
-    ]);
-
-    const tickersJson = await tickersRes.json();
-    if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
-      return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
     }
 
     const genuineSpotCryptoSet = new Set();
@@ -245,7 +268,7 @@ export default async function handler(req, res) {
       const isTpHit = isLong ? (curPrice >= trade.tp) : (curPrice <= trade.tp);
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
 
-      const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol]);
+      const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol], trade.symbol);
       const pCurStr = curPrice.toFixed(prec);
       const pEntryStr = trade.entryPrice.toFixed(prec);
 
@@ -535,7 +558,8 @@ export default async function handler(req, res) {
       ? Math.max(candidateTrade.wickPoint * 0.9975, entryPrice * 0.9945)
       : Math.min(candidateTrade.wickPoint * 1.0025, entryPrice * 1.0055);
 
-    const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr);
+    // Kontrat tablosundan kesin hassasiyet değeri alınır
+    const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr, candidateTrade.symbol);
     const tpFormatted = tp.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
