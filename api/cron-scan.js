@@ -24,11 +24,12 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
+    // GEVŞETİLMİŞ ROTASYON ZAMANLARI (Günde 20-30 sinyal hedefi)
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
-    const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
-    const POST_STOP_COOLDOWN_MS = 45 * 60 * 1000;
-    const LEVERAGE = 25; // 25x KALDIRAÇ
-    const MARGIN_RATIO = 0.10; // KASANIN ANLIK %10'U
+    const SAME_COIN_LOCK_MS = 12 * 60 * 1000;       // 20 dk yerine 12 dk
+    const POST_STOP_COOLDOWN_MS = 20 * 60 * 1000;   // 45 dk yerine 20 dk
+    const LEVERAGE = 25;                            // 25x KALDIRAÇ
+    const MARGIN_RATIO = 0.10;                      // KASANIN ANLIK %10'U
     const now = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -74,7 +75,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Pozisyonu Tamamen Kapatma Fonksiyonu
     async function closeBitgetPosition(symbol, isLong) {
       const closeSide = isLong ? 'sell' : 'buy';
       let qty = "1";
@@ -132,16 +132,6 @@ export default async function handler(req, res) {
       } catch (e) {}
 
       return 397;
-    }
-
-    function calculateEMA(prices, period) {
-      if (!prices || prices.length < period) return prices[prices.length - 1];
-      const k = 2 / (period + 1);
-      let ema = prices.slice(0, period).reduce((a, b) => a + b, 0) / period;
-      for (let i = period; i < prices.length; i++) {
-        ema = prices[i] * k + ema * (1 - k);
-      }
-      return ema;
     }
 
     function calculateOrderQuantity(entryPrice, notional) {
@@ -283,7 +273,7 @@ export default async function handler(req, res) {
                           `━━━━━━━━━━━━━━━━━━━━\n` +
                           `💎 <b>Parite:</b> #${trade.symbol}\n` +
                           `💵 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                          `⚠️ <i>Fitil arkası disiplin stopu çalıştı. Parite 45 dk soğumaya alındı.</i>`;
+                          `⚠️ <i>Fitil arkası disiplin stopu çalıştı. Parite 20 dk soğumaya alındı.</i>`;
 
         await sendTelegramAlert(tgStopMsg);
 
@@ -297,7 +287,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SAF KRİPTO RADARI + 24H/1H PİYASA YAPISI FİLTRESİ
+    // MODÜL 2: SAF KRİPTO RADARI + DİNAMİK SCALPING MİMARİSİ
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -368,10 +358,6 @@ export default async function handler(req, res) {
         volume: Number(c[5])
       })).sort((a, b) => a.time - b.time);
 
-      const closes = candles1m.map(c => c.close);
-      const ema25 = calculateEMA(closes, 25);
-      const ema50 = calculateEMA(closes, 50);
-
       const cur1m = candles1m[candles1m.length - 1];
       const sweep1m = candles1m[candles1m.length - 2];
       const pastList = candles1m.slice(-22, -2);
@@ -385,35 +371,22 @@ export default async function handler(req, res) {
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
 
-      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.48) && (cur1m.close > sweep1m.close);
-      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.48) && (cur1m.close < sweep1m.close);
+      // %42+ Fitil Oranı (Kaliteli likidite süpürmesi)
+      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.42) && (cur1m.close > sweep1m.close);
+      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.42) && (cur1m.close < sweep1m.close);
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
-      // 24 SAATLİK VE 1 SAATLİK BANT KONUMU (RANGE FILTER)
+      // 24 SAATLİK BANT EMNİYET KİLİDİ (%15 Eşik)
       const meta = tickerMetaMap[item.symbol];
       if (meta && meta.high24h > meta.low24h && meta.low24h > 0) {
         const range24h = meta.high24h - meta.low24h;
         const pos24h = (cur1m.close - meta.low24h) / range24h;
-        if (isBearishSweep && pos24h <= 0.25) continue;
-        if (isBullishSweep && pos24h >= 0.75) continue;
+        if (isBearishSweep && pos24h <= 0.15) continue; // Günün dibinde SHORT yasak
+        if (isBullishSweep && pos24h >= 0.85) continue; // Günün tepesinde LONG yasak
       }
 
-      const h1High = Math.max(...candles1m.map(c => c.high));
-      const h1Low  = Math.min(...candles1m.map(c => c.low));
-      const h1Range = h1High - h1Low;
-      if (h1Range > 0) {
-        const h1Pos = (cur1m.close - h1Low) / h1Range;
-        if (isBearishSweep && h1Pos <= 0.25) continue;
-        if (isBullishSweep && h1Pos >= 0.75) continue;
-      }
-
-      if (isBearishSweep && (cur1m.close > ema50 || ema25 > ema50)) continue;
-      if (isBullishSweep && (cur1m.close < ema50 || ema25 < ema50)) continue;
-
-      const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
-      if (volZScore < 2.3 || volZScore > 6.0) continue;
-
+      // TAHTA AKIŞI (ORDER FLOW / TAKER RATIO)
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -434,7 +407,13 @@ export default async function handler(req, res) {
       const totalFlow = buyUsd + sellUsd;
       const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
 
-      if (isBullishSweep && takerBuyRatio >= 65) {
+      // DİNAMİK HACİM Z-SCORE FİLTRESİ (Güçlü akış varsa 1.8σ, standartsa 2.1σ)
+      const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
+      const requiredZScore = (takerBuyRatio >= 70 || takerBuyRatio <= 30) ? 1.8 : 2.1;
+
+      if (volZScore < requiredZScore || volZScore > 6.0) continue;
+
+      if (isBullishSweep && takerBuyRatio >= 62) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
@@ -444,12 +423,12 @@ export default async function handler(req, res) {
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `1h ve 24h dip bölge dışı teyitli. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar absorbe edildi, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} kurumsal alıcı akışıyla sıçrama başladı.`
+          reason: `%${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar temizlendi. ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} kurumsal alıcı akışıyla sıçrama başladı.`
         };
         break;
       }
 
-      if (isBearishSweep && takerBuyRatio <= 35) {
+      if (isBearishSweep && takerBuyRatio <= 38) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'SHORT',
@@ -459,7 +438,7 @@ export default async function handler(req, res) {
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `1h ve 24h tepe bölge dışı teyitli. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} kurumsal satıcı akışıyla çöküş başladı.`
+          reason: `%${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu. ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} kurumsal satıcı akışıyla çöküş başladı.`
         };
         break;
       }
@@ -470,7 +449,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (BITGET UTA RESMİ PRESET TEK TP & TEK SL MÜHÜRLEME)
+    // MODÜL 3: CANLI BORSA EMRİ (GENİŞ FİTİL TAMPONLU STOP & %100 TEK TP)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -497,12 +476,13 @@ export default async function handler(req, res) {
 
     const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
 
-    // TEK VE KESİN TP: TAM +%0.60
+    // KESİN TEK TP: TAM +%0.60 (%100 ÇIKIŞ)
     const tp = isLong ? entryPrice * 1.0060 : entryPrice * 0.9940;
 
+    // STOP AVI KORUMASI: Fitil ucunun binde 3.5 arkasına tampon (0.9965 / 1.0035)
     let sl = isLong 
-      ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9930)
-      : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0070);
+      ? Math.min(candidateTrade.wickPoint * 0.9965, entryPrice * 0.9920)
+      : Math.max(candidateTrade.wickPoint * 1.0035, entryPrice * 1.0080);
 
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr);
     const tpFormatted = tp.toFixed(precision);
