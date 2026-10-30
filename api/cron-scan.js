@@ -102,36 +102,56 @@ export default async function handler(req, res) {
       });
     }
 
+    // =========================================================================
+    // DİNAMİK VE DOĞRU KASA BAKİYESİ SORGULAMA (BITGET UTA V3 & V2 UYUMLU)
+    // =========================================================================
     async function getFuturesEquity() {
+      // 1. Bitget UTA V3 Varlık Listesi
       try {
         const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
-        if (accResV3 && accResV3.code === '00000' && Array.isArray(accResV3.data)) {
-          const usdtItem = accResV3.data.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
+        if (accResV3 && accResV3.code === '00000') {
+          const list = Array.isArray(accResV3.data) ? accResV3.data : (accResV3.data?.assets || []);
+          const usdtItem = list.find(a => (a.coin === 'USDT' || a.coinName === 'USDT' || a.assetCoin === 'USDT'));
           if (usdtItem) {
-            const eq = parseFloat(usdtItem.equity || usdtItem.available || usdtItem.balance || 0);
-            if (eq > 10) return eq;
+            const eq = parseFloat(usdtItem.equity || usdtItem.available || usdtItem.usdtEquity || usdtItem.balance || 0);
+            if (eq > 5) return eq;
+          }
+          if (accResV3.data?.accountEquity) {
+            const totalEq = parseFloat(accResV3.data.accountEquity);
+            if (totalEq > 5) return totalEq;
           }
         }
       } catch (e) {}
 
+      // 2. Bitget V2 Mix Vadeli Bakiye (Küçük harf 'usdt-futures' ile kesin format)
       try {
-        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=USDT-FUTURES', 'GET');
+        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=usdt-futures', 'GET');
         if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
           const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
           if (usdtAcc) {
-            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
-            if (eq > 10) return eq;
+            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || usdtAcc.crossMaxAvailable || 0);
+            if (eq > 5) return eq;
           }
         }
       } catch (e) {}
 
+      // 3. Bitget UTA Hesap Genel Özeti
+      try {
+        const infoRes = await bitgetPrivateRequest('/api/v3/account/info', 'GET');
+        if (infoRes && infoRes.code === '00000' && infoRes.data?.usdtEquity) {
+          const eq = parseFloat(infoRes.data.usdtEquity);
+          if (eq > 5) return eq;
+        }
+      } catch (e) {}
+
+      // 4. Firebase'den Son Kayıtlı Gerçek Değer
       try {
         const lastEqRes = await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`);
         const savedEq = parseFloat(await lastEqRes.json());
-        if (savedEq > 10) return savedEq;
+        if (savedEq > 5) return savedEq;
       } catch (e) {}
 
-      return 397;
+      return 100; // API yanıt vermezse korumalı taban
     }
 
     function calculateOrderQuantity(entryPrice, notional) {
@@ -449,16 +469,18 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (GENİŞ FİTİL TAMPONLU STOP & %100 TEK TP)
+    // MODÜL 3: CANLI BORSA EMRİ (DİNAMİK MARJİN & GENİŞ FİTİL TAMPONLU STOP)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
+    // Gerçek bakiye Firebase'e kaydedilir
     await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(currentEquity)
     }).catch(() => {});
 
+    // Kasanın anlık net %10'u dinamik hesaplanır
     const dynamicMargin = parseFloat((currentEquity * MARGIN_RATIO).toFixed(2));
     
     try {
