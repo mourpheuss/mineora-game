@@ -157,12 +157,14 @@ export default async function handler(req, res) {
       }
     }
 
+    // GÜNCELLENMİŞ PRECISION: PEPE, BONK, SHIB DAHİL TÜM COINLERDE DOĞRU BASAMAK
     function getPrecision(price) {
-      const str = price.toString();
-      if (str.includes('.')) {
-        return Math.min(6, str.split('.')[1].length);
-      }
-      return 4;
+      if (!price || isNaN(price) || price <= 0) return 4;
+      if (price >= 1000) return 2;
+      if (price >= 1) return 4;
+      if (price >= 0.01) return 5;
+      if (price >= 0.0001) return 6;
+      return 8; // 0.0001'den küçük pariteler için (örn: PEPE 0.00000451) 8 basamak
     }
 
     // 1. Bitget Vadeli Ticker Verilerini Çek
@@ -232,8 +234,9 @@ export default async function handler(req, res) {
       const isTpHit = isLong ? (curPrice >= trade.tp) : (curPrice <= trade.tp);
       const isStopHit = isLong ? (curPrice <= trade.sl) : (curPrice >= trade.sl);
 
-      const pCurStr = curPrice < 1 ? curPrice.toFixed(getPrecision(curPrice)) : curPrice.toFixed(4);
-      const pEntryStr = trade.entryPrice < 1 ? trade.entryPrice.toFixed(getPrecision(trade.entryPrice)) : trade.entryPrice.toFixed(4);
+      const prec = getPrecision(trade.entryPrice);
+      const pCurStr = curPrice.toFixed(prec);
+      const pEntryStr = trade.entryPrice.toFixed(prec);
 
       // TP HEDEFİ VURULDU (%100 TAM KAPANIŞ)
       if (isTpHit) {
@@ -565,9 +568,10 @@ export default async function handler(req, res) {
       })
     ]);
 
-    const pStr = entryPrice < 1 ? entryPrice.toFixed(precision) : entryPrice.toFixed(4);
-    const tpStr = tp < 1 ? tp.toFixed(precision) : tp.toFixed(4);
-    const slStr = sl < 1 ? sl.toFixed(precision) : sl.toFixed(4);
+    // Hassasiyeti korunan dinamik fiyat dizgeleri
+    const pStr = entryPrice.toFixed(precision);
+    const tpStr = tp.toFixed(precision);
+    const slStr = sl.toFixed(precision);
 
     // KASA BAKİYESİ VE MARJİN TUTARI TAMAMEN GİZLENMİŞ TELEGRAM BİLDİRİMİ
     const tgMsg = `🎯 <b>MINEORA SNIPER | SCALPİNG</b>\n` +
