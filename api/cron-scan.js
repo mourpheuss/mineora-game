@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & PARAMETRELER
+    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & ORİJİNAL PARAMETRELER (28 EKİM)
     // =========================================================================
     const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
     const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
@@ -24,14 +24,14 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    // YÖNETİM PARAMETRELERİ (LİKİDİTE SÜPÜRME MOTORU)
+    // ORİJİNAL CRON-SCAN (15) ORANLARI
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const POST_STOP_COOLDOWN_MS = 25 * 60 * 1000;
-    const LEVERAGE = 15;                            // 15x Kaldıraç
-    const MARGIN_RATIO = 0.05;                      // Kasanın %5'i (Güvenli Risk)
-    const TP1_RATIO_PCT = 0.60;                     // Hızlı TP1 (+%0.60)
-    const TP2_RATIO_PCT = 1.20;                     // Hedef TP2 (+%1.20)
+    const LEVERAGE = 20;                            // 20x KALDIRAÇ (TAM ORİJİNAL)
+    const MARGIN_RATIO = 0.10;                      // KASANIN %10'U (TAM ORİJİNAL)
+    const TP1_RATIO_PCT = 0.60;                     // HIZLI TP1 (+%0.60)
+    const TP2_RATIO_PCT = 1.20;                     // HEDEF TP2 (+%1.20)
     const now = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -338,8 +338,8 @@ export default async function handler(req, res) {
                          `🧭 <b>Yön:</b> ${trade.direction}\n` +
                          `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
                          `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                         `💰 <b>Net Kâr:</b> +%${TP2_RATIO_PCT} (${LEVERAGE}x ile <b>+%${(TP2_RATIO_PCT * LEVERAGE).toFixed(1)} NET BÜYÜME</b>)\n` +
-                         `🏆 <i>Likidite dalgası zirvede tam nakde dönüştü.</i>`;
+                         `🏆 <b>Net Kâr:</b> +%${TP2_RATIO_PCT} (${LEVERAGE}x ile <b>+%${(TP2_RATIO_PCT * LEVERAGE).toFixed(1)} NET BÜYÜME</b>)\n` +
+                         `✨ <i>Likidite dalgası zirvede tam nakde dönüştü.</i>`;
 
         await sendTelegramAlert(tgTp2Msg);
 
@@ -576,6 +576,7 @@ export default async function handler(req, res) {
       body: JSON.stringify(currentEquity)
     }).catch(() => {});
 
+    // ORİJİNAL %10 DİNAMİK MARJİN
     const dynamicMargin = parseFloat(Math.max(5, (currentEquity * MARGIN_RATIO)).toFixed(2));
     
     try {
@@ -587,6 +588,7 @@ export default async function handler(req, res) {
       });
     } catch (e) {}
 
+    // ORİJİNAL 20x KALDIRAÇLI BÜYÜKLÜK (KASANIN %200'Ü)
     const positionNotional = dynamicMargin * LEVERAGE;
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
@@ -748,7 +750,7 @@ export default async function handler(req, res) {
                   `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
                   `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `💼 <b>Model:</b> Kasanın %5'i ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
+                  `💼 <b>Model:</b> Kasanın %10'u ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
                   `🏦 <b>Borsa Emri:</b> ✅ Bitget UTA Emri Açıldı\n` +
                   `👥 <b>Ayna İşlem (Kullanıcılar):</b> ${memberOrdersCount} Üye Hesabında Açıldı\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
