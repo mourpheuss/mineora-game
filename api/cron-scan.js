@@ -134,16 +134,10 @@ export default async function handler(req, res) {
         if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
           const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
           if (usdtAcc) {
-            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || usdtAcc.crossMaxAvailable || 0);
+            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || 0);
             if (eq > 5) return eq;
           }
         }
-      } catch (e) {}
-
-      try {
-        const lastEqRes = await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`);
-        const savedEq = parseFloat(await lastEqRes.json());
-        if (savedEq > 5) return savedEq;
       } catch (e) {}
 
       return 100;
@@ -214,7 +208,6 @@ export default async function handler(req, res) {
       return 8;
     }
 
-    // cron-scan (15) Saf Kripto Doğrulama Filtresi (Hisseler ve sahte türevler elenir)
     const genuineSpotCryptoSet = new Set();
     if (spotSymbolsRes && spotSymbolsRes.ok) {
       try {
@@ -300,7 +293,7 @@ export default async function handler(req, res) {
       // TP1 VURULDU -> %50 KÂR AL & STOP'U GİRİŞE KİLİTLE (RİSK: SIFIR)
       if (isTp1Hit && !trade.tp1Hit) {
         trade.tp1Hit = true;
-        trade.sl = trade.entryPrice; // Stop başabaşa çekilir
+        trade.sl = trade.entryPrice;
 
         await closeBitgetPosition(trade.symbol, isLong, true);
 
@@ -354,7 +347,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: CRON-SCAN (15) SAF LİKİDİTE SÜPÜRME RADARI
+    // MODÜL 2: DİP/TEPE SÜPÜRME MOTORU (TEPEDEN ALMAYI ENGELLEYEN TABAN KİLİTLİ)
     // =========================================================================
     const openTradesCount = Object.values(activeTrades).filter(t => {
       if (!t || t.status !== 'OPEN') return false;
@@ -366,7 +359,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 3 aktif operasyon var." });
     }
 
-    // TOKSİK COIN KARA LİSTESİ (Kayıpların %70'ini üretenler)
     const TOXIC_COINS_BLACKLIST = [
       "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
       "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT"
@@ -395,7 +387,6 @@ export default async function handler(req, res) {
       for (const fx of FOREX_AND_FIAT) if (symUpper.includes(fx)) return false;
       for (const st of STOCKS_BLACKLIST) if (symUpper.includes(st)) return false;
 
-      // Bitget Spot tahtasında listeli gerçek kripto para doğrulaması
       if (genuineSpotCryptoSet.size > 0 && !genuineSpotCryptoSet.has(c.symbol)) return false;
 
       const p = parseFloat(c.lastPr || 0);
@@ -434,6 +425,11 @@ export default async function handler(req, res) {
 
       const rangeHigh = Math.max(...pastList.map(c => c.high));
       const rangeLow  = Math.min(...pastList.map(c => c.low));
+      const rangeSpan = rangeHigh - rangeLow;
+      if (rangeSpan <= 0) continue;
+
+      // Fiyatın 20 dakikalık kanal içindeki konumu (0.0 = En Dip, 1.0 = En Tepe)
+      const rangePos = (cur1m.close - rangeLow) / rangeSpan;
 
       const sweepRange = sweep1m.high - sweep1m.low;
       if (sweepRange <= 0) continue;
@@ -441,17 +437,29 @@ export default async function handler(req, res) {
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
 
-      // CRON-SCAN (15) KURAL 1: %48 FİTİL İLE LİKİDİTE SÜPÜRMESİ
-      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.48) && (cur1m.close > sweep1m.close);
-      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.48) && (cur1m.close < sweep1m.close);
+      // KURAL 1: LİKİDİTE SÜPÜRMESİ & FİTİL REDDİ
+      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.48);
+      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.48);
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
-      // CRON-SCAN (15) KURAL 2: 1.8σ Z-SCORE HACİM ANOMALİSİ
-      const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
-      if (volZScore < 1.8) continue;
+      // KURAL 2: DİPTEN/TEPEDEN UZAKLAŞMA KİLİDİ (Tepeden Long / Dipten Short engeli)
+      const distFromBottomWick = (cur1m.close - sweep1m.low) / sweep1m.low;
+      const distFromTopWick = (sweep1m.high - cur1m.close) / sweep1m.high;
 
-      // CRON-SCAN (15) KURAL 3: 250$ EMİR FİLTRESİ İLE KURUMSAL TAKER AKIŞI
+      // LONG: Fiyat kanalın en alt %35'inde olmalı VE dip fitilden en fazla %0.55 uzaklaşmış olmalı!
+      const isLongValidZone = isBullishSweep && (rangePos <= 0.35) && (distFromBottomWick <= 0.0055) && (cur1m.close >= sweep1m.low);
+      
+      // SHORT: Fiyat kanalın en üst %65'inde olmalı VE tepe fitilden en fazla %0.55 uzaklaşmış olmalı!
+      const isShortValidZone = isBearishSweep && (rangePos >= 0.65) && (distFromTopWick <= 0.0055) && (cur1m.close <= sweep1m.high);
+
+      if (!isLongValidZone && !isShortValidZone) continue;
+
+      // KURAL 3: 1.8σ - 4.5σ HACİM ANOMALİSİ (Aşırı tükeniş mumları elenir)
+      const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
+      if (volZScore < 1.8 || volZScore > 4.8) continue;
+
+      // KURAL 4: 250$ KURUMSAL TAKER AKIŞI
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
@@ -472,8 +480,8 @@ export default async function handler(req, res) {
       const totalFlow = buyUsd + sellUsd;
       const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
 
-      // LONG TETİĞİ (%65 Teyit)
-      if (isBullishSweep && takerBuyRatio >= 65) {
+      // LONG TETİĞİ (Dipten Giriş Onayı)
+      if (isLongValidZone && takerBuyRatio >= 62) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
@@ -483,13 +491,14 @@ export default async function handler(req, res) {
           level: rangeLow,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(takerBuyRatio),
-          reason: `Son 20 dk dip seviyesi ($${rangeLow}) iğnelendi. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar absorbe edildi, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
+          rangePos: Math.round(rangePos * 100),
+          reason: `Dip süpürme tamamlandı. Kanalın dip %${Math.round(rangePos * 100)} diliminde, %${Math.round((sweepLowerWick / sweepRange) * 100)} fitil desteği, ${volZScore.toFixed(1)}σ hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla dipten yakalandı.`
         };
         break;
       }
 
-      // SHORT TETİĞİ (%35 Teyit)
-      if (isBearishSweep && takerBuyRatio <= 35) {
+      // SHORT TETİĞİ (Tepeden Giriş Onayı)
+      if (isShortValidZone && takerBuyRatio <= 38) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'SHORT',
@@ -499,14 +508,15 @@ export default async function handler(req, res) {
           level: rangeHigh,
           volZScore: parseFloat(volZScore.toFixed(2)),
           takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `Son 20 dk tepe seviyesi ($${rangeHigh}) iğnelendi. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla çöküş başladı.`
+          rangePos: Math.round(rangePos * 100),
+          reason: `Tepe süpürme tamamlandı. Kanalın tavan %${Math.round(rangePos * 100)} diliminde, %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitil tuzağı, ${volZScore.toFixed(1)}σ hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla tepeden yakalandı.`
         };
         break;
       }
     }
 
     if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Saf likidite süpürme ve balina ayakizleri taranıyor..." });
+      return res.status(200).json({ status: "SCANNING", message: "Tabandan ve tavandan dönüş sinyalleri taranıyor..." });
     }
 
     // =========================================================================
@@ -542,14 +552,14 @@ export default async function handler(req, res) {
     const tp1 = isLong ? entryPrice * (1 + TP1_RATIO_PCT / 100) : entryPrice * (1 - TP1_RATIO_PCT / 100);
     const tp2 = isLong ? entryPrice * (1 + TP2_RATIO_PCT / 100) : entryPrice * (1 - TP2_RATIO_PCT / 100);
 
+    // Stop doğrudan fitil ucunun hemen arkasına (tam kurumsal koruma)
     let sl = isLong 
-      ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9920)
-      : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0080);
+      ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9925)
+      : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0075);
 
     const tp1Formatted = tp1.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
-    // Borsaya Mühürlü Market Emri (TP1 ve Fitil Stopu Borsa Sunucusuna Yazılır)
     const orderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
@@ -621,13 +631,14 @@ export default async function handler(req, res) {
     const slStr = sl.toFixed(precision);
     const lvlStr = candidateTrade.level.toFixed(precision);
 
-    const tgMsg = `🎯 <b>MINEORA SNIPER | LİKİDİTE SÜPÜRME ALARMI</b>\n` +
+    const tgMsg = `🎯 <b>MINEORA SNIPER | DİP / TEPE YAKALAMA ALARMI</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-                  `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG (Dip Likidite Avı)' : '🔴 SHORT (Tepe Likidite Avı)'}\n` +
-                  `🧱 <b>Avlanan Seviye:</b> <code>$${lvlStr}</code>\n` +
+                  `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG (Dipten Dönüş)' : '🔴 SHORT (Tepeden Çöküş)'}\n` +
+                  `🧱 <b>Süpürülen Seviye:</b> <code>$${lvlStr}</code>\n` +
+                  `📍 <b>Kanal Konumu:</b> %${candidateTrade.rangePos} (Uç Bölge Onaylı)\n` +
                   `📊 <b>Hacim Anomalisi:</b> ${candidateTrade.volZScore}σ Z-Score\n` +
-                  `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
+                  `⚡ <b>Kurumsal Taker Gücü:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %5'i ($${dynamicMargin}) | ${LEVERAGE}x Kaldıraç\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
