@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const LOCK_WINDOW_MS = 30 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
     const POST_STOP_COOLDOWN_MS = 25 * 60 * 1000;
-    const LEVERAGE = 15;                            // 15x KALDIRAÇ (GÜRÜLTÜDEN KORUYAN İDEAL SEVİYE)
+    const LEVERAGE = 15;                            // 15x KALDIRAÇ
     const MARGIN_RATIO = 0.10;                      // KASANIN %10'U
     const now = Date.now();
 
@@ -239,7 +239,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM TAKİBİ
+    // MODÜL 1: CANLI İŞLEM TAKİBİ & DİNAMİK DÖNÜŞ KORUMASI (SMART REVERSAL EXIT)
     // =========================================================================
     for (const [tradeKey, trade] of Object.entries(activeTrades)) {
       if (!trade || trade.status !== 'OPEN') continue;
@@ -254,20 +254,95 @@ export default async function handler(req, res) {
       const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol], trade.symbol);
       const pCurStr = curPrice.toFixed(prec);
       const pEntryStr = trade.entryPrice.toFixed(prec);
-      const targetPctStr = (trade.tpTargetPct || 2.10).toFixed(2);
 
+      // Anlık kâr/zarar yüzdesi
+      const currentPnlPct = isLong 
+        ? ((curPrice - trade.entryPrice) / trade.entryPrice * 100)
+        : ((trade.entryPrice - curPrice) / trade.entryPrice * 100);
+
+      // En yüksek kârı hafızada tut
+      const prevMaxPnl = trade.maxPnlPct || 0;
+      const peakPnl = Math.max(prevMaxPnl, currentPnlPct);
+      trade.maxPnlPct = parseFloat(peakPnl.toFixed(2));
+
+      // ─────────────────────────────────────────────────────────────────────
+      // DİNAMİK TP & ERKEN DÖNÜŞ KONTROLÜ
+      // ─────────────────────────────────────────────────────────────────────
+      let dynamicExitReason = null;
+
+      // 1. Zirveden Geri Çekilme Takibi (Trailing Exit):
+      // Fiyat +%1.00 gördükten sonra zirveden %0.35 geri düştüyse (Kârı eritmeden al ve çık)
+      if (peakPnl >= 1.00 && currentPnlPct <= (peakPnl - 0.35)) {
+        dynamicExitReason = `Zirveden (%+${peakPnl} kârdan) geri çekilme tespit edildi. Net %+${currentPnlPct.toFixed(2)} ile dinamik kâr alındı.`;
+      }
+      // 2. Breakeven Koruması:
+      // Fiyat +%0.80'i gördüyse artık bu işlemin eksiye düşmesine izin verme (+%0.15'te başabaş kapat)
+      else if (peakPnl >= 0.80 && currentPnlPct <= 0.15) {
+        dynamicExitReason = `+%${peakPnl} kâr sonrası giriş seviyesine geri çekilme. Zarar engellendi, başabaş kapatıldı.`;
+      }
+
+      // 3. Ters Fitil / Dönüş Algılayıcı (Eğer kâr en az +%0.60 ise ve karşı mum belirdiyse)
+      if (!dynamicExitReason && currentPnlPct >= 0.60) {
+        try {
+          const quickCandle = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${trade.symbol}&productType=USDT-FUTURES&granularity=1m&limit=3`, { headers: browserHeaders }).then(r => r.json());
+          if (quickCandle.code === '00000' && Array.isArray(quickCandle.data) && quickCandle.data.length >= 2) {
+            const lastC = quickCandle.data[quickCandle.data.length - 1];
+            const o = Number(lastC[1]), h = Number(lastC[2]), l = Number(lastC[3]), c = Number(lastC[4]);
+            const rng = h - l;
+            if (rng > 0) {
+              const upperWick = (h - Math.max(o, c)) / rng;
+              const lowerWick = (Math.min(o, c) - l) / rng;
+              // LONG pozisyondayken üst fitil (%55+) geldiyse veya SHORT iken alt fitil (%55+) geldiyse
+              if (isLong && upperWick >= 0.55 && c < o) {
+                dynamicExitReason = `Tepede satıcı fitili (%${Math.round(upperWick*100)}) belirdi. Dönüş hissedildi, kâr kilitlendi.`;
+              } else if (!isLong && lowerWick >= 0.55 && c > o) {
+                dynamicExitReason = `Dipte alıcı fitili (%${Math.round(lowerWick*100)}) belirdi. Dönüş hissedildi, kâr kilitlendi.`;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Dinamik Erken Çıkış Gerçekleştiğinde:
+      if (dynamicExitReason) {
+        trade.status = 'DYNAMIC_TP';
+        trade.closedAt = now;
+        trade.exitPrice = curPrice;
+        await closeBitgetPosition(trade.symbol, isLong);
+
+        const netGrowth = (currentPnlPct * LEVERAGE).toFixed(1);
+        const tgDynMsg = `🎯 <b>MINEORA PRO | DİNAMİK TP KİLİTLENDİ!</b>\n` +
+                         `━━━━━━━━━━━━━━━━━━━━\n` +
+                         `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
+                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
+                         `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
+                         `💰 <b>Kâr:</b> +%${currentPnlPct.toFixed(2)} (${LEVERAGE}x ile <b>+%${netGrowth} Kasa Büyümesi</b>)\n` +
+                         `🛡️ <b>Sebep:</b> <i>${dynamicExitReason}</i>`;
+
+        await sendTelegramAlert(tgDynMsg);
+
+        await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(trade)
+        });
+        continue;
+      }
+
+      // Statik Tam TP Vurulduğunda:
       if (isTpHit) {
         trade.status = 'TP_HIT';
         trade.closedAt = now;
         await closeBitgetPosition(trade.symbol, isLong);
 
-        const tgTpMsg = `🚀 <b>MINEORA PRO | CONFLUENCE HEDEFİ VURULDU!</b>\n` +
+        const tgTpMsg = `🚀 <b>MINEORA PRO | MAJÖR HEDEF VURULDU!</b>\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
                         `💎 <b>Parite:</b> #${trade.symbol}\n` +
                         `🧭 <b>Yön:</b> ${trade.direction}\n` +
                         `💵 <b>Giriş:</b> <code>$${pEntryStr}</code>\n` +
                         `🎯 <b>Kapanış:</b> <code>$${pCurStr}</code>\n` +
-                        `💰 <b>Net Kâr:</b> +%${targetPctStr} (${LEVERAGE}x ile <b>+%${(parseFloat(targetPctStr) * LEVERAGE).toFixed(1)} NET BÜYÜME</b>)\n` +
+                        `💰 <b>Net Kâr:</b> +%${(trade.tpTargetPct || 1.80).toFixed(2)} (${LEVERAGE}x ile <b>+%${((trade.tpTargetPct || 1.80) * LEVERAGE).toFixed(1)} NET BÜYÜME</b>)\n` +
                         `✅ <i>Pozisyon nakde çevrildi, kâr kasaya eklendi.</i>`;
 
         await sendTelegramAlert(tgTpMsg);
@@ -280,6 +355,7 @@ export default async function handler(req, res) {
         continue;
       }
 
+      // Stop Loss Vurulduğunda:
       if (isStopHit) {
         trade.status = 'STOPPED';
         trade.closedAt = now;
@@ -306,6 +382,13 @@ export default async function handler(req, res) {
         });
         continue;
       }
+
+      // Güncel peak bilgisini Firebase'de güncelle
+      await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}/maxPnlPct.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trade.maxPnlPct)
+      }).catch(() => {});
     }
 
     // =========================================================================
@@ -550,9 +633,9 @@ export default async function handler(req, res) {
                            (upperWickPct >= 0.40) && 
                            (takerBuyRatio <= 38);
 
-      // DİNAMİK YAPISAL TP VE SL (Bollinger Genişliği ve 1h Kanalına Göre)
-      let dynamicTpPct = Math.min(2.80, Math.max(1.80, bb.bandwidth * 0.85));
-      let dynamicSlPct = Math.min(1.10, Math.max(0.75, h1RangePct * 0.22));
+      // DİNAMİK YAPISAL TP VE SL (Daha erişilebilir dinamik hedefler)
+      let dynamicTpPct = Math.min(2.20, Math.max(1.30, bb.bandwidth * 0.70));
+      let dynamicSlPct = Math.min(1.00, Math.max(0.70, h1RangePct * 0.20));
 
       if (isLongValid) {
         candidateTrade = {
@@ -672,6 +755,7 @@ export default async function handler(req, res) {
       sl,
       tpTargetPct: candidateTrade.dynamicTpPct,
       slTargetPct: candidateTrade.dynamicSlPct,
+      maxPnlPct: 0,
       status: 'OPEN',
       reason: candidateTrade.reason,
       indicators: candidateTrade.indicators,
@@ -710,10 +794,10 @@ export default async function handler(req, res) {
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `💼 <b>Model:</b> Kasanın %10'u | ${LEVERAGE}x Kaldıraç\n` +
                   `📊 <b>Teyit:</b> ${candidateTrade.reason}\n` +
-                  `🎯 <b>Dinamik Hedef (+%${candidateTrade.dynamicTpPct}):</b> <code>$${tpStr}</code> (Net: <b>+%${(candidateTrade.dynamicTpPct * LEVERAGE).toFixed(1)}</b>)\n` +
+                  `🎯 <b>Tavan Hedef (+%${candidateTrade.dynamicTpPct}):</b> <code>$${tpStr}</code> (Net: <b>+%${(candidateTrade.dynamicTpPct * LEVERAGE).toFixed(1)}</b>)\n` +
                   `🛑 <b>Yapısal Stop (-%${candidateTrade.dynamicSlPct}):</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🛡️ <i>TP ve SL doğrudan Bitget UTA emir defterine mühürlenmiştir.</i>`;
+                  `⚡ <i>Akıllı Takip Devrede: Zirveden dönüşte veya karşı akışta kâr anında kilitlenir.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
