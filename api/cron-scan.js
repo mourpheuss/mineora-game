@@ -383,6 +383,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 3 aktif operasyon var." });
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // TOKSİK COIN KARA LİSTESİ (Kayıpların %70'ini üreten pariteler)
+    // ─────────────────────────────────────────────────────────────────────────
+    const TOXIC_COINS_BLACKLIST = [
+      "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
+      "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT"
+    ];
+
     const FOREX_AND_FIAT = [
       "USDBRL", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDTRY", "USDCAD",
       "USDCHF", "USDCNH", "EURGBP", "EURJPY", "GBPJPY", "XAU", "XAG", "SPX",
@@ -404,6 +412,7 @@ export default async function handler(req, res) {
       if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
 
       const symUpper = c.symbol.toUpperCase();
+      if (TOXIC_COINS_BLACKLIST.includes(symUpper)) return false;
       for (const fx of FOREX_AND_FIAT) if (symUpper.includes(fx)) return false;
       for (const st of STOCKS_BLACKLIST) if (symUpper.includes(st)) return false;
       for (const low of LOW_LEVERAGE_OR_MICRO_BLACKLIST) if (symUpper === low) return false;
