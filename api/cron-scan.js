@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
     const POST_STOP_COOLDOWN_MS = 25 * 60 * 1000;
     const LEVERAGE = 15;                            // 15x KALDIRAÇ
-    const MARGIN_RATIO = 0.10;                      // KASANIN %10'U
+    const MARGIN_RATIO = 0.05;                      // KASANIN %5'İ
     const now = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -272,12 +272,12 @@ export default async function handler(req, res) {
 
       // 1. Zirveden Geri Çekilme Takibi (Trailing Exit):
       // Fiyat +%1.00 gördükten sonra zirveden %0.35 geri düştüyse (Kârı eritmeden al ve çık)
-      if (peakPnl >= 0.70 && currentPnlPct <= (peakPnl - 0.60)) {
+      if (peakPnl >= 0.75 && currentPnlPct <= (peakPnl - 0.60)) {
         dynamicExitReason = `Zirveden (%+${peakPnl} kârdan) geri çekilme tespit edildi. Net %+${currentPnlPct.toFixed(2)} ile dinamik kâr alındı.`;
       }
       // 2. Breakeven Koruması:
       // Fiyat +%0.80'i gördüyse artık bu işlemin eksiye düşmesine izin verme (+%0.15'te başabaş kapat)
-      else if (peakPnl >= 0.80 && currentPnlPct <= 0.15) {
+      else if (peakPnl >= 0.75 && currentPnlPct <= 0.15) {
         dynamicExitReason = `+%${peakPnl} kâr sonrası giriş seviyesine geri çekilme. Zarar engellendi, başabaş kapatıldı.`;
       }
 
