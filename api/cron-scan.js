@@ -271,7 +271,7 @@ export default async function handler(req, res) {
       let dynamicExitReason = null;
 
       // 1. Zirveden Geri Çekilme Takibi (Trailing Exit):
-      // Fiyat +%1.00 gördükten sonra zirveden %0.35 geri düştüyse (Kârı eritmeden al ve çık)
+      // Fiyat +%0.75 gördükten sonra zirveden %0.60 geri düştüyse (Kârı eritmeden al ve çık)
       if (peakPnl >= 0.75 && currentPnlPct <= (peakPnl - 0.60)) {
         dynamicExitReason = `Zirveden (%+${peakPnl} kârdan) geri çekilme tespit edildi. Net %+${currentPnlPct.toFixed(2)} ile dinamik kâr alındı.`;
       }
