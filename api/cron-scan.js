@@ -29,9 +29,12 @@ export default async function handler(req, res) {
     const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
     const POST_STOP_COOLDOWN_MS = 25 * 60 * 1000;
     const LEVERAGE = 15;                            // 15x KALDIRAÇ
-    const MARGIN_RATIO = 0.05;                      // KASANIN %5'İ (GÜVENLİ RİSK)
-    const DOYMA_TP_PCT = 0.55;                      // BORSAYA MÜHÜRLÜ KESİN DOYMA TP'Sİ (+%0.55)
-    const MIN_SL_PCT = 0.65;                        // GÜRÜLTÜDEN KORUYAN MİNİMUM STOP (-%0.65)
+    const TOTAL_MARGIN_RATIO = 0.05;                // TOPLAM MARJİN %5
+    const FIRST_ENTRY_RATIO = 0.025;                // İLK GİRİŞ %2.5
+    const DCA_ADD_RATIO = 0.025;                    // EKLEME %2.5 (-%0.45'TE)
+    const DCA_DIP_PCT = 0.45;                       // EKLEME MESAFESİ (-%0.45)
+    const DOYMA_TP_PCT = 0.55;                      // BORSAYA MÜHÜRLÜ DOYMA TP'Sİ (+%0.55)
+    const MIN_SL_PCT = 0.80;                        // MİNİMUM TABAN STOP (-%0.80)
     const now = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -269,17 +272,14 @@ export default async function handler(req, res) {
       let dynamicExitReason = null;
 
       // 1. ZAMAN AŞIMI ÇIKIŞI (4 Dakika Kuralı):
-      // Fiyat 4 dakikadır açık ve kârda oyalanıyorsa (+%0.30), beklemeden çık!
       if (openMinutes >= 4.0 && currentPnlPct >= 0.30) {
         dynamicExitReason = `4 dk zaman aşımı. Hareket doydu, +%${currentPnlPct.toFixed(2)} ile kilitlendi.`;
       }
       // 2. ZİRVEDEN GERİ ÇEKİLME:
-      // Fiyat +%0.45 gördükten sonra %0.12 gevşerse anında piyasa emriyle kapat!
       else if (peakPnl >= 0.45 && currentPnlPct <= (peakPnl - 0.12)) {
         dynamicExitReason = `Zirveden (%+${peakPnl}) geri çekilme görüldü. Net %+${currentPnlPct.toFixed(2)} ile kapatıldı.`;
       }
       // 3. ERKEN BREAKEVEN:
-      // Fiyat +%0.35 gördüyse maliyete yaklaşınca (+%0.06) sıfır zararla kapat!
       else if (peakPnl >= 0.35 && currentPnlPct <= 0.06) {
         dynamicExitReason = `+%${peakPnl} kâr sonrası giriş seviyesine geri çekilme. Zarar engellendi.`;
       }
@@ -383,9 +383,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "IDLE", message: "Takipte 3 aktif operasyon var." });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // TOKSİK COIN KARA LİSTESİ (Kayıpların %70'ini üreten pariteler)
-    // ─────────────────────────────────────────────────────────────────────────
+    // TOKSİK COIN KARA LİSTESİ
     const TOXIC_COINS_BLACKLIST = [
       "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
       "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT"
@@ -619,7 +617,7 @@ export default async function handler(req, res) {
                            (upperWickPct >= 0.40) && 
                            (takerBuyRatio <= 38);
 
-      // Gürültüyü engelleyen dinamik stop (Taban: %0.65)
+      // Tabanlı güvenli stop:
       let dynamicSlPct = Math.max(MIN_SL_PCT, Math.min(0.95, h1RangePct * 0.22));
 
       if (isLongValid) {
@@ -662,7 +660,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (BORSAYA MÜHÜRLÜ DOYMA TP'Sİ: +%0.55)
+    // MODÜL 3: CANLI BORSA EMRİ (2 KADEMELİ NATIVE BİTGET DCA & DOYMA TP)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -672,7 +670,9 @@ export default async function handler(req, res) {
       body: JSON.stringify(currentEquity)
     }).catch(() => {});
 
-    const dynamicMargin = parseFloat(Math.max(5, (currentEquity * MARGIN_RATIO)).toFixed(2));
+    // Kademeli marjin hesaplaması (%2.5 ilk giriş + %2.5 limit DCA eklemesi)
+    const firstMargin = parseFloat(Math.max(2.5, (currentEquity * FIRST_ENTRY_RATIO)).toFixed(2));
+    const dcaMargin = parseFloat(Math.max(2.5, (currentEquity * DCA_ADD_RATIO)).toFixed(2));
     
     try {
       await bitgetPrivateRequest('/api/v3/account/set-leverage', 'POST', {
@@ -683,30 +683,33 @@ export default async function handler(req, res) {
       });
     } catch (e) {}
 
-    const positionNotional = dynamicMargin * LEVERAGE;
+    const firstPositionNotional = firstMargin * LEVERAGE;
+    const dcaPositionNotional = dcaMargin * LEVERAGE;
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
-    const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
-
-    const tpRatio = candidateTrade.dynamicTpPct / 100;
-    const slRatio = candidateTrade.dynamicSlPct / 100;
-
-    // Kesin TP ve Tabanlı SL Seviyeleri:
-    const tp = isLong ? entryPrice * (1 + tpRatio) : entryPrice * (1 - tpRatio);
-    let sl = isLong 
-      ? Math.min(candidateTrade.wickPoint * 0.998, entryPrice * (1 - slRatio))
-      : Math.max(candidateTrade.wickPoint * 1.002, entryPrice * (1 + slRatio));
+    const firstOrderSize = calculateOrderQuantity(entryPrice, firstPositionNotional);
 
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr, candidateTrade.symbol);
-    const tpFormatted = tp.toFixed(precision);
-    const slFormatted = sl.toFixed(precision);
 
-    const orderPayload = {
+    // Seviyeler
+    const tpRatio = candidateTrade.dynamicTpPct / 100;
+    const slRatio = candidateTrade.dynamicSlPct / 100;
+    const dcaRatio = DCA_DIP_PCT / 100;
+
+    // 1. İlk Giriş İçin Mühürlü TP ve SL
+    const tpPrice = isLong ? entryPrice * (1 + tpRatio) : entryPrice * (1 - tpRatio);
+    const slPrice = isLong ? entryPrice * (1 - slRatio) : entryPrice * (1 + slRatio);
+
+    const tpFormatted = tpPrice.toFixed(precision);
+    const slFormatted = slPrice.toFixed(precision);
+
+    // 1. ADIM: İLK GİRİŞ EMRİ (Market - %2.5 Marjin)
+    const firstOrderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
       side: isLong ? 'buy' : 'sell',
       orderType: 'market',
-      qty: orderSize.toString(),
+      qty: firstOrderSize.toString(),
       presetTakeProfitPrice: tpFormatted,
       takeProfit: tpFormatted,
       tpOrderType: 'market',
@@ -717,18 +720,35 @@ export default async function handler(req, res) {
       slTriggerBy: 'mark'
     };
 
-    const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', orderPayload);
+    const placeFirstOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', firstOrderPayload);
 
-    if (placeOrderRes.code !== '00000') {
+    if (placeFirstOrderRes.code !== '00000') {
       await sendTelegramAlert(
         `⚠️ <b>MINEORA PRO | BİTGET EMİR REDDİ</b>\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-        `🛑 <b>Sebep:</b> <code>${placeOrderRes.msg || 'Bilinmeyen hata'}</code>\n` +
+        `🛑 <b>Sebep:</b> <code>${placeFirstOrderRes.msg || 'Bilinmeyen hata'}</code>\n` +
         `🛡️ <i>İşlem iptal edildi; bakiye korundu.</i>`
       );
-      return res.status(200).json({ status: "ORDER_REJECTED", error: placeOrderRes.msg });
+      return res.status(200).json({ status: "ORDER_REJECTED", error: placeFirstOrderRes.msg });
     }
+
+    // 2. ADIM: BİTGET TAHTASINA NATIVE LIMIT DCA EKLEME EMRİ ASMA (-%0.45 Dipte)
+    const dcaPrice = isLong ? entryPrice * (1 - dcaRatio) : entryPrice * (1 + dcaRatio);
+    const dcaPriceFormatted = dcaPrice.toFixed(precision);
+    const dcaOrderSize = calculateOrderQuantity(dcaPrice, dcaPositionNotional);
+
+    const dcaOrderPayload = {
+      category: 'USDT-FUTURES',
+      symbol: candidateTrade.symbol,
+      side: isLong ? 'buy' : 'sell',
+      orderType: 'limit',
+      price: dcaPriceFormatted,
+      qty: dcaOrderSize.toString()
+    };
+
+    // Borsa tahtasına limit emir olarak asılır (Gecikme 0 milisaniye)
+    const placeDcaOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', dcaOrderPayload).catch(() => null);
 
     const tradeId = `trade_${Date.now()}`;
     const newTrade = {
@@ -736,8 +756,9 @@ export default async function handler(req, res) {
       symbol: candidateTrade.symbol,
       direction: candidateTrade.direction,
       entryPrice,
-      tp,
-      sl,
+      tp: tpPrice,
+      sl: slPrice,
+      dcaPrice,
       tpTargetPct: candidateTrade.dynamicTpPct,
       slTargetPct: candidateTrade.dynamicSlPct,
       maxPnlPct: 0,
@@ -747,11 +768,13 @@ export default async function handler(req, res) {
       createdAt: now,
       timestamp: new Date().toISOString(),
       walletEquityAtEntry: currentEquity,
-      marginUsed: dynamicMargin,
-      openSize: orderSize,
+      marginUsed: firstMargin,
+      openSize: firstOrderSize,
+      dcaOrderSize,
       bitgetOrderResult: 'SUCCESS',
       stopResult: 'SUCCESS (BORSAYA MÜHÜRLENDİ)',
-      tpResult: 'SUCCESS (BORSAYA MÜHÜRLENDİ)'
+      tpResult: 'SUCCESS (BORSAYA MÜHÜRLENDİ)',
+      dcaResult: placeDcaOrderRes?.code === '00000' ? 'LIMIT DEFTERDE ASILI' : 'ATLANDI'
     };
 
     await Promise.all([
@@ -768,29 +791,31 @@ export default async function handler(req, res) {
     ]);
 
     const pStr = entryPrice.toFixed(precision);
-    const tpStr = tp.toFixed(precision);
-    const slStr = sl.toFixed(precision);
+    const tpStr = tpPrice.toFixed(precision);
+    const slStr = slPrice.toFixed(precision);
+    const dcaStr = dcaPrice.toFixed(precision);
 
-    const tgMsg = `🎯 <b>MINEORA PRO | KESİN DOYMA SCALP</b>\n` +
+    const tgMsg = `🎯 <b>MINEORA PRO | KADEMELİ NATIVE SCALP</b>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💎 <b>Borsa:</b> BİTGET UTA\n` +
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
                   `🧭 <b>Yön:</b> ${isLong ? '🟢 LONG' : '🔴 SHORT'}\n` +
-                  `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `💼 <b>Model:</b> Kasanın %5'i | ${LEVERAGE}x Kaldıraç\n` +
-                  `🎯 <b>Mühürlü Doyma Hedefi (+%${candidateTrade.dynamicTpPct}):</b> <code>$${tpStr}</code> (Net: <b>+%${(candidateTrade.dynamicTpPct * LEVERAGE).toFixed(1)}</b>)\n` +
-                  `🛑 <b>Geniş Tabanlı Stop (-%${candidateTrade.dynamicSlPct}):</b> <code>$${slStr}</code>\n` +
+                  `💵 <b>1. Giriş (%2.5):</b> <code>$${pStr}</code>\n` +
+                  `📥 <b>2. Giriş Limiti (-%0.45):</b> <code>$${dcaStr}</code> <i>(Tahtada asılı)</i>\n` +
+                  `🎯 <b>Mühürlü Hedef (+%${candidateTrade.dynamicTpPct}):</b> <code>$${tpStr}</code>\n` +
+                  `🛑 <b>Yapısal Stop (-%${candidateTrade.dynamicSlPct}):</b> <code>$${slStr}</code>\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `⚡ <i>Bitget Motoruna Kilitlendi: +%0.55'e anlık temasta borsa TP'yi doğrudan alır; geri dönüş stopuna fırsat vermez.</i>`;
+                  `⚡ <i>Tüm emirler doğrudan Bitget sunucusuna yazılmıştır; Vercel gecikmesi yaşanmaz.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
     return res.status(200).json({
       success: true,
       trade: newTrade,
-      bitget_order: placeOrderRes,
+      bitget_first_order: placeFirstOrderRes,
+      bitget_dca_order: placeDcaOrderRes,
       wallet_equity: currentEquity,
-      margin_used: dynamicMargin
+      margin_used: firstMargin
     });
 
   } catch (error) {
