@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 export const config = {
-  maxDuration: 60 // 60 saniyelik kesintisiz nöbetçi süresi
+  maxDuration: 60 // Vercel 60s tam nöbet süresi
 };
 
 export default async function handler(req, res) {
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & ORİJİNAL PARAMETRELER
+    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & 28 EKİM ORİJİNAL PARAMETRELERİ
     // =========================================================================
     const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
     const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
+    // ORİJİNAL CRON-SCAN (15) ORANLARI
     const LOCK_WINDOW_MS = 25 * 60 * 1000;
     const SAME_COIN_LOCK_MS = 20 * 60 * 1000;
     const POST_STOP_COOLDOWN_MS = 25 * 60 * 1000;
@@ -33,7 +34,7 @@ export default async function handler(req, res) {
     const MARGIN_RATIO = 0.10;                      // KASANIN %10'U
     const TP1_RATIO_PCT = 0.60;                     // HIZLI TP1 (+%0.60)
     const TP2_RATIO_PCT = 1.20;                     // HEDEF TP2 (+%1.20)
-    const MAX_SL_RATIO_PCT = 0.65;                  // MUTLAK TAVAN STOP (MAKS -%0.65)
+    const MAX_SL_RATIO_PCT = 0.65;                  // MUTLAK TAVAN STOP (MAKSİMUM -%0.65)
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -139,21 +140,27 @@ export default async function handler(req, res) {
       });
     }
 
+    // =========================================================================
+    // BORSA DEFTERİNE SIFIR GECİKMELİ STOP-LOSS MÜHÜRLEME (BREAKEVEN LOCK)
+    // =========================================================================
     async function lockBreakevenOnExchange(symbol, isLong, entryPriceFormatted, customCreds = null) {
       const closeSide = isLong ? 'sell' : 'buy';
       try {
+        // 1. Borsadaki ESKİ TETİK (PLAN) ve NORMAL emirleri eşzamanlı iptal et
         await Promise.allSettled([
           bitgetPrivateRequest('/api/v3/trade/cancel-symbol-plan-order', 'POST', { category: 'USDT-FUTURES', symbol: symbol }, customCreds),
           bitgetPrivateRequest('/api/v2/mix/order/cancel-symbol-plan-order', 'POST', { symbol: symbol, productType: 'usdt-futures', marginCoin: 'USDT' }, customCreds),
           bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', { category: 'USDT-FUTURES', symbol: symbol }, customCreds)
         ]);
 
+        // 2. Kalan açık pozisyon miktarını al
         let remQty = "0";
         const posRes = await bitgetPrivateRequest(`/api/v3/position/current-position?category=USDT-FUTURES&symbol=${symbol}`, 'GET', {}, customCreds);
         if (posRes.code === '00000' && Array.isArray(posRes.data) && posRes.data.length > 0) {
           remQty = (posRes.data[0].total || posRes.data[0].available || "0").toString();
         }
 
+        // 3. Bitget V3 Plan/Stop Emrini doğrudan giriş fiyatına mühürle (loss_plan)
         const planPayload = {
           category: 'USDT-FUTURES',
           symbol: symbol,
@@ -168,6 +175,7 @@ export default async function handler(req, res) {
 
         const resPlan = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', planPayload, customCreds);
         
+        // 4. V3 kabul etmezse V2 Mix doğrudan pos_loss mühürlemesi
         if (resPlan.code !== '00000') {
           await bitgetPrivateRequest('/api/v2/mix/order/place-plan-order', 'POST', {
             productType: 'usdt-futures',
@@ -479,20 +487,19 @@ export default async function handler(req, res) {
       return openCount;
     }
 
-    // İlk kontrol
+    // İlk denetleme
     let currentOpenCount = await evaluateActiveTrades(Date.now());
 
     // =========================================================================
     // NÖBETÇİ MODU (SENTINEL LOOP): EĞER 4 İŞLEM DOLUYSA TARAMAYI DURDUR,
-    // 60 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 4 POZİSYONU ANLIK DENETLE!
+    // 52 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 4 POZİSYONU ANLIK DENETLE!
     // =========================================================================
     if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
       console.log(`[SENTINEL MODE] 4 İşlem Dolu. Genel tarama kapatıldı, mikro-takip döngüsüne girildi.`);
       
-      while ((Date.now() - startTime) < 52000) { // Vercel 60s sınırını aşmamak için 52 saniye nöbet tut
-        await new Promise(r => setTimeout(r, 2500)); // 2.5 saniye bekle
+      while ((Date.now() - startTime) < 52000) {
+        await new Promise(r => setTimeout(r, 2500)); // 2.5 saniyede bir kontrol
 
-        // Sadece açık olan 4 coinin anlık fiyatını hızlıca çek
         const activeSymbols = Object.values(activeTrades).filter(t => t && t.status === 'OPEN').map(t => t.symbol);
         if (activeSymbols.length === 0) break;
 
@@ -510,16 +517,14 @@ export default async function handler(req, res) {
 
         currentOpenCount = await evaluateActiveTrades(Date.now());
         
-        // Eğer pozisyonlardan biri kapandıysa ve 4'ün altına düştüyse nöbeti bitir, taramaya yer aç!
         if (currentOpenCount < MAX_CONCURRENT_TRADES) {
           console.log(`[SENTINEL MODE] Bir işlem kapandı (${currentOpenCount}/${MAX_CONCURRENT_TRADES}). Yeni tarama için döngü sonlandırıldı.`);
           break;
         }
       }
 
-      // Eğer 52 saniye sonunda hala 4 işlem açıksa fonksiyonu güvenle bitir
       if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
-        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "4 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
+        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "4 pozisyon kesintisiz gerçek zamanlı korundu ve takip edildi." });
       }
     }
 
@@ -681,6 +686,7 @@ export default async function handler(req, res) {
       body: JSON.stringify(currentEquity)
     }).catch(() => {});
 
+    // ORİJİNAL %10 DİNAMİK MARJİN
     const dynamicMargin = parseFloat(Math.max(5, (currentEquity * MARGIN_RATIO)).toFixed(2));
     
     try {
@@ -692,6 +698,7 @@ export default async function handler(req, res) {
       });
     } catch (e) {}
 
+    // ORİJİNAL 20x KALDIRAÇLI BÜYÜKLÜK (KASANIN %200'Ü)
     const positionNotional = dynamicMargin * LEVERAGE;
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
@@ -702,7 +709,7 @@ export default async function handler(req, res) {
     const tp1 = isLong ? entryPrice * (1 + TP1_RATIO_PCT / 100) : entryPrice * (1 - TP1_RATIO_PCT / 100);
     const tp2 = isLong ? entryPrice * (1 + TP2_RATIO_PCT / 100) : entryPrice * (1 - TP2_RATIO_PCT / 100);
 
-    // KESİN DÜZELTİLMİŞ SERT STOP TAVANI (MAKSİMUM -%0.65)
+    // KESİN DÜZELTİLMİŞ SERT STOP TAVANI (MAKSİMUM -%0.65):
     const maxAllowedSlDistance = entryPrice * (MAX_SL_RATIO_PCT / 100);
     let sl = isLong 
       ? Math.max(candidateTrade.wickPoint * 0.9985, entryPrice - maxAllowedSlDistance)
@@ -711,6 +718,7 @@ export default async function handler(req, res) {
     const tp1Formatted = tp1.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
 
+    // 1. Yönetici Hesabında Borsaya Mühürlü İşlem Aç
     const orderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
@@ -740,7 +748,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "ORDER_REJECTED", error: placeOrderRes.msg });
     }
 
-    // VIP Üyelerin Bitget ve BingX Hesaplarına Paralel Emir İlet
+    // 2. VIP Üyelerin Bitget ve BingX Hesaplarına Paralel Emir İlet
     let memberOrdersCount = 0;
     for (const [uname, udata] of Object.entries(allUsers)) {
       if (!udata || !udata.autoTradeEnabled) continue;
