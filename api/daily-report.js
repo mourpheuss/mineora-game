@@ -28,10 +28,10 @@ export default async function handler(req, res) {
       periodText = "Bugün (00:00 TSİ'den İtibaren)";
     }
 
-    // YENİ DCA MODELİ VE KOMİSYON PARAMETRELERİ
+    // BİTGET GERÇEK DÖKÜM PARAMETRELERİ
     const LEVERAGE = 20;
     const TP_TARGET_PCT = 0.70;                     // +%0.70 Fiyat Kârı
-    const TAKER_FEE_RATE = 0.0012;                  // %0.12 Çift Yönlü Borsa Komisyonu
+    const BITGET_ROUNDTRIP_FEE_RATE = 0.0012;       // Çift yönlü net %0.12 (Giriş %0.06 + Çıkış %0.06)
 
     let totalTrades = 0;
     let tpHitCount = 0;
@@ -49,7 +49,6 @@ export default async function handler(req, res) {
       if (trade.status === 'TP_HIT' || trade.status === 'TP2_HIT') {
         tpHitCount++;
 
-        // İşlemde kullanılan toplam marjin oranı (varsayılan %3, DCA ile kademeli artar)
         const dcaCount = trade.dcaCount || 1;
         let marginRatio = 0.03;
         if (dcaCount === 2) marginRatio = 0.045;
@@ -57,14 +56,14 @@ export default async function handler(req, res) {
         else if (dcaCount === 4) marginRatio = 0.05625;
         else if (dcaCount >= 5) marginRatio = 0.058125;
 
-        // Pozisyonun kasanın yüzde kaçına denk geldiği
+        // Pozisyonun kasanın kaç katı olduğu (Notional)
         const notionalRatio = marginRatio * LEVERAGE;
 
-        // 1. Brüt Kâr: Notional x %0.70
+        // 1. Brüt Kâr: Notional x %0.70 TP
         const grossTradeGainPct = notionalRatio * TP_TARGET_PCT;
         
-        // 2. Borsa Komisyonu: Notional x %0.12 (Giriş + Çıkış Piyasa Emri)
-        const tradeFeePct = notionalRatio * (TAKER_FEE_RATE * 100);
+        // 2. Bitget Kesintisi: Notional x %0.12 Borsa Taker Komisyonu
+        const tradeFeePct = notionalRatio * (BITGET_ROUNDTRIP_FEE_RATE * 100);
 
         totalGrossGainPct += grossTradeGainPct;
         totalFeesPct += tradeFeePct;
@@ -74,7 +73,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // NET KASA GETİRİSİ (KOMİSYON DÜŞÜLDÜKTEN SONRA)
+    // KASAYA NET KALAN (KOMİSYON DÜŞÜLDÜKTEN SONRA)
     const netPortfolioGrowth = totalGrossGainPct - totalFeesPct;
     const evaluatedTrades = tpHitCount;
     const winRate = evaluatedTrades > 0 ? "100.0" : "0.0";
@@ -90,11 +89,11 @@ export default async function handler(req, res) {
                       `⏳ <b>Açıkta Takip Edilen:</b> ${waitingOpenCount} Adet\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `💰 <b>Brüt Kasa Kârı:</b> +%${totalGrossGainPct.toFixed(2)}\n` +
-                      `🧾 <b>Bitget Komisyon Kesintisi:</b> -%${totalFeesPct.toFixed(2)} (Çift Yönlü Taker)\n` +
+                      `🧾 <b>Bitget Komisyon Kesintisi:</b> -%${totalFeesPct.toFixed(2)} (Çift Yönlü %0.12)\n` +
                       `📈 <b>KASAYA NET GETİRİ:</b> <b>${growthSign}%${netPortfolioGrowth.toFixed(2)}</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `🎯 <b>Net Kazanma Oranı (Win Rate):</b> <b>%${winRate}</b> <i>(${tpHitCount}/${evaluatedTrades} Tamamlanan)</i>\n` +
-                      `💡 <i>Her işlemin komisyon kesintisi net olarak düşülmüş borsa bakiyesidir.</i>\n` +
+                      `🛡️ <i>Bitget borsa dökümüne göre her işlemde %0.12 komisyon net düşülmüştür.</i>\n` +
                       `🌐 <i>Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                       `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
