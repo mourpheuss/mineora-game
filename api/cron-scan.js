@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 export const config = {
-  maxDuration: 60 // 60s tam nöbet süresi
+  maxDuration: 60
 };
 
 export default async function handler(req, res) {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const LEVERAGE = 20;                            // 20x KALDIRAÇ
     const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
-    const TP_TARGET_PCT = 0.50;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.50
+    const TP_TARGET_PCT = 0.60;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.60
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -195,19 +195,6 @@ export default async function handler(req, res) {
       return 100;
     }
 
-    function calculateOrderQuantity(entryPrice, notional) {
-      const rawQty = notional / entryPrice;
-      if (entryPrice >= 1000) {
-        return parseFloat(rawQty.toFixed(3));
-      } else if (entryPrice >= 50) {
-        return parseFloat(rawQty.toFixed(2));
-      } else if (entryPrice >= 1) {
-        return parseFloat(rawQty.toFixed(1));
-      } else {
-        return Math.max(1, Math.round(rawQty));
-      }
-    }
-
     function calculateZScore(series, currentVal) {
       if (!series || series.length < 5) return 0;
       const n = series.length;
@@ -230,13 +217,18 @@ export default async function handler(req, res) {
     }
 
     const symbolPrecisionMap = {};
+    const symbolVolumePlaceMap = {};
+    const symbolMinQtyMap = {};
+
     if (contractsRes && contractsRes.ok) {
       try {
         const contractsJson = await contractsRes.json();
         if (contractsJson.code === '00000' && Array.isArray(contractsJson.data)) {
           contractsJson.data.forEach(c => {
-            if (c.symbol && c.pricePlace !== undefined) {
-              symbolPrecisionMap[c.symbol] = parseInt(c.pricePlace, 10);
+            if (c.symbol) {
+              if (c.pricePlace !== undefined) symbolPrecisionMap[c.symbol] = parseInt(c.pricePlace, 10);
+              if (c.volumePlace !== undefined) symbolVolumePlaceMap[c.symbol] = parseInt(c.volumePlace, 10);
+              if (c.minTradeNum !== undefined) symbolMinQtyMap[c.symbol] = parseFloat(c.minTradeNum);
             }
           });
         }
@@ -258,6 +250,18 @@ export default async function handler(req, res) {
       if (price >= 0.001) return 5;
       if (price >= 0.0001) return 6;
       return 8;
+    }
+
+    function calculateOrderQuantityDynamic(symbol, entryPrice, notional) {
+      const rawQty = notional / entryPrice;
+      const volPlace = symbolVolumePlaceMap[symbol] !== undefined ? symbolVolumePlaceMap[symbol] : 0;
+      const minQty = symbolMinQtyMap[symbol] !== undefined ? symbolMinQtyMap[symbol] : 1;
+
+      let finalQty = parseFloat(rawQty.toFixed(volPlace));
+      if (finalQty < minQty) {
+        finalQty = minQty;
+      }
+      return finalQty;
     }
 
     const genuineSpotCryptoSet = new Set();
@@ -300,7 +304,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.50 TP & HER -%2.50 DCA EKLEMESİ)
+    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.60 TP & HER -%2.50 DCA EKLEMESİ)
     // =========================================================================
     async function evaluateActiveTrades(currentTime) {
       let openCount = 0;
@@ -320,7 +324,7 @@ export default async function handler(req, res) {
           ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
           : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
 
-        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.50 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
+        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.60 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
         if (pnlPct >= TP_TARGET_PCT) {
           trade.status = 'TP_HIT';
           trade.closedAt = currentTime;
@@ -358,7 +362,7 @@ export default async function handler(req, res) {
 
           if (addMargin >= 1.0) {
             const addNotional = addMargin * LEVERAGE;
-            const addQty = calculateOrderQuantity(curPrice, addNotional);
+            const addQty = calculateOrderQuantityDynamic(trade.symbol, curPrice, addNotional);
             const addSide = isLong ? 'buy' : 'sell';
 
             const addOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -393,7 +397,7 @@ export default async function handler(req, res) {
                                `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
                                `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
                                `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
-                               `🚀 <b>Yeni TP Hedefi (+%0.50):</b> <code>$${newTpStr}</code>\n` +
+                               `🚀 <b>Yeni TP Hedefi (+%0.60):</b> <code>$${newTpStr}</code>\n` +
                                `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount}`;
 
               await sendTelegramAlert(tgDcaMsg);
@@ -410,7 +414,6 @@ export default async function handler(req, res) {
       return openCount;
     }
 
-    // İlk denetleme
     let currentOpenCount = await evaluateActiveTrades(Date.now());
 
     // =========================================================================
@@ -422,7 +425,7 @@ export default async function handler(req, res) {
       console.log(`[SENTINEL MODE] 4 İşlem Dolu. Genel tarama kapatıldı, mikro-takip nöbetine girildi.`);
 
       while ((Date.now() - startTime) < 52000) {
-        await new Promise(r => setTimeout(r, 2500)); // 2.5 saniyede bir kontrol
+        await new Promise(r => setTimeout(r, 2500));
 
         const activeSymbols = Object.values(activeTrades).filter(t => t && t.status === 'OPEN').map(t => t.symbol);
         if (activeSymbols.length === 0) break;
@@ -441,14 +444,12 @@ export default async function handler(req, res) {
 
         currentOpenCount = await evaluateActiveTrades(Date.now());
 
-        // Biri kapandı ve slot açıldı! Derhal genel taramaya geç!
         if (currentOpenCount < MAX_CONCURRENT_TRADES) {
           console.log(`[SENTINEL MODE] Bir işlem kapandı (${currentOpenCount}/${MAX_CONCURRENT_TRADES}). Yeni tarama başlatılıyor.`);
           break;
         }
       }
 
-      // Eğer 52 saniye sonunda hala 4 işlem açıksa fonksiyonu güvenle tamamla
       if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
         return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "4 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
       }
@@ -456,7 +457,6 @@ export default async function handler(req, res) {
 
     // =========================================================================
     // MODÜL 2: 20 DAKİKALIK SAF LİKİDİTE SÜPÜRME TARAMA MOTORU
-    // (Sadece içeride 4'ten az işlem varsa çalışır)
     // =========================================================================
     const TOXIC_COINS_BLACKLIST = [
       "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
@@ -602,7 +602,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.50)
+    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.60)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -626,7 +626,9 @@ export default async function handler(req, res) {
     const positionNotional = dynamicMargin * LEVERAGE;
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
-    const orderSize = calculateOrderQuantity(entryPrice, positionNotional);
+    
+    // BİTGET GERÇEK volumePlace VE minTradeNum İLE HASSAS ADET HESABI
+    const orderSize = calculateOrderQuantityDynamic(candidateTrade.symbol, entryPrice, positionNotional);
 
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr, candidateTrade.symbol);
 
@@ -680,7 +682,7 @@ export default async function handler(req, res) {
             const uList = Array.isArray(uAcc.data) ? uAcc.data : (uAcc.data?.assets || []);
             const uUsdt = uList.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
             const uEq = parseFloat(uUsdt?.equity || 100);
-            uSize = calculateOrderQuantity(entryPrice, uEq * MARGIN_RATIO * LEVERAGE);
+            uSize = calculateOrderQuantityDynamic(candidateTrade.symbol, entryPrice, uEq * MARGIN_RATIO * LEVERAGE);
           } catch(e) { uSize = 1; }
 
           await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -709,7 +711,7 @@ export default async function handler(req, res) {
           try {
             const bBal = await bingxPrivateRequest('/openApi/swap/v2/user/balance', 'GET', {}, creds);
             const bEq = parseFloat(bBal.data?.balance?.equity || 100);
-            bSize = calculateOrderQuantity(entryPrice, bEq * MARGIN_RATIO * LEVERAGE);
+            bSize = calculateOrderQuantityDynamic(candidateTrade.symbol, entryPrice, bEq * MARGIN_RATIO * LEVERAGE);
           } catch(e) { bSize = 1; }
 
           await bingxPrivateRequest('/openApi/swap/v2/trade/order', 'POST', {
@@ -782,7 +784,7 @@ export default async function handler(req, res) {
                   `🎯 <b>Hedef TP (+%${TP_TARGET_PCT}):</b> <code>$${tpStr}</code> (Borsaya Mühürlendi)\n` +
                   `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💡 <i>Kural: +%0.50 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
+                  `💡 <i>Kural: +%0.60 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
