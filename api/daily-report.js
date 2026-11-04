@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     const reportMsg = `🏆 <b>MINEORA SNIPER | PERFORMANS RAPORU</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `⏱️ <b>Filtre:</b> ${periodText}\n` +
-                      `💼 <b>Model:</b> Kasanın %3'ü | 20x Kaldıraç | Tek TP: +%${TP_TARGET_PCT.toFixed(2)}\n` +
+                      `💼 <b>Model:</b> Kasanın %3'ü | 15x Kaldıraç | Tek TP: +%${TP_TARGET_PCT.toFixed(2)}\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `📊 <b>Toplam Taranan İşlem:</b> ${totalTrades}\n` +
                       `🚀 <b>Hedef Vuruldu (Tam Kapanış):</b> ${tpHitCount} Adet\n` +
