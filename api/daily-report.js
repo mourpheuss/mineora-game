@@ -17,7 +17,6 @@ export default async function handler(req, res) {
       cutoffTime = now - (h * 60 * 60 * 1000);
       periodText = `Son ${h} Saat`;
     } else {
-      // TÜRKİYE SAATİNE (UTC+3) GÖRE 00:00 HESAPLAMA
       const TURKEY_OFFSET_MS = 3 * 60 * 60 * 1000;
       const turkeyNow = new Date(now + TURKEY_OFFSET_MS);
       
@@ -25,24 +24,21 @@ export default async function handler(req, res) {
       const month = turkeyNow.getUTCMonth();
       const day = turkeyNow.getUTCDate();
       
-      // Türkiye saatiyle tam bugün 00:00:00 anının UTC karşılığı
       cutoffTime = Date.UTC(year, month, day, 0, 0, 0) - TURKEY_OFFSET_MS;
       periodText = "Bugün (00:00 TSİ'den İtibaren)";
     }
 
-    // Sabit Disiplin Çarpanları (Kasanın %10'u x 25x Kaldıraç)
-    // Tek TP: %10 marjin x (+%0.60 x 25x) = +%1.50 Kasa Büyümesi
-    const TP_PORTFOLIO_GAIN_PCT = 1.50;
-    // Ortalama Stop: %10 marjin x (-%0.75 x 25x) = -%1.88 Kasa Kaybı
-    const STOP_PORTFOLIO_LOSS_PCT = 1.88;
+    // YENİ DCA MODELİ VE KOMİSYON PARAMETRELERİ
+    const LEVERAGE = 20;
+    const TP_TARGET_PCT = 0.70;                     // +%0.70 Fiyat Kârı
+    const TAKER_FEE_RATE = 0.0012;                  // %0.12 Çift Yönlü Borsa Komisyonu
 
     let totalTrades = 0;
     let tpHitCount = 0;
-    let stopCount = 0;
     let waitingOpenCount = 0;
 
-    let totalGainPct = 0;
-    let totalLossPct = 0;
+    let totalGrossGainPct = 0;
+    let totalFeesPct = 0;
 
     for (const [key, trade] of Object.entries(tradesData)) {
       if (!trade || !trade.createdAt) continue;
@@ -52,38 +48,53 @@ export default async function handler(req, res) {
 
       if (trade.status === 'TP_HIT' || trade.status === 'TP2_HIT') {
         tpHitCount++;
-        totalGainPct += TP_PORTFOLIO_GAIN_PCT;
-      } else if (trade.status === 'STOPPED') {
-        if (trade.tp1Hit) {
-          totalGainPct += 0.60;
-        } else {
-          stopCount++;
-          totalLossPct += STOP_PORTFOLIO_LOSS_PCT;
-        }
+
+        // İşlemde kullanılan toplam marjin oranı (varsayılan %3, DCA ile kademeli artar)
+        const dcaCount = trade.dcaCount || 1;
+        let marginRatio = 0.03;
+        if (dcaCount === 2) marginRatio = 0.045;
+        else if (dcaCount === 3) marginRatio = 0.0525;
+        else if (dcaCount === 4) marginRatio = 0.05625;
+        else if (dcaCount >= 5) marginRatio = 0.058125;
+
+        // Pozisyonun kasanın yüzde kaçına denk geldiği
+        const notionalRatio = marginRatio * LEVERAGE;
+
+        // 1. Brüt Kâr: Notional x %0.70
+        const grossTradeGainPct = notionalRatio * TP_TARGET_PCT;
+        
+        // 2. Borsa Komisyonu: Notional x %0.12 (Giriş + Çıkış Piyasa Emri)
+        const tradeFeePct = notionalRatio * (TAKER_FEE_RATE * 100);
+
+        totalGrossGainPct += grossTradeGainPct;
+        totalFeesPct += tradeFeePct;
+
       } else if (trade.status === 'OPEN') {
         waitingOpenCount++;
       }
     }
 
-    const netPortfolioGrowth = totalGainPct - totalLossPct;
-    const evaluatedTrades = tpHitCount + stopCount;
-    const winRate = evaluatedTrades > 0 ? ((tpHitCount / evaluatedTrades) * 100).toFixed(1) : "0.0";
+    // NET KASA GETİRİSİ (KOMİSYON DÜŞÜLDÜKTEN SONRA)
+    const netPortfolioGrowth = totalGrossGainPct - totalFeesPct;
+    const evaluatedTrades = tpHitCount;
+    const winRate = evaluatedTrades > 0 ? "100.0" : "0.0";
     const growthSign = netPortfolioGrowth >= 0 ? "+" : "";
 
     const reportMsg = `🏆 <b>MINEORA SNIPER | PERFORMANS RAPORU</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `⏱️ <b>Filtre:</b> ${periodText}\n` +
-                      `💼 <b>Model:</b> Kasanın %10'u | 25x Kaldıraç (Tek TP: +%0.60)\n` +
+                      `💼 <b>Model:</b> Kasanın %3'ü | 20x Kaldıraç | Tek TP: +%${TP_TARGET_PCT.toFixed(2)}\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
                       `📊 <b>Toplam Taranan İşlem:</b> ${totalTrades}\n` +
-                      `🚀 <b>Hedef Vuruldu (Tam Kapanış):</b> ${tpHitCount} Adet (Kasaya +%${(tpHitCount * TP_PORTFOLIO_GAIN_PCT).toFixed(2)})\n` +
-                      `🛑 <b>Disiplin Stopu:</b> ${stopCount} Adet (Kasaya -%${(stopCount * STOP_PORTFOLIO_LOSS_PCT).toFixed(2)})\n` +
+                      `🚀 <b>Hedef Vuruldu (Tam Kapanış):</b> ${tpHitCount} Adet\n` +
                       `⏳ <b>Açıkta Takip Edilen:</b> ${waitingOpenCount} Adet\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `🎯 <b>Net Kazanma Oranı (Win Rate):</b> <b>%${winRate}</b> <i>(${tpHitCount}/${evaluatedTrades} Tamamlanan)</i>\n` +
+                      `💰 <b>Brüt Kasa Kârı:</b> +%${totalGrossGainPct.toFixed(2)}\n` +
+                      `🧾 <b>Bitget Komisyon Kesintisi:</b> -%${totalFeesPct.toFixed(2)} (Çift Yönlü Taker)\n` +
                       `📈 <b>KASAYA NET GETİRİ:</b> <b>${growthSign}%${netPortfolioGrowth.toFixed(2)}</b>\n` +
                       `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `⚡ <i>Hızlı çıkış scalping modeli: +%0.60 fiyatta (%15 net kâr) pozisyon %100 kapatılır.</i>\n` +
+                      `🎯 <b>Net Kazanma Oranı (Win Rate):</b> <b>%${winRate}</b> <i>(${tpHitCount}/${evaluatedTrades} Tamamlanan)</i>\n` +
+                      `💡 <i>Her işlemin komisyon kesintisi net olarak düşülmüş borsa bakiyesidir.</i>\n` +
                       `🌐 <i>Terminal: <a href="https://mineoragame.com">mineoragame.com</a></i>\n` +
                       `📢 <i>Kanal: <a href="https://t.me/mineorabalina">t.me/mineorabalina</a></i>`;
 
@@ -99,11 +110,10 @@ export default async function handler(req, res) {
       netPortfolioGrowth: `${growthSign}%${netPortfolioGrowth.toFixed(2)}`,
       stats: {
         totalTrades,
-        evaluatedTrades,
         successfulTrades: tpHitCount,
-        winRate: `${winRate}%`,
-        tpHitCount,
-        stopCount,
+        grossGain: `+${totalGrossGainPct.toFixed(2)}%`,
+        feesDeducted: `-${totalFeesPct.toFixed(2)}%`,
+        netGrowth: `${growthSign}${netPortfolioGrowth.toFixed(2)}%`,
         waitingOpenCount
       }
     });
