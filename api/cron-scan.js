@@ -32,6 +32,7 @@ export default async function handler(req, res) {
     const MARGIN_RATIO = 0.10;                      // KASANIN %10'U
     const TP1_RATIO_PCT = 0.60;                     // HIZLI TP1 (+%0.60)
     const TP2_RATIO_PCT = 1.20;                     // HEDEF TP2 (+%1.20)
+    const MAX_SL_RATIO_PCT = 0.65;                  // MUTLAK TAVAN STOP (MAKSİMUM -%0.65)
     const now = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -120,10 +121,11 @@ export default async function handler(req, res) {
       }
 
       if (!halfClose) {
-        await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
-          category: 'USDT-FUTURES',
-          symbol: symbol
-        }).catch(() => {});
+        await Promise.allSettled([
+          bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', { category: 'USDT-FUTURES', symbol: symbol }),
+          bitgetPrivateRequest('/api/v3/trade/cancel-symbol-plan-order', 'POST', { category: 'USDT-FUTURES', symbol: symbol }),
+          bitgetPrivateRequest('/api/v2/mix/order/cancel-symbol-plan-order', 'POST', { symbol: symbol, productType: 'usdt-futures', marginCoin: 'USDT' })
+        ]);
       }
 
       return await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
@@ -142,11 +144,12 @@ export default async function handler(req, res) {
     async function lockBreakevenOnExchange(symbol, isLong, entryPriceFormatted, customCreds = null) {
       const closeSide = isLong ? 'sell' : 'buy';
       try {
-        // 1. Borsadaki eski fitil stop emirlerini iptal et
-        await bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', {
-          category: 'USDT-FUTURES',
-          symbol: symbol
-        }, customCreds).catch(() => {});
+        // 1. Borsadaki ESKİ TETİK (PLAN) ve NORMAL emirleri eşzamanlı iptal et
+        await Promise.allSettled([
+          bitgetPrivateRequest('/api/v3/trade/cancel-symbol-plan-order', 'POST', { category: 'USDT-FUTURES', symbol: symbol }, customCreds),
+          bitgetPrivateRequest('/api/v2/mix/order/cancel-symbol-plan-order', 'POST', { symbol: symbol, productType: 'usdt-futures', marginCoin: 'USDT' }, customCreds),
+          bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', { category: 'USDT-FUTURES', symbol: symbol }, customCreds)
+        ]);
 
         // 2. Kalan açık pozisyon miktarını al
         let remQty = "0";
@@ -155,7 +158,7 @@ export default async function handler(req, res) {
           remQty = (posRes.data[0].total || posRes.data[0].available || "0").toString();
         }
 
-        // 3. Bitget V3 Plan/Stop Emrini doğrudan giriş fiyatına mühürle
+        // 3. Bitget V3 Plan/Stop Emrini doğrudan giriş fiyatına mühürle (loss_plan)
         const planPayload = {
           category: 'USDT-FUTURES',
           symbol: symbol,
@@ -170,7 +173,7 @@ export default async function handler(req, res) {
 
         const resPlan = await bitgetPrivateRequest('/api/v3/trade/place-plan-order', 'POST', planPayload, customCreds);
         
-        // V3 plan kabul etmezse V2 mix fallback dene
+        // 4. V3 kabul etmezse V2 Mix doğrudan pos_loss mühürlemesi
         if (resPlan.code !== '00000') {
           await bitgetPrivateRequest('/api/v2/mix/order/place-plan-order', 'POST', {
             productType: 'usdt-futures',
@@ -180,7 +183,7 @@ export default async function handler(req, res) {
             triggerPrice: entryPriceFormatted,
             triggerType: 'mark_price',
             executePrice: entryPriceFormatted,
-            side: closeSide,
+            holdSide: isLong ? 'long' : 'short',
             size: remQty !== "0" ? remQty : "1"
           }, customCreds).catch(() => {});
         }
@@ -207,7 +210,6 @@ export default async function handler(req, res) {
               reduceOnly: 'yes'
             }, creds).catch(() => {});
 
-            // TP1 alındıysa üyenin hesabında da stopu borsaya mühürle
             if (halfClose && entryPriceFormatted) {
               await lockBreakevenOnExchange(symbol, isLong, entryPriceFormatted, creds);
             }
@@ -671,9 +673,13 @@ export default async function handler(req, res) {
     const tp1 = isLong ? entryPrice * (1 + TP1_RATIO_PCT / 100) : entryPrice * (1 - TP1_RATIO_PCT / 100);
     const tp2 = isLong ? entryPrice * (1 + TP2_RATIO_PCT / 100) : entryPrice * (1 - TP2_RATIO_PCT / 100);
 
+    // KESİN DÜZELTİLMİŞ SERT STOP TAVANI (MAKSİMUM -%0.65):
+    // LONG için: Stop seviyesi fitil arkası olsun AMA asla entryPrice * (1 - 0.0065)'in altına inemesin! (Math.max)
+    // SHORT için: Stop seviyesi fitil arkası olsun AMA asla entryPrice * (1 + 0.0065)'in üstüne çıkamasın! (Math.min)
+    const maxAllowedSlDistance = entryPrice * (MAX_SL_RATIO_PCT / 100);
     let sl = isLong 
-      ? Math.min(candidateTrade.wickPoint * 0.9985, entryPrice * 0.9925)
-      : Math.max(candidateTrade.wickPoint * 1.0015, entryPrice * 1.0075);
+      ? Math.max(candidateTrade.wickPoint * 0.9985, entryPrice - maxAllowedSlDistance)
+      : Math.min(candidateTrade.wickPoint * 1.0015, entryPrice + maxAllowedSlDistance);
 
     const tp1Formatted = tp1.toFixed(precision);
     const slFormatted = sl.toFixed(precision);
@@ -828,7 +834,7 @@ export default async function handler(req, res) {
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hızlı TP 1 (+%${TP1_RATIO_PCT}):</b> <code>$${tp1Str}</code> (Borsaya Mühürlendi)\n` +
                   `🚀 <b>Hedef TP 2 (+%${TP2_RATIO_PCT}):</b> <code>$${tp2Str}</code>\n` +
-                  `🛑 <b>Fitil Arkası Stop:</b> <code>$${slStr}</code> (Borsaya Mühürlendi)\n` +
+                  `🛑 <b>Sert Tavan Stop:</b> <code>$${slStr}</code> (Maks -%${MAX_SL_RATIO_PCT})\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `📊 <i>İstihbarat: ${candidateTrade.reason}</i>\n` +
                   `💡 <i>Kural: TP1 (+%0.60) alındığı an pozisyonun %50'si satılır, stop maliyete borsaya mühürlenir!</i>`;
