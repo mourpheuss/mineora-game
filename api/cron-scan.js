@@ -29,7 +29,8 @@ export default async function handler(req, res) {
     const LEVERAGE = 20;                            // 20x KALDIRAÇ
     const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
-    const TP_TARGET_PCT = 0.60;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.60
+    const TP_TARGET_PCT = 0.70;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.70
+    const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -304,7 +305,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.60 TP & HER -%2.50 DCA EKLEMESİ)
+    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.70 TP & EN FAZLA 4 KEZ DCA EKLEME)
     // =========================================================================
     async function evaluateActiveTrades(currentTime) {
       let openCount = 0;
@@ -324,10 +325,13 @@ export default async function handler(req, res) {
           ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
           : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
 
-        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.60 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
+        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.70 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
         if (pnlPct >= TP_TARGET_PCT) {
           trade.status = 'TP_HIT';
           trade.closedAt = currentTime;
+          trade.exitPrice = curPrice;
+          trade.realizedPnlPct = pnlPct;
+          
           await closeBitgetPosition(trade.symbol, isLong);
           await executeUserCloses(trade.symbol, isLong);
 
@@ -352,11 +356,11 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // 2. DCA MALİYET İNDİRME: HER -%2.50 ÇEKİLMEDE ÖNCEKİ MARJİNİN %50'Sİ KADAR EKLEME
+        // 2. DCA MALİYET İNDİRME: EN FAZLA 4 KEZ EKLEME (dcaCount < 5)
         const dcaCount = trade.dcaCount || 1;
         const nextDcaTriggerDropPct = dcaCount * DCA_DROP_STEP_PCT;
 
-        if (pnlPct <= -nextDcaTriggerDropPct) {
+        if (dcaCount <= MAX_DCA_ADDS && pnlPct <= -nextDcaTriggerDropPct) {
           const lastMarginUsed = trade.lastMarginUsed || trade.marginUsed;
           const addMargin = parseFloat((lastMarginUsed * 0.50).toFixed(2));
 
@@ -397,8 +401,8 @@ export default async function handler(req, res) {
                                `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
                                `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
                                `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
-                               `🚀 <b>Yeni TP Hedefi (+%0.60):</b> <code>$${newTpStr}</code>\n` +
-                               `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount}`;
+                               `🚀 <b>Yeni TP Hedefi (+%0.70):</b> <code>$${newTpStr}</code>\n` +
+                               `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount - 1} / ${MAX_DCA_ADDS} Ekleme Yapıldı`;
 
               await sendTelegramAlert(tgDcaMsg);
 
@@ -602,7 +606,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.60)
+    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.70)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -627,9 +631,7 @@ export default async function handler(req, res) {
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
     
-    // BİTGET GERÇEK volumePlace VE minTradeNum İLE HASSAS ADET HESABI
     const orderSize = calculateOrderQuantityDynamic(candidateTrade.symbol, entryPrice, positionNotional);
-
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr, candidateTrade.symbol);
 
     const tp = isLong ? entryPrice * (1 + TP_TARGET_PCT / 100) : entryPrice * (1 - TP_TARGET_PCT / 100);
@@ -782,9 +784,9 @@ export default async function handler(req, res) {
                   `👥 <b>Ayna İşlem (Kullanıcılar):</b> ${memberOrdersCount} Üye Hesabında Açıldı\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hedef TP (+%${TP_TARGET_PCT}):</b> <code>$${tpStr}</code> (Borsaya Mühürlendi)\n` +
-                  `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır)\n` +
+                  `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır | Maks 4 Ekleme)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💡 <i>Kural: +%0.60 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
+                  `💡 <i>Kural: +%0.70 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
