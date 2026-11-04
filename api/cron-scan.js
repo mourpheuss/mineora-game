@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const LEVERAGE = 15;                            // 15x KALDIRAÇ
     const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
-    const TP_TARGET_PCT = 0.75;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.75 (GÜNCELLENDİ)
+    const TP_TARGET_PCT = 0.75;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.75
     const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
     const startTime = Date.now();
 
@@ -465,7 +465,7 @@ export default async function handler(req, res) {
     const TOXIC_COINS_BLACKLIST = [
       "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
       "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT",
-      "CLANKERUSDT" // KARA LİSTEYE EKLENDİ
+      "CLANKERUSDT"
     ];
 
     const FOREX_AND_FIAT = [
@@ -495,6 +495,18 @@ export default async function handler(req, res) {
 
       const p = parseFloat(c.lastPr || 0);
       if (p > 0 && p < 0.005) return false;
+
+      // KURAL: 24 SAATLİK DEĞİŞİMİ +%30 ÜSTÜ VEYA -%30 ALTI OLAN AŞIRI VOLATİL COİNLERİ ELE
+      let chg24hPct = 0;
+      const openPr = parseFloat(c.openPrice || 0);
+      if (openPr > 0 && p > 0) {
+        chg24hPct = ((p - openPr) / openPr) * 100;
+      } else if (c.change24h !== undefined) {
+        const rawChg = parseFloat(c.change24h || 0);
+        chg24hPct = Math.abs(rawChg) < 2.0 ? rawChg * 100 : rawChg;
+      }
+
+      if (chg24hPct >= 30.0 || chg24hPct <= -30.0) return false;
 
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
       return vol >= 1500000;
@@ -777,9 +789,9 @@ export default async function handler(req, res) {
                   `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
                   `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG (Dip Likidite Avı)' : '🔴 SHORT (Tepe Likidite Avı)'}\n` +
                   `🧱 <b>Avlanan Seviye:</b> <code>$${lvlStr}</code>\n` +
+                  `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
                   `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
                   `🏦 <b>Borsa Emri:</b> ✅ Bitget UTA Emri Açıldı\n` +
-                  `👥 <b>Ayna İşlem (Kullanıcılar):</b> ${memberOrdersCount} Üye Hesabında Açıldı\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hedef TP (+%${TP_TARGET_PCT}):</b> <code>$${tpStr}</code> (Borsaya Mühürlendi)\n` +
                   `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır | Maks 4 Ekleme)\n` +
