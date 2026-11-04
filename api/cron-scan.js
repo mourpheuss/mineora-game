@@ -26,10 +26,10 @@ export default async function handler(req, res) {
     
     const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
     const MAX_CONCURRENT_TRADES = 4;                // MAKSİMUM 4 İŞLEM SINIRI
-    const LEVERAGE = 10;                            // 10x KALDIRAÇ (GÜNCELLENDİ)
+    const LEVERAGE = 10;                            // 10x KALDIRAÇ
     const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
-    const TP_TARGET_PCT = 0.70;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.70
+    const TP_TARGET_PCT = 0.75;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.75 (GÜNCELLENDİ)
     const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
     const startTime = Date.now();
 
@@ -305,7 +305,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.70 TP & EN FAZLA 4 KEZ DCA EKLEME)
+    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.75 TP & EN FAZLA 4 KEZ DCA EKLEME)
     // =========================================================================
     async function evaluateActiveTrades(currentTime) {
       let openCount = 0;
@@ -325,7 +325,7 @@ export default async function handler(req, res) {
           ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
           : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
 
-        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.70 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
+        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.75 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
         if (pnlPct >= TP_TARGET_PCT) {
           trade.status = 'TP_HIT';
           trade.closedAt = currentTime;
@@ -401,7 +401,7 @@ export default async function handler(req, res) {
                                `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
                                `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
                                `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
-                               `🚀 <b>Yeni TP Hedefi (+%0.70):</b> <code>$${newTpStr}</code>\n` +
+                               `🚀 <b>Yeni TP Hedefi (+%0.75):</b> <code>$${newTpStr}</code>\n` +
                                `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount - 1} / ${MAX_DCA_ADDS} Ekleme Yapıldı`;
 
               await sendTelegramAlert(tgDcaMsg);
@@ -464,7 +464,8 @@ export default async function handler(req, res) {
     // =========================================================================
     const TOXIC_COINS_BLACKLIST = [
       "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
-      "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT"
+      "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT",
+      "CLANKERUSDT" // KARA LİSTEYE EKLENDİ
     ];
 
     const FOREX_AND_FIAT = [
@@ -606,7 +607,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.70)
+    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.75)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -786,7 +787,7 @@ export default async function handler(req, res) {
                   `🎯 <b>Hedef TP (+%${TP_TARGET_PCT}):</b> <code>$${tpStr}</code> (Borsaya Mühürlendi)\n` +
                   `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır | Maks 4 Ekleme)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💡 <i>Kural: +%0.70 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
+                  `💡 <i>Kural: +%0.75 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
