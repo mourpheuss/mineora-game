@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     
     const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
     const MAX_CONCURRENT_TRADES = 4;                // MAKSİMUM 4 İŞLEM SINIRI
-    const LEVERAGE = 20;                            // 20x KALDIRAÇ
+    const LEVERAGE = 10;                            // 10x KALDIRAÇ (GÜNCELLENDİ)
     const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
     const TP_TARGET_PCT = 0.70;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.70
