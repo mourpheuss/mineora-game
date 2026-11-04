@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 export const config = {
-  maxDuration: 60
+  maxDuration: 60 // 60s tam nöbet süresi
 };
 
 export default async function handler(req, res) {
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & %3 MARJİN DCA PARAMETRELERİ
+    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & 4 COİN KONTROLLÜ DCA PARAMETRELERİ
     // =========================================================================
     const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
     const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
@@ -24,13 +24,13 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    // YENİ PARAMETRELER (STOP YOK, SERBEST ADET, DİNAMİK EKLEME)
     const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
+    const MAX_CONCURRENT_TRADES = 4;                // MAKSİMUM 4 İŞLEM SINIRI
     const LEVERAGE = 20;                            // 20x KALDIRAÇ
     const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
     const TP_TARGET_PCT = 0.50;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.50
-    const now = Date.now();
+    const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
       const targets = [TG_CHANNEL_ID, TG_ADMIN_ID];
@@ -300,117 +300,163 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM TAKİBİ, +%0.50 TAM TP & HER -%2.50'DE DCA EKLEME
+    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.50 TP & HER -%2.50 DCA EKLEMESİ)
     // =========================================================================
-    for (const [tradeKey, trade] of Object.entries(activeTrades)) {
-      if (!trade || trade.status !== 'OPEN') continue;
+    async function evaluateActiveTrades(currentTime) {
+      let openCount = 0;
+      for (const [tradeKey, trade] of Object.entries(activeTrades)) {
+        if (!trade || trade.status !== 'OPEN') continue;
+        openCount++;
 
-      const curPrice = priceMap[trade.symbol];
-      if (!curPrice || curPrice <= 0) continue;
+        const curPrice = priceMap[trade.symbol];
+        if (!curPrice || curPrice <= 0) continue;
 
-      const isLong = trade.direction === 'LONG';
-      const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol], trade.symbol);
-      const pCurStr = curPrice.toFixed(prec);
-      const pEntryStr = trade.entryPrice.toFixed(prec);
+        const isLong = trade.direction === 'LONG';
+        const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol], trade.symbol);
+        const pCurStr = curPrice.toFixed(prec);
+        const pEntryStr = trade.entryPrice.toFixed(prec);
 
-      // Ortalama maliyet üzerinden anlık kâr/zarar yüzdesi
-      const pnlPct = isLong
-        ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
-        : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
+        const pnlPct = isLong
+          ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
+          : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
 
-      // 1. KESİN TP: FİYAT +%0.50 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
-      if (pnlPct >= TP_TARGET_PCT) {
-        trade.status = 'TP_HIT';
-        trade.closedAt = now;
-        await closeBitgetPosition(trade.symbol, isLong);
-        await executeUserCloses(trade.symbol, isLong);
+        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.50 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
+        if (pnlPct >= TP_TARGET_PCT) {
+          trade.status = 'TP_HIT';
+          trade.closedAt = currentTime;
+          await closeBitgetPosition(trade.symbol, isLong);
+          await executeUserCloses(trade.symbol, isLong);
 
-        const tgTpMsg = `🎯 <b>MINEORA SNIPER | TP HEDEFİ VURULDU (%100 KAPANDI)!</b>\n` +
-                        `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                        `🧭 <b>Yön:</b> ${trade.direction}\n` +
-                        `💵 <b>Ortalama Maliyet:</b> <code>$${pEntryStr}</code>\n` +
-                        `🎯 <b>Kapanış Fiyatı:</b> <code>$${pCurStr}</code>\n` +
-                        `💰 <b>Net Kâr:</b> +%${pnlPct.toFixed(2)} (${LEVERAGE}x ile <b>+%${(pnlPct * LEVERAGE).toFixed(1)} MARJİN KÂRI</b>)\n` +
-                        `🧱 <b>Toplam Katman:</b> ${trade.dcaCount || 1}. Kademe Tamamlandı\n` +
-                        `✨ <i>Pozisyon tamamen kapatıldı, kâr kasaya eklendi.</i>`;
+          const tgTpMsg = `🎯 <b>MINEORA SNIPER | TP HEDEFİ VURULDU (%100 KAPANDI)!</b>\n` +
+                          `━━━━━━━━━━━━━━━━━━━━\n` +
+                          `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                          `🧭 <b>Yön:</b> ${trade.direction}\n` +
+                          `💵 <b>Ortalama Maliyet:</b> <code>$${pEntryStr}</code>\n` +
+                          `🎯 <b>Kapanış Fiyatı:</b> <code>$${pCurStr}</code>\n` +
+                          `💰 <b>Net Kâr:</b> +%${pnlPct.toFixed(2)} (${LEVERAGE}x ile <b>+%${(pnlPct * LEVERAGE).toFixed(1)} MARJİN KÂRI</b>)\n` +
+                          `🧱 <b>Toplam Katman:</b> ${trade.dcaCount || 1}. Kademe Tamamlandı\n` +
+                          `✨ <i>Pozisyon tamamen kapatıldı, kasa nakde geçti.</i>`;
 
-        await sendTelegramAlert(tgTpMsg);
+          await sendTelegramAlert(tgTpMsg);
 
-        await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(trade)
-        });
-        continue;
-      }
-
-      // 2. DCA MALİYET İNDİRME: HER -%2.50 ÇEKİLMEDE ÖNCEKİ MARJİNİN YARISI KADAR EKLEME
-      const dcaCount = trade.dcaCount || 1; // 1 = sadece ilk giriş yapılmış
-      const nextDcaTriggerDropPct = dcaCount * DCA_DROP_STEP_PCT; // 1. ekleme için -%2.50, 2. için -%5.00, 3. için -%7.50
-
-      if (pnlPct <= -nextDcaTriggerDropPct) {
-        // Önceki marjinin tam yarısı
-        const lastMarginUsed = trade.lastMarginUsed || trade.marginUsed;
-        const addMargin = parseFloat((lastMarginUsed * 0.50).toFixed(2));
-
-        if (addMargin >= 1.0) { // Minimum 1 USDT ekleme payı
-          const addNotional = addMargin * LEVERAGE;
-          const addQty = calculateOrderQuantity(curPrice, addNotional);
-          const addSide = isLong ? 'buy' : 'sell';
-
-          const addOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-            category: 'USDT-FUTURES',
-            symbol: trade.symbol,
-            side: addSide,
-            orderType: 'market',
-            qty: addQty.toString()
+          await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(trade)
           });
+          openCount--;
+          continue;
+        }
 
-          if (addOrderRes.code === '00000') {
-            // Yeni ortalama maliyeti hesapla
-            const prevQty = trade.openSize || 0;
-            const newTotalQty = prevQty + addQty;
-            const prevNotional = prevQty * trade.entryPrice;
-            const newTotalNotional = prevNotional + addNotional;
-            const newAvgEntry = newTotalNotional / newTotalQty;
+        // 2. DCA MALİYET İNDİRME: HER -%2.50 ÇEKİLMEDE ÖNCEKİ MARJİNİN %50'Sİ KADAR EKLEME
+        const dcaCount = trade.dcaCount || 1;
+        const nextDcaTriggerDropPct = dcaCount * DCA_DROP_STEP_PCT;
 
-            trade.entryPrice = newAvgEntry;
-            trade.openSize = newTotalQty;
-            trade.totalMargin = (trade.totalMargin || trade.marginUsed) + addMargin;
-            trade.lastMarginUsed = addMargin;
-            trade.dcaCount = dcaCount + 1;
-            // Yeni ortalama maliyet üzerinden TP seviyesini güncelle
-            trade.tp = isLong ? newAvgEntry * (1 + TP_TARGET_PCT / 100) : newAvgEntry * (1 - TP_TARGET_PCT / 100);
+        if (pnlPct <= -nextDcaTriggerDropPct) {
+          const lastMarginUsed = trade.lastMarginUsed || trade.marginUsed;
+          const addMargin = parseFloat((lastMarginUsed * 0.50).toFixed(2));
 
-            const newEntryStr = newAvgEntry.toFixed(prec);
-            const newTpStr = trade.tp.toFixed(prec);
+          if (addMargin >= 1.0) {
+            const addNotional = addMargin * LEVERAGE;
+            const addQty = calculateOrderQuantity(curPrice, addNotional);
+            const addSide = isLong ? 'buy' : 'sell';
 
-            const tgDcaMsg = `🧱 <b>MINEORA SNIPER | DCA KADEME EKLEMESİ YAPILDI</b>\n` +
-                             `━━━━━━━━━━━━━━━━━━━━\n` +
-                             `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                             `🧭 <b>Yön:</b> ${trade.direction}\n` +
-                             `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
-                             `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
-                             `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
-                             `🚀 <b>Yeni TP Hedefi (+%0.50):</b> <code>$${newTpStr}</code>\n` +
-                             `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount}`;
-
-            await sendTelegramAlert(tgDcaMsg);
-
-            await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(trade)
+            const addOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
+              category: 'USDT-FUTURES',
+              symbol: trade.symbol,
+              side: addSide,
+              orderType: 'market',
+              qty: addQty.toString()
             });
+
+            if (addOrderRes.code === '00000') {
+              const prevQty = trade.openSize || 0;
+              const newTotalQty = prevQty + addQty;
+              const prevNotional = prevQty * trade.entryPrice;
+              const newTotalNotional = prevNotional + addNotional;
+              const newAvgEntry = newTotalNotional / newTotalQty;
+
+              trade.entryPrice = newAvgEntry;
+              trade.openSize = newTotalQty;
+              trade.totalMargin = (trade.totalMargin || trade.marginUsed) + addMargin;
+              trade.lastMarginUsed = addMargin;
+              trade.dcaCount = dcaCount + 1;
+              trade.tp = isLong ? newAvgEntry * (1 + TP_TARGET_PCT / 100) : newAvgEntry * (1 - TP_TARGET_PCT / 100);
+
+              const newEntryStr = newAvgEntry.toFixed(prec);
+              const newTpStr = trade.tp.toFixed(prec);
+
+              const tgDcaMsg = `🧱 <b>MINEORA SNIPER | DCA KADEME EKLEMESİ YAPILDI</b>\n` +
+                               `━━━━━━━━━━━━━━━━━━━━\n` +
+                               `💎 <b>Parite:</b> #${trade.symbol}\n` +
+                               `🧭 <b>Yön:</b> ${trade.direction}\n` +
+                               `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
+                               `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
+                               `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
+                               `🚀 <b>Yeni TP Hedefi (+%0.50):</b> <code>$${newTpStr}</code>\n` +
+                               `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount}`;
+
+              await sendTelegramAlert(tgDcaMsg);
+
+              await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(trade)
+              });
+            }
           }
         }
+      }
+      return openCount;
+    }
+
+    // İlk denetleme
+    let currentOpenCount = await evaluateActiveTrades(Date.now());
+
+    // =========================================================================
+    // NÖBETÇİ MODU (SENTINEL LOOP): 4 İŞLEM DOLDUĞUNDA GENEL TARAMAYI DURDUR,
+    // 52 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 4 POZİSYONU ANLIK DENETLE!
+    // BİRİ KAPANDIĞI ANDA DÖNGÜDEN ÇIKIP DERHAL YENİ TARAMAYA GEÇ!
+    // =========================================================================
+    if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
+      console.log(`[SENTINEL MODE] 4 İşlem Dolu. Genel tarama kapatıldı, mikro-takip nöbetine girildi.`);
+
+      while ((Date.now() - startTime) < 52000) {
+        await new Promise(r => setTimeout(r, 2500)); // 2.5 saniyede bir kontrol
+
+        const activeSymbols = Object.values(activeTrades).filter(t => t && t.status === 'OPEN').map(t => t.symbol);
+        if (activeSymbols.length === 0) break;
+
+        try {
+          const quickTickRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
+          const qJson = await quickTickRes.json();
+          if (qJson.code === '00000' && Array.isArray(qJson.data)) {
+            qJson.data.forEach(t => {
+              if (activeSymbols.includes(t.symbol)) {
+                priceMap[t.symbol] = parseFloat(t.lastPr || 0);
+              }
+            });
+          }
+        } catch(e) {}
+
+        currentOpenCount = await evaluateActiveTrades(Date.now());
+
+        // Biri kapandı ve slot açıldı! Derhal genel taramaya geç!
+        if (currentOpenCount < MAX_CONCURRENT_TRADES) {
+          console.log(`[SENTINEL MODE] Bir işlem kapandı (${currentOpenCount}/${MAX_CONCURRENT_TRADES}). Yeni tarama başlatılıyor.`);
+          break;
+        }
+      }
+
+      // Eğer 52 saniye sonunda hala 4 işlem açıksa fonksiyonu güvenle tamamla
+      if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
+        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "4 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
       }
     }
 
     // =========================================================================
     // MODÜL 2: 20 DAKİKALIK SAF LİKİDİTE SÜPÜRME TARAMA MOTORU
-    // (4 Coin Kilidi Kaldırıldı - Koşulu Sağlayan Her Coine Giriş Açar)
+    // (Sadece içeride 4'ten az işlem varsa çalışır)
     // =========================================================================
     const TOXIC_COINS_BLACKLIST = [
       "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
@@ -452,12 +498,11 @@ export default async function handler(req, res) {
     let candidateTrade = null;
 
     for (const item of pool) {
-      // Halihazırda açık bir pozisyonu varsa yeni pozisyon açma (DCA modülü yönetecek)
       const isAlreadyOpen = Object.values(activeTrades).some(t => t && t.status === 'OPEN' && t.symbol === item.symbol);
       if (isAlreadyOpen) continue;
 
       const lastSentTime = lastSignals[item.symbol] || 0;
-      if (now - lastSentTime < SAME_COIN_LOCK_MS) continue;
+      if (Date.now() - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
       const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
@@ -567,7 +612,6 @@ export default async function handler(req, res) {
       body: JSON.stringify(currentEquity)
     }).catch(() => {});
 
-    // KASANIN NET %3'Ü DİNAMİK MARJİN
     const dynamicMargin = parseFloat(Math.max(3, (currentEquity * MARGIN_RATIO)).toFixed(2));
     
     try {
@@ -579,7 +623,6 @@ export default async function handler(req, res) {
       });
     } catch (e) {}
 
-    // 20x KALDIRAÇLI BÜYÜKLÜK
     const positionNotional = dynamicMargin * LEVERAGE;
     const entryPrice = candidateTrade.price;
     const isLong = candidateTrade.direction === 'LONG';
@@ -587,11 +630,9 @@ export default async function handler(req, res) {
 
     const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr, candidateTrade.symbol);
 
-    // KESİN VE TEK TP: TAM +%0.50 (STOP YOK!)
     const tp = isLong ? entryPrice * (1 + TP_TARGET_PCT / 100) : entryPrice * (1 - TP_TARGET_PCT / 100);
     const tpFormatted = tp.toFixed(precision);
 
-    // BORSAYA STOP OLMADAN, SADECE TP İLE MARKET EMRİ GÖNDERİLİR
     const orderPayload = {
       category: 'USDT-FUTURES',
       symbol: candidateTrade.symbol,
@@ -617,7 +658,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "ORDER_REJECTED", error: placeOrderRes.msg });
     }
 
-    // VIP Üyelerin Bitget ve BingX Hesaplarına Paralel Emir İlet
     let memberOrdersCount = 0;
     for (const [uname, udata] of Object.entries(allUsers)) {
       if (!udata || !udata.autoTradeEnabled) continue;
@@ -692,16 +732,16 @@ export default async function handler(req, res) {
       direction: candidateTrade.direction,
       entryPrice,
       tp,
-      sl: 0, // STOP YOK
+      sl: 0,
       status: 'OPEN',
-      dcaCount: 1, // 1. kademe
+      dcaCount: 1,
       marginUsed: dynamicMargin,
       totalMargin: dynamicMargin,
       lastMarginUsed: dynamicMargin,
       openSize: orderSize,
       score: candidateTrade.takerRatio,
       reason: candidateTrade.reason,
-      createdAt: now,
+      createdAt: Date.now(),
       timestamp: new Date().toISOString(),
       walletEquityAtEntry: currentEquity,
       bitgetOrderResult: 'SUCCESS',
@@ -719,7 +759,7 @@ export default async function handler(req, res) {
       fetch(`${FIREBASE_BASE_URL}/last_signals/${candidateTrade.symbol}.json`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(now)
+        body: JSON.stringify(Date.now())
       })
     ]);
 
