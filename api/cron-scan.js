@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const MAX_CONCURRENT_TRADES = 4;                // MAKSİMUM 4 İŞLEM SINIRI
     const LEVERAGE = 15;                            // 15x KALDIRAÇ
     const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
-    const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
+    const DCA_DROP_STEP_PCT = 2.50;                 // HER GÜNCEL MALİYETTEN SABİT -%2.50 GERİ GİTTİĞİNDE EKLEME
     const TP_TARGET_PCT = 0.75;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.75
     const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
     const startTime = Date.now();
@@ -223,7 +223,7 @@ export default async function handler(req, res) {
 
     if (contractsRes && contractsRes.ok) {
       try {
-        const contractsJson = await contractsRes.json();
+        contractsJson = await contractsRes.json();
         if (contractsJson.code === '00000' && Array.isArray(contractsJson.data)) {
           contractsJson.data.forEach(c => {
             if (c.symbol) {
@@ -356,11 +356,10 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // 2. DCA MALİYET İNDİRME: EN FAZLA 4 KEZ EKLEME (dcaCount < 5)
+        // 2. DCA MALİYET İNDİRME: HER GÜNCEL MALİYETTEN SABİT -%2.50 ÇEKİLMEDE EKLEME YAP
         const dcaCount = trade.dcaCount || 1;
-        const nextDcaTriggerDropPct = dcaCount * DCA_DROP_STEP_PCT;
 
-        if (dcaCount <= MAX_DCA_ADDS && pnlPct <= -nextDcaTriggerDropPct) {
+        if (dcaCount <= MAX_DCA_ADDS && pnlPct <= -DCA_DROP_STEP_PCT) {
           const lastMarginUsed = trade.lastMarginUsed || trade.marginUsed;
           const addMargin = parseFloat((lastMarginUsed * 0.50).toFixed(2));
 
@@ -398,7 +397,7 @@ export default async function handler(req, res) {
                                `━━━━━━━━━━━━━━━━━━━━\n` +
                                `💎 <b>Parite:</b> #${trade.symbol}\n` +
                                `🧭 <b>Yön:</b> ${trade.direction}\n` +
-                               `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
+                               `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${DCA_DROP_STEP_PCT.toFixed(2)})\n` +
                                `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
                                `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
                                `🚀 <b>Yeni TP Hedefi (+%0.75):</b> <code>$${newTpStr}</code>\n` +
@@ -794,7 +793,7 @@ export default async function handler(req, res) {
                   `🏦 <b>Borsa Emri:</b> ✅ Bitget UTA Emri Açıldı\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `🎯 <b>Hedef TP (+%${TP_TARGET_PCT}):</b> <code>$${tpStr}</code> (Borsaya Mühürlendi)\n` +
-                  `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır | Maks 4 Ekleme)\n` +
+                  `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her güncellenen maliyetten -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır | Maks 4 Ekleme)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
                   `💡 <i>Kural: +%0.75 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
 
