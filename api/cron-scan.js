@@ -521,7 +521,7 @@ export default async function handler(req, res) {
       const lastSentTime = lastSignals[item.symbol] || 0;
       if (Date.now() - lastSentTime < SAME_COIN_LOCK_MS) continue;
 
-      const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
+      const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=65`, { headers: browserHeaders })
         .then(r => r.json()).catch(() => ({}));
 
       if (candles1mRes.code !== '00000' || !Array.isArray(candles1mRes.data) || candles1mRes.data.length < 20) continue;
@@ -537,7 +537,7 @@ export default async function handler(req, res) {
 
       const cur1m = candles1m[candles1m.length - 1];
       const sweep1m = candles1m[candles1m.length - 2];
-      const pastList = candles1m.slice(0, -2);
+      const pastList = candles1m.slice(-22, -2);
 
       const rangeHigh = Math.max(...pastList.map(c => c.high));
       const rangeLow  = Math.min(...pastList.map(c => c.low));
@@ -581,8 +581,26 @@ export default async function handler(req, res) {
       const totalFlow = buyUsd + sellUsd;
       const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
 
-      // LONG TETİĞİ (%65 Kurumsal Alıcı Akışı)
-      if (isBullishSweep && takerBuyRatio >= 65) {
+      // KURAL 4: AKILLI AŞIRILIK FİLTRESİ (Son 1 saatte kesintisiz -%8 düşüp hiç yeşil yakmayan şelalelerde LONG açma)
+      let isUnbrokenWaterfall = false;
+      if (candles1m.length >= 60) {
+        const candles60m = candles1m.slice(-60);
+        const pStart60m = candles60m[0].open;
+        const drop60mPct = ((cur1m.close - pStart60m) / pStart60m) * 100;
+        
+        const q1 = candles60m.slice(0, 15);
+        const q2 = candles60m.slice(15, 30);
+        const q3 = candles60m.slice(30, 45);
+        const q4 = candles60m.slice(45, 60);
+        const hasGreenQuarter = [q1, q2, q3, q4].some(q => q[q.length - 1].close > q[0].open);
+
+        if (drop60mPct <= -8.0 && !hasGreenQuarter) {
+          isUnbrokenWaterfall = true;
+        }
+      }
+
+      // LONG TETİĞİ (%65 Kurumsal Alıcı Akışı & Şelale Filtresi)
+      if (isBullishSweep && takerBuyRatio >= 65 && !isUnbrokenWaterfall) {
         candidateTrade = {
           symbol: item.symbol,
           direction: 'LONG',
