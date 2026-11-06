@@ -497,7 +497,7 @@ export default async function handler(req, res) {
       const p = parseFloat(c.lastPr || 0);
       if (p > 0 && p < 0.005) return false;
 
-      // KURAL: 24 SAATLİK DEĞİŞİMİ +%30 ÜSTÜ VEYA -%30 ALTI OLAN AŞIRI VOLATİL COİNLERİ ELE
+      // KURAL: 24 SAATLİK DEĞİŞİMİ +%20 ÜSTÜ VEYA -%20 ALTI OLAN AŞIRI VOLATİL COİNLERİ ELE
       let chg24hPct = 0;
       const openPr = parseFloat(c.openPrice || 0);
       if (openPr > 0 && p > 0) {
@@ -507,7 +507,7 @@ export default async function handler(req, res) {
         chg24hPct = Math.abs(rawChg) < 2.0 ? rawChg * 100 : rawChg;
       }
 
-      if (chg24hPct >= 30.0 || chg24hPct <= -30.0) return false;
+      if (chg24hPct >= 20.0 || chg24hPct <= -20.0) return false;
 
       const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
       return vol >= 1500000;
