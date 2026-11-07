@@ -465,8 +465,7 @@ export default async function handler(req, res) {
     const TOXIC_COINS_BLACKLIST = [
       "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
       "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT",
-      "CLANKERUSDT", "BTCUSDT", "UAIUSDT"
-    ];
+      "CLANKERUSDT", "BTCUSDT"
     ];
 
     const FOREX_AND_FIAT = [
