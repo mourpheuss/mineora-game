@@ -27,9 +27,9 @@ export default async function handler(req, res) {
     const SAME_COIN_LOCK_MS = 10 * 60 * 1000;       // AYNI COİNDE BEKLEME SÜRESİ 10 DK
     const MAX_CONCURRENT_TRADES = 7;                // MAKSİMUM 7 İŞLEM SINIRI
     const LEVERAGE = 20;                            // 20x KALDIRAÇ
-    const MARGIN_RATIO = 0.05;                      // KASANIN %5'İ İLE İLK GİRİŞ
+    const MARGIN_RATIO = 0.07;                      // KASANIN %7'Sİ İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
-    const TP_TARGET_PCT = 0.70;                     // TEK VE KESİN SABİT TP: ORTALAMA MALİYETTEN +%0.70
+    const TP_TARGET_PCT = 0.50;                     // TEK VE KESİN SABİT TP: ORTALAMA MALİYETTEN +%0.50
     const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
     const startTime = Date.now();
 
@@ -151,7 +151,7 @@ export default async function handler(req, res) {
               side: closeSideBitget,
               orderType: 'market',
               reduceOnly: 'yes'
-            }, creds).catch(() => {});
+}, creds).catch(() => {});
           } else if (ex === 'BINGX') {
             const bingxSym = symbol.replace('USDT', '-USDT');
             await bingxPrivateRequest('/openApi/swap/v2/trade/order', 'POST', {
@@ -291,7 +291,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.70 SABİT TP & EN FAZLA 4 KEZ DCA)
+    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.50 SABİT TP & EN FAZLA 4 KEZ DCA)
     // =========================================================================
     async function evaluateActiveTrades(currentTime) {
       let openCount = 0;
@@ -311,7 +311,7 @@ export default async function handler(req, res) {
           ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
           : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
 
-        // 1. KESİN TEK TP: FİYAT ORTALAMA MALİYETTEN +%0.70 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
+        // 1. KESİN TEK TP: FİYAT ORTALAMA MALİYETTEN +%0.50 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
         if (pnlPct >= TP_TARGET_PCT) {
           trade.status = 'TP_HIT';
           trade.closedAt = currentTime;
@@ -387,7 +387,7 @@ export default async function handler(req, res) {
                                `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
                                `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
                                `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
-                               `🚀 <b>Yeni TP Hedefi (+%${TP_TARGET_PCT}):</b> <code>$${newTpStr}</code>\n` +
+                               `🚀 <b>Yeni TP Hedefi (+%0.50):</b> <code>$${newTpStr}</code>\n` +
                                `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount - 1} / ${MAX_DCA_ADDS} Ekleme Yapıldı`;
 
               await sendTelegramAlert(tgDcaMsg);
@@ -567,7 +567,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %5'İ, 20x KALDIRAÇ, SABİT TP: +%0.70)
+    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %7'Sİ, 20x KALDIRAÇ, SABİT TP: +%0.50)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
