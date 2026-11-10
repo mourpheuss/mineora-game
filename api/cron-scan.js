@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & 4 COİN KONTROLLÜ DCA PARAMETRELERİ
+    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & 7 COİN KONTROLLÜ DCA PARAMETRELERİ
     // =========================================================================
     const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
     const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
@@ -24,12 +24,12 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
-    const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
-    const MAX_CONCURRENT_TRADES = 4;                // MAKSİMUM 4 İŞLEM SINIRI
-    const LEVERAGE = 15;                            // 15x KALDIRAÇ
-    const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
+    const SAME_COIN_LOCK_MS = 10 * 60 * 1000;       // AYNI COİNDE BEKLEME SÜRESİ 10 DK
+    const MAX_CONCURRENT_TRADES = 7;                // MAKSİMUM 7 İŞLEM SINIRI
+    const LEVERAGE = 20;                            // 20x KALDIRAÇ
+    const MARGIN_RATIO = 0.05;                      // KASANIN %5'İ İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
-    const TP_TARGET_PCT = 0.75;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.75
+    const TP_TARGET_PCT = 0.70;                     // TEK VE KESİN SABİT TP: ORTALAMA MALİYETTEN +%0.70
     const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
     const startTime = Date.now();
 
@@ -265,20 +265,6 @@ export default async function handler(req, res) {
       return finalQty;
     }
 
-    const genuineSpotCryptoSet = new Set();
-    if (spotSymbolsRes && spotSymbolsRes.ok) {
-      try {
-        const spotJson = await spotSymbolsRes.json();
-        if (spotJson.code === '00000' && Array.isArray(spotJson.data)) {
-          spotJson.data.forEach(s => {
-            if (s.symbol && s.symbol.endsWith("USDT") && s.status === 'online') {
-              genuineSpotCryptoSet.add(s.symbol);
-            }
-          });
-        }
-      } catch (e) {}
-    }
-
     const priceMap = {};
     const rawPriceMap = {};
     tickersJson.data.forEach(t => {
@@ -305,7 +291,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.75 TP & EN FAZLA 4 KEZ DCA EKLEME)
+    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.70 SABİT TP & EN FAZLA 4 KEZ DCA)
     // =========================================================================
     async function evaluateActiveTrades(currentTime) {
       let openCount = 0;
@@ -325,7 +311,7 @@ export default async function handler(req, res) {
           ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
           : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
 
-        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.75 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
+        // 1. KESİN TEK TP: FİYAT ORTALAMA MALİYETTEN +%0.70 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
         if (pnlPct >= TP_TARGET_PCT) {
           trade.status = 'TP_HIT';
           trade.closedAt = currentTime;
@@ -401,7 +387,7 @@ export default async function handler(req, res) {
                                `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
                                `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
                                `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
-                               `🚀 <b>Yeni TP Hedefi (+%0.75):</b> <code>$${newTpStr}</code>\n` +
+                               `🚀 <b>Yeni TP Hedefi (+%${TP_TARGET_PCT}):</b> <code>$${newTpStr}</code>\n` +
                                `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount - 1} / ${MAX_DCA_ADDS} Ekleme Yapıldı`;
 
               await sendTelegramAlert(tgDcaMsg);
@@ -421,12 +407,12 @@ export default async function handler(req, res) {
     let currentOpenCount = await evaluateActiveTrades(Date.now());
 
     // =========================================================================
-    // NÖBETÇİ MODU (SENTINEL LOOP): 4 İŞLEM DOLDUĞUNDA GENEL TARAMAYI DURDUR,
-    // 52 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 4 POZİSYONU ANLIK DENETLE!
+    // NÖBETÇİ MODU (SENTINEL LOOP): 7 İŞLEM DOLDUĞUNDA GENEL TARAMAYI DURDUR,
+    // 52 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 7 POZİSYONU ANLIK DENETLE!
     // BİRİ KAPANDIĞI ANDA DÖNGÜDEN ÇIKIP DERHAL YENİ TARAMAYA GEÇ!
     // =========================================================================
     if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
-      console.log(`[SENTINEL MODE] 4 İşlem Dolu. Genel tarama kapatıldı, mikro-takip nöbetine girildi.`);
+      console.log(`[SENTINEL MODE] 7 İşlem Dolu. Genel tarama kapatıldı, mikro-takip nöbetine girildi.`);
 
       while ((Date.now() - startTime) < 52000) {
         await new Promise(r => setTimeout(r, 2500));
@@ -455,61 +441,23 @@ export default async function handler(req, res) {
       }
 
       if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
-        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "4 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
+        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "7 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
       }
     }
 
     // =========================================================================
-    // MODÜL 2: 20 DAKİKALIK SAF LİKİDİTE SÜPÜRME TARAMA MOTORU
+    // MODÜL 2: 12 SEÇİLMİŞ DENGELİ MAJÖR COİN İLE LİKİDİTE SÜPÜRME MOTORU
     // =========================================================================
-    const TOXIC_COINS_BLACKLIST = [
-      "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
-      "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT",
-      "CLANKERUSDT", "BTCUSDT"
-    ];
-
-    const FOREX_AND_FIAT = [
-      "USDBRL", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDTRY", "USDCAD",
-      "USDCHF", "USDCNH", "EURGBP", "EURJPY", "GBPJPY", "XAU", "XAG", "SPX",
-      "NDX", "DJI", "CLUSDT", "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT"
-    ];
-
-    const STOCKS_BLACKLIST = [
-      "IREN", "LITE", "GLW", "SNXX", "SPCX", "INTC", "ARM", "AMD", "MRVL", "EWZ", "TQQQ", "CSOP",
-      "HYUNDAI", "DXYZ", "MP", "BZ", "UVXY", "MSTR", "BE", "SOXL", "ASML",
-      "HOOD", "MU", "MELI", "QQQ", "SPY", "SQQQ", "SKHYNIX", "SOFTBANK",
-      "OPENAI", "ANTHROPIC", "KORU", "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "INTW", "PLTR", "BABA", "NIO", "MARA", "RIOT", "CLSK", "CORZ", "SNDK"
+    const MAJOR_12_COINS = [
+      "SOLUSDT", "NEARUSDT", "SUIUSDT", "APTUSDT", "DOGEUSDT", 
+      "ARBUSDT", "OPUSDT", "TIAUSDT", "INJUSDT", "DOTUSDT", 
+      "SEIUSDT", "FETUSDT"
     ];
 
     const pool = tickersJson.data.filter(c => {
-      if (!c.symbol || !c.symbol.endsWith("USDT")) return false;
-      if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
-
+      if (!c.symbol) return false;
       const symUpper = c.symbol.toUpperCase();
-      if (TOXIC_COINS_BLACKLIST.includes(symUpper)) return false;
-      for (const fx of FOREX_AND_FIAT) if (symUpper.includes(fx)) return false;
-      for (const st of STOCKS_BLACKLIST) if (symUpper.includes(st)) return false;
-
-      if (genuineSpotCryptoSet.size > 0 && !genuineSpotCryptoSet.has(c.symbol)) return false;
-
-      const p = parseFloat(c.lastPr || 0);
-      if (p > 0 && p < 0.005) return false;
-
-      // KURAL: 24 SAATLİK DEĞİŞİMİ +%30 ÜSTÜ VEYA -%30 ALTI OLAN AŞIRI VOLATİL COİNLERİ ELE
-      let chg24hPct = 0;
-      const openPr = parseFloat(c.openPrice || 0);
-      if (openPr > 0 && p > 0) {
-        chg24hPct = ((p - openPr) / openPr) * 100;
-      } else if (c.change24h !== undefined) {
-        const rawChg = parseFloat(c.change24h || 0);
-        chg24hPct = Math.abs(rawChg) < 2.0 ? rawChg * 100 : rawChg;
-      }
-
-      if (chg24hPct >= 30.0 || chg24hPct <= -30.0) return false;
-
-      const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      return vol >= 1500000;
+      return MAJOR_12_COINS.includes(symUpper);
     }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
 
     let candidateTrade = null;
@@ -550,15 +498,15 @@ export default async function handler(req, res) {
       const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
       const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
 
-      // KURAL 1: CRON-SCAN (15) ORİJİNAL %48 FİTİL VE LİKİDİTE SÜPÜRMESİ
+      // KURAL 1: %48 FİTİL VE LİKİDİTE SÜPÜRMESİ
       const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.48) && (cur1m.close > sweep1m.close);
       const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.48) && (cur1m.close < sweep1m.close);
 
       if (!isBullishSweep && !isBearishSweep) continue;
 
-      // KURAL 2: 1.8σ Z-SCORE HACİM ANOMALİSİ
+      // KURAL 2: 1.50σ Z-SCORE HACİM ANOMALİSİ (MAJÖR DERİN TAHTA UYUMU)
       const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
-      if (volZScore < 1.8 || volZScore > 5.0) continue;
+      if (volZScore < 1.50 || volZScore > 5.0) continue;
 
       // KURAL 3: 250$ KURUMSAL EMİR FİLTRESİ İLE TAKER AKIŞI
       const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
@@ -619,7 +567,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.75)
+    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %5'İ, 20x KALDIRAÇ, SABİT TP: +%0.70)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
@@ -796,7 +744,7 @@ export default async function handler(req, res) {
                   `🎯 <b>Hedef TP (+%${TP_TARGET_PCT}):</b> <code>$${tpStr}</code> (Borsaya Mühürlendi)\n` +
                   `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır | Maks 4 Ekleme)\n` +
                   `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💡 <i>Kural: +%0.75 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
+                  `💡 <i>Kural: +%${TP_TARGET_PCT} kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
 
     await sendTelegramAlert(tgMsg);
 
