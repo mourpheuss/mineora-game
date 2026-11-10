@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & 4 COİN KONTROLLÜ DCA PARAMETRELERİ
+    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & 7 COİN KONTROLLÜ DCA PARAMETRELERİ
     // =========================================================================
     const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
     const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
@@ -25,9 +25,9 @@ export default async function handler(req, res) {
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
     
     const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
-    const MAX_CONCURRENT_TRADES = 4;                // MAKSİMUM 4 İŞLEM SINIRI
+    const MAX_CONCURRENT_TRADES = 7;                // MAKSİMUM 7 İŞLEM SINIRI
     const LEVERAGE = 15;                            // 15x KALDIRAÇ
-    const MARGIN_RATIO = 0.03;                      // KASANIN %3'Ü İLE İLK GİRİŞ
+    const MARGIN_RATIO = 0.05;                      // KASANIN %5'İ İLE İLK GİRİŞ
     const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
     const TP_TARGET_PCT = 0.75;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.75
     const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
@@ -421,12 +421,12 @@ export default async function handler(req, res) {
     let currentOpenCount = await evaluateActiveTrades(Date.now());
 
     // =========================================================================
-    // NÖBETÇİ MODU (SENTINEL LOOP): 4 İŞLEM DOLDUĞUNDA GENEL TARAMAYI DURDUR,
-    // 52 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 4 POZİSYONU ANLIK DENETLE!
+    // NÖBETÇİ MODU (SENTINEL LOOP): 7 İŞLEM DOLDUĞUNDA GENEL TARAMAYI DURDUR,
+    // 52 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 7 POZİSYONU ANLIK DENETLE!
     // BİRİ KAPANDIĞI ANDA DÖNGÜDEN ÇIKIP DERHAL YENİ TARAMAYA GEÇ!
     // =========================================================================
     if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
-      console.log(`[SENTINEL MODE] 4 İşlem Dolu. Genel tarama kapatıldı, mikro-takip nöbetine girildi.`);
+      console.log(`[SENTINEL MODE] 7 İşlem Dolu. Genel tarama kapatıldı, mikro-takip nöbetine girildi.`);
 
       while ((Date.now() - startTime) < 52000) {
         await new Promise(r => setTimeout(r, 2500));
@@ -455,7 +455,7 @@ export default async function handler(req, res) {
       }
 
       if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
-        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "4 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
+        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "7 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
       }
     }
 
@@ -619,7 +619,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.75)
+    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %5'İ, STOP YOK, TEK TP: +%0.75)
     // =========================================================================
     const currentEquity = await getFuturesEquity();
     
