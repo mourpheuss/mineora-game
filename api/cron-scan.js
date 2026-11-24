@@ -26,9 +26,15 @@ export default async function handler(req, res) {
     const TP_DOLLAR = 4.00;                     // SABİT +$4.00 GÖMÜLÜ TAKE-PROFIT
     const SL_DOLLAR = 5.00;                     // SABİT -$5.00 GÖMÜLÜ STOP-LOSS
     const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
-    const DEFAULT_LOT_SIZE = 0.10;              // VARSAYILAN LOT (Firebase'de gold_lot_size varsa onu kullanır)
+    const FALLBACK_MIN_LOT = 0.01;              // XM/MT5'TE GEÇMİŞ LOT BULUNAMAZSA GÜVENLİ MİNİMUM LOT
     const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME
     const startTime = Date.now();
+
+    const METAAPI_REGIONS = [
+      "https://mt-client-api-v1.london.agiliumtrade.ai",
+      "https://mt-client-api-v1.new-york.agiliumtrade.ai",
+      "https://mt-client-api-v1.agiliumtrade.ag"
+    ];
 
     async function sendTelegramAlert(text) {
       const targets = [TG_CHANNEL_ID, TG_ADMIN_ID];
@@ -62,14 +68,56 @@ export default async function handler(req, res) {
       return parseFloat(Math.max(TP_DOLLAR, expected).toFixed(2));
     }
 
+    // XM / MT5 HESABINDAKİ SON MANUEL LOT MİKTARINI OKU (AÇIK POZİSYON VEYA SON İŞLEM GEÇMİŞİ)
+    async function detectUserMt5Lot() {
+      const startIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+      const endIso = new Date(Date.now() + 3600 * 1000).toISOString();
+
+      for (const baseUrl of METAAPI_REGIONS) {
+        try {
+          // 1) Önce açık pozisyonlarda GOLD varsa onun lotunu al
+          const posRes = await fetch(
+            `${baseUrl}/users/current/accounts/${METAAPI_ACCOUNT_ID}/positions`,
+            {
+              method: "GET",
+              headers: { "auth-token": METAAPI_TOKEN, "Accept": "application/json" }
+            }
+          );
+          if (posRes.ok) {
+            const positions = await posRes.json();
+            if (Array.isArray(positions)) {
+              const goldPos = positions.filter(p => p.symbol === MT5_SYMBOL && p.volume >= 0.01);
+              if (goldPos.length > 0) {
+                return Number(goldPos[goldPos.length - 1].volume);
+              }
+            }
+
+            // 2) Açık pozisyon yoksa son 14 gündeki geçmiş GOLD işlemlerinin en sonuncusunun lotunu al
+            const dealsRes = await fetch(
+              `${baseUrl}/users/current/accounts/${METAAPI_ACCOUNT_ID}/history-deals/time/${encodeURIComponent(startIso)}/${encodeURIComponent(endIso)}`,
+              {
+                method: "GET",
+                headers: { "auth-token": METAAPI_TOKEN, "Accept": "application/json" }
+              }
+            );
+            if (dealsRes.ok) {
+              const deals = await dealsRes.json();
+              if (Array.isArray(deals)) {
+                const goldDeals = deals.filter(d => d.symbol === MT5_SYMBOL && d.volume >= 0.01);
+                if (goldDeals.length > 0) {
+                  return Number(goldDeals[goldDeals.length - 1].volume);
+                }
+              }
+            }
+            break;
+          }
+        } catch (e) {}
+      }
+      return FALLBACK_MIN_LOT;
+    }
+
     // METAAPI CLOUD ÜZERİNDEN XM MT5 HESABINA OTOMATİK EMİR GÖNDERİMİ
     async function executeMetaApiTrade(direction, volume, slPrice, tpPrice) {
-      const regions = [
-        "https://mt-client-api-v1.london.agiliumtrade.ai",
-        "https://mt-client-api-v1.new-york.agiliumtrade.ai",
-        "https://mt-client-api-v1.agiliumtrade.ag"
-      ];
-
       const payload = {
         actionType: direction === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
         symbol: MT5_SYMBOL,
@@ -81,7 +129,7 @@ export default async function handler(req, res) {
 
       let lastErr = "MetaApi bağlantı hatası";
 
-      for (const baseUrl of regions) {
+      for (const baseUrl of METAAPI_REGIONS) {
         try {
           const response = await fetch(
             `${baseUrl}/users/current/accounts/${METAAPI_ACCOUNT_ID}/trade`,
@@ -109,7 +157,7 @@ export default async function handler(req, res) {
       return { success: false, error: lastErr };
     }
 
-    // 1. TÜRKİYE SAATİ (UTC+3) KONTROLÜ: SADECE 09:30 - 22:30 ARASI ÇALIŞIR
+    // 1. TÜRKİYE SAATİ (UTC+3) KONTROLÜ: SADECE 08:30 - 23:00 ARASI ÇALIŞIR
     const nowUtc3 = new Date(Date.now() + 3 * 3600 * 1000);
     const dayOfWeek = nowUtc3.getUTCDay(); // 0 = Pazar, 6 = Cumartesi
     const hourDec = nowUtc3.getUTCHours() + nowUtc3.getUTCMinutes() / 60;
@@ -118,10 +166,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "WEEKEND_CLOSED", message: "Hafta sonu altın piyasası kapalı." });
     }
 
-    if (hourDec < 9.5 || hourDec > 22.5) {
+    if (hourDec < 8.5 || hourDec > 23.0) {
       return res.status(200).json({
         status: "OUT_OF_HOURS",
-        message: "Gece modu aktif (09:30 - 22:30 dışında sinyal üretilmez)."
+        message: "Gece modu aktif (08:30 - 23:00 dışında sinyal üretilmez)."
       });
     }
 
@@ -185,23 +233,17 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "OANDA XAUUSD piyasa verisi alınamadı." });
     }
 
-    // 3. FIREBASE ÜZERİNDEN AÇIK SİNYALLERİ VE MANUEL LOT AYARINI ÇEK
+    // 3. FIREBASE ÜZERİNDEN AÇIK SİNYALLERİ ÇEK
     let goldSignals = {};
     let lastSignalTimestamp = 0;
-    let activeLotSize = DEFAULT_LOT_SIZE;
 
     try {
-      const [gsRes, lsRes, lotRes] = await Promise.all([
+      const [gsRes, lsRes] = await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/gold_signals.json`),
-        fetch(`${FIREBASE_BASE_URL}/last_gold_signal_ts.json`),
-        fetch(`${FIREBASE_BASE_URL}/gold_lot_size.json`)
+        fetch(`${FIREBASE_BASE_URL}/last_gold_signal_ts.json`)
       ]);
       goldSignals = (await gsRes.json()) || {};
       lastSignalTimestamp = (await lsRes.json()) || 0;
-      const customLot = await lotRes.json();
-      if (customLot && !isNaN(parseFloat(customLot)) && parseFloat(customLot) >= 0.01) {
-        activeLotSize = parseFloat(customLot);
-      }
     } catch (e) {
       goldSignals = {};
       lastSignalTimestamp = 0;
@@ -227,7 +269,7 @@ export default async function handler(req, res) {
           sig.closedAt = Date.now();
           sig.realizedDollar = parseFloat(diffDollar.toFixed(2));
 
-          const usedLot = sig.lotSize || activeLotSize;
+          const usedLot = sig.lotSize || FALLBACK_MIN_LOT;
           const estNetUsd = (diffDollar * usedLot * 100 - usedLot * 20).toFixed(2);
 
           const tpMsg = `🎯 <b>XM MT5 (GOLD) | +$4.00 TP VURULDU!</b>\n` +
@@ -355,13 +397,14 @@ export default async function handler(req, res) {
       const wickPct = Math.round((lowerWick / candleSpan) * 100);
       const isTrendAligned = entry >= ema60;
       const projectedMove = predictExpectedMove(boxRange, wickPct, isTrendAligned, isNySession);
+      const userLot = await detectUserMt5Lot();
 
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "BUY",
-        lotSize: activeLotSize,
+        lotSize: userLot,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry + TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry - SL_DOLLAR).toFixed(2)),
@@ -392,13 +435,14 @@ export default async function handler(req, res) {
       const wickPct = Math.round((upperWick / candleSpan) * 100);
       const isTrendAligned = entry <= ema60;
       const projectedMove = predictExpectedMove(boxRange, wickPct, isTrendAligned, isNySession);
+      const userLot = await detectUserMt5Lot();
 
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "SELL",
-        lotSize: activeLotSize,
+        lotSize: userLot,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry - TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry + SL_DOLLAR).toFixed(2)),
@@ -420,8 +464,7 @@ export default async function handler(req, res) {
         livePrice: goldData.currentPrice,
         ema60: parseFloat(ema60.toFixed(2)),
         microHigh,
-        microLow,
-        activeLotSize
+        microLow
       });
     }
 
@@ -454,7 +497,7 @@ export default async function handler(req, res) {
     const isBuy = newSignal.direction === "BUY";
     const trendLabel = newSignal.isTrendAligned ? "EMA 60 Trend Yönü (Güçlü)" : "EMA 60 Düzeltme Tepkisi";
     const mt5StatusLine = mt5Exec.success
-      ? `✅ <b>XM MT5 Emri Açıldı</b> (${newSignal.lotSize.toFixed(2)} Lot | TP/SL Gömülü)`
+      ? `✅ <b>XM MT5 Emri Açıldı</b> (${newSignal.lotSize.toFixed(2)} Lot — Hesabınızdaki Son Lot)`
       : `⚠️ <b>MT5 Emir Hatası:</b> <code>${mt5Exec.error}</code>`;
 
     const entryMsg = `🏆 <b>XM GOLD (OANDA:XAUUSD) | OTO MT5 İŞLEMİ</b>\n` +
