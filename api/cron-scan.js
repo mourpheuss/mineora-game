@@ -18,7 +18,8 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
-    const LOT_SIZE = 0.20;                      // REFERANS İŞLEM LOTU (0.20 LOT)
+    const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
+    const LOT_SIZE = 0.20;                      // SABİT İŞLEM LOTU (0.20 LOT)
     const TP_DOLLAR = 4.00;                     // HEDEF TAKE-PROFIT (+$4.00)
     const SL_DOLLAR = 5.00;                     // STOP-LOSS (-$5.00)
     const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
@@ -57,7 +58,6 @@ export default async function handler(req, res) {
       return parseFloat(Math.max(TP_DOLLAR, expected).toFixed(2));
     }
 
-    // Türkiye Saati (UTC+3) Yardımcıları
     function getTurkeyDateObj(ts = Date.now()) {
       return new Date(ts + 3 * 3600 * 1000);
     }
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
           `━━━━━━━━━━━━━━━━━━━━\n` +
           `💰 <b>Net Ons Hareketi:</b> <b>${signPrefix}$${totalDollarMove.toFixed(2)}</b>\n` +
           `💵 <b>0.20 Lot Karşılığı:</b> <b>${totalDollarMove >= 0 ? '+' : ''}$${estNetUsd}</b>\n` +
-          `🌙 <i>Yeni işlem günü 08:30'da otomatik taramaya başlayacaktır.</i>`;
+          `⚡ <i>Sistem 24 saat kesintisiz taramaya devam etmektedir.</i>`;
 
         await Promise.all([
           sendTelegramAlert(summaryMsg),
@@ -138,29 +138,14 @@ export default async function handler(req, res) {
             body: JSON.stringify(reportDateKey)
           })
         ]);
-
-        return res.status(200).json({
-          status: "DAILY_SUMMARY_SENT",
-          date: reportDateKey,
-          totalSignals: daySignals.length,
-          tpCount,
-          slCount
-        });
       }
     }
 
     // =========================================================================
-    // 2. HAFTA SONU VE GECE MODU KONTROLÜ (08:30 - 23:00 ARASI AKTİF)
+    // 2. SADECE HAFTA SONU PİYASA KAPALI KONTROLÜ (HAFTA İÇİ 24 SAAT AKTİF)
     // =========================================================================
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       return res.status(200).json({ status: "WEEKEND_CLOSED", message: "Hafta sonu altın piyasası kapalı." });
-    }
-
-    if (hourDec < 8.5 || hourDec > 23.0) {
-      return res.status(200).json({
-        status: "OUT_OF_HOURS",
-        message: "Gece modu aktif (08:30 - 23:00 dışında sinyal üretilmez)."
-      });
     }
 
     const isNySession = hourDec >= 15.5 && hourDec <= 19.5;
@@ -339,7 +324,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           status: "TRACKING_TP_SL",
           livePrice: goldData.currentPrice,
-          mode: "TELEGRAM_ONLY",
+          mode: "24H_HYBRID_MT5_TELEGRAM",
           message: "Açık sinyal +$4.00 TP / -$5.00 SL için canlı izleniyor."
         });
       }
@@ -352,7 +337,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: "COOLDOWN",
         livePrice: goldData.currentPrice,
-        mode: "TELEGRAM_ONLY",
+        mode: "24H_HYBRID_MT5_TELEGRAM",
         message: "Son sinyal sonrası 10 dakikalık soğuma süresi bekleniyor."
       });
     }
@@ -373,13 +358,13 @@ export default async function handler(req, res) {
         livePrice: goldData.currentPrice,
         ema60: parseFloat(ema60.toFixed(2)),
         boxRange: boxRange.toFixed(2),
-        mode: "TELEGRAM_ONLY"
+        mode: "24H_HYBRID_MT5_TELEGRAM"
       });
     }
 
     const candleSpan = sweepCandle.high - sweepCandle.low;
     if (candleSpan <= 0) {
-      return res.status(200).json({ status: "FLAT_CANDLE", mode: "TELEGRAM_ONLY" });
+      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_HYBRID_MT5_TELEGRAM" });
     }
 
     const lowerWick = Math.min(sweepCandle.open, sweepCandle.close) - sweepCandle.low;
@@ -404,7 +389,7 @@ export default async function handler(req, res) {
 
       newSignal = {
         id: `gold_${Date.now()}`,
-        symbol: "XAUUSD",
+        symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "BUY",
         lotSize: LOT_SIZE,
@@ -419,6 +404,7 @@ export default async function handler(req, res) {
         wick: parseFloat(sweepCandle.low.toFixed(2)),
         wickPct,
         status: "OPEN",
+        vpsExecuted: false,
         createdAt: Date.now()
       };
     }
@@ -441,7 +427,7 @@ export default async function handler(req, res) {
 
       newSignal = {
         id: `gold_${Date.now()}`,
-        symbol: "XAUUSD",
+        symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "SELL",
         lotSize: LOT_SIZE,
@@ -456,6 +442,7 @@ export default async function handler(req, res) {
         wick: parseFloat(sweepCandle.high.toFixed(2)),
         wickPct,
         status: "OPEN",
+        vpsExecuted: false,
         createdAt: Date.now()
       };
     }
@@ -467,12 +454,12 @@ export default async function handler(req, res) {
         ema60: parseFloat(ema60.toFixed(2)),
         microHigh,
         microLow,
-        mode: "TELEGRAM_ONLY"
+        mode: "24H_HYBRID_MT5_TELEGRAM"
       });
     }
 
     // =========================================================================
-    // MODÜL 3: SİNYALİ FIREBASE'E KAYDET VE TELEGRAM GİRİŞ MESAJINI GÖNDER
+    // MODÜL 3: SİNYALİ FIREBASE'E YAZ (PC MT5 KÖPRÜSÜ + TELEGRAM BİLDİRİMİ)
     // =========================================================================
     await Promise.all([
       fetch(`${FIREBASE_BASE_URL}/gold_signals/${newSignal.id}.json`, {
@@ -491,7 +478,7 @@ export default async function handler(req, res) {
     const trendLabel = newSignal.isTrendAligned ? "EMA 60 Trend Yönü (Güçlü)" : "EMA 60 Düzeltme Tepkisi";
 
     const entryMsg =
-      `🏆 <b>XAUUSD (GOLD) | YENİ GİRİŞ SİNYALİ</b>\n` +
+      `🏆 <b>XAUUSD (GOLD) | YENİ GİRİŞ SİNYALİ (7/24)</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
       `🧱 <b>Avlanan Seviye:</b> <code>$${newSignal.level.toFixed(2)}</code> (İğne: $${newSignal.wick.toFixed(2)} | %${newSignal.wickPct} Fitil)\n` +
@@ -502,13 +489,13 @@ export default async function handler(req, res) {
       `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
       `🛑 <b>Stop-Loss (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `⏱️ <i>Fiyat +$4.00 TP veya -$5.00 SL seviyesine ulaştığında bildirim gelecektir.</i>`;
+      `🤖 <i>PC MT5 köprüsü açıksa 0.20 Lot otomatik işlenir; TP/SL bildirimleri aktiftir.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
     return res.status(200).json({
       success: true,
-      mode: "TELEGRAM_ONLY",
+      mode: "24H_HYBRID_MT5_TELEGRAM",
       signal: newSignal
     });
 
