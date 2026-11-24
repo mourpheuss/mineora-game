@@ -11,14 +11,14 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. TELEGRAM & OANDA XAUUSD SCALP PARAMETRELERİ (EMA 60 KORUMALI)
+    // 0. TELEGRAM & OANDA XAUUSD SCALP PARAMETRELERİ (EMA 60 + MENZİL ÖNGÖRÜSÜ)
     // =========================================================================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
-    const TP_DOLLAR = 3.00;                     // SABİT +$3.00 HEDEF
+    const TP_DOLLAR = 3.00;                     // SABİT +$3.00 GARANTİ SCALP HEDEFİ
     const SL_DOLLAR = 5.00;                     // SABİT -$5.00 STOP
     const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
     const RECOMMENDED_LOT = "0.10";             // XM ÖNERİLEN LOT (0.10 Lot = +$28 TP / -$52 SL)
@@ -48,6 +48,15 @@ export default async function handler(req, res) {
       return ema;
     }
 
+    function predictExpectedMove(boxRange, wickPct, isTrendAligned, isNySession) {
+      const baseMove = boxRange * 0.65;
+      const wickMult = wickPct >= 60 ? 1.20 : 1.00;
+      const trendMult = isTrendAligned ? 1.35 : 0.85;
+      const sessionMult = isNySession ? 1.30 : 1.00;
+      const expected = baseMove * wickMult * trendMult * sessionMult;
+      return parseFloat(Math.max(TP_DOLLAR, expected).toFixed(2));
+    }
+
     // 1. TÜRKİYE SAATİ (UTC+3) KONTROLÜ: SADECE 09:30 - 22:30 ARASI ÇALIŞIR
     const nowUtc3 = new Date(Date.now() + 3 * 3600 * 1000);
     const dayOfWeek = nowUtc3.getUTCDay(); // 0 = Pazar, 6 = Cumartesi
@@ -63,6 +72,8 @@ export default async function handler(req, res) {
         message: "Gece modu aktif (09:30 - 22:30 dışında sinyal üretilmez)."
       });
     }
+
+    const isNySession = hourDec >= 15.5 && hourDec <= 19.5;
 
     // 2. OANDA:XAUUSD CANLI FİYAT VE 100 ADET 1 DAKİKALIK MUM VERİSİ
     async function fetchOandaGoldData() {
@@ -163,7 +174,8 @@ export default async function handler(req, res) {
                         `💵 <b>Giriş Fiyatı:</b> <code>$${sig.entry.toFixed(2)}</code>\n` +
                         `🏁 <b>Kapanış (TP):</b> <code>$${livePrice.toFixed(2)}</code>\n` +
                         `💰 <b>Net Hareket:</b> <b>+$${diffDollar.toFixed(2)}</b> (${RECOMMENDED_LOT} Lot ≈ +$28 Net)\n` +
-                        `✨ <i>Hedef başarıyla tamamlandı, yeni fırsat taranıyor.</i>`;
+                        `🚀 <b>Uzama Hedefi:</b> <code>$${(sig.projectedTp || sig.tp).toFixed(2)}</code> (+$${(sig.projectedMove || TP_DOLLAR).toFixed(2)})\n` +
+                        `✨ <i>İlk +$3.00 hedef tamamlandı; dilerseniz maliyete stop çekip uzama hedefini takip edebilirsiniz.</i>`;
 
           await sendTelegramAlert(tpMsg);
 
@@ -229,7 +241,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: OANDA:XAUUSD M1 LİKİDİTE SÜPÜRME + EMA 60 TREND FİLTRESİ
+    // MODÜL 2: OANDA:XAUUSD M1 LİKİDİTE SÜPÜRME + EMA 60 + MENZİL ÖNGÖRÜSÜ
     // =========================================================================
     if (Date.now() - lastSignalTimestamp < SIGNAL_COOLDOWN_MS) {
       return res.status(200).json({
@@ -279,6 +291,10 @@ export default async function handler(req, res) {
 
     if (isBuySweep) {
       const entry = goldData.currentPrice;
+      const wickPct = Math.round((lowerWick / candleSpan) * 100);
+      const isTrendAligned = entry >= ema60;
+      const projectedMove = predictExpectedMove(boxRange, wickPct, isTrendAligned, isNySession);
+
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: "XAUUSD",
@@ -287,10 +303,13 @@ export default async function handler(req, res) {
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry + TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry - SL_DOLLAR).toFixed(2)),
+        projectedMove,
+        projectedTp: parseFloat((entry + projectedMove).toFixed(2)),
+        isTrendAligned,
         ema60: parseFloat(ema60.toFixed(2)),
         level: parseFloat(microLow.toFixed(2)),
         wick: parseFloat(sweepCandle.low.toFixed(2)),
-        wickPct: Math.round((lowerWick / candleSpan) * 100),
+        wickPct,
         status: "OPEN",
         createdAt: Date.now()
       };
@@ -308,6 +327,10 @@ export default async function handler(req, res) {
 
     if (isSellSweep) {
       const entry = goldData.currentPrice;
+      const wickPct = Math.round((upperWick / candleSpan) * 100);
+      const isTrendAligned = entry <= ema60;
+      const projectedMove = predictExpectedMove(boxRange, wickPct, isTrendAligned, isNySession);
+
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: "XAUUSD",
@@ -316,10 +339,13 @@ export default async function handler(req, res) {
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry - TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry + SL_DOLLAR).toFixed(2)),
+        projectedMove,
+        projectedTp: parseFloat((entry - projectedMove).toFixed(2)),
+        isTrendAligned,
         ema60: parseFloat(ema60.toFixed(2)),
         level: parseFloat(microHigh.toFixed(2)),
         wick: parseFloat(sweepCandle.high.toFixed(2)),
-        wickPct: Math.round((upperWick / candleSpan) * 100),
+        wickPct,
         status: "OPEN",
         createdAt: Date.now()
       };
@@ -349,18 +375,21 @@ export default async function handler(req, res) {
     ]);
 
     const isBuy = newSignal.direction === "BUY";
+    const trendLabel = newSignal.isTrendAligned ? "EMA 60 Trend Yönü (Güçlü)" : "EMA 60 Düzeltme Tepkisi";
+
     const entryMsg = `🏆 <b>XM GOLD (OANDA:XAUUSD) | $3.00 SCALP SİNYALİ</b>\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
                      `🧭 <b>Yön:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
                      `🧱 <b>Avlanan Seviye:</b> <code>$${newSignal.level.toFixed(2)}</code> (İğne: $${newSignal.wick.toFixed(2)} | %${newSignal.wickPct} Fitil)\n` +
-                     `📊 <b>EMA 60 Dengesi:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (Trend Onaylı)\n` +
+                     `📊 <b>EMA 60 Durumu:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (${trendLabel})\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
                      `💵 <b>Giriş Fiyatı:</b> <code>$${newSignal.entry.toFixed(2)}</code>\n` +
-                     `🎯 <b>Take-Profit (+$3.00):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+                     `🎯 <b>İlk Scalp TP (+$3.00):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+                     `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
                      `🛑 <b>Stop-Loss (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
                      `⚖️ <b>Önerilen Lot:</b> <code>${RECOMMENDED_LOT} Lot</code> (TP Net: ~$28)\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                     `⏱️ <i>OANDA:XAUUSD canlı akışından üretildi. +$3.00 ulaşınca bildirim gelecektir.</i>`;
+                     `⏱️ <i>Geç kalınırsa tahmini menzile kadar kalan mesafe değerlendirilebilir. +$3.00 ulaşınca bildirim gelir.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
