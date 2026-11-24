@@ -18,8 +18,8 @@ export default async function handler(req, res) {
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
-    // METAAPI CLOUD MT5 BAĞLANTI BİLGİLERİ (XMGlobal-MT5 17 - GÜNCEL HESAP ID)
-    const METAAPI_ACCOUNT_ID = "4c7903fe-bcf9-49e7-a8fd-6f5fe4e4d8dc";
+    // METAAPI CLOUD MT5 BAĞLANTI BİLGİLERİ (XMGlobal-MT5 12 - YENİ HESAP ID)
+    const METAAPI_ACCOUNT_ID = "34eb6352-b607-4d69-8bdb-f4765d1b62a0";
     const METAAPI_TOKEN = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIyMjY4NDRhOGJiMjEwMGI5YTE5Mzk0MzQ2ZWJkZjk1MSIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVzdC1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcnBjLWFwaSIsIm1ldGhvZHMiOlsibWV0YWFwaS1hcGk6d3M6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVhbC10aW1lLXN0cmVhbWluZy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJtZXRhc3RhdHMtYXBpIiwibWV0aG9kcyI6WyJtZXRhc3RhdHMtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6InJpc2stbWFuYWdlbWVudC1hcGkiLCJtZXRob2RzIjpbInJpc2stbWFuYWdlbWVudC1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoiY29weWZhY3RvcnktYXBpIiwibWV0aG9kcyI6WyJjb3B5ZmFjdG9yeS1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoibXQtbWFuYWdlci1hcGkiLCJtZXRob2RzIjpbIm10LW1hbmFnZXItYXBpOnJlc3Q6ZGVhbGluZzoqOioiLCJtdC1tYW5hZ2VyLWFwaTpyZXN0OnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJiaWxsaW5nLWFwaSIsIm1ldGhvZHMiOlsiYmlsbGluZy1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfV0sImlnbm9yZVJhdGVMaW1pdHMiOmZhbHNlLCJ0b2tlbklkIjoiMjAyMTAyMTMiLCJpbXBlcnNvbmF0ZWQiOmZhbHNlLCJyZWFsVXNlcklkIjoiMjI2ODQ0YThiYjIxMDBiOWExOTM5NDM0NmViZGY5NTEiLCJpYXQiOjE3OTU1MjkwNjgsImV4cCI6MTgwMzMwNTA2OH0.QGK9lSxYYjJMU4vwePvzpcy0DJufMbvfiF2YtzZEJa-w7A3vH7zgX1hRniwk4lNCPARSbQoug1w-uYY82Zlbr79rVdr2oQ1f3grby2uwOWg7FPjwdgbRvEXF3wF2vJvw2QIhclhvpKD5YLQM71O9bz1H_N0ZcpVooX-lRnhL0dNuxqQW5eJmu0WXYIQekrjgBxyxbT40agNEaACNOdq3bQ1qpmVA79Mt19zsrmsfnSKweqjcXu5I3IMfKmLmchZfKAiGkobVxySiXYeN1DQzj19GkJFFJQb3nv8lSDN8AWmG2dHnQy9rUFXShXQux3VJxJiz2hFy9ZQJv9uq2P6kAjB92kFUwj67BS8pErRAJyZt5MmHTd1m9LshVtTI5J76RblW_-5Q616OpkiQFdbTnaKiJy9QBGhVwaKkDI4LVjia0XbxbdzgnzSylyOIJuHyh0Ru9O0Ov13mbVwkNQsw2RAQyqL9UNzcKysi5JAo4-OWlOTurHhDFeErR6nC9Y-OP7U7b7crnkEh839uBnmHh1l6d4pnEDNo52TBc0w2pehJRmFb1X2qMmmvGsEw0saNcUAVKXHOT0RH3oEVV1a5mQ9y6UdH6b6SzaYZISV17v-9zUAHtNoSIVosRQR0afNREl1TGmGLH5HO5bSUiEiPHGKgDVDtxQMms-1HWVT8JrQ";
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
 
@@ -497,7 +497,7 @@ export default async function handler(req, res) {
                      `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
                      `🛑 <b>Gömülü SL (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                     `⏱️ <i>XMGlobal-MT5 17 hesabına 0.20 Lot ile +$4.00 TP ve -$5.00 SL doğrudan işlendi.</i>`;
+                     `⏱️ <i>XMGlobal-MT5 12 hesabına 0.20 Lot ile +$4.00 TP ve -$5.00 SL doğrudan işlendi.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
