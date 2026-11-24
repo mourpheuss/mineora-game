@@ -11,17 +11,22 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. TELEGRAM & OANDA XAUUSD SCALP PARAMETRELERİ (EMA 60 + MENZİL ÖNGÖRÜSÜ)
+    // 0. TELEGRAM, METAAPI (XM MT5) & OANDA XAUUSD SCALP PARAMETRELERİ
     // =========================================================================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
-    const TP_DOLLAR = 3.00;                     // SABİT +$3.00 GARANTİ SCALP HEDEFİ
-    const SL_DOLLAR = 5.00;                     // SABİT -$5.00 STOP
+    // METAAPI CLOUD MT5 BAĞLANTI BİLGİLERİ (XMGlobal-MT5 17)
+    const METAAPI_ACCOUNT_ID = "0b87da2-5c68-4820-93dd-467f9c6c8937";
+    const METAAPI_TOKEN = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIyMjY4NDRhOGJiMjEwMGI5YTE5Mzk0MzQ2ZWJkZjk1MSIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVzdC1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcnBjLWFwaSIsIm1ldGhvZHMiOlsibWV0YWFwaS1hcGk6d3M6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVhbC10aW1lLXN0cmVhbWluZy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJtZXRhc3RhdHMtYXBpIiwibWV0aG9kcyI6WyJtZXRhc3RhdHMtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6InJpc2stbWFuYWdlbWVudC1hcGkiLCJtZXRob2RzIjpbInJpc2stbWFuYWdlbWVudC1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoiY29weWZhY3RvcnktYXBpIiwibWV0aG9kcyI6WyJjb3B5ZmFjdG9yeS1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoibXQtbWFuYWdlci1hcGkiLCJtZXRob2RzIjpbIm10LW1hbmFnZXItYXBpOnJlc3Q6ZGVhbGluZzoqOioiLCJtdC1tYW5hZ2VyLWFwaTpyZXN0OnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJiaWxsaW5nLWFwaSIsIm1ldGhvZHMiOlsiYmlsbGluZy1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfV0sImlnbm9yZVJhdGVMaW1pdHMiOmZhbHNlLCJ0b2tlbklkIjoiMjAyMTAyMTMiLCJpZCI6IjIyNjg0NGE4YmIyMTAwYjlhMTkzOTQzNDZlYmRmOTUxIiwiaW1wZXJzb25hdGVkIjpmYWxzZSwicmVhbFVzZXJJZCI6IjIyNjg0NGE4YmIyMTAwYjlhMTkzOTQzNDZlYmRmOTUxIiwiaWF0IjoxNzk1NTI1OTQ2LCJleHAiOjE4MDMzMDE5NDZ9.EEZy7B2CFGPn1A0DEvdjlAQ8upI-Dw_sN3AvU5Wyfw24weHJ9iPja_-D3TS1PLhADu_vl0J-EdFjRRIiPaw0-_JBqJlvfqmHX4EK2nb-DdSUi-zsnlCu7nGRcjo8LGj4TckHu-gMV7mHcim-IPL89ylXGUIwcthTBZx5NxZy-7KguOxIMZFuC4AldPnBmdP8pIuyHlyDvrS5gwo-ORNeKl9cy-PxefvpNhTxSllnHA3DKz1H1zOLGOc-XLbOImSYYs68jH4p_f_W3TzldVDG5l-6KFlHudH68YX8RW4Gy5M2DtQmQgfmK0xOGBv0IlqgQHYYDatkxj5HtpTwMUM2zHfVReupiFFimMb4ylhECIwy2AUAhyRAG5PlvNlMJ8hML9OiOyMc2_eilscWPTE3sLO6spEjzsHhcsfXfiYupaRCzarGmmTTVSgX-iqB5TwCeMYeVcip_hFNW7TMlg0f2jcYITVDEkz3yCJUvWqJkw9LSlxi79bP7XKxSYAGsytNgUS3l9Xqc6PCcA6WXmtnCSObqyA2BNR0yq_QliGiOIUS4n8fIpuQfE_CFXzRoOr48UjzOM4Z3P0CF1JU0p1MfE59AF2NYOhXT45h0TxqPPKH0sS4wwGrnEq9sNUieddxLgpgO2RMXVHlbe5jGht7xY-W6ao-lyOB_XrhigvGxXI";
+    const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
+
+    const TP_DOLLAR = 4.00;                     // SABİT +$4.00 GÖMÜLÜ TAKE-PROFIT
+    const SL_DOLLAR = 5.00;                     // SABİT -$5.00 GÖMÜLÜ STOP-LOSS
     const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
-    const RECOMMENDED_LOT = "0.10";             // XM ÖNERİLEN LOT (0.10 Lot = +$28 TP / -$52 SL)
+    const DEFAULT_LOT_SIZE = 0.10;              // VARSAYILAN LOT (Firebase'de gold_lot_size varsa onu kullanır)
     const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME
     const startTime = Date.now();
 
@@ -55,6 +60,53 @@ export default async function handler(req, res) {
       const sessionMult = isNySession ? 1.30 : 1.00;
       const expected = baseMove * wickMult * trendMult * sessionMult;
       return parseFloat(Math.max(TP_DOLLAR, expected).toFixed(2));
+    }
+
+    // METAAPI CLOUD ÜZERİNDEN XM MT5 HESABINA OTOMATİK EMİR GÖNDERİMİ
+    async function executeMetaApiTrade(direction, volume, slPrice, tpPrice) {
+      const regions = [
+        "https://mt-client-api-v1.london.agiliumtrade.ai",
+        "https://mt-client-api-v1.new-york.agiliumtrade.ai",
+        "https://mt-client-api-v1.agiliumtrade.ag"
+      ];
+
+      const payload = {
+        actionType: direction === "BUY" ? "ORDER_TYPE_BUY" : "ORDER_TYPE_SELL",
+        symbol: MT5_SYMBOL,
+        volume: Number(volume),
+        stopLoss: Number(slPrice.toFixed(2)),
+        takeProfit: Number(tpPrice.toFixed(2)),
+        comment: "MineoraGoldScalp"
+      };
+
+      let lastErr = "MetaApi bağlantı hatası";
+
+      for (const baseUrl of regions) {
+        try {
+          const response = await fetch(
+            `${baseUrl}/users/current/accounts/${METAAPI_ACCOUNT_ID}/trade`,
+            {
+              method: "POST",
+              headers: {
+                "auth-token": METAAPI_TOKEN,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+              },
+              body: JSON.stringify(payload)
+            }
+          );
+          const result = await response.json();
+          if (response.ok && (result.stringCode === "TRADE_RETCODE_DONE" || result.orderId || result.positionId)) {
+            return { success: true, data: result };
+          }
+          lastErr = result.message || result.stringCode || JSON.stringify(result);
+          if (result.error === "NotFoundException") continue;
+          return { success: false, error: lastErr };
+        } catch (err) {
+          lastErr = err.message;
+        }
+      }
+      return { success: false, error: lastErr };
     }
 
     // 1. TÜRKİYE SAATİ (UTC+3) KONTROLÜ: SADECE 09:30 - 22:30 ARASI ÇALIŞIR
@@ -133,23 +185,30 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "OANDA XAUUSD piyasa verisi alınamadı." });
     }
 
-    // 3. FIREBASE ÜZERİNDEN AÇIK SİNYALLERİ ÇEK
+    // 3. FIREBASE ÜZERİNDEN AÇIK SİNYALLERİ VE MANUEL LOT AYARINI ÇEK
     let goldSignals = {};
     let lastSignalTimestamp = 0;
+    let activeLotSize = DEFAULT_LOT_SIZE;
+
     try {
-      const [gsRes, lsRes] = await Promise.all([
+      const [gsRes, lsRes, lotRes] = await Promise.all([
         fetch(`${FIREBASE_BASE_URL}/gold_signals.json`),
-        fetch(`${FIREBASE_BASE_URL}/last_gold_signal_ts.json`)
+        fetch(`${FIREBASE_BASE_URL}/last_gold_signal_ts.json`),
+        fetch(`${FIREBASE_BASE_URL}/gold_lot_size.json`)
       ]);
       goldSignals = (await gsRes.json()) || {};
       lastSignalTimestamp = (await lsRes.json()) || 0;
+      const customLot = await lotRes.json();
+      if (customLot && !isNaN(parseFloat(customLot)) && parseFloat(customLot) >= 0.01) {
+        activeLotSize = parseFloat(customLot);
+      }
     } catch (e) {
       goldSignals = {};
       lastSignalTimestamp = 0;
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI +$3.00 TP VE -$5.00 SL DENETLEYİCİSİ
+    // MODÜL 1: CANLI +$4.00 TP VE -$5.00 SL DENETLEYİCİSİ
     // =========================================================================
     async function evaluateOpenGoldSignals(livePrice) {
       let openCount = 0;
@@ -161,21 +220,23 @@ export default async function handler(req, res) {
         const isBuy = sig.direction === 'BUY';
         const diffDollar = isBuy ? (livePrice - sig.entry) : (sig.entry - livePrice);
 
-        // +$3.00 TP VURULDU!
+        // +$4.00 TP VURULDU!
         if (diffDollar >= TP_DOLLAR) {
           sig.status = 'TP_HIT';
           sig.exitPrice = livePrice;
           sig.closedAt = Date.now();
           sig.realizedDollar = parseFloat(diffDollar.toFixed(2));
 
-          const tpMsg = `🎯 <b>XM GOLD (OANDA:XAUUSD) | +$3.00 TP GELDİ!</b>\n` +
+          const usedLot = sig.lotSize || activeLotSize;
+          const estNetUsd = (diffDollar * usedLot * 100 - usedLot * 20).toFixed(2);
+
+          const tpMsg = `🎯 <b>XM MT5 (GOLD) | +$4.00 TP VURULDU!</b>\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
-                        `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY' : '🔴 SELL'}\n` +
+                        `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY' : '🔴 SELL'} (${usedLot.toFixed(2)} Lot)\n` +
                         `💵 <b>Giriş Fiyatı:</b> <code>$${sig.entry.toFixed(2)}</code>\n` +
                         `🏁 <b>Kapanış (TP):</b> <code>$${livePrice.toFixed(2)}</code>\n` +
-                        `💰 <b>Net Hareket:</b> <b>+$${diffDollar.toFixed(2)}</b> (${RECOMMENDED_LOT} Lot ≈ +$28 Net)\n` +
-                        `🚀 <b>Uzama Hedefi:</b> <code>$${(sig.projectedTp || sig.tp).toFixed(2)}</code> (+$${(sig.projectedMove || TP_DOLLAR).toFixed(2)})\n` +
-                        `✨ <i>İlk +$3.00 hedef tamamlandı; dilerseniz maliyete stop çekip uzama hedefini takip edebilirsiniz.</i>`;
+                        `💰 <b>Net Hareket:</b> <b>+$${diffDollar.toFixed(2)}</b> (~+$${estNetUsd} Net Kâr)\n` +
+                        `✨ <i>MT5 üzerindeki gömülü TP başarıyla tetiklendi.</i>`;
 
           await sendTelegramAlert(tpMsg);
 
@@ -195,12 +256,12 @@ export default async function handler(req, res) {
           sig.closedAt = Date.now();
           sig.realizedDollar = parseFloat(diffDollar.toFixed(2));
 
-          const slMsg = `🛑 <b>XM GOLD (OANDA:XAUUSD) | STOP-LOSS (-$5.00)</b>\n` +
+          const slMsg = `🛑 <b>XM MT5 (GOLD) | STOP-LOSS (-$5.00)</b>\n` +
                         `━━━━━━━━━━━━━━━━━━━━\n` +
                         `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY' : '🔴 SELL'}\n` +
                         `💵 <b>Giriş Fiyatı:</b> <code>$${sig.entry.toFixed(2)}</code>\n` +
                         `📉 <b>Stop Fiyatı:</b> <code>$${livePrice.toFixed(2)}</code>\n` +
-                        `🛡️ <i>-$5.00 stop seviyesi çalıştı; yeni kurulum bekleniyor.</i>`;
+                        `🛡️ <i>MT5 üzerindeki -$5.00 gömülü stop çalıştı; yeni kurulum bekleniyor.</i>`;
 
           await sendTelegramAlert(slMsg);
 
@@ -235,7 +296,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           status: "TRACKING_TP",
           livePrice: goldData.currentPrice,
-          message: "Açık altın sinyali +$3.00 TP / -$5.00 SL için canlı takip ediliyor."
+          message: "Açık XM MT5 GOLD pozisyonu +$4.00 TP / -$5.00 SL için canlı izleniyor."
         });
       }
     }
@@ -297,9 +358,10 @@ export default async function handler(req, res) {
 
       newSignal = {
         id: `gold_${Date.now()}`,
-        symbol: "XAUUSD",
+        symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "BUY",
+        lotSize: activeLotSize,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry + TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry - SL_DOLLAR).toFixed(2)),
@@ -333,9 +395,10 @@ export default async function handler(req, res) {
 
       newSignal = {
         id: `gold_${Date.now()}`,
-        symbol: "XAUUSD",
+        symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "SELL",
+        lotSize: activeLotSize,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry - TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry + SL_DOLLAR).toFixed(2)),
@@ -357,9 +420,23 @@ export default async function handler(req, res) {
         livePrice: goldData.currentPrice,
         ema60: parseFloat(ema60.toFixed(2)),
         microHigh,
-        microLow
+        microLow,
+        activeLotSize
       });
     }
+
+    // =========================================================================
+    // MODÜL 3: XM MT5 HESABINA OTOMATİK EMİR GÖNDER (+$4.00 TP / -$5.00 SL GÖMÜLÜ)
+    // =========================================================================
+    const mt5Exec = await executeMetaApiTrade(
+      newSignal.direction,
+      newSignal.lotSize,
+      newSignal.sl,
+      newSignal.tp
+    );
+
+    newSignal.mt5Status = mt5Exec.success ? "EXECUTED" : "FAILED";
+    newSignal.mt5Response = mt5Exec.success ? mt5Exec.data : mt5Exec.error;
 
     await Promise.all([
       fetch(`${FIREBASE_BASE_URL}/gold_signals/${newSignal.id}.json`, {
@@ -376,25 +453,30 @@ export default async function handler(req, res) {
 
     const isBuy = newSignal.direction === "BUY";
     const trendLabel = newSignal.isTrendAligned ? "EMA 60 Trend Yönü (Güçlü)" : "EMA 60 Düzeltme Tepkisi";
+    const mt5StatusLine = mt5Exec.success
+      ? `✅ <b>XM MT5 Emri Açıldı</b> (${newSignal.lotSize.toFixed(2)} Lot | TP/SL Gömülü)`
+      : `⚠️ <b>MT5 Emir Hatası:</b> <code>${mt5Exec.error}</code>`;
 
-    const entryMsg = `🏆 <b>XM GOLD (OANDA:XAUUSD) | $3.00 SCALP SİNYALİ</b>\n` +
+    const entryMsg = `🏆 <b>XM GOLD (OANDA:XAUUSD) | OTO MT5 İŞLEMİ</b>\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
                      `🧭 <b>Yön:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
+                     `🏦 <b>Borsa Durumu:</b> ${mt5StatusLine}\n` +
                      `🧱 <b>Avlanan Seviye:</b> <code>$${newSignal.level.toFixed(2)}</code> (İğne: $${newSignal.wick.toFixed(2)} | %${newSignal.wickPct} Fitil)\n` +
                      `📊 <b>EMA 60 Durumu:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (${trendLabel})\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
                      `💵 <b>Giriş Fiyatı:</b> <code>$${newSignal.entry.toFixed(2)}</code>\n` +
-                     `🎯 <b>İlk Scalp TP (+$3.00):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+                     `🎯 <b>Gömülü TP (+$4.00):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
                      `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
-                     `🛑 <b>Stop-Loss (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
-                     `⚖️ <b>Önerilen Lot:</b> <code>${RECOMMENDED_LOT} Lot</code> (TP Net: ~$28)\n` +
+                     `🛑 <b>Gömülü SL (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                     `⏱️ <i>Geç kalınırsa tahmini menzile kadar kalan mesafe değerlendirilebilir. +$3.00 ulaşınca bildirim gelir.</i>`;
+                     `⏱️ <i>XMGlobal-MT5 17 hesabına +$4.00 TP ve -$5.00 SL doğrudan işlendi.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
     return res.status(200).json({
       success: true,
+      mt5_executed: mt5Exec.success,
+      mt5_detail: newSignal.mt5Response,
       signal: newSignal
     });
 
