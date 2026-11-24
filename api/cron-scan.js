@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
     const LOT_SIZE = 0.20;                      // SABİT İŞLEM LOTU (0.20 LOT)
     const TP_DOLLAR = 4.00;                     // HEDEF TAKE-PROFIT (+$4.00)
-    const SL_DOLLAR = 5.00;                     // STOP-LOSS (-$5.00)
+    const SL_DOLLAR = 10.00;                     // STOP-LOSS (-$10.00)
     const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
     const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME
     const startTime = Date.now();
