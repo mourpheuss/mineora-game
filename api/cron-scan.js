@@ -23,10 +23,10 @@ export default async function handler(req, res) {
     const METAAPI_TOKEN = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIyMjY4NDRhOGJiMjEwMGI5YTE5Mzk0MzQ2ZWJkZjk1MSIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVzdC1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcnBjLWFwaSIsIm1ldGhvZHMiOlsibWV0YWFwaS1hcGk6d3M6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVhbC10aW1lLXN0cmVhbWluZy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJtZXRhc3RhdHMtYXBpIiwibWV0aG9kcyI6WyJtZXRhc3RhdHMtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6InJpc2stbWFuYWdlbWVudC1hcGkiLCJtZXRob2RzIjpbInJpc2stbWFuYWdlbWVudC1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoiY29weWZhY3RvcnktYXBpIiwibWV0aG9kcyI6WyJjb3B5ZmFjdG9yeS1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoibXQtbWFuYWdlci1hcGkiLCJtZXRob2RzIjpbIm10LW1hbmFnZXItYXBpOnJlc3Q6ZGVhbGluZzoqOioiLCJtdC1tYW5hZ2VyLWFwaTpyZXN0OnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJiaWxsaW5nLWFwaSIsIm1ldGhvZHMiOlsiYmlsbGluZy1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfV0sImlnbm9yZVJhdGVMaW1pdHMiOmZhbHNlLCJ0b2tlbklkIjoiMjAyMTAyMTMiLCJpZCI6IjIyNjg0NGE4YmIyMTAwYjlhMTkzOTQzNDZlYmRmOTUxIiwiaW1wZXJzb25hdGVkIjpmYWxzZSwicmVhbFVzZXJJZCI6IjIyNjg0NGE4YmIyMTAwYjlhMTkzOTQzNDZlYmRmOTUxIiwiaWF0IjoxNzk1NTI1OTQ2LCJleHAiOjE4MDMzMDE5NDZ9.EEZy7B2CFGPn1A0DEvdjlAQ8upI-Dw_sN3AvU5Wyfw24weHJ9iPja_-D3TS1PLhADu_vl0J-EdFjRRIiPaw0-_JBqJlvfqmHX4EK2nb-DdSUi-zsnlCu7nGRcjo8LGj4TckHu-gMV7mHcim-IPL89ylXGUIwcthTBZx5NxZy-7KguOxIMZFuC4AldPnBmdP8pIuyHlyDvrS5gwo-ORNeKl9cy-PxefvpNhTxSllnHA3DKz1H1zOLGOc-XLbOImSYYs68jH4p_f_W3TzldVDG5l-6KFlHudH68YX8RW4Gy5M2DtQmQgfmK0xOGBv0IlqgQHYYDatkxj5HtpTwMUM2zHfVReupiFFimMb4ylhECIwy2AUAhyRAG5PlvNlMJ8hML9OiOyMc2_eilscWPTE3sLO6spEjzsHhcsfXfiYupaRCzarGmmTTVSgX-iqB5TwCeMYeVcip_hFNW7TMlg0f2jcYITVDEkz3yCJUvWqJkw9LSlxi79bP7XKxSYAGsytNgUS3l9Xqc6PCcA6WXmtnCSObqyA2BNR0yq_QliGiOIUS4n8fIpuQfE_CFXzRoOr48UjzOM4Z3P0CF1JU0p1MfE59AF2NYOhXT45h0TxqPPKH0sS4wwGrnEq9sNUieddxLgpgO2RMXVHlbe5jGht7xY-W6ao-lyOB_XrhigvGxXI";
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
 
+    const LOT_SIZE = 0.20;                      // SABİT İŞLEM LOTU (0.20 LOT)
     const TP_DOLLAR = 4.00;                     // SABİT +$4.00 GÖMÜLÜ TAKE-PROFIT
     const SL_DOLLAR = 5.00;                     // SABİT -$5.00 GÖMÜLÜ STOP-LOSS
     const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
-    const FALLBACK_MIN_LOT = 0.01;              // XM/MT5'TE GEÇMİŞ LOT BULUNAMAZSA GÜVENLİ MİNİMUM LOT
     const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME
     const startTime = Date.now();
 
@@ -68,52 +68,27 @@ export default async function handler(req, res) {
       return parseFloat(Math.max(TP_DOLLAR, expected).toFixed(2));
     }
 
-    // XM / MT5 HESABINDAKİ SON MANUEL LOT MİKTARINI OKU (AÇIK POZİSYON VEYA SON İŞLEM GEÇMİŞİ)
-    async function detectUserMt5Lot() {
-      const startIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
-      const endIso = new Date(Date.now() + 3600 * 1000).toISOString();
-
-      for (const baseUrl of METAAPI_REGIONS) {
-        try {
-          // 1) Önce açık pozisyonlarda GOLD varsa onun lotunu al
-          const posRes = await fetch(
-            `${baseUrl}/users/current/accounts/${METAAPI_ACCOUNT_ID}/positions`,
-            {
-              method: "GET",
-              headers: { "auth-token": METAAPI_TOKEN, "Accept": "application/json" }
-            }
-          );
-          if (posRes.ok) {
-            const positions = await posRes.json();
-            if (Array.isArray(positions)) {
-              const goldPos = positions.filter(p => p.symbol === MT5_SYMBOL && p.volume >= 0.01);
-              if (goldPos.length > 0) {
-                return Number(goldPos[goldPos.length - 1].volume);
-              }
-            }
-
-            // 2) Açık pozisyon yoksa son 14 gündeki geçmiş GOLD işlemlerinin en sonuncusunun lotunu al
-            const dealsRes = await fetch(
-              `${baseUrl}/users/current/accounts/${METAAPI_ACCOUNT_ID}/history-deals/time/${encodeURIComponent(startIso)}/${encodeURIComponent(endIso)}`,
-              {
-                method: "GET",
-                headers: { "auth-token": METAAPI_TOKEN, "Accept": "application/json" }
-              }
-            );
-            if (dealsRes.ok) {
-              const deals = await dealsRes.json();
-              if (Array.isArray(deals)) {
-                const goldDeals = deals.filter(d => d.symbol === MT5_SYMBOL && d.volume >= 0.01);
-                if (goldDeals.length > 0) {
-                  return Number(goldDeals[goldDeals.length - 1].volume);
-                }
-              }
-            }
-            break;
+    // CANLI METAAPI BAĞLANTI VE OTOMATİK EMİR DURUMU KONTROLÜ
+    async function checkMetaApiStatus() {
+      try {
+        const res = await fetch(
+          `https://mt-provisioning-api-v1.agiliumtrade.ag/users/current/accounts/${METAAPI_ACCOUNT_ID}`,
+          {
+            method: "GET",
+            headers: { "auth-token": METAAPI_TOKEN, "Accept": "application/json" }
           }
-        } catch (e) {}
+        );
+        if (!res.ok) return { connected: false, state: "API_AUTH_ERROR" };
+        const acc = await res.json();
+        const isReady = acc.state === "DEPLOYED" && acc.connectionStatus === "CONNECTED";
+        return {
+          connected: isReady,
+          state: acc.state || "UNKNOWN",
+          connectionStatus: acc.connectionStatus || "DISCONNECTED"
+        };
+      } catch (e) {
+        return { connected: false, state: "CHECK_FAILED" };
       }
-      return FALLBACK_MIN_LOT;
     }
 
     // METAAPI CLOUD ÜZERİNDEN XM MT5 HESABINA OTOMATİK EMİR GÖNDERİMİ
@@ -228,7 +203,11 @@ export default async function handler(req, res) {
       return { currentPrice, candles, source: oandaLivePrice > 0 ? "OANDA:XAUUSD" : "XAUUSD_FEED" };
     }
 
-    const goldData = await fetchOandaGoldData();
+    const [goldData, mt5Health] = await Promise.all([
+      fetchOandaGoldData(),
+      checkMetaApiStatus()
+    ]);
+
     if (!goldData) {
       return res.status(500).json({ error: "OANDA XAUUSD piyasa verisi alınamadı." });
     }
@@ -269,7 +248,7 @@ export default async function handler(req, res) {
           sig.closedAt = Date.now();
           sig.realizedDollar = parseFloat(diffDollar.toFixed(2));
 
-          const usedLot = sig.lotSize || FALLBACK_MIN_LOT;
+          const usedLot = sig.lotSize || LOT_SIZE;
           const estNetUsd = (diffDollar * usedLot * 100 - usedLot * 20).toFixed(2);
 
           const tpMsg = `🎯 <b>XM MT5 (GOLD) | +$4.00 TP VURULDU!</b>\n` +
@@ -338,6 +317,8 @@ export default async function handler(req, res) {
         return res.status(200).json({
           status: "TRACKING_TP",
           livePrice: goldData.currentPrice,
+          lotSize: LOT_SIZE,
+          mt5_auto_trade: mt5Health,
           message: "Açık XM MT5 GOLD pozisyonu +$4.00 TP / -$5.00 SL için canlı izleniyor."
         });
       }
@@ -350,6 +331,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: "COOLDOWN",
         livePrice: goldData.currentPrice,
+        lotSize: LOT_SIZE,
+        mt5_auto_trade: mt5Health,
         message: "Son sinyal sonrası 10 dakikalık soğuma süresi bekleniyor."
       });
     }
@@ -369,13 +352,15 @@ export default async function handler(req, res) {
         status: "SCANNING_RANGE",
         livePrice: goldData.currentPrice,
         ema60: parseFloat(ema60.toFixed(2)),
-        boxRange: boxRange.toFixed(2)
+        boxRange: boxRange.toFixed(2),
+        lotSize: LOT_SIZE,
+        mt5_auto_trade: mt5Health
       });
     }
 
     const candleSpan = sweepCandle.high - sweepCandle.low;
     if (candleSpan <= 0) {
-      return res.status(200).json({ status: "FLAT_CANDLE" });
+      return res.status(200).json({ status: "FLAT_CANDLE", mt5_auto_trade: mt5Health });
     }
 
     const lowerWick = Math.min(sweepCandle.open, sweepCandle.close) - sweepCandle.low;
@@ -397,14 +382,13 @@ export default async function handler(req, res) {
       const wickPct = Math.round((lowerWick / candleSpan) * 100);
       const isTrendAligned = entry >= ema60;
       const projectedMove = predictExpectedMove(boxRange, wickPct, isTrendAligned, isNySession);
-      const userLot = await detectUserMt5Lot();
 
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "BUY",
-        lotSize: userLot,
+        lotSize: LOT_SIZE,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry + TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry - SL_DOLLAR).toFixed(2)),
@@ -435,14 +419,13 @@ export default async function handler(req, res) {
       const wickPct = Math.round((upperWick / candleSpan) * 100);
       const isTrendAligned = entry <= ema60;
       const projectedMove = predictExpectedMove(boxRange, wickPct, isTrendAligned, isNySession);
-      const userLot = await detectUserMt5Lot();
 
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "SELL",
-        lotSize: userLot,
+        lotSize: LOT_SIZE,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry - TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry + SL_DOLLAR).toFixed(2)),
@@ -464,12 +447,14 @@ export default async function handler(req, res) {
         livePrice: goldData.currentPrice,
         ema60: parseFloat(ema60.toFixed(2)),
         microHigh,
-        microLow
+        microLow,
+        lotSize: LOT_SIZE,
+        mt5_auto_trade: mt5Health
       });
     }
 
     // =========================================================================
-    // MODÜL 3: XM MT5 HESABINA OTOMATİK EMİR GÖNDER (+$4.00 TP / -$5.00 SL GÖMÜLÜ)
+    // MODÜL 3: XM MT5 HESABINA OTOMATİK EMİR GÖNDER (0.20 LOT | +$4.00 TP / -$5.00 SL)
     // =========================================================================
     const mt5Exec = await executeMetaApiTrade(
       newSignal.direction,
@@ -497,7 +482,7 @@ export default async function handler(req, res) {
     const isBuy = newSignal.direction === "BUY";
     const trendLabel = newSignal.isTrendAligned ? "EMA 60 Trend Yönü (Güçlü)" : "EMA 60 Düzeltme Tepkisi";
     const mt5StatusLine = mt5Exec.success
-      ? `✅ <b>XM MT5 Emri Açıldı</b> (${newSignal.lotSize.toFixed(2)} Lot — Hesabınızdaki Son Lot)`
+      ? `✅ <b>XM MT5 Emri Açıldı</b> (${newSignal.lotSize.toFixed(2)} Lot | TP/SL Gömülü)`
       : `⚠️ <b>MT5 Emir Hatası:</b> <code>${mt5Exec.error}</code>`;
 
     const entryMsg = `🏆 <b>XM GOLD (OANDA:XAUUSD) | OTO MT5 İŞLEMİ</b>\n` +
@@ -512,12 +497,13 @@ export default async function handler(req, res) {
                      `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
                      `🛑 <b>Gömülü SL (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                     `⏱️ <i>XMGlobal-MT5 17 hesabına +$4.00 TP ve -$5.00 SL doğrudan işlendi.</i>`;
+                     `⏱️ <i>XMGlobal-MT5 17 hesabına 0.20 Lot ile +$4.00 TP ve -$5.00 SL doğrudan işlendi.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
     return res.status(200).json({
       success: true,
+      mt5_auto_trade: mt5Health,
       mt5_executed: mt5Exec.success,
       mt5_detail: newSignal.mt5Response,
       signal: newSignal
