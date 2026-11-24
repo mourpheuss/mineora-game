@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. TELEGRAM & OANDA XAUUSD SCALP PARAMETRELERİ (SADECE SİNYAL MODU)
+    // 0. TELEGRAM & OANDA XAUUSD SCALP PARAMETRELERİ (EMA 60 KORUMALI)
     // =========================================================================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
@@ -20,8 +20,9 @@ export default async function handler(req, res) {
 
     const TP_DOLLAR = 3.00;                     // SABİT +$3.00 HEDEF
     const SL_DOLLAR = 5.00;                     // SABİT -$5.00 STOP
+    const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
     const RECOMMENDED_LOT = "0.10";             // XM ÖNERİLEN LOT (0.10 Lot = +$28 TP / -$52 SL)
-    const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME (GÜNDE 10-13 SİNYAL)
+    const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -35,6 +36,16 @@ export default async function handler(req, res) {
           });
         } catch (e) {}
       }
+    }
+
+    function calculateEMA(data, period = 60) {
+      if (!data || data.length === 0) return 0;
+      const k = 2 / (period + 1);
+      let ema = data[0].close;
+      for (let i = 1; i < data.length; i++) {
+        ema = data[i].close * k + ema * (1 - k);
+      }
+      return ema;
     }
 
     // 1. TÜRKİYE SAATİ (UTC+3) KONTROLÜ: SADECE 09:30 - 22:30 ARASI ÇALIŞIR
@@ -53,11 +64,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. OANDA:XAUUSD CANLI FİYAT VE 1 DAKİKALIK VERİ ÇEKİCİ
+    // 2. OANDA:XAUUSD CANLI FİYAT VE 100 ADET 1 DAKİKALIK MUM VERİSİ
     async function fetchOandaGoldData() {
       let oandaLivePrice = 0;
 
-      // A) OANDA:XAUUSD Canlı Anlık Fiyat (TradingView Scanner API)
       try {
         const tvRes = await fetch("https://scanner.tradingview.com/cfd/scan", {
           method: "POST",
@@ -73,13 +83,12 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
 
-      // B) 1 Dakikalık Mum Serisi (OANDA tabanlı fiyat ölçeğine kalibre edilmiş)
       const candleRes = await fetch(
-        "https://api.bitget.com/api/v2/mix/market/candles?symbol=XAUUSDT&productType=USDT-FUTURES&granularity=1m&limit=25",
+        "https://api.bitget.com/api/v2/mix/market/candles?symbol=XAUUSDT&productType=USDT-FUTURES&granularity=1m&limit=100",
         { headers: browserHeaders }
       );
       const candleJson = await candleRes.json();
-      if (candleJson.code !== '00000' || !Array.isArray(candleJson.data) || candleJson.data.length < 18) {
+      if (candleJson.code !== '00000' || !Array.isArray(candleJson.data) || candleJson.data.length < 65) {
         return null;
       }
 
@@ -91,7 +100,6 @@ export default async function handler(req, res) {
         close: Number(c[4])
       })).sort((a, b) => a.time - b.time);
 
-      // OANDA:XAUUSD canlı fiyatı geldiyse son mumlarla OANDA kotasyonu arasındaki farkı sıfırla
       const lastRawClose = rawCandles[rawCandles.length - 1].close;
       const spreadOffset = (oandaLivePrice > 0 && Math.abs(oandaLivePrice - lastRawClose) < 25)
         ? (oandaLivePrice - lastRawClose)
@@ -221,7 +229,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: OANDA:XAUUSD M1 LİKİDİTE SÜPÜRME TARAYICISI (GÜNDE 10-13 SİNYAL)
+    // MODÜL 2: OANDA:XAUUSD M1 LİKİDİTE SÜPÜRME + EMA 60 TREND FİLTRESİ
     // =========================================================================
     if (Date.now() - lastSignalTimestamp < SIGNAL_COOLDOWN_MS) {
       return res.status(200).json({
@@ -232,6 +240,7 @@ export default async function handler(req, res) {
     }
 
     const candles = goldData.candles;
+    const ema60 = calculateEMA(candles, 60);
     const sweepCandle = candles[candles.length - 2];
     const currentCandle = candles[candles.length - 1];
     const pool13m = candles.slice(candles.length - 15, candles.length - 2);
@@ -240,11 +249,11 @@ export default async function handler(req, res) {
     const microLow = Math.min(...pool13m.map(c => c.low));
     const boxRange = microHigh - microLow;
 
-    // Günde 10-13 sağlam sinyal için minimum $2.80 bant genişliği
     if (boxRange < 2.80) {
       return res.status(200).json({
         status: "SCANNING_RANGE",
         livePrice: goldData.currentPrice,
+        ema60: parseFloat(ema60.toFixed(2)),
         boxRange: boxRange.toFixed(2)
       });
     }
@@ -259,8 +268,10 @@ export default async function handler(req, res) {
 
     let newSignal = null;
 
-    // BUY TETİĞİ: Micro Low altına en az $0.32 iğne + %46 alt fitil + çizgi üstü kapanış
+    // BUY TETİĞİ: Likidite süpürmesi + Fiyat EMA 60'ın $4.00 altında şelale düşüşünde olmamalı
+    const isBuySafeFromWaterfall = goldData.currentPrice >= (ema60 - EMA_MAX_DIST);
     const isBuySweep =
+      isBuySafeFromWaterfall &&
       (sweepCandle.low <= microLow - 0.32) &&
       (sweepCandle.close > microLow) &&
       ((lowerWick / candleSpan) >= 0.46) &&
@@ -276,6 +287,7 @@ export default async function handler(req, res) {
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry + TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry - SL_DOLLAR).toFixed(2)),
+        ema60: parseFloat(ema60.toFixed(2)),
         level: parseFloat(microLow.toFixed(2)),
         wick: parseFloat(sweepCandle.low.toFixed(2)),
         wickPct: Math.round((lowerWick / candleSpan) * 100),
@@ -284,14 +296,17 @@ export default async function handler(req, res) {
       };
     }
 
-    // SELL TETİĞİ: Micro High üstüne en az $0.32 iğne + %46 üst fitil + çizgi altı kapanış
+    // SELL TETİĞİ: Likidite süpürmesi + Fiyat EMA 60'ın $4.00 üstünde ralli kırılımında olmamalı
+    const isSellSafeFromRally = goldData.currentPrice <= (ema60 + EMA_MAX_DIST);
     const isSellSweep =
+      !newSignal &&
+      isSellSafeFromRally &&
       (sweepCandle.high >= microHigh + 0.32) &&
       (sweepCandle.close < microHigh) &&
       ((upperWick / candleSpan) >= 0.46) &&
       (currentCandle.close <= sweepCandle.close);
 
-    if (!newSignal && isSellSweep) {
+    if (isSellSweep) {
       const entry = goldData.currentPrice;
       newSignal = {
         id: `gold_${Date.now()}`,
@@ -301,6 +316,7 @@ export default async function handler(req, res) {
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry - TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry + SL_DOLLAR).toFixed(2)),
+        ema60: parseFloat(ema60.toFixed(2)),
         level: parseFloat(microHigh.toFixed(2)),
         wick: parseFloat(sweepCandle.high.toFixed(2)),
         wickPct: Math.round((upperWick / candleSpan) * 100),
@@ -313,6 +329,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: "SCANNING_OANDA_GOLD",
         livePrice: goldData.currentPrice,
+        ema60: parseFloat(ema60.toFixed(2)),
         microHigh,
         microLow
       });
@@ -336,6 +353,7 @@ export default async function handler(req, res) {
                      `━━━━━━━━━━━━━━━━━━━━\n` +
                      `🧭 <b>Yön:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
                      `🧱 <b>Avlanan Seviye:</b> <code>$${newSignal.level.toFixed(2)}</code> (İğne: $${newSignal.wick.toFixed(2)} | %${newSignal.wickPct} Fitil)\n` +
+                     `📊 <b>EMA 60 Dengesi:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (Trend Onaylı)\n` +
                      `━━━━━━━━━━━━━━━━━━━━\n` +
                      `💵 <b>Giriş Fiyatı:</b> <code>$${newSignal.entry.toFixed(2)}</code>\n` +
                      `🎯 <b>Take-Profit (+$3.00):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
