@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 export const config = {
   maxDuration: 60
 };
@@ -8,29 +6,22 @@ export default async function handler(req, res) {
   try {
     const browserHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
     };
 
     // =========================================================================
-    // 0. BİTGET UNIFIED / UTA V3 BİLGİLERİ & 4 COİN KONTROLLÜ DCA PARAMETRELERİ
+    // 0. TELEGRAM & OANDA XAUUSD SCALP PARAMETRELERİ (SADECE SİNYAL MODU)
     // =========================================================================
-    const ADMIN_API_KEY = "bg_70a6d856aad55c998597f8888e27a61f";
-    const ADMIN_SECRET = "07562c9e62461b950ac8eec37fc9c9cb821bee34a57fc14fca54352bb5423804";
-    const ADMIN_PASSPHRASE = "Ers4834754";
-    const BITGET_BASE_URL = 'https://api.bitget.com';
-
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
     const TG_ADMIN_ID = "6457294906";
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
-    
-    const SAME_COIN_LOCK_MS = 15 * 60 * 1000;
-    const MAX_CONCURRENT_TRADES = 7;                // MAKSİMUM 7 İŞLEM SINIRI
-    const LEVERAGE = 15;                            // 15x KALDIRAÇ
-    const MARGIN_RATIO = 0.05;                      // KASANIN %5'Ü İLE İLK GİRİŞ
-    const DCA_DROP_STEP_PCT = 2.50;                 // HER -%2.50 GERİ GİTTİĞİNDE EKLEME
-    const TP_TARGET_PCT = 0.75;                     // TEK VE KESİN TP: ORTALAMA MALİYETTEN +%0.75
-    const MAX_DCA_ADDS = 4;                         // EN FAZLA 4 DEFA EKLEME YAPILSIN
+
+    const TP_DOLLAR = 3.00;                     // SABİT +$3.00 HEDEF
+    const SL_DOLLAR = 5.00;                     // SABİT -$5.00 STOP
+    const RECOMMENDED_LOT = "0.10";             // XM ÖNERİLEN LOT (0.10 Lot = +$28 TP / -$52 SL)
+    const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME (GÜNDE 10-13 SİNYAL)
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -40,773 +31,324 @@ export default async function handler(req, res) {
           await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: target, text: text, parse_mode: 'HTML' })
+            body: JSON.stringify({ chat_id: target, text, parse_mode: 'HTML' })
           });
         } catch (e) {}
       }
     }
 
-    async function bitgetPrivateRequest(endpoint, method = 'POST', bodyObj = {}, customCreds = null) {
-      const apiKey = customCreds ? customCreds.key : ADMIN_API_KEY;
-      const secret = customCreds ? customCreds.secret : ADMIN_SECRET;
-      const pass = customCreds ? customCreds.passphrase : ADMIN_PASSPHRASE;
+    // 1. TÜRKİYE SAATİ (UTC+3) KONTROLÜ: SADECE 09:30 - 22:30 ARASI ÇALIŞIR
+    const nowUtc3 = new Date(Date.now() + 3 * 3600 * 1000);
+    const dayOfWeek = nowUtc3.getUTCDay(); // 0 = Pazar, 6 = Cumartesi
+    const hourDec = nowUtc3.getUTCHours() + nowUtc3.getUTCMinutes() / 60;
 
-      const timestamp = Date.now().toString();
-      const bodyStr = method === 'GET' ? '' : JSON.stringify(bodyObj);
-      const message = timestamp + method + endpoint + bodyStr;
-      const signature = crypto.createHmac('sha256', secret).update(message).digest('base64');
-
-      const headers = {
-        'ACCESS-KEY': apiKey,
-        'ACCESS-SIGN': signature,
-        'ACCESS-TIMESTAMP': timestamp,
-        'ACCESS-PASSPHRASE': pass,
-        'Content-Type': 'application/json',
-        'locale': 'en-US'
-      };
-
-      const options = { method, headers };
-      if (method !== 'GET') options.body = bodyStr;
-
-      try {
-        const response = await fetch(`${BITGET_BASE_URL}${endpoint}`, options);
-        return await response.json();
-      } catch (err) {
-        return { code: '-1', msg: err.message };
-      }
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return res.status(200).json({ status: "WEEKEND_CLOSED", message: "Hafta sonu altın piyasası kapalı." });
     }
 
-    async function bingxPrivateRequest(endpoint, method = 'POST', params = {}, creds = {}) {
-      if (!creds || !creds.key || !creds.secret) return { code: -1, msg: "BingX API anahtarları eksik" };
-      const timestamp = Date.now().toString();
-      const fullParams = { ...params, timestamp };
-
-      const sortedKeys = Object.keys(fullParams).sort();
-      const queryString = sortedKeys.map(k => `${k}=${encodeURIComponent(fullParams[k])}`).join('&');
-      const signature = crypto.createHmac('sha256', creds.secret).update(queryString).digest('hex');
-      const finalUrl = `https://open-api.bingx.com${endpoint}?${queryString}&signature=${signature}`;
-
-      try {
-        const response = await fetch(finalUrl, {
-          method,
-          headers: {
-            'X-BX-APIKEY': creds.key,
-            'Content-Type': 'application/json'
-          }
-        });
-        return await response.json();
-      } catch (err) {
-        return { code: -1, msg: err.message };
-      }
-    }
-
-    async function closeBitgetPosition(symbol, isLong) {
-      const closeSide = isLong ? 'sell' : 'buy';
-      let qty = "0";
-
-      try {
-        const posRes = await bitgetPrivateRequest(`/api/v3/position/current-position?category=USDT-FUTURES&symbol=${symbol}`, 'GET');
-        if (posRes.code === '00000' && Array.isArray(posRes.data) && posRes.data.length > 0) {
-          const totalQty = parseFloat(posRes.data[0].total || posRes.data[0].available || 0);
-          if (totalQty > 0) {
-            qty = totalQty.toString();
-          }
-        }
-      } catch (e) {}
-
-      if (qty === "0") {
-        return { code: '00000', msg: 'Pozisyon borsada zaten kapalı.' };
-      }
-
-      await Promise.allSettled([
-        bitgetPrivateRequest('/api/v3/trade/cancel-symbol-order', 'POST', { category: 'USDT-FUTURES', symbol }),
-        bitgetPrivateRequest('/api/v3/trade/cancel-symbol-plan-order', 'POST', { category: 'USDT-FUTURES', symbol })
-      ]);
-
-      return await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-        category: 'USDT-FUTURES',
-        symbol: symbol,
-        side: closeSide,
-        orderType: 'market',
-        qty: qty,
-        reduceOnly: 'yes'
+    if (hourDec < 9.5 || hourDec > 22.5) {
+      return res.status(200).json({
+        status: "OUT_OF_HOURS",
+        message: "Gece modu aktif (09:30 - 22:30 dışında sinyal üretilmez)."
       });
     }
 
-    async function executeUserCloses(symbol, isLong) {
-      const closeSideBitget = isLong ? 'sell' : 'buy';
-      const closeSideBingx  = isLong ? 'SELL' : 'BUY';
+    // 2. OANDA:XAUUSD CANLI FİYAT VE 1 DAKİKALIK VERİ ÇEKİCİ
+    async function fetchOandaGoldData() {
+      let oandaLivePrice = 0;
 
-      for (const [uname, udata] of Object.entries(allUsers)) {
-        if (!udata || !udata.autoTradeEnabled) continue;
-        const ex = udata.exchange || 'BITGET';
-        const creds = udata.exchangeApi || udata.bitgetApi;
-        if (!creds || !creds.key || !creds.secret) continue;
-
-        try {
-          if (ex === 'BITGET') {
-            await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-              category: 'USDT-FUTURES',
-              symbol: symbol,
-              side: closeSideBitget,
-              orderType: 'market',
-              reduceOnly: 'yes'
-            }, creds).catch(() => {});
-          } else if (ex === 'BINGX') {
-            const bingxSym = symbol.replace('USDT', '-USDT');
-            await bingxPrivateRequest('/openApi/swap/v2/trade/order', 'POST', {
-              symbol: bingxSym,
-              side: closeSideBingx,
-              type: 'MARKET',
-              reduceOnly: 'true'
-            }, creds).catch(() => {});
-          }
-        } catch (e) {}
-      }
-    }
-
-    async function getFuturesEquity() {
+      // A) OANDA:XAUUSD Canlı Anlık Fiyat (TradingView Scanner API)
       try {
-        const accResV3 = await bitgetPrivateRequest('/api/v3/account/assets', 'GET');
-        if (accResV3 && accResV3.code === '00000') {
-          const list = Array.isArray(accResV3.data) ? accResV3.data : (accResV3.data?.assets || []);
-          const usdtItem = list.find(a => (a.coin === 'USDT' || a.coinName === 'USDT' || a.assetCoin === 'USDT'));
-          if (usdtItem) {
-            const eq = parseFloat(usdtItem.equity || usdtItem.available || usdtItem.usdtEquity || usdtItem.balance || 0);
-            if (eq > 5) return eq;
-          }
-          if (accResV3.data?.accountEquity) {
-            const totalEq = parseFloat(accResV3.data.accountEquity);
-            if (totalEq > 5) return totalEq;
-          }
+        const tvRes = await fetch("https://scanner.tradingview.com/cfd/scan", {
+          method: "POST",
+          headers: browserHeaders,
+          body: JSON.stringify({
+            symbols: { tickers: ["OANDA:XAUUSD"], query: { types: [] } },
+            columns: ["close", "high", "low", "open", "change", "change_abs"]
+          })
+        });
+        const tvJson = await tvRes.json();
+        if (tvJson?.data?.[0]?.d?.[0]) {
+          oandaLivePrice = parseFloat(tvJson.data[0].d[0]);
         }
       } catch (e) {}
 
-      try {
-        const accResV2 = await bitgetPrivateRequest('/api/v2/mix/account/accounts?productType=usdt-futures', 'GET');
-        if (accResV2 && accResV2.code === '00000' && Array.isArray(accResV2.data)) {
-          const usdtAcc = accResV2.data.find(a => (a.marginCoin === 'USDT' || a.coin === 'USDT'));
-          if (usdtAcc) {
-            const eq = parseFloat(usdtAcc.usdtEquity || usdtAcc.equity || usdtAcc.available || usdtAcc.crossMaxAvailable || 0);
-            if (eq > 5) return eq;
-          }
-        }
-      } catch (e) {}
-
-      return 100;
-    }
-
-    function calculateZScore(series, currentVal) {
-      if (!series || series.length < 5) return 0;
-      const n = series.length;
-      const mean = series.reduce((a, b) => a + b, 0) / n;
-      const variance = series.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
-      const stdDev = Math.sqrt(variance);
-      return stdDev === 0 ? 0 : (currentVal - mean) / stdDev;
-    }
-
-    // 1. Bitget Vadeli Ticker, Spot ve Kontrat Bilgilerini Çek
-    const [tickersRes, spotSymbolsRes, contractsRes] = await Promise.all([
-      fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders }),
-      fetch("https://api.bitget.com/api/v2/spot/public/symbols", { headers: browserHeaders }).catch(() => null),
-      fetch("https://api.bitget.com/api/v2/mix/market/contracts?productType=USDT-FUTURES", { headers: browserHeaders }).catch(() => null)
-    ]);
-
-    const tickersJson = await tickersRes.json();
-    if (tickersJson.code !== '00000' || !Array.isArray(tickersJson.data)) {
-      return res.status(500).json({ error: "Bitget piyasa verisi alınamadı." });
-    }
-
-    const symbolPrecisionMap = {};
-    const symbolVolumePlaceMap = {};
-    const symbolMinQtyMap = {};
-
-    if (contractsRes && contractsRes.ok) {
-      try {
-        const contractsJson = await contractsRes.json();
-        if (contractsJson.code === '00000' && Array.isArray(contractsJson.data)) {
-          contractsJson.data.forEach(c => {
-            if (c.symbol) {
-              if (c.pricePlace !== undefined) symbolPrecisionMap[c.symbol] = parseInt(c.pricePlace, 10);
-              if (c.volumePlace !== undefined) symbolVolumePlaceMap[c.symbol] = parseInt(c.volumePlace, 10);
-              if (c.minTradeNum !== undefined) symbolMinQtyMap[c.symbol] = parseFloat(c.minTradeNum);
-            }
-          });
-        }
-      } catch (e) {}
-    }
-
-    function getPrecision(price, rawPriceStr = null, symbol = null) {
-      if (symbol && symbolPrecisionMap[symbol] !== undefined) {
-        return symbolPrecisionMap[symbol];
+      // B) 1 Dakikalık Mum Serisi (OANDA tabanlı fiyat ölçeğine kalibre edilmiş)
+      const candleRes = await fetch(
+        "https://api.bitget.com/api/v2/mix/market/candles?symbol=XAUUSDT&productType=USDT-FUTURES&granularity=1m&limit=25",
+        { headers: browserHeaders }
+      );
+      const candleJson = await candleRes.json();
+      if (candleJson.code !== '00000' || !Array.isArray(candleJson.data) || candleJson.data.length < 18) {
+        return null;
       }
-      if (!price || isNaN(price) || price <= 0) return 2;
-      if (price >= 100) return 2;
-      if (price >= 10) return 3;
-      if (rawPriceStr && typeof rawPriceStr === 'string' && rawPriceStr.includes('.')) {
-        const decCount = rawPriceStr.split('.')[1].length;
-        if (decCount > 0) return Math.min(6, decCount);
-      }
-      if (price >= 0.1) return 4;
-      if (price >= 0.001) return 5;
-      if (price >= 0.0001) return 6;
-      return 8;
+
+      const rawCandles = candleJson.data.map(c => ({
+        time: Number(c[0]),
+        open: Number(c[1]),
+        high: Number(c[2]),
+        low: Number(c[3]),
+        close: Number(c[4])
+      })).sort((a, b) => a.time - b.time);
+
+      // OANDA:XAUUSD canlı fiyatı geldiyse son mumlarla OANDA kotasyonu arasındaki farkı sıfırla
+      const lastRawClose = rawCandles[rawCandles.length - 1].close;
+      const spreadOffset = (oandaLivePrice > 0 && Math.abs(oandaLivePrice - lastRawClose) < 25)
+        ? (oandaLivePrice - lastRawClose)
+        : 0;
+
+      const candles = rawCandles.map(c => ({
+        time: c.time,
+        open: parseFloat((c.open + spreadOffset).toFixed(2)),
+        high: parseFloat((c.high + spreadOffset).toFixed(2)),
+        low: parseFloat((c.low + spreadOffset).toFixed(2)),
+        close: parseFloat((c.close + spreadOffset).toFixed(2))
+      }));
+
+      const currentPrice = oandaLivePrice > 0 ? oandaLivePrice : candles[candles.length - 1].close;
+      return { currentPrice, candles, source: oandaLivePrice > 0 ? "OANDA:XAUUSD" : "XAUUSD_FEED" };
     }
 
-    function calculateOrderQuantityDynamic(symbol, entryPrice, notional) {
-      const rawQty = notional / entryPrice;
-      const volPlace = symbolVolumePlaceMap[symbol] !== undefined ? symbolVolumePlaceMap[symbol] : 0;
-      const minQty = symbolMinQtyMap[symbol] !== undefined ? symbolMinQtyMap[symbol] : 1;
-
-      let finalQty = parseFloat(rawQty.toFixed(volPlace));
-      if (finalQty < minQty) {
-        finalQty = minQty;
-      }
-      return finalQty;
+    const goldData = await fetchOandaGoldData();
+    if (!goldData) {
+      return res.status(500).json({ error: "OANDA XAUUSD piyasa verisi alınamadı." });
     }
 
-    const genuineSpotCryptoSet = new Set();
-    if (spotSymbolsRes && spotSymbolsRes.ok) {
-      try {
-        const spotJson = await spotSymbolsRes.json();
-        if (spotJson.code === '00000' && Array.isArray(spotJson.data)) {
-          spotJson.data.forEach(s => {
-            if (s.symbol && s.symbol.endsWith("USDT") && s.status === 'online') {
-              genuineSpotCryptoSet.add(s.symbol);
-            }
-          });
-        }
-      } catch (e) {}
-    }
-
-    const priceMap = {};
-    const rawPriceMap = {};
-    tickersJson.data.forEach(t => {
-      priceMap[t.symbol] = parseFloat(t.lastPr || 0);
-      rawPriceMap[t.symbol] = t.lastPr || "";
-    });
-
-    let activeTrades = {};
-    let lastSignals = {};
-    let allUsers = {};
+    // 3. FIREBASE ÜZERİNDEN AÇIK SİNYALLERİ ÇEK
+    let goldSignals = {};
+    let lastSignalTimestamp = 0;
     try {
-      const [atRes, lsRes, usRes] = await Promise.all([
-        fetch(`${FIREBASE_BASE_URL}/active_trades.json`),
-        fetch(`${FIREBASE_BASE_URL}/last_signals.json`),
-        fetch(`${FIREBASE_BASE_URL}/users.json`)
+      const [gsRes, lsRes] = await Promise.all([
+        fetch(`${FIREBASE_BASE_URL}/gold_signals.json`),
+        fetch(`${FIREBASE_BASE_URL}/last_gold_signal_ts.json`)
       ]);
-      activeTrades = (await atRes.json()) || {};
-      lastSignals = (await lsRes.json()) || {};
-      allUsers = (await usRes.json()) || {};
+      goldSignals = (await gsRes.json()) || {};
+      lastSignalTimestamp = (await lsRes.json()) || 0;
     } catch (e) {
-      activeTrades = {};
-      lastSignals = {};
-      allUsers = {};
+      goldSignals = {};
+      lastSignalTimestamp = 0;
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI İŞLEM DENETLEYİCİSİ (+%0.75 TP & EN FAZLA 4 KEZ DCA EKLEME)
+    // MODÜL 1: CANLI +$3.00 TP VE -$5.00 SL DENETLEYİCİSİ
     // =========================================================================
-    async function evaluateActiveTrades(currentTime) {
+    async function evaluateOpenGoldSignals(livePrice) {
       let openCount = 0;
-      for (const [tradeKey, trade] of Object.entries(activeTrades)) {
-        if (!trade || trade.status !== 'OPEN') continue;
+
+      for (const [sigKey, sig] of Object.entries(goldSignals)) {
+        if (!sig || sig.status !== 'OPEN') continue;
         openCount++;
 
-        const curPrice = priceMap[trade.symbol];
-        if (!curPrice || curPrice <= 0) continue;
+        const isBuy = sig.direction === 'BUY';
+        const diffDollar = isBuy ? (livePrice - sig.entry) : (sig.entry - livePrice);
 
-        const isLong = trade.direction === 'LONG';
-        const prec = getPrecision(trade.entryPrice, rawPriceMap[trade.symbol], trade.symbol);
-        const pCurStr = curPrice.toFixed(prec);
-        const pEntryStr = trade.entryPrice.toFixed(prec);
+        // +$3.00 TP VURULDU!
+        if (diffDollar >= TP_DOLLAR) {
+          sig.status = 'TP_HIT';
+          sig.exitPrice = livePrice;
+          sig.closedAt = Date.now();
+          sig.realizedDollar = parseFloat(diffDollar.toFixed(2));
 
-        const pnlPct = isLong
-          ? ((curPrice - trade.entryPrice) / trade.entryPrice) * 100
-          : ((trade.entryPrice - curPrice) / trade.entryPrice) * 100;
+          const tpMsg = `🎯 <b>XM GOLD (OANDA:XAUUSD) | +$3.00 TP GELDİ!</b>\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY' : '🔴 SELL'}\n` +
+                        `💵 <b>Giriş Fiyatı:</b> <code>$${sig.entry.toFixed(2)}</code>\n` +
+                        `🏁 <b>Kapanış (TP):</b> <code>$${livePrice.toFixed(2)}</code>\n` +
+                        `💰 <b>Net Hareket:</b> <b>+$${diffDollar.toFixed(2)}</b> (${RECOMMENDED_LOT} Lot ≈ +$28 Net)\n` +
+                        `✨ <i>Hedef başarıyla tamamlandı, yeni fırsat taranıyor.</i>`;
 
-        // 1. KESİN TP: FİYAT ORTALAMA MALİYETTEN +%0.75 KÂR GÖRDÜĞÜNDE %100 TAM KAPANIŞ
-        if (pnlPct >= TP_TARGET_PCT) {
-          trade.status = 'TP_HIT';
-          trade.closedAt = currentTime;
-          trade.exitPrice = curPrice;
-          trade.realizedPnlPct = pnlPct;
-          
-          await closeBitgetPosition(trade.symbol, isLong);
-          await executeUserCloses(trade.symbol, isLong);
+          await sendTelegramAlert(tpMsg);
 
-          const tgTpMsg = `🎯 <b>MINEORA SNIPER | TP HEDEFİ VURULDU (%100 KAPANDI)!</b>\n` +
-                          `━━━━━━━━━━━━━━━━━━━━\n` +
-                          `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                          `🧭 <b>Yön:</b> ${trade.direction}\n` +
-                          `💵 <b>Ortalama Maliyet:</b> <code>$${pEntryStr}</code>\n` +
-                          `🎯 <b>Kapanış Fiyatı:</b> <code>$${pCurStr}</code>\n` +
-                          `💰 <b>Net Kâr:</b> +%${pnlPct.toFixed(2)} (${LEVERAGE}x ile <b>+%${(pnlPct * LEVERAGE).toFixed(1)} MARJİN KÂRI</b>)\n` +
-                          `🧱 <b>Toplam Katman:</b> ${trade.dcaCount || 1}. Kademe Tamamlandı\n` +
-                          `✨ <i>Pozisyon tamamen kapatıldı, kasa nakde geçti.</i>`;
-
-          await sendTelegramAlert(tgTpMsg);
-
-          await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
+          await fetch(`${FIREBASE_BASE_URL}/gold_signals/${sigKey}.json`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(trade)
+            body: JSON.stringify(sig)
           });
           openCount--;
           continue;
         }
 
-        // 2. DCA MALİYET İNDİRME: EN FAZLA 4 KEZ EKLEME (dcaCount < 5)
-        const dcaCount = trade.dcaCount || 1;
-        const nextDcaTriggerDropPct = dcaCount * DCA_DROP_STEP_PCT;
+        // -$5.00 SL VURULDU!
+        if (diffDollar <= -SL_DOLLAR) {
+          sig.status = 'SL_HIT';
+          sig.exitPrice = livePrice;
+          sig.closedAt = Date.now();
+          sig.realizedDollar = parseFloat(diffDollar.toFixed(2));
 
-        if (dcaCount <= MAX_DCA_ADDS && pnlPct <= -nextDcaTriggerDropPct) {
-          const lastMarginUsed = trade.lastMarginUsed || trade.marginUsed;
-          const addMargin = parseFloat((lastMarginUsed * 0.50).toFixed(2));
+          const slMsg = `🛑 <b>XM GOLD (OANDA:XAUUSD) | STOP-LOSS (-$5.00)</b>\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY' : '🔴 SELL'}\n` +
+                        `💵 <b>Giriş Fiyatı:</b> <code>$${sig.entry.toFixed(2)}</code>\n` +
+                        `📉 <b>Stop Fiyatı:</b> <code>$${livePrice.toFixed(2)}</code>\n` +
+                        `🛡️ <i>-$5.00 stop seviyesi çalıştı; yeni kurulum bekleniyor.</i>`;
 
-          if (addMargin >= 1.0) {
-            const addNotional = addMargin * LEVERAGE;
-            const addQty = calculateOrderQuantityDynamic(trade.symbol, curPrice, addNotional);
-            const addSide = isLong ? 'buy' : 'sell';
+          await sendTelegramAlert(slMsg);
 
-            const addOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-              category: 'USDT-FUTURES',
-              symbol: trade.symbol,
-              side: addSide,
-              orderType: 'market',
-              qty: addQty.toString()
-            });
-
-            if (addOrderRes.code === '00000') {
-              const prevQty = trade.openSize || 0;
-              const newTotalQty = prevQty + addQty;
-              const prevNotional = prevQty * trade.entryPrice;
-              const newTotalNotional = prevNotional + addNotional;
-              const newAvgEntry = newTotalNotional / newTotalQty;
-
-              trade.entryPrice = newAvgEntry;
-              trade.openSize = newTotalQty;
-              trade.totalMargin = (trade.totalMargin || trade.marginUsed) + addMargin;
-              trade.lastMarginUsed = addMargin;
-              trade.dcaCount = dcaCount + 1;
-              trade.tp = isLong ? newAvgEntry * (1 + TP_TARGET_PCT / 100) : newAvgEntry * (1 - TP_TARGET_PCT / 100);
-
-              const newEntryStr = newAvgEntry.toFixed(prec);
-              const newTpStr = trade.tp.toFixed(prec);
-
-              const tgDcaMsg = `🧱 <b>MINEORA SNIPER | DCA KADEME EKLEMESİ YAPILDI</b>\n` +
-                               `━━━━━━━━━━━━━━━━━━━━\n` +
-                               `💎 <b>Parite:</b> #${trade.symbol}\n` +
-                               `🧭 <b>Yön:</b> ${trade.direction}\n` +
-                               `📉 <b>Çekilme:</b> -%${Math.abs(pnlPct).toFixed(2)} (Eşik: -%${nextDcaTriggerDropPct.toFixed(2)})\n` +
-                               `💵 <b>Eklenen Marjin:</b> $${addMargin} (Öncekinin %50'si)\n` +
-                               `🎯 <b>Yeni Ortalama Maliyet:</b> <code>$${newEntryStr}</code>\n` +
-                               `🚀 <b>Yeni TP Hedefi (+%0.75):</b> <code>$${newTpStr}</code>\n` +
-                               `🧱 <b>Toplam Kademe Sayısı:</b> ${trade.dcaCount - 1} / ${MAX_DCA_ADDS} Ekleme Yapıldı`;
-
-              await sendTelegramAlert(tgDcaMsg);
-
-              await fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeKey}.json`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(trade)
-              });
-            }
-          }
+          await fetch(`${FIREBASE_BASE_URL}/gold_signals/${sigKey}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sig)
+          });
+          openCount--;
         }
       }
+
       return openCount;
     }
 
-    let currentOpenCount = await evaluateActiveTrades(Date.now());
+    let activeCount = await evaluateOpenGoldSignals(goldData.currentPrice);
 
     // =========================================================================
-    // NÖBETÇİ MODU (SENTINEL LOOP): 4 İŞLEM DOLDUĞUNDA GENEL TARAMAYI DURDUR,
-    // 52 SANİYE BOYUNCA 2.5 SANİYEDE BİR SADECE BU 4 POZİSYONU ANLIK DENETLE!
-    // BİRİ KAPANDIĞI ANDA DÖNGÜDEN ÇIKIP DERHAL YENİ TARAMAYA GEÇ!
+    // NÖBETÇİ MODU: AKTİF SİNYAL VARSA 50 SANİYE BOYUNCA 2.5 SN'DE BİR TP KONTROLÜ YAP
     // =========================================================================
-    if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
-      console.log(`[SENTINEL MODE] 7 İşlem Dolu. Genel tarama kapatıldı, mikro-takip nöbetine girildi.`);
-
-      while ((Date.now() - startTime) < 52000) {
+    if (activeCount > 0) {
+      while ((Date.now() - startTime) < 50000) {
         await new Promise(r => setTimeout(r, 2500));
+        const freshData = await fetchOandaGoldData();
+        if (!freshData) continue;
 
-        const activeSymbols = Object.values(activeTrades).filter(t => t && t.status === 'OPEN').map(t => t.symbol);
-        if (activeSymbols.length === 0) break;
-
-        try {
-          const quickTickRes = await fetch("https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES", { headers: browserHeaders });
-          const qJson = await quickTickRes.json();
-          if (qJson.code === '00000' && Array.isArray(qJson.data)) {
-            qJson.data.forEach(t => {
-              if (activeSymbols.includes(t.symbol)) {
-                priceMap[t.symbol] = parseFloat(t.lastPr || 0);
-              }
-            });
-          }
-        } catch(e) {}
-
-        currentOpenCount = await evaluateActiveTrades(Date.now());
-
-        if (currentOpenCount < MAX_CONCURRENT_TRADES) {
-          console.log(`[SENTINEL MODE] Bir işlem kapandı (${currentOpenCount}/${MAX_CONCURRENT_TRADES}). Yeni tarama başlatılıyor.`);
-          break;
-        }
+        activeCount = await evaluateOpenGoldSignals(freshData.currentPrice);
+        if (activeCount === 0) break;
       }
 
-      if (currentOpenCount >= MAX_CONCURRENT_TRADES) {
-        return res.status(200).json({ status: "SENTINEL_ACTIVE", message: "7 pozisyon 52 saniye boyunca gerçek zamanlı korundu ve takip edildi." });
-      }
-    }
-
-    // =========================================================================
-    // MODÜL 2: 20 DAKİKALIK SAF LİKİDİTE SÜPÜRME TARAMA MOTORU
-    // =========================================================================
-    const TOXIC_COINS_BLACKLIST = [
-      "BCHUSDT", "PAXGUSDT", "XRPUSDT", "AVAXUSDT", "ENAUSDT", "TRXUSDT",
-      "ADAUSDT", "IDOLUSDT", "LINKUSDT", "ETHUSDT", "PEPEUSDT", "ZECUSDT",
-      "CLANKERUSDT", "BTCUSDT"
-    ];
-
-    const FOREX_AND_FIAT = [
-      "USDBRL", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDTRY", "USDCAD",
-      "USDCHF", "USDCNH", "EURGBP", "EURJPY", "GBPJPY", "XAU", "XAG", "SPX",
-      "NDX", "DJI", "CLUSDT", "BGBUSDT", "USDCUSDT", "EURUSDT", "GBPUSDT", "TUSDT"
-    ];
-
-    const STOCKS_BLACKLIST = [
-      "IREN", "LITE", "GLW", "SNXX", "SPCX", "INTC", "ARM", "AMD", "MRVL", "EWZ", "TQQQ", "CSOP",
-      "HYUNDAI", "DXYZ", "MP", "BZ", "UVXY", "MSTR", "BE", "SOXL", "ASML",
-      "HOOD", "MU", "MELI", "QQQ", "SPY", "SQQQ", "SKHYNIX", "SOFTBANK",
-      "OPENAI", "ANTHROPIC", "KORU", "NVDA", "TSLA", "AAPL", "AMZN", "MSFT", "GOOG", "META", "COIN",
-      "INTW", "PLTR", "BABA", "NIO", "MARA", "RIOT", "CLSK", "CORZ", "SNDK"
-    ];
-
-    const pool = tickersJson.data.filter(c => {
-      if (!c.symbol || !c.symbol.endsWith("USDT")) return false;
-      if (c.symbol.includes("_") || c.symbol.includes(".") || c.symbol.includes("-")) return false;
-
-      const symUpper = c.symbol.toUpperCase();
-      if (TOXIC_COINS_BLACKLIST.includes(symUpper)) return false;
-      for (const fx of FOREX_AND_FIAT) if (symUpper.includes(fx)) return false;
-      for (const st of STOCKS_BLACKLIST) if (symUpper.includes(st)) return false;
-
-      if (genuineSpotCryptoSet.size > 0 && !genuineSpotCryptoSet.has(c.symbol)) return false;
-
-      const p = parseFloat(c.lastPr || 0);
-      if (p > 0 && p < 0.005) return false;
-
-      // KURAL: 24 SAATLİK DEĞİŞİMİ +%30 ÜSTÜ VEYA -%30 ALTI OLAN AŞIRI VOLATİL COİNLERİ ELE
-      let chg24hPct = 0;
-      const openPr = parseFloat(c.openPrice || 0);
-      if (openPr > 0 && p > 0) {
-        chg24hPct = ((p - openPr) / openPr) * 100;
-      } else if (c.change24h !== undefined) {
-        const rawChg = parseFloat(c.change24h || 0);
-        chg24hPct = Math.abs(rawChg) < 2.0 ? rawChg * 100 : rawChg;
-      }
-
-      if (chg24hPct >= 30.0 || chg24hPct <= -30.0) return false;
-
-      const vol = parseFloat(c.usdtVolume || c.quoteVolume || 0);
-      return vol >= 1500000;
-    }).sort((a, b) => parseFloat(b.usdtVolume || 0) - parseFloat(a.usdtVolume || 0));
-
-    let candidateTrade = null;
-
-    for (const item of pool) {
-      const isAlreadyOpen = Object.values(activeTrades).some(t => t && t.status === 'OPEN' && t.symbol === item.symbol);
-      if (isAlreadyOpen) continue;
-
-      const lastSentTime = lastSignals[item.symbol] || 0;
-      if (Date.now() - lastSentTime < SAME_COIN_LOCK_MS) continue;
-
-      const candles1mRes = await fetch(`https://api.bitget.com/api/v2/mix/market/candles?symbol=${item.symbol}&productType=USDT-FUTURES&granularity=1m&limit=25`, { headers: browserHeaders })
-        .then(r => r.json()).catch(() => ({}));
-
-      if (candles1mRes.code !== '00000' || !Array.isArray(candles1mRes.data) || candles1mRes.data.length < 20) continue;
-
-      const candles1m = candles1mRes.data.map(c => ({
-        time: Math.floor(Number(c[0]) / 1000),
-        open: Number(c[1]),
-        high: Number(c[2]),
-        low: Number(c[3]),
-        close: Number(c[4]),
-        volume: Number(c[5])
-      })).sort((a, b) => a.time - b.time);
-
-      const cur1m = candles1m[candles1m.length - 1];
-      const sweep1m = candles1m[candles1m.length - 2];
-      const pastList = candles1m.slice(0, -2);
-
-      const rangeHigh = Math.max(...pastList.map(c => c.high));
-      const rangeLow  = Math.min(...pastList.map(c => c.low));
-      const rangeSpan = rangeHigh - rangeLow;
-      if (rangeSpan <= 0) continue;
-
-      const sweepRange = sweep1m.high - sweep1m.low;
-      if (sweepRange <= 0) continue;
-
-      const sweepLowerWick = Math.min(sweep1m.open, sweep1m.close) - sweep1m.low;
-      const sweepUpperWick = sweep1m.high - Math.max(sweep1m.open, sweep1m.close);
-
-      // KURAL 1: CRON-SCAN (15) ORİJİNAL %48 FİTİL VE LİKİDİTE SÜPÜRMESİ
-      const isBullishSweep = (sweep1m.low <= rangeLow) && (sweep1m.close > rangeLow) && ((sweepLowerWick / sweepRange) >= 0.48) && (cur1m.close > sweep1m.close);
-      const isBearishSweep = (sweep1m.high >= rangeHigh) && (sweep1m.close < rangeHigh) && ((sweepUpperWick / sweepRange) >= 0.48) && (cur1m.close < sweep1m.close);
-
-      if (!isBullishSweep && !isBearishSweep) continue;
-
-      // KURAL 2: 1.8σ Z-SCORE HACİM ANOMALİSİ
-      const volZScore = calculateZScore(pastList.map(c => c.volume), sweep1m.volume);
-      if (volZScore < 1.8 || volZScore > 5.0) continue;
-
-      // KURAL 3: 250$ KURUMSAL EMİR FİLTRESİ İLE TAKER AKIŞI
-      const fillsRes = await fetch(`https://api.bitget.com/api/v2/mix/market/fills?symbol=${item.symbol}&productType=usdt-futures&limit=60`, { headers: browserHeaders })
-        .then(r => r.json()).catch(() => ({}));
-
-      const fills = fillsRes.data?.fillList || fillsRes.data || [];
-      let buyUsd = 0;
-      let sellUsd = 0;
-
-      if (Array.isArray(fills)) {
-        fills.forEach(f => {
-          const val = parseFloat(f.price || 0) * parseFloat(f.size || 0);
-          if (val >= 250) {
-            if (f.side === 'buy') buyUsd += val;
-            else sellUsd += val;
-          }
+      if (activeCount > 0) {
+        return res.status(200).json({
+          status: "TRACKING_TP",
+          livePrice: goldData.currentPrice,
+          message: "Açık altın sinyali +$3.00 TP / -$5.00 SL için canlı takip ediliyor."
         });
       }
-
-      const totalFlow = buyUsd + sellUsd;
-      const takerBuyRatio = totalFlow > 0 ? (buyUsd / totalFlow) * 100 : 50;
-
-      // LONG TETİĞİ (%65 Kurumsal Alıcı Akışı)
-      if (isBullishSweep && takerBuyRatio >= 65) {
-        candidateTrade = {
-          symbol: item.symbol,
-          direction: 'LONG',
-          price: cur1m.close,
-          rawPriceStr: item.lastPr,
-          wickPoint: sweep1m.low,
-          level: rangeLow,
-          volZScore: parseFloat(volZScore.toFixed(2)),
-          takerRatio: Math.round(takerBuyRatio),
-          reason: `Son 20 dk dip seviyesi ($${rangeLow}) iğnelendi. %${Math.round((sweepLowerWick / sweepRange) * 100)} alt fitille satıcılar absorbe edildi, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(takerBuyRatio)} alıcı akışıyla sıçrama başladı.`
-        };
-        break;
-      }
-
-      // SHORT TETİĞİ (%35 Satıcı Baskısı)
-      if (isBearishSweep && takerBuyRatio <= 35) {
-        candidateTrade = {
-          symbol: item.symbol,
-          direction: 'SHORT',
-          price: cur1m.close,
-          rawPriceStr: item.lastPr,
-          wickPoint: sweep1m.high,
-          level: rangeHigh,
-          volZScore: parseFloat(volZScore.toFixed(2)),
-          takerRatio: Math.round(100 - takerBuyRatio),
-          reason: `Son 20 dk tepe seviyesi ($${rangeHigh}) iğnelendi. %${Math.round((sweepUpperWick / sweepRange) * 100)} üst fitille boğa tuzağı kuruldu, ${volZScore.toFixed(1)}σ Z-Score hacim ve %${Math.round(100 - takerBuyRatio)} satıcı akışıyla çöküş başladı.`
-        };
-        break;
-      }
-    }
-
-    if (!candidateTrade) {
-      return res.status(200).json({ status: "SCANNING", message: "Likidite süpürme fırsatları taranıyor..." });
     }
 
     // =========================================================================
-    // MODÜL 3: CANLI BORSA EMRİ (KASANIN %3'Ü, STOP YOK, TEK TP: +%0.75)
+    // MODÜL 2: OANDA:XAUUSD M1 LİKİDİTE SÜPÜRME TARAYICISI (GÜNDE 10-13 SİNYAL)
     // =========================================================================
-    const currentEquity = await getFuturesEquity();
-    
-    await fetch(`${FIREBASE_BASE_URL}/last_known_equity.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(currentEquity)
-    }).catch(() => {});
-
-    const dynamicMargin = parseFloat(Math.max(3, (currentEquity * MARGIN_RATIO)).toFixed(2));
-    
-    try {
-      await bitgetPrivateRequest('/api/v3/account/set-leverage', 'POST', {
-        category: 'USDT-FUTURES',
-        symbol: candidateTrade.symbol,
-        marginCoin: 'USDT',
-        leverage: LEVERAGE.toString()
+    if (Date.now() - lastSignalTimestamp < SIGNAL_COOLDOWN_MS) {
+      return res.status(200).json({
+        status: "COOLDOWN",
+        livePrice: goldData.currentPrice,
+        message: "Son sinyal sonrası 10 dakikalık soğuma süresi bekleniyor."
       });
-    } catch (e) {}
-
-    const positionNotional = dynamicMargin * LEVERAGE;
-    const entryPrice = candidateTrade.price;
-    const isLong = candidateTrade.direction === 'LONG';
-    
-    const orderSize = calculateOrderQuantityDynamic(candidateTrade.symbol, entryPrice, positionNotional);
-    const precision = getPrecision(entryPrice, candidateTrade.rawPriceStr, candidateTrade.symbol);
-
-    const tp = isLong ? entryPrice * (1 + TP_TARGET_PCT / 100) : entryPrice * (1 - TP_TARGET_PCT / 100);
-    const tpFormatted = tp.toFixed(precision);
-
-    const orderPayload = {
-      category: 'USDT-FUTURES',
-      symbol: candidateTrade.symbol,
-      side: isLong ? 'buy' : 'sell',
-      orderType: 'market',
-      qty: orderSize.toString(),
-      presetTakeProfitPrice: tpFormatted,
-      takeProfit: tpFormatted,
-      tpOrderType: 'market',
-      tpTriggerBy: 'mark'
-    };
-
-    const placeOrderRes = await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', orderPayload);
-
-    if (placeOrderRes.code !== '00000') {
-      await sendTelegramAlert(
-        `⚠️ <b>MINEORA SNIPER | BİTGET EMİR REDDİ</b>\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-        `🛑 <b>Sebep:</b> <code>${placeOrderRes.msg || 'Bilinmeyen hata'}</code>\n` +
-        `🛡️ <i>İşlem iptal edildi; bakiye korundu.</i>`
-      );
-      return res.status(200).json({ status: "ORDER_REJECTED", error: placeOrderRes.msg });
     }
 
-    let memberOrdersCount = 0;
-    for (const [uname, udata] of Object.entries(allUsers)) {
-      if (!udata || !udata.autoTradeEnabled) continue;
-      const ex = udata.exchange || 'BITGET';
-      const creds = udata.exchangeApi || udata.bitgetApi;
-      if (!creds || !creds.key || !creds.secret) continue;
+    const candles = goldData.candles;
+    const sweepCandle = candles[candles.length - 2];
+    const currentCandle = candles[candles.length - 1];
+    const pool13m = candles.slice(candles.length - 15, candles.length - 2);
 
-      try {
-        if (ex === 'BITGET') {
-          await bitgetPrivateRequest('/api/v3/account/set-leverage', 'POST', {
-            category: 'USDT-FUTURES',
-            symbol: candidateTrade.symbol,
-            marginCoin: 'USDT',
-            leverage: LEVERAGE.toString()
-          }, creds);
+    const microHigh = Math.max(...pool13m.map(c => c.high));
+    const microLow = Math.min(...pool13m.map(c => c.low));
+    const boxRange = microHigh - microLow;
 
-          let uSize = 1;
-          try {
-            const uAcc = await bitgetPrivateRequest('/api/v3/account/assets', 'GET', {}, creds);
-            const uList = Array.isArray(uAcc.data) ? uAcc.data : (uAcc.data?.assets || []);
-            const uUsdt = uList.find(a => (a.coin === 'USDT' || a.coinName === 'USDT'));
-            const uEq = parseFloat(uUsdt?.equity || 100);
-            uSize = calculateOrderQuantityDynamic(candidateTrade.symbol, entryPrice, uEq * MARGIN_RATIO * LEVERAGE);
-          } catch(e) { uSize = 1; }
-
-          await bitgetPrivateRequest('/api/v3/trade/place-order', 'POST', {
-            category: 'USDT-FUTURES',
-            symbol: candidateTrade.symbol,
-            side: isLong ? 'buy' : 'sell',
-            orderType: 'market',
-            qty: uSize.toString(),
-            presetTakeProfitPrice: tpFormatted,
-            takeProfit: tpFormatted,
-            tpOrderType: 'market',
-            tpTriggerBy: 'mark'
-          }, creds);
-          memberOrdersCount++;
-
-        } else if (ex === 'BINGX') {
-          const bingxSym = candidateTrade.symbol.replace('USDT', '-USDT');
-
-          await bingxPrivateRequest('/openApi/swap/v2/trade/leverage', 'POST', {
-            symbol: bingxSym,
-            side: isLong ? 'LONG' : 'SHORT',
-            leverage: LEVERAGE.toString()
-          }, creds);
-
-          let bSize = 1;
-          try {
-            const bBal = await bingxPrivateRequest('/openApi/swap/v2/user/balance', 'GET', {}, creds);
-            const bEq = parseFloat(bBal.data?.balance?.equity || 100);
-            bSize = calculateOrderQuantityDynamic(candidateTrade.symbol, entryPrice, bEq * MARGIN_RATIO * LEVERAGE);
-          } catch(e) { bSize = 1; }
-
-          await bingxPrivateRequest('/openApi/swap/v2/trade/order', 'POST', {
-            symbol: bingxSym,
-            side: isLong ? 'BUY' : 'SELL',
-            positionSide: isLong ? 'LONG' : 'SHORT',
-            type: 'MARKET',
-            quantity: bSize.toString(),
-            takeProfit: JSON.stringify({ type: 'TAKE_PROFIT_MARKET', stopPrice: parseFloat(tpFormatted), price: parseFloat(tpFormatted) })
-          }, creds);
-          memberOrdersCount++;
-        }
-      } catch(err) {}
+    // Günde 10-13 sağlam sinyal için minimum $2.80 bant genişliği
+    if (boxRange < 2.80) {
+      return res.status(200).json({
+        status: "SCANNING_RANGE",
+        livePrice: goldData.currentPrice,
+        boxRange: boxRange.toFixed(2)
+      });
     }
 
-    const tradeId = `trade_${Date.now()}`;
-    const newTrade = {
-      id: tradeId,
-      symbol: candidateTrade.symbol,
-      direction: candidateTrade.direction,
-      entryPrice,
-      tp,
-      sl: 0,
-      status: 'OPEN',
-      dcaCount: 1,
-      marginUsed: dynamicMargin,
-      totalMargin: dynamicMargin,
-      lastMarginUsed: dynamicMargin,
-      openSize: orderSize,
-      score: candidateTrade.takerRatio,
-      reason: candidateTrade.reason,
-      createdAt: Date.now(),
-      timestamp: new Date().toISOString(),
-      walletEquityAtEntry: currentEquity,
-      bitgetOrderResult: 'SUCCESS',
-      tpResult: 'SUCCESS (BORSAYA MÜHÜRLENDİ)',
-      stopResult: 'DISABLED (STOP YOK)',
-      membersExecuted: memberOrdersCount
-    };
+    const candleSpan = sweepCandle.high - sweepCandle.low;
+    if (candleSpan <= 0) {
+      return res.status(200).json({ status: "FLAT_CANDLE" });
+    }
+
+    const lowerWick = Math.min(sweepCandle.open, sweepCandle.close) - sweepCandle.low;
+    const upperWick = sweepCandle.high - Math.max(sweepCandle.open, sweepCandle.close);
+
+    let newSignal = null;
+
+    // BUY TETİĞİ: Micro Low altına en az $0.32 iğne + %46 alt fitil + çizgi üstü kapanış
+    const isBuySweep =
+      (sweepCandle.low <= microLow - 0.32) &&
+      (sweepCandle.close > microLow) &&
+      ((lowerWick / candleSpan) >= 0.46) &&
+      (currentCandle.close >= sweepCandle.close);
+
+    if (isBuySweep) {
+      const entry = goldData.currentPrice;
+      newSignal = {
+        id: `gold_${Date.now()}`,
+        symbol: "XAUUSD",
+        source: goldData.source,
+        direction: "BUY",
+        entry: parseFloat(entry.toFixed(2)),
+        tp: parseFloat((entry + TP_DOLLAR).toFixed(2)),
+        sl: parseFloat((entry - SL_DOLLAR).toFixed(2)),
+        level: parseFloat(microLow.toFixed(2)),
+        wick: parseFloat(sweepCandle.low.toFixed(2)),
+        wickPct: Math.round((lowerWick / candleSpan) * 100),
+        status: "OPEN",
+        createdAt: Date.now()
+      };
+    }
+
+    // SELL TETİĞİ: Micro High üstüne en az $0.32 iğne + %46 üst fitil + çizgi altı kapanış
+    const isSellSweep =
+      (sweepCandle.high >= microHigh + 0.32) &&
+      (sweepCandle.close < microHigh) &&
+      ((upperWick / candleSpan) >= 0.46) &&
+      (currentCandle.close <= sweepCandle.close);
+
+    if (!newSignal && isSellSweep) {
+      const entry = goldData.currentPrice;
+      newSignal = {
+        id: `gold_${Date.now()}`,
+        symbol: "XAUUSD",
+        source: goldData.source,
+        direction: "SELL",
+        entry: parseFloat(entry.toFixed(2)),
+        tp: parseFloat((entry - TP_DOLLAR).toFixed(2)),
+        sl: parseFloat((entry + SL_DOLLAR).toFixed(2)),
+        level: parseFloat(microHigh.toFixed(2)),
+        wick: parseFloat(sweepCandle.high.toFixed(2)),
+        wickPct: Math.round((upperWick / candleSpan) * 100),
+        status: "OPEN",
+        createdAt: Date.now()
+      };
+    }
+
+    if (!newSignal) {
+      return res.status(200).json({
+        status: "SCANNING_OANDA_GOLD",
+        livePrice: goldData.currentPrice,
+        microHigh,
+        microLow
+      });
+    }
 
     await Promise.all([
-      fetch(`${FIREBASE_BASE_URL}/active_trades/${tradeId}.json`, {
+      fetch(`${FIREBASE_BASE_URL}/gold_signals/${newSignal.id}.json`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTrade)
+        body: JSON.stringify(newSignal)
       }),
-      fetch(`${FIREBASE_BASE_URL}/last_signals/${candidateTrade.symbol}.json`, {
+      fetch(`${FIREBASE_BASE_URL}/last_gold_signal_ts.json`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Date.now())
       })
     ]);
 
-    const pStr = entryPrice.toFixed(precision);
-    const tpStr = tp.toFixed(precision);
-    const lvlStr = candidateTrade.level.toFixed(precision);
+    const isBuy = newSignal.direction === "BUY";
+    const entryMsg = `🏆 <b>XM GOLD (OANDA:XAUUSD) | $3.00 SCALP SİNYALİ</b>\n` +
+                     `━━━━━━━━━━━━━━━━━━━━\n` +
+                     `🧭 <b>Yön:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
+                     `🧱 <b>Avlanan Seviye:</b> <code>$${newSignal.level.toFixed(2)}</code> (İğne: $${newSignal.wick.toFixed(2)} | %${newSignal.wickPct} Fitil)\n` +
+                     `━━━━━━━━━━━━━━━━━━━━\n` +
+                     `💵 <b>Giriş Fiyatı:</b> <code>$${newSignal.entry.toFixed(2)}</code>\n` +
+                     `🎯 <b>Take-Profit (+$3.00):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+                     `🛑 <b>Stop-Loss (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
+                     `⚖️ <b>Önerilen Lot:</b> <code>${RECOMMENDED_LOT} Lot</code> (TP Net: ~$28)\n` +
+                     `━━━━━━━━━━━━━━━━━━━━\n` +
+                     `⏱️ <i>OANDA:XAUUSD canlı akışından üretildi. +$3.00 ulaşınca bildirim gelecektir.</i>`;
 
-    const tgMsg = `🎯 <b>MINEORA SNIPER | DCA LİKİDİTE SÜPÜRME</b>\n` +
-                  `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💎 <b>Parite:</b> #${candidateTrade.symbol}\n` +
-                  `🧭 <b>Pozisyon:</b> ${isLong ? '🟢 LONG (Dip Likidite Avı)' : '🔴 SHORT (Tepe Likidite Avı)'}\n` +
-                  `🧱 <b>Avlanan Seviye:</b> <code>$${lvlStr}</code>\n` +
-                  `⚡ <b>Kurumsal Güç:</b> %${candidateTrade.takerRatio}\n` +
-                  `💵 <b>Giriş:</b> <code>$${pStr}</code>\n` +
-                  `🏦 <b>Borsa Emri:</b> ✅ Bitget UTA Emri Açıldı\n` +
-                  `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `🎯 <b>Hedef TP (+%${TP_TARGET_PCT}):</b> <code>$${tpStr}</code> (Borsaya Mühürlendi)\n` +
-                  `🛡️ <b>Stop Mantığı:</b> STOP YOK! (Her -%${DCA_DROP_STEP_PCT} geri çekilmede son marjinin %50'si kadar ekleme yapılır | Maks 4 Ekleme)\n` +
-                  `━━━━━━━━━━━━━━━━━━━━\n` +
-                  `💡 <i>Kural: +%0.75 kâr görüldüğünde pozisyon %100 tam kapatılır.</i>`;
-
-    await sendTelegramAlert(tgMsg);
+    await sendTelegramAlert(entryMsg);
 
     return res.status(200).json({
       success: true,
-      trade: newTrade,
-      bitget_order: placeOrderRes,
-      wallet_equity: currentEquity,
-      margin_used: dynamicMargin,
-      members_executed: memberOrdersCount
+      signal: newSignal
     });
 
   } catch (error) {
