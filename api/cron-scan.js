@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
     const LOT_SIZE = 0.20;                      // SABİT İŞLEM LOTU (0.20 LOT)
     const TP_DOLLAR = 4.00;                     // HEDEF TAKE-PROFIT (+$4.00)
-    const SL_DOLLAR = 10.00;                     // STOP-LOSS (-$10.00)
+    const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00)
     const EMA_MAX_DIST = 4.00;                  // EMA 60 ŞELALE / RALLİ KORUMA MESAFESİ ($4.00)
     const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME
     const startTime = Date.now();
@@ -76,19 +76,24 @@ export default async function handler(req, res) {
     const hourDec = hourUtc3 + minUtc3 / 60;
 
     // =========================================================================
-    // 1. GECE 00:00 GÜNLÜK ÖZET RAPORU (00:00 - 00:05 ARASI TETİKLENİR)
+    // 1. GECE 00:00 GÜNLÜK ÖZET RAPORU (TEK SEFERLİK KİLİT MEKANİZMALI)
     // =========================================================================
     if (hourUtc3 === 0 && minUtc3 <= 5) {
       const yesterdayUtc3 = getTurkeyDateObj(Date.now() - 12 * 3600 * 1000);
       const reportDateKey = formatTrDateKey(yesterdayUtc3);
 
-      const [lastReportRes, gsRes] = await Promise.all([
-        fetch(`${FIREBASE_BASE_URL}/last_daily_summary_date.json`),
-        fetch(`${FIREBASE_BASE_URL}/gold_signals.json`)
-      ]);
-
+      const lastReportRes = await fetch(`${FIREBASE_BASE_URL}/last_daily_summary_date.json`);
       const lastSentDate = await lastReportRes.json();
+
       if (lastSentDate !== reportDateKey) {
+        // Yarış durumunu (çift mesajı) önlemek için önce kilidi Firebase'e yaz
+        await fetch(`${FIREBASE_BASE_URL}/last_daily_summary_date.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reportDateKey)
+        });
+
+        const gsRes = await fetch(`${FIREBASE_BASE_URL}/gold_signals.json`);
         const allSignals = (await gsRes.json()) || {};
         const daySignals = Object.values(allSignals).filter(s => {
           if (!s || !s.createdAt) return false;
@@ -130,14 +135,7 @@ export default async function handler(req, res) {
           `💵 <b>0.20 Lot Karşılığı:</b> <b>${totalDollarMove >= 0 ? '+' : ''}$${estNetUsd}</b>\n` +
           `⚡ <i>Sistem 24 saat kesintisiz taramaya devam etmektedir.</i>`;
 
-        await Promise.all([
-          sendTelegramAlert(summaryMsg),
-          fetch(`${FIREBASE_BASE_URL}/last_daily_summary_date.json`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reportDateKey)
-          })
-        ]);
+        await sendTelegramAlert(summaryMsg);
       }
     }
 
@@ -230,7 +228,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI +$4.00 TP VE -$5.00 SL DENETLEYİCİSİ (TELEGRAM BİLDİRİMLİ)
+    // MODÜL 1: CANLI +$4.00 TP VE -$10.00 SL DENETLEYİCİSİ (TELEGRAM BİLDİRİMLİ)
     // =========================================================================
     async function evaluateOpenGoldSignals(livePrice) {
       let openCount = 0;
@@ -272,7 +270,7 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // -$5.00 SL VURULDU!
+        // -$10.00 SL VURULDU!
         if (diffDollar <= -SL_DOLLAR) {
           sig.status = 'SL_HIT';
           sig.exitPrice = livePrice;
@@ -325,7 +323,7 @@ export default async function handler(req, res) {
           status: "TRACKING_TP_SL",
           livePrice: goldData.currentPrice,
           mode: "24H_HYBRID_MT5_TELEGRAM",
-          message: "Açık sinyal +$4.00 TP / -$5.00 SL için canlı izleniyor."
+          message: `Açık sinyal +$${TP_DOLLAR.toFixed(2)} TP / -$${SL_DOLLAR.toFixed(2)} SL için canlı izleniyor.`
         });
       }
     }
@@ -459,7 +457,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 3: SİNYALİ FIREBASE'E YAZ (PC MT5 KÖPRÜSÜ + TELEGRAM BİLDİRİMİ)
+    // MODÜL 3: SİNYALİ FIREBASE'E YAZ (VPS MT5 KÖPRÜSÜ + TELEGRAM BİLDİRİMİ)
     // =========================================================================
     await Promise.all([
       fetch(`${FIREBASE_BASE_URL}/gold_signals/${newSignal.id}.json`, {
@@ -485,11 +483,11 @@ export default async function handler(req, res) {
       `📊 <b>EMA 60 Durumu:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (${trendLabel})\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `💵 <b>Giriş Fiyatı:</b> <code>$${newSignal.entry.toFixed(2)}</code>\n` +
-      `🎯 <b>Hedef TP (+$4.00):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+      `🎯 <b>Hedef TP (+$${TP_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
       `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
-      `🛑 <b>Stop-Loss (-$5.00):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
+      `🛑 <b>Stop-Loss (-$${SL_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `🤖 <i>PC MT5 köprüsü açıksa 0.20 Lot otomatik işlenir; TP/SL bildirimleri aktiftir.</i>`;
+      `🤖 <i>VPS MT5 köprüsü 0.20 Lot otomatik işledi; TP/SL bildirimleri aktiftir.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
