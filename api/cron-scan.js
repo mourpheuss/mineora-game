@@ -20,10 +20,10 @@ export default async function handler(req, res) {
 
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
     const LOT_SIZE = 0.20;                      // SABİT İŞLEM LOTU (0.20 LOT)
-    const TP_DOLLAR = 4.00;                     // HEDEF TAKE-PROFIT (+$4.00)
-    const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00)
-    const MIN_WICK_RATIO = 0.50;                // EN AZ %50 GÜÇLÜ LİKİDİTE FİTİLİ
-    const SIGNAL_COOLDOWN_MS = 10 * 60 * 1000;  // SİNYALLER ARASI 10 DK BEKLEME
+    const TP_DOLLAR = 6.00;                     // HEDEF TAKE-PROFIT (+$6.00 = $120)
+    const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00 = -$200)
+    const MIN_WICK_RATIO = 0.45;                // EN AZ %45 GÜÇLÜ LİKİDİTE FİTİLİ
+    const SIGNAL_COOLDOWN_MS = 5 * 60 * 1000;   // SİNYALLER ARASI 5 DK BEKLEME
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     }
 
     function predictExpectedMove(boxRange, wickPct, isNySession) {
-      const baseMove = boxRange * 0.65;
+      const baseMove = boxRange * 0.75;
       const wickMult = wickPct >= 65 ? 1.25 : 1.05;
       const trendMult = 1.35; // Yalnızca EMA 60 trend yönü işlemleri
       const sessionMult = isNySession ? 1.30 : 1.00;
@@ -227,7 +227,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI +$4.00 TP VE -$10.00 SL DENETLEYİCİSİ (TELEGRAM BİLDİRİMLİ)
+    // MODÜL 1: CANLI +$6.00 TP VE -$10.00 SL DENETLEYİCİSİ (TELEGRAM BİLDİRİMLİ)
     // =========================================================================
     async function evaluateOpenGoldSignals(livePrice) {
       let openCount = 0;
@@ -326,14 +326,14 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 2: SADECE EMA 60 TREND YÖNÜNDE LİKİDİTE SÜPÜRME + %55 FİTİL FİLTRESİ
+    // MODÜL 2: SADECE EMA 60 TREND YÖNÜNDE LİKİDİTE SÜPÜRME + %45 FİTİL FİLTRESİ
     // =========================================================================
     if (Date.now() - lastSignalTimestamp < SIGNAL_COOLDOWN_MS) {
       return res.status(200).json({
         status: "COOLDOWN",
         livePrice: goldData.currentPrice,
         mode: "24H_TREND_ONLY_MT5",
-        message: "Son sinyal sonrası 10 dakikalık soğuma süresi bekleniyor."
+        message: "Son sinyal sonrası 5 dakikalık soğuma süresi bekleniyor."
       });
     }
 
@@ -347,7 +347,7 @@ export default async function handler(req, res) {
     const microLow = Math.min(...pool13m.map(c => c.low));
     const boxRange = microHigh - microLow;
 
-    if (boxRange < 2.80) {
+    if (boxRange < 2.20) {
       return res.status(200).json({
         status: "SCANNING_RANGE",
         livePrice: goldData.currentPrice,
@@ -371,7 +371,7 @@ export default async function handler(req, res) {
     const isBuyTrend = goldData.currentPrice > ema60 && sweepCandle.close > ema60;
     const isBuySweep =
       isBuyTrend &&
-      (sweepCandle.low <= microLow - 0.32) &&
+      (sweepCandle.low <= microLow - 0.25) &&
       (sweepCandle.close > microLow) &&
       ((lowerWick / candleSpan) >= MIN_WICK_RATIO) &&
       (currentCandle.close >= sweepCandle.close);
@@ -408,7 +408,7 @@ export default async function handler(req, res) {
     const isSellSweep =
       !newSignal &&
       isSellTrend &&
-      (sweepCandle.high >= microHigh + 0.32) &&
+      (sweepCandle.high >= microHigh + 0.25) &&
       (sweepCandle.close < microHigh) &&
       ((upperWick / candleSpan) >= MIN_WICK_RATIO) &&
       (currentCandle.close <= sweepCandle.close);
