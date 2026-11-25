@@ -19,9 +19,9 @@ export default async function handler(req, res) {
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
-    const LOT_SIZE = 0.20;                      // SABİT İŞLEM LOTU (0.20 LOT)
-    const TP_DOLLAR = 6.00;                     // HEDEF TAKE-PROFIT (+$6.00 = $120)
-    const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00 = -$200)
+    const LOT_SIZE = 0.25;                      // SABİT İŞLEM LOTU (0.25 LOT)
+    const TP_DOLLAR = 6.00;                     // HEDEF TAKE-PROFIT (+$6.00 = $150)
+    const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00 = -$250)
     const MIN_WICK_RATIO = 0.45;                // EN AZ %45 GÜÇLÜ LİKİDİTE FİTİLİ
     const SIGNAL_COOLDOWN_MS = 5 * 60 * 1000;   // SİNYALLER ARASI 5 DK BEKLEME
     const startTime = Date.now();
@@ -103,14 +103,20 @@ export default async function handler(req, res) {
         let slCount = 0;
         let openCount = 0;
         let totalDollarMove = 0;
+        let totalNetUsd = 0;
 
         for (const s of daySignals) {
+          const sigLot = s.lotSize || LOT_SIZE;
           if (s.status === 'TP_HIT') {
             tpCount++;
-            totalDollarMove += (s.realizedDollar || TP_DOLLAR);
+            const move = s.realizedDollar || TP_DOLLAR;
+            totalDollarMove += move;
+            totalNetUsd += move * sigLot * 100;
           } else if (s.status === 'SL_HIT') {
             slCount++;
-            totalDollarMove += (s.realizedDollar || -SL_DOLLAR);
+            const move = s.realizedDollar || -SL_DOLLAR;
+            totalDollarMove += move;
+            totalNetUsd += move * sigLot * 100;
           } else if (s.status === 'OPEN') {
             openCount++;
           }
@@ -118,7 +124,6 @@ export default async function handler(req, res) {
 
         const totalClosed = tpCount + slCount;
         const winRate = totalClosed > 0 ? Math.round((tpCount / totalClosed) * 100) : 0;
-        const estNetUsd = (totalDollarMove * LOT_SIZE * 100).toFixed(2);
         const signPrefix = totalDollarMove >= 0 ? "+" : "";
 
         const summaryMsg =
@@ -131,7 +136,7 @@ export default async function handler(req, res) {
           `📈 <b>Başarı Oranı:</b> %${winRate}\n` +
           `━━━━━━━━━━━━━━━━━━━━\n` +
           `💰 <b>Net Ons Hareketi:</b> <b>${signPrefix}$${totalDollarMove.toFixed(2)}</b>\n` +
-          `💵 <b>0.20 Lot Karşılığı:</b> <b>${totalDollarMove >= 0 ? '+' : ''}$${estNetUsd}</b>\n` +
+          `💵 <b>Net Lot Karşılığı (${LOT_SIZE.toFixed(2)} Lot):</b> <b>${totalNetUsd >= 0 ? '+' : ''}$${totalNetUsd.toFixed(2)}</b>\n` +
           `⚡ <i>Sistem 24 saat kesintisiz taramaya devam etmektedir.</i>`;
 
         await sendTelegramAlert(summaryMsg);
@@ -482,7 +487,7 @@ export default async function handler(req, res) {
       `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
       `🛑 <b>Stop-Loss (-$${SL_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `🤖 <i>VPS MT5 köprüsü 0.20 Lot otomatik işledi; TP/SL bildirimleri aktiftir.</i>`;
+      `🤖 <i>VPS MT5 köprüsü ${LOT_SIZE.toFixed(2)} Lot otomatik işledi; TP/SL bildirimleri aktiftir.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
