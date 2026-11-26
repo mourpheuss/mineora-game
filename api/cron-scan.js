@@ -19,9 +19,9 @@ export default async function handler(req, res) {
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
-    const LOT_SIZE = 0.25;                      // SABİT İŞLEM LOTU (0.25 LOT)
-    const TP_DOLLAR = 6.00;                     // HEDEF TAKE-PROFIT (+$6.00 = $150)
-    const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00 = -$250)
+    const LOT_SIZE = 0.30;                      // SABİT İŞLEM LOTU (0.30 LOT)
+    const TP_DOLLAR = 6.00;                     // HEDEF TAKE-PROFIT (+$6.00 = $180)
+    const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00 = -$300)
     const MIN_WICK_RATIO = 0.45;                // EN AZ %45 GÜÇLÜ LİKİDİTE FİTİLİ
     const SIGNAL_COOLDOWN_MS = 5 * 60 * 1000;   // SİNYALLER ARASI 5 DK BEKLEME
     const startTime = Date.now();
