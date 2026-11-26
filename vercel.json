@@ -3,10 +3,6 @@
     {
       "path": "/api/cron-scan",
       "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/daily-report",
-      "schedule": "0 6 * * *"
     }
   ]
 }
