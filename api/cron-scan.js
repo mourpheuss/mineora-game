@@ -5,7 +5,7 @@ export const config = {
 export default async function handler(req, res) {
   try {
     // =========================================================================
-    // 0. TELEGRAM, FIREBASE & DOĞRUDAN XM GLOBAL MT5 PARAMETRELERİ (V8.0)
+    // 0. TELEGRAM, FIREBASE & DOĞRUDAN XM GLOBAL MT5 PARAMETRELERİ (V8.1 FINAL)
     // =========================================================================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
@@ -371,20 +371,20 @@ export default async function handler(req, res) {
           status: "TRACKING_XM_MT5_POSITION",
           bid: goldData.bid,
           ask: goldData.ask,
-          mode: "24H_XM_NATIVE_V8_0",
+          mode: "24H_XM_NATIVE_V8_1",
           message: `XM Global MT5 açık pozisyonu +$${TP_DOLLAR.toFixed(2)} TP / -$${SL_DOLLAR.toFixed(2)} SL için canlı izleniyor.`
         });
       }
     }
 
     // =========================================================================
-    // MODÜL 2: M1+M5 EMA YÖN BİRLİĞİ & LİKİDİTE SÜPÜRME SNIPER (V8.0)
+    // MODÜL 2: M1+M5 EMA YÖN BİRLİĞİ & LİKİDİTE SÜPÜRME SNIPER (V8.1 FINAL)
     // =========================================================================
     if (isFridayCloseLock) {
       return res.status(200).json({
         status: "FRIDAY_CLOSE_LOCK",
         livePrice: goldData.currentPrice,
-        mode: "24H_XM_NATIVE_V8_0",
+        mode: "24H_XM_NATIVE_V8_1",
         message: "Cuma 22:30 sonrası hafta sonu gap koruması nedeniyle yeni işlem açılmıyor."
       });
     }
@@ -393,7 +393,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: "COOLDOWN",
         livePrice: goldData.currentPrice,
-        mode: "24H_XM_NATIVE_V8_0",
+        mode: "24H_XM_NATIVE_V8_1",
         message: "Son sinyal sonrası 3 dakikalık soğuma süresi bekleniyor."
       });
     }
@@ -403,7 +403,7 @@ export default async function handler(req, res) {
         status: "HIGH_SPREAD_FILTERED",
         spread: goldData.spread,
         maxAllowed: MAX_ALLOWED_SPREAD,
-        mode: "24H_XM_NATIVE_V8_0"
+        mode: "24H_XM_NATIVE_V8_1"
       });
     }
 
@@ -450,13 +450,13 @@ export default async function handler(req, res) {
         status: "DEAD_RANGE_FILTERED",
         livePrice: goldData.currentPrice,
         rangeSpan45: rangeSpan45.toFixed(2),
-        mode: "24H_XM_NATIVE_V8_0"
+        mode: "24H_XM_NATIVE_V8_1"
       });
     }
 
     const candleSpan = sweepCandle.high - sweepCandle.low;
     if (candleSpan <= 0) {
-      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_XM_NATIVE_V8_0" });
+      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_XM_NATIVE_V8_1" });
     }
 
     const lowerWick = Math.min(sweepCandle.open, sweepCandle.close) - sweepCandle.low;
@@ -484,21 +484,28 @@ export default async function handler(req, res) {
     // 1. DİPTEN LONG (BUY) KURULUMU
     // -------------------------------------------------------------------------
     const isDownSlowing = m5Slope > m5PrevSlope || m1Slope >= 0.05;
+    const isNotWaterfallCrash = Math.abs(m5Slope) < 1.80;
     const roomToTopWall = rangeHigh45 - goldData.ask;
 
     // Senaryo A: Yükseliş rejiminde 12m basamak dibine dokunuş/süpürme + yeşil dönüş
     const buyTrendStep = isBullishRegime && (sweepCandle.low <= stepLow + 0.10) && (sweepCandle.close >= stepLow) && (pricePositionPct <= 75);
-    // Senaryo B: Yükseliş trendinde M1 veya M5 EMA 60 desteğinden sekme
-    const buyEmaBounce = (m5Slope >= 0.15) && (
-      ((sweepCandle.low <= ema60M1 + 0.60) && (sweepCandle.low >= ema60M1 - 1.80) && (sweepCandle.close >= ema60M1)) ||
-      ((sweepCandle.low <= ema60M5 + 1.00) && (sweepCandle.low >= ema60M5 - 2.50) && (sweepCandle.close >= ema60M5))
-    );
-    // Senaryo C: Aşırı satım kanal dibinde (%24 ve altı) V-dönüş pinbarı
-    const buyDeepReversal = ((pricePositionPct <= 24) || (distFromM5Ema <= -dynamicOverextended && isDownSlowing)) &&
-      (sweepCandle.low <= stepLow + 0.05) && (sweepCandle.close > stepLow) && (lowerWickRatio >= 0.48);
+
+    // Senaryo B: Yükseliş trendinde M1 veya M5 EMA 60 desteğinden sekme (dinamik referans)
+    const hitM5Support = (m5Slope >= 0.15) && (sweepCandle.low <= ema60M5 + 1.00) && (sweepCandle.low >= ema60M5 - 2.50) && (sweepCandle.close >= ema60M5);
+    const hitM1Support = (m5Slope >= 0.15) && (sweepCandle.low <= ema60M1 + 0.60) && (sweepCandle.low >= ema60M1 - 1.80) && (sweepCandle.close >= ema60M1);
+    const buyEmaBounce = hitM5Support || hitM1Support;
+
+    // Senaryo C: Aşırı satım kanal dibinde (%24 ve altı) yavaşlamış şelale V-dönüş pinbarı
+    const buyDeepReversal = isNotWaterfallCrash &&
+      ((pricePositionPct <= 24) || (distFromM5Ema <= -dynamicOverextended && isDownSlowing)) &&
+      (sweepCandle.low <= stepLow + 0.05) &&
+      (sweepCandle.close > stepLow) &&
+      (lowerWickRatio >= 0.48);
 
     const buyTriggered = buyTrendStep || buyEmaBounce || buyDeepReversal;
-    const buyRefLevel = buyEmaBounce ? parseFloat(ema60M1.toFixed(2)) : stepLow;
+    const buyRefLevel = hitM5Support
+      ? parseFloat(ema60M5.toFixed(2))
+      : (hitM1Support ? parseFloat(ema60M1.toFixed(2)) : stepLow);
     const buyChaseDist = Math.abs(goldData.ask - buyRefLevel);
 
     if (
@@ -511,9 +518,9 @@ export default async function handler(req, res) {
       const entry = goldData.ask;
       const wickPct = Math.round(lowerWickRatio * 100);
       const projectedMove = predictExpectedMove(boxRange, wickPct, isNySession);
-      const setupTag = buyEmaBounce
-        ? "EMA 60 Trend Destek Sekmesi"
-        : (buyDeepReversal ? "Aşırı Satım Dip Dönüşü" : "Yükseliş Basamak Dibi");
+      const setupTag = hitM5Support
+        ? "M5 EMA 60 Ana Destek Sekmesi"
+        : (hitM1Support ? "M1 EMA 60 Trend Destek Sekmesi" : (buyDeepReversal ? "Aşırı Satım Dip Dönüşü" : "Yükseliş Basamak Dibi"));
 
       newSignal = {
         id: `gold_${Date.now()}`,
@@ -544,24 +551,29 @@ export default async function handler(req, res) {
     // 2. TEPEDEN SHORT (SELL) KURULUMU
     // -------------------------------------------------------------------------
     const isUpSlowing = m5Slope <= m5PrevSlope || m1Slope <= -0.05;
+    const isNotRocketSpike = Math.abs(m5Slope) < 1.80;
     const roomToBottomWall = goldData.bid - rangeLow45;
 
     // Senaryo A: Düşüş rejiminde 12m basamak tepesine dokunuş/süpürme + kırmızı dönüş
     const sellTrendStep = isBearishRegime && (sweepCandle.high >= stepHigh - 0.10) && (sweepCandle.close <= stepHigh) && (pricePositionPct >= 25);
-    // Senaryo B: Düşüş trendinde M1 veya M5 EMA 60 direncinden ret
-    const sellEmaReject = (m5Slope <= -0.15) && (
-      ((sweepCandle.high >= ema60M1 - 0.60) && (sweepCandle.high <= ema60M1 + 1.80) && (sweepCandle.close <= ema60M1)) ||
-      ((sweepCandle.high >= ema60M5 - 1.00) && (sweepCandle.high <= ema60M5 + 2.50) && (sweepCandle.close <= ema60M5))
-    );
-    // Senaryo C: Aşırı şişmiş kanal tepesinde (%76 ve üzeri) zirve avı
-    const sellOverextendedTop = ((pricePositionPct >= 76) || (distFromM5Ema >= dynamicOverextended)) &&
+
+    // Senaryo B: Düşüş trendinde M1 veya M5 EMA 60 direncinden ret (dinamik referans)
+    const hitM5Resist = (m5Slope <= -0.15) && (sweepCandle.high >= ema60M5 - 1.00) && (sweepCandle.high <= ema60M5 + 2.50) && (sweepCandle.close <= ema60M5);
+    const hitM1Resist = (m5Slope <= -0.15) && (sweepCandle.high >= ema60M1 - 0.60) && (sweepCandle.high <= ema60M1 + 1.80) && (sweepCandle.close <= ema60M1);
+    const sellEmaReject = hitM5Resist || hitM1Resist;
+
+    // Senaryo C: Aşırı şişmiş kanal tepesinde (%76 ve üzeri) yavaşlamış zirve avı
+    const sellOverextendedTop = isNotRocketSpike &&
+      ((pricePositionPct >= 76) || (distFromM5Ema >= dynamicOverextended)) &&
       isUpSlowing &&
       (sweepCandle.high >= stepHigh - 0.05) &&
       (sweepCandle.close < stepHigh) &&
       (upperWickRatio >= 0.48);
 
     const sellTriggered = sellTrendStep || sellEmaReject || sellOverextendedTop;
-    const sellRefLevel = sellEmaReject ? parseFloat(ema60M1.toFixed(2)) : stepHigh;
+    const sellRefLevel = hitM5Resist
+      ? parseFloat(ema60M5.toFixed(2))
+      : (hitM1Resist ? parseFloat(ema60M1.toFixed(2)) : stepHigh);
     const sellChaseDist = Math.abs(sellRefLevel - goldData.bid);
 
     if (
@@ -575,9 +587,9 @@ export default async function handler(req, res) {
       const entry = goldData.bid;
       const wickPct = Math.round(upperWickRatio * 100);
       const projectedMove = predictExpectedMove(boxRange, wickPct, isNySession);
-      const setupTag = sellEmaReject
-        ? "EMA 60 Trend Direnç Reddi"
-        : (sellOverextendedTop ? "Aşırı Şişmiş Zirve Avı" : "Düşüş Basamak Tepesi");
+      const setupTag = hitM5Resist
+        ? "M5 EMA 60 Ana Direnç Reddi"
+        : (hitM1Resist ? "M1 EMA 60 Trend Direnç Reddi" : (sellOverextendedTop ? "Aşırı Şişmiş Zirve Avı" : "Düşüş Basamak Tepesi"));
 
       newSignal = {
         id: `gold_${Date.now()}`,
@@ -618,7 +630,7 @@ export default async function handler(req, res) {
         pricePositionPct,
         stepHigh,
         stepLow,
-        mode: "24H_XM_NATIVE_V8_0"
+        mode: "24H_XM_NATIVE_V8_1"
       });
     }
 
@@ -641,7 +653,7 @@ export default async function handler(req, res) {
     const isBuy = newSignal.direction === "BUY";
 
     const entryMsg =
-      `🏆 <b>XAUUSD (GOLD) | DOĞRUDAN XM MT5 SNIPER (V8.0)</b>\n` +
+      `🏆 <b>XAUUSD (GOLD) | DOĞRUDAN XM MT5 SNIPER (V8.1)</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (DİPTEN LONG)' : '🔴 SELL (TEPEDEN SHORT)'}\n` +
       `⚡ <b>Kurulum Tipi:</b> ${newSignal.setupType}\n` +
@@ -659,7 +671,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      mode: "24H_XM_NATIVE_V8_0",
+      mode: "24H_XM_NATIVE_V8_1",
       signal: newSignal
     });
 
