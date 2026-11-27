@@ -5,7 +5,7 @@ export const config = {
 export default async function handler(req, res) {
   try {
     // =========================================================================
-    // 0. TELEGRAM, FIREBASE & DOĞRUDAN XM GLOBAL MT5 PARAMETRELERİ (V7 NATIVE)
+    // 0. TELEGRAM, FIREBASE & DOĞRUDAN XM GLOBAL MT5 PARAMETRELERİ (V7.1)
     // =========================================================================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
@@ -16,12 +16,13 @@ export default async function handler(req, res) {
     const LOT_SIZE = 0.30;                      // SABİT İŞLEM LOTU (0.30 LOT)
     const TP_DOLLAR = 4.00;                     // HIZLI TAKE-PROFIT (+$4.00 = $120)
     const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00 = -$300)
+    const MAX_ALLOWED_SPREAD = 0.85;            // MAKS. İZİN VERİLEN SPREAD ($0.85)
     const MIN_WICK_RATIO = 0.42;                // YÖNLÜ MUMDA EN AZ %42 FİTİL
     const PINBAR_WICK_RATIO = 0.60;             // TERS GÖVDELİ PİNBARDA EN AZ %60 FİTİL
     const MAX_ENTRY_CHASE = 1.65;               // DİP/TEPE SEVİYESİNDEN MAKS. $1.65 UZAKLIK
     const MIN_ROOM_TO_WALL = 3.40;              // TP YÖNÜNDE EN AZ $3.40 BOŞ ALAN ŞARTI
     const SIGNAL_COOLDOWN_MS = 3 * 60 * 1000;   // SİNYALLER ARASI 3 DK SOĞUMA SÜRESİ
-    const MAX_FEED_STALE_MS = 25 * 1000;        // XM VERİSİ 25 SN'DEN ESKİYSE BEKLE
+    const MAX_FEED_STALE_MS = 35 * 1000;        // XM VERİSİ 35 SN'DEN ESKİYSE BEKLE
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -191,7 +192,6 @@ export default async function handler(req, res) {
           return null;
         }
 
-        // VPS Python köprüsü güncel veri gönderiyor mu kontrol et
         const ageMs = Date.now() - (feed.updatedAt || 0);
         if (ageMs > MAX_FEED_STALE_MS) {
           return { stale: true, ageSec: Math.round(ageMs / 1000) };
@@ -208,12 +208,14 @@ export default async function handler(req, res) {
         const bid = Number(feed.bid) || candles[candles.length - 1].close;
         const ask = Number(feed.ask) || candles[candles.length - 1].close;
         const currentPrice = Number(feed.mid) || candles[candles.length - 1].close;
+        const spread = parseFloat((ask - bid).toFixed(2));
 
         return {
           stale: false,
           currentPrice,
           bid,
           ask,
+          spread,
           candles,
           source: `XM_MT5:${feed.server || "XMGlobal"}`
         };
@@ -227,7 +229,7 @@ export default async function handler(req, res) {
     if (!goldData) {
       return res.status(200).json({
         status: "WAITING_XM_MT5_FEED",
-        message: "VPS bridge.py üzerinden XM Global MT5 mum verisi bekleniyor."
+        message: "VPS mt5_bridge.py üzerinden XM Global MT5 mum verisi bekleniyor."
       });
     }
 
@@ -235,7 +237,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: "STALE_XM_MT5_FEED",
         ageSec: goldData.ageSec,
-        message: `XM MT5 verisi ${goldData.ageSec} saniyedir güncellenmedi; VPS bridge.py kontrol edilmeli.`
+        message: `XM MT5 verisi ${goldData.ageSec} saniyedir güncellenmedi; VPS mt5_bridge.py kontrol edilmeli.`
       });
     }
 
@@ -258,7 +260,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: XM GLOBAL MT5 GERÇEK TP VE SL DENETLEYİCİSİ
+    // MODÜL 1: XM GLOBAL MT5 GERÇEK TP VE SL DENETLEYİCİSİ (TAM HEDEF KONTROLÜ)
     // =========================================================================
     async function evaluateOpenGoldSignals(xmData) {
       let openCount = 0;
@@ -269,14 +271,12 @@ export default async function handler(req, res) {
 
         const isBuy = sig.direction === 'BUY';
         const entryRef = Number(sig.mt5EntryPrice || sig.entry);
-        // BUY işlemi Bid fiyatından kapanır, SELL işlemi Ask fiyatından kapanır (gerçek XM MT5 kuralı)
         const closeCheckPrice = isBuy ? xmData.bid : xmData.ask;
         const diffDollar = isBuy ? (closeCheckPrice - entryRef) : (entryRef - closeCheckPrice);
 
         const targetTp = sig.tp ? Math.abs(sig.tp - sig.entry) : TP_DOLLAR;
         const targetSl = sig.sl ? Math.abs(sig.sl - sig.entry) : SL_DOLLAR;
 
-        // 1. Öncelik: VPS bridge.py pozisyonun XM'de kapandığını bildirdiyse veya fiyat hedefe ulaştıysa
         const isClosedOnMt5 = sig.mt5Closed === true;
         const realizedMove = isClosedOnMt5 && sig.mt5RealizedDollar !== undefined
           ? Number(sig.mt5RealizedDollar)
@@ -285,7 +285,8 @@ export default async function handler(req, res) {
           ? Number(sig.mt5ClosePrice)
           : closeCheckPrice;
 
-        if ((isClosedOnMt5 && realizedMove > 0) || diffDollar >= targetTp - 0.05) {
+        // Tam TP seviyesine ulaşmadan veya MT5 kapanış teyidi gelmeden erken kapatma yapma
+        if ((isClosedOnMt5 && realizedMove > 0) || diffDollar >= targetTp) {
           sig.status = 'TP_HIT';
           sig.exitPrice = finalExitPrice;
           sig.closedAt = Date.now();
@@ -316,7 +317,7 @@ export default async function handler(req, res) {
           continue;
         }
 
-        if ((isClosedOnMt5 && realizedMove <= 0) || diffDollar <= -(targetSl - 0.05)) {
+        if ((isClosedOnMt5 && realizedMove <= 0) || diffDollar <= -targetSl) {
           sig.status = 'SL_HIT';
           sig.exitPrice = finalExitPrice;
           sig.closedAt = Date.now();
@@ -370,37 +371,49 @@ export default async function handler(req, res) {
           status: "TRACKING_XM_MT5_POSITION",
           bid: goldData.bid,
           ask: goldData.ask,
-          mode: "24H_XM_NATIVE_V7",
+          mode: "24H_XM_NATIVE_V7_1",
           message: `XM Global MT5 açık pozisyonu +$${TP_DOLLAR.toFixed(2)} TP / -$${SL_DOLLAR.toFixed(2)} SL için canlı izleniyor.`
         });
       }
     }
 
     // =========================================================================
-    // MODÜL 2: DOĞRUDAN XM GLOBAL MT5 M5+M1 DİPTEN LONG / TEPEDEN SHORT (V7)
+    // MODÜL 2: DOĞRUDAN XM GLOBAL MT5 M5+M1 DİPTEN LONG / TEPEDEN SHORT (V7.1)
     // =========================================================================
     if (Date.now() - lastSignalTimestamp < SIGNAL_COOLDOWN_MS) {
       return res.status(200).json({
         status: "COOLDOWN",
         livePrice: goldData.currentPrice,
-        mode: "24H_XM_NATIVE_V7",
+        mode: "24H_XM_NATIVE_V7_1",
         message: "Son sinyal sonrası 3 dakikalık soğuma süresi bekleniyor."
       });
     }
 
-    const candles = goldData.candles;
-    const m5Candles = aggregateToM5(candles);
+    // SPREAD KALKANI: Makas $0.85 üzerindeyse (gece açılışı/haber) işlem açma
+    if (goldData.spread > MAX_ALLOWED_SPREAD) {
+      return res.status(200).json({
+        status: "HIGH_SPREAD_FILTERED",
+        spread: goldData.spread,
+        maxAllowed: MAX_ALLOWED_SPREAD,
+        mode: "24H_XM_NATIVE_V7_1"
+      });
+    }
 
-    const ema60M1 = calculateEMA(candles, 60);
-    const ema60M5 = calculateEMA(m5Candles, 60);
-    const ema60M5Prev = calculateEMA(m5Candles.slice(0, Math.max(1, m5Candles.length - 4)), 60);
-    const ema60M5Prev2 = calculateEMA(m5Candles.slice(0, Math.max(1, m5Candles.length - 8)), 60);
+    const candles = goldData.candles;
+    // EMA ve eğim hesaplamaları için yalnızca KAPANMIŞ mumları kullan (anlık tik gürültüsünü önler)
+    const closedCandles = candles.slice(0, candles.length - 1);
+    const m5ClosedCandles = aggregateToM5(closedCandles);
+
+    const ema60M1 = calculateEMA(closedCandles, 60);
+    const ema60M5 = calculateEMA(m5ClosedCandles, 60);
+    const ema60M5Prev = calculateEMA(m5ClosedCandles.slice(0, Math.max(1, m5ClosedCandles.length - 4)), 60);
+    const ema60M5Prev2 = calculateEMA(m5ClosedCandles.slice(0, Math.max(1, m5ClosedCandles.length - 8)), 60);
 
     const m5Slope = parseFloat((ema60M5 - ema60M5Prev).toFixed(2));
     const m5PrevSlope = parseFloat((ema60M5Prev - ema60M5Prev2).toFixed(2));
     const distFromM5Ema = parseFloat((goldData.currentPrice - ema60M5).toFixed(2));
 
-    const avgCandleSize = calculateAvgCandleSize(candles, 30);
+    const avgCandleSize = calculateAvgCandleSize(closedCandles, 30);
     const dynamicOverextended = Math.max(13.00, parseFloat((avgCandleSize * 12).toFixed(2)));
 
     const sweepCandle = candles[candles.length - 2];
@@ -426,13 +439,13 @@ export default async function handler(req, res) {
         status: "DEAD_RANGE_FILTERED",
         livePrice: goldData.currentPrice,
         rangeSpan45: rangeSpan45.toFixed(2),
-        mode: "24H_XM_NATIVE_V7"
+        mode: "24H_XM_NATIVE_V7_1"
       });
     }
 
     const candleSpan = sweepCandle.high - sweepCandle.low;
     if (candleSpan <= 0) {
-      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_XM_NATIVE_V7" });
+      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_XM_NATIVE_V7_1" });
     }
 
     const lowerWick = Math.min(sweepCandle.open, sweepCandle.close) - sweepCandle.low;
@@ -571,6 +584,7 @@ export default async function handler(req, res) {
         status: "SCANNING_XM_MT5_GOLD",
         bid: goldData.bid,
         ask: goldData.ask,
+        spread: goldData.spread,
         ema60M5: parseFloat(ema60M5.toFixed(2)),
         ema60M1: parseFloat(ema60M1.toFixed(2)),
         m5Slope,
@@ -578,7 +592,7 @@ export default async function handler(req, res) {
         dynamicOverextended,
         stepHigh,
         stepLow,
-        mode: "24H_XM_NATIVE_V7"
+        mode: "24H_XM_NATIVE_V7_1"
       });
     }
 
@@ -601,7 +615,7 @@ export default async function handler(req, res) {
     const isBuy = newSignal.direction === "BUY";
 
     const entryMsg =
-      `🏆 <b>XAUUSD (GOLD) | DOĞRUDAN XM MT5 SNIPER (V7)</b>\n` +
+      `🏆 <b>XAUUSD (GOLD) | DOĞRUDAN XM MT5 SNIPER (V7.1)</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (DİPTEN LONG)' : '🔴 SELL (TEPEDEN SHORT)'}\n` +
       `⚡ <b>Kurulum Tipi:</b> ${newSignal.setupType}\n` +
@@ -619,7 +633,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      mode: "24H_XM_NATIVE_V7",
+      mode: "24H_XM_NATIVE_V7_1",
       signal: newSignal
     });
 
