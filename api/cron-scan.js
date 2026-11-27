@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     };
 
     // =========================================================================
-    // 0. TELEGRAM, FIREBASE & OANDA XAUUSD SCALP PARAMETRELERİ
+    // 0. TELEGRAM, FIREBASE & OANDA XAUUSD SCALP PARAMETRELERİ (HIZLI SCALP V3)
     // =========================================================================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
@@ -20,10 +20,12 @@ export default async function handler(req, res) {
 
     const MT5_SYMBOL = "GOLD";                  // XM MT5 SEMBOL ADI
     const LOT_SIZE = 0.30;                      // SABİT İŞLEM LOTU (0.30 LOT)
-    const TP_DOLLAR = 6.00;                     // HEDEF TAKE-PROFIT (+$6.00 = $180)
+    const TP_DOLLAR = 4.00;                     // HIZLI TAKE-PROFIT (+$4.00 = $120)
     const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00 = -$300)
-    const MIN_WICK_RATIO = 0.45;                // EN AZ %45 GÜÇLÜ LİKİDİTE FİTİLİ
-    const SIGNAL_COOLDOWN_MS = 5 * 60 * 1000;   // SİNYALLER ARASI 5 DK BEKLEME
+    const MIN_WICK_RATIO = 0.42;                // EN AZ %42 LİKİDİTE FİTİLİ
+    const MIN_BOX_RANGE = 1.60;                 // EN AZ $1.60 KUTU GENİŞLİĞİ (DAHA FAZLA SİNYAL)
+    const MAX_ENTRY_CHASE = 1.50;               // AVLANAN SEVİYEDEN MAKS. $1.50 UZAKLIK (GEÇ GİRİŞ ENGELİ)
+    const SIGNAL_COOLDOWN_MS = 3 * 60 * 1000;   // SİNYALLER ARASI 3 DK BEKLEME
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -52,7 +54,7 @@ export default async function handler(req, res) {
     function predictExpectedMove(boxRange, wickPct, isNySession) {
       const baseMove = boxRange * 0.75;
       const wickMult = wickPct >= 65 ? 1.25 : 1.05;
-      const trendMult = 1.35; // Yalnızca EMA 60 trend yönü işlemleri
+      const trendMult = 1.35;
       const sessionMult = isNySession ? 1.30 : 1.00;
       const expected = baseMove * wickMult * trendMult * sessionMult;
       return parseFloat(Math.max(TP_DOLLAR, expected).toFixed(2));
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
     }
 
     const nowUtc3 = getTurkeyDateObj();
-    const dayOfWeek = nowUtc3.getUTCDay(); // 0 = Pazar, 6 = Cumartesi
+    const dayOfWeek = nowUtc3.getUTCDay();
     const hourUtc3 = nowUtc3.getUTCHours();
     const minUtc3 = nowUtc3.getUTCMinutes();
     const hourDec = hourUtc3 + minUtc3 / 60;
@@ -144,7 +146,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // 2. HAFTA SONU PİYASA KAPALI KONTROLÜ (HAFTA İÇİ 24 SAAT AKTİF)
+    // 2. HAFTA SONU PİYASA KAPALI KONTROLÜ
     // =========================================================================
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       return res.status(200).json({ status: "WEEKEND_CLOSED", message: "Hafta sonu altın piyasası kapalı." });
@@ -232,7 +234,7 @@ export default async function handler(req, res) {
     }
 
     // =========================================================================
-    // MODÜL 1: CANLI +$6.00 TP VE -$10.00 SL DENETLEYİCİSİ (TELEGRAM BİLDİRİMLİ)
+    // MODÜL 1: CANLI +$4.00 TP VE -$10.00 SL DENETLEYİCİSİ
     // =========================================================================
     async function evaluateOpenGoldSignals(livePrice) {
       let openCount = 0;
@@ -243,8 +245,10 @@ export default async function handler(req, res) {
 
         const isBuy = sig.direction === 'BUY';
         const diffDollar = isBuy ? (livePrice - sig.entry) : (sig.entry - livePrice);
+        const targetTp = sig.tp ? Math.abs(sig.tp - sig.entry) : TP_DOLLAR;
+        const targetSl = sig.sl ? Math.abs(sig.sl - sig.entry) : SL_DOLLAR;
 
-        if (diffDollar >= TP_DOLLAR) {
+        if (diffDollar >= targetTp - 0.05) {
           sig.status = 'TP_HIT';
           sig.exitPrice = livePrice;
           sig.closedAt = Date.now();
@@ -254,13 +258,13 @@ export default async function handler(req, res) {
           const estNetUsd = (diffDollar * usedLot * 100).toFixed(2);
 
           const tpMsg =
-            `🎯 <b>XAUUSD (GOLD) | TP GELDİ (+$${TP_DOLLAR.toFixed(2)})</b>\n` +
+            `🎯 <b>XAUUSD (GOLD) | TP GELDİ (+$${targetTp.toFixed(2)})</b>\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
             `💵 <b>Giriş Fiyatı:</b> <code>$${sig.entry.toFixed(2)}</code>\n` +
             `🏁 <b>TP Kapanış:</b> <code>$${livePrice.toFixed(2)}</code>\n` +
             `💰 <b>Kazanç:</b> <b>+$${diffDollar.toFixed(2)} Ons</b> (${usedLot.toFixed(2)} Lot: <b>+$${estNetUsd}</b>)\n` +
-            `✅ <i>Hedef başarıyla tamamlandı!</i>`;
+            `✅ <i>Hızlı hedef başarıyla tamamlandı!</i>`;
 
           await sendTelegramAlert(tpMsg);
 
@@ -273,7 +277,7 @@ export default async function handler(req, res) {
           continue;
         }
 
-        if (diffDollar <= -SL_DOLLAR) {
+        if (diffDollar <= -(targetSl - 0.05)) {
           sig.status = 'SL_HIT';
           sig.exitPrice = livePrice;
           sig.closedAt = Date.now();
@@ -283,7 +287,7 @@ export default async function handler(req, res) {
           const estLossUsd = Math.abs(diffDollar * usedLot * 100).toFixed(2);
 
           const slMsg =
-            `🛑 <b>XAUUSD (GOLD) | SL GELDİ (-$${SL_DOLLAR.toFixed(2)})</b>\n` +
+            `🛑 <b>XAUUSD (GOLD) | SL GELDİ (-$${targetSl.toFixed(2)})</b>\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
             `💵 <b>Giriş Fiyatı:</b> <code>$${sig.entry.toFixed(2)}</code>\n` +
@@ -324,26 +328,28 @@ export default async function handler(req, res) {
         return res.status(200).json({
           status: "TRACKING_TP_SL",
           livePrice: goldData.currentPrice,
-          mode: "24H_TREND_ONLY_MT5",
+          mode: "24H_FAST_SCALP_MT5",
           message: `Açık sinyal +$${TP_DOLLAR.toFixed(2)} TP / -$${SL_DOLLAR.toFixed(2)} SL için canlı izleniyor.`
         });
       }
     }
 
     // =========================================================================
-    // MODÜL 2: SADECE EMA 60 TREND YÖNÜNDE LİKİDİTE SÜPÜRME + %45 FİTİL FİLTRESİ
+    // MODÜL 2: SAĞLAM TREND + EMA 60 EĞİM + YAKIN GİRİŞ KALKANI
     // =========================================================================
     if (Date.now() - lastSignalTimestamp < SIGNAL_COOLDOWN_MS) {
       return res.status(200).json({
         status: "COOLDOWN",
         livePrice: goldData.currentPrice,
-        mode: "24H_TREND_ONLY_MT5",
-        message: "Son sinyal sonrası 5 dakikalık soğuma süresi bekleniyor."
+        mode: "24H_FAST_SCALP_MT5",
+        message: "Son sinyal sonrası 3 dakikalık soğuma süresi bekleniyor."
       });
     }
 
     const candles = goldData.candles;
     const ema60 = calculateEMA(candles, 60);
+    const ema60Prev = calculateEMA(candles.slice(0, candles.length - 8), 60); // 8 mum önceki EMA 60
+
     const sweepCandle = candles[candles.length - 2];
     const currentCandle = candles[candles.length - 1];
     const pool13m = candles.slice(candles.length - 15, candles.length - 2);
@@ -352,19 +358,19 @@ export default async function handler(req, res) {
     const microLow = Math.min(...pool13m.map(c => c.low));
     const boxRange = microHigh - microLow;
 
-    if (boxRange < 2.20) {
+    if (boxRange < MIN_BOX_RANGE) {
       return res.status(200).json({
         status: "SCANNING_RANGE",
         livePrice: goldData.currentPrice,
         ema60: parseFloat(ema60.toFixed(2)),
         boxRange: boxRange.toFixed(2),
-        mode: "24H_TREND_ONLY_MT5"
+        mode: "24H_FAST_SCALP_MT5"
       });
     }
 
     const candleSpan = sweepCandle.high - sweepCandle.low;
     if (candleSpan <= 0) {
-      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_TREND_ONLY_MT5" });
+      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_FAST_SCALP_MT5" });
     }
 
     const lowerWick = Math.min(sweepCandle.open, sweepCandle.close) - sweepCandle.low;
@@ -372,14 +378,16 @@ export default async function handler(req, res) {
 
     let newSignal = null;
 
-    // BUY TETİĞİ — YALNIZCA FİYAT EMA 60 ÜZERİNDEYSE (YÜKSELİŞ TRENDİ)
-    const isBuyTrend = goldData.currentPrice > ema60 && sweepCandle.close > ema60;
+    // BUY TETİĞİ — EMA 60 YUKARI EĞİMLİ + YAKIN GİRİŞ ($1.50 MAX) + FİTİL SÜPÜRME
+    const isBuyTrend = goldData.currentPrice > ema60 && sweepCandle.close > ema60 && ema60 >= ema60Prev;
+    const buyEntryDistance = goldData.currentPrice - microLow;
     const isBuySweep =
       isBuyTrend &&
-      (sweepCandle.low <= microLow - 0.25) &&
+      (sweepCandle.low <= microLow - 0.20) &&
       (sweepCandle.close > microLow) &&
       ((lowerWick / candleSpan) >= MIN_WICK_RATIO) &&
-      (currentCandle.close >= sweepCandle.close);
+      (currentCandle.close >= sweepCandle.close) &&
+      (buyEntryDistance > 0 && buyEntryDistance <= MAX_ENTRY_CHASE);
 
     if (isBuySweep) {
       const entry = goldData.currentPrice;
@@ -408,15 +416,17 @@ export default async function handler(req, res) {
       };
     }
 
-    // SELL TETİĞİ — YALNIZCA FİYAT EMA 60 ALTINDAYSA (DÜŞÜŞ TRENDİ)
-    const isSellTrend = goldData.currentPrice < ema60 && sweepCandle.close < ema60;
+    // SELL TETİĞİ — EMA 60 AŞAĞI EĞİMLİ + YAKIN GİRİŞ ($1.50 MAX) + FİTİL SÜPÜRME
+    const isSellTrend = goldData.currentPrice < ema60 && sweepCandle.close < ema60 && ema60 <= ema60Prev;
+    const sellEntryDistance = microHigh - goldData.currentPrice;
     const isSellSweep =
       !newSignal &&
       isSellTrend &&
-      (sweepCandle.high >= microHigh + 0.25) &&
+      (sweepCandle.high >= microHigh + 0.20) &&
       (sweepCandle.close < microHigh) &&
       ((upperWick / candleSpan) >= MIN_WICK_RATIO) &&
-      (currentCandle.close <= sweepCandle.close);
+      (currentCandle.close <= sweepCandle.close) &&
+      (sellEntryDistance > 0 && sellEntryDistance <= MAX_ENTRY_CHASE);
 
     if (isSellSweep) {
       const entry = goldData.currentPrice;
@@ -450,10 +460,11 @@ export default async function handler(req, res) {
         status: "SCANNING_OANDA_GOLD",
         livePrice: goldData.currentPrice,
         ema60: parseFloat(ema60.toFixed(2)),
+        emaSlope: ema60 >= ema60Prev ? "UP" : "DOWN",
         activeTrend: goldData.currentPrice > ema60 ? "BUY_ONLY" : "SELL_ONLY",
         microHigh,
         microLow,
-        mode: "24H_TREND_ONLY_MT5"
+        mode: "24H_FAST_SCALP_MT5"
       });
     }
 
@@ -476,24 +487,24 @@ export default async function handler(req, res) {
     const isBuy = newSignal.direction === "BUY";
 
     const entryMsg =
-      `🏆 <b>XAUUSD (GOLD) | TREND SİNYALİ (7/24)</b>\n` +
+      `🏆 <b>XAUUSD (GOLD) | HIZLI TREND SCALP (7/24)</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
       `🧱 <b>Avlanan Seviye:</b> <code>$${newSignal.level.toFixed(2)}</code> (İğne: $${newSignal.wick.toFixed(2)} | %${newSignal.wickPct} Fitil)\n` +
-      `📊 <b>EMA 60 Durumu:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (EMA 60 Trend Yönü — Güçlü)\n` +
+      `📊 <b>EMA 60 Durumu:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (Eğim Onaylı — Güçlü)\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `💵 <b>Giriş Fiyatı:</b> <code>$${newSignal.entry.toFixed(2)}</code>\n` +
-      `🎯 <b>Hedef TP (+$${TP_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+      `🎯 <b>Hızlı TP (+$${TP_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
       `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
       `🛑 <b>Stop-Loss (-$${SL_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `🤖 <i>VPS MT5 köprüsü ${LOT_SIZE.toFixed(2)} Lot otomatik işledi; TP/SL bildirimleri aktiftir.</i>`;
+      `🤖 <i>VPS MT5 köprüsü ${LOT_SIZE.toFixed(2)} Lot hızlı scalp işledi; TP/SL bildirimleri aktiftir.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
     return res.status(200).json({
       success: true,
-      mode: "24H_TREND_ONLY_MT5",
+      mode: "24H_FAST_SCALP_MT5",
       signal: newSignal
     });
 
