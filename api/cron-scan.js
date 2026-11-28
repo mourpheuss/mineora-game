@@ -5,7 +5,7 @@ export const config = {
 export default async function handler(req, res) {
   try {
     // =========================================================================
-    // 0. TELEGRAM, FIREBASE & DOĞRUDAN XM GLOBAL MT5 PARAMETRELERİ (V9.0 ÇİFT MOTOR)
+    // 0. TELEGRAM, FIREBASE & DOĞRUDAN XM GLOBAL MT5 PARAMETRELERİ (93-XM V3.2)
     // =========================================================================
     const TG_BOT_TOKEN = "8682225307:AAHaa-hieKBBluU6uZ2_-OgSPxGR7OwMssE";
     const TG_CHANNEL_ID = "-1004404988937";
@@ -13,27 +13,17 @@ export default async function handler(req, res) {
     const FIREBASE_BASE_URL = "https://mineora-web-default-rtdb.firebaseio.com";
 
     const MT5_SYMBOL = "GOLD";                  // XM GLOBAL MT5 SEMBOL ADI
-    const LOT_SIZE = 0.30;                      // SABİT İŞLEM LOTU (0.30 LOT -> $4 TP = +$120)
+    const LOT_SIZE = 0.25;                      // KASA KORUMALI LOT (0.25 LOT -> +$60 TP / -$250 SL)
     const TP_DOLLAR = 4.00;                     // HIZLI TAKE-PROFIT (+$4.00)
     const SL_DOLLAR = 10.00;                    // STOP-LOSS (-$10.00)
     const MAX_ALLOWED_SPREAD = 0.80;            // MAKS. İZİN VERİLEN CANLI XM SPREAD ($0.80)
-    const SIGNAL_COOLDOWN_MS = 15 * 60 * 1000;  // SİNYALLER ARASI 15 DK (15 BAR) SOĞUMA
+    const MIN_WICK_RATIO = 0.42;                // EN AZ %42 LİKİDİTE FİTİLİ (93 MATEMATİĞİ)
+    const MIN_BOX_RANGE = 1.60;                 // EN AZ $1.60 KUTU GENİŞLİĞİ (93 MATEMATİĞİ)
+    const MAX_ENTRY_CHASE = 1.25;               // AVLANAN SEVİYEDEN MAKS. $1.25 UZAKLIK (GEÇ GİRİŞ ENGELİ)
+    const MIN_EMA_SLOPE = 0.35;                 // 8 BARDA EN AZ $0.35 NET EMA 60 EĞİMİ (YATAY KİLİT)
+    const MIN_EMA_BUFFER = 1.20;                // FİYAT İLE EMA 60 ARASI EN AZ $1.20 TEMİZ MESAFE
+    const SIGNAL_COOLDOWN_MS = 5 * 60 * 1000;   // SİNYALLER ARASI 5 DK SOĞUMA SÜRESİ
     const MAX_FEED_STALE_MS = 35 * 1000;        // XM VERİSİ 35 SN'DEN ESKİYSE BEKLE
-
-    // ÇİFT MOTOR PARAMETRELERİ (V3)
-    const EMA_TREND_LEN = 200;                  // ANA YÖN KİLİDİ (EMA 200)
-    const MIN_EMA_DIST = 2.00;                  // EMA 200'E EN AZ $2.00 MESAFE (YAPIŞIK YATAY KORUMA)
-    const MAX_EMA_DIST = 8.50;                  // EMA 200'DEN EN FAZLA $8.50 UZAKLIK (AŞIRI ŞİŞME KORUMA)
-    const MIN_SLOPE_MOT_A = 0.25;               // MOTOR A MİN. 30 DK EMA 200 EĞİMİ ($)
-    const MIN_SLOPE_MOT_B = 0.30;               // MOTOR B MİN. 30 DK EMA 200 EĞİMİ ($)
-    const MIN_ATR_MOT_A = 1.20;                 // MOTOR A MİN. ATR(14) VOLATİLİTESİ ($)
-    const CCI_THRESH = 100.0;                   // CCI(20) AŞIRI BÖLGE EŞİĞİ (±100)
-    const MIN_MACD_HIST_DEPTH = 0.30;           // MİN. MACD HİSTOGRAM ÇEKİLME DERİNLİĞİ ($)
-    const LR_WINDOW = 60;                       // 60-BAR LİNEER REGRESYON KANALI PENCERESİ
-    const LR_MULT = 2.0;                        // KANAL STANDART SAPMA ÇARPANI
-    const MIN_WICK_RATIO = 0.45;                // MOTOR B MİN. REDDEDİLME FİTİL ORANI (%45)
-    const MIN_VOL_MULT = 1.20;                  // MOTOR B MİN. TİK HACİM ÇARPANI (1.20x)
-
     const startTime = Date.now();
 
     async function sendTelegramAlert(text) {
@@ -49,104 +39,23 @@ export default async function handler(req, res) {
       }
     }
 
-    // =========================================================================
-    // TEKNİK HESAPLAMA FONKSİYONLARI (M1 KAPALI MUMLAR ÜZERİNDEN)
-    // =========================================================================
-    function calculateEMASeries(closes, period) {
-      const n = closes.length;
-      const out = new Array(n).fill(0);
-      if (n === 0) return out;
+    function calculateEMA(data, period = 60) {
+      if (!data || data.length === 0) return 0;
       const k = 2 / (period + 1);
-      if (n >= period) {
-        let sum = 0;
-        for (let i = 0; i < period; i++) sum += closes[i];
-        out[period - 1] = sum / period;
-        for (let i = 0; i < period - 1; i++) out[i] = out[period - 1];
-        for (let i = period; i < n; i++) {
-          out[i] = closes[i] * k + out[i - 1] * (1 - k);
-        }
-      } else {
-        out[0] = closes[0];
-        for (let i = 1; i < n; i++) {
-          out[i] = closes[i] * k + out[i - 1] * (1 - k);
-        }
+      let ema = data[0].close;
+      for (let i = 1; i < data.length; i++) {
+        ema = data[i].close * k + ema * (1 - k);
       }
-      return out;
+      return ema;
     }
 
-    function calculateATRSeries(candles, period = 14) {
-      const n = candles.length;
-      const tr = new Array(n).fill(0);
-      for (let i = 0; i < n; i++) {
-        if (i === 0) {
-          tr[i] = candles[i].high - candles[i].low;
-        } else {
-          const prevC = candles[i - 1].close;
-          tr[i] = Math.max(
-            candles[i].high - candles[i].low,
-            Math.abs(candles[i].high - prevC),
-            Math.abs(candles[i].low - prevC)
-          );
-        }
-      }
-      return calculateEMASeries(tr, period);
-    }
-
-    function calculateCCISeries(candles, period = 20) {
-      const n = candles.length;
-      const tp = candles.map(c => (c.high + c.low + c.close) / 3);
-      const out = new Array(n).fill(0);
-      for (let i = period - 1; i < n; i++) {
-        let sum = 0;
-        for (let j = i - period + 1; j <= i; j++) sum += tp[j];
-        const mean = sum / period;
-        let devSum = 0;
-        for (let j = i - period + 1; j <= i; j++) devSum += Math.abs(tp[j] - mean);
-        const mad = devSum / period;
-        out[i] = mad === 0 ? 0 : (tp[i] - mean) / (0.015 * mad);
-      }
-      return out;
-    }
-
-    function calculateMACDHistSeries(closes, fast = 12, slow = 26, sig = 9) {
-      const emaFast = calculateEMASeries(closes, fast);
-      const emaSlow = calculateEMASeries(closes, slow);
-      const macdLine = closes.map((_, i) => emaFast[i] - emaSlow[i]);
-      const sigLine = calculateEMASeries(macdLine, sig);
-      return macdLine.map((v, i) => v - sigLine[i]);
-    }
-
-    function calculateLinRegChannel(closes, win = 60, mult = 2.0) {
-      const n = closes.length;
-      if (n < win) return null;
-      const slice = closes.slice(n - win);
-      const xMean = (win - 1) / 2;
-      let xVar = 0;
-      for (let i = 0; i < win; i++) xVar += (i - xMean) * (i - xMean);
-
-      let ySum = 0;
-      for (let i = 0; i < win; i++) ySum += slice[i];
-      const yMean = ySum / win;
-
-      let cov = 0;
-      for (let i = 0; i < win; i++) cov += (i - xMean) * (slice[i] - yMean);
-      const m = cov / xVar;
-      const b = yMean - m * xMean;
-
-      let sqErr = 0;
-      for (let i = 0; i < win; i++) {
-        const fitted = m * i + b;
-        const diff = slice[i] - fitted;
-        sqErr += diff * diff;
-      }
-      const std = Math.sqrt(sqErr / win);
-      const mid = m * (win - 1) + b;
-      return {
-        mid,
-        upper: mid + mult * std,
-        lower: mid - mult * std,
-        slope: m * win
-      };
+    function predictExpectedMove(boxRange, wickPct, isNySession) {
+      const baseMove = boxRange * 0.75;
+      const wickMult = wickPct >= 65 ? 1.25 : 1.05;
+      const trendMult = 1.35;
+      const sessionMult = isNySession ? 1.30 : 1.00;
+      const expected = baseMove * wickMult * trendMult * sessionMult;
+      return parseFloat(Math.max(TP_DOLLAR, expected).toFixed(2));
     }
 
     function getTurkeyDateObj(ts = Date.now()) {
@@ -241,17 +150,18 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "WEEKEND_CLOSED", message: "Hafta sonu altın piyasası kapalı." });
     }
 
+    const isNySession = hourDec >= 15.5 && hourDec <= 19.5;
     const isFridayCloseLock = (dayOfWeek === 5 && hourDec >= 22.5);
 
     // =========================================================================
-    // 3. DOĞRUDAN XM GLOBAL MT5 CANLI FİYAT VE 300 ADET M1 MUMU ÇEKME
+    // 3. DOĞRUDAN XM GLOBAL MT5 CANLI FİYAT VE M1 MUM VERİSİ (VPS BRIDGE)
     // =========================================================================
     async function fetchXmMt5GoldData() {
       try {
         const feedRes = await fetch(`${FIREBASE_BASE_URL}/mt5_live_feed.json`);
         const feed = await feedRes.json();
 
-        if (!feed || !Array.isArray(feed.candles) || feed.candles.length < 210) {
+        if (!feed || !Array.isArray(feed.candles) || feed.candles.length < 75) {
           return null;
         }
 
@@ -265,8 +175,7 @@ export default async function handler(req, res) {
           open: Number(c.open),
           high: Number(c.high),
           low: Number(c.low),
-          close: Number(c.close),
-          volume: Number(c.tick_volume ?? c.volume ?? 0)
+          close: Number(c.close)
         })).sort((a, b) => a.time - b.time);
 
         const bid = Number(feed.bid) || candles[candles.length - 1].close;
@@ -293,7 +202,7 @@ export default async function handler(req, res) {
     if (!goldData) {
       return res.status(200).json({
         status: "WAITING_XM_MT5_FEED",
-        message: "VPS mt5_bridge.py üzerinden XM Global MT5 mum verisi (en az 210 M1 bar) bekleniyor."
+        message: "VPS mt5_bridge.py üzerinden XM Global MT5 mum verisi bekleniyor."
       });
     }
 
@@ -364,7 +273,6 @@ export default async function handler(req, res) {
             `🎯 <b>XAUUSD (GOLD) | TP GELDİ (+$${targetTp.toFixed(2)})</b>\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
-            `⚙️ <b>Tetikleyen Motor:</b> ${sig.setupType || "Çift Motor"}\n` +
             `💵 <b>XM Giriş Fiyatı:</b> <code>$${entryRef.toFixed(2)}</code>\n` +
             `🏁 <b>XM TP Kapanış:</b> <code>$${finalExitPrice.toFixed(2)}</code>\n` +
             `💰 <b>Kazanç:</b> <b>+$${Math.abs(realizedMove).toFixed(2)} Ons</b> (${usedLot.toFixed(2)} Lot: <b>+$${estNetUsd}</b>)\n` +
@@ -396,11 +304,10 @@ export default async function handler(req, res) {
             `🛑 <b>XAUUSD (GOLD) | SL GELDİ (-$${targetSl.toFixed(2)})</b>\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
-            `⚙️ <b>Tetikleyen Motor:</b> ${sig.setupType || "Çift Motor"}\n` +
             `💵 <b>XM Giriş Fiyatı:</b> <code>$${entryRef.toFixed(2)}</code>\n` +
             `📉 <b>XM SL Kapanış:</b> <code>$${finalExitPrice.toFixed(2)}</code>\n` +
             `💸 <b>Zarar:</b> <b>-$${Math.abs(realizedMove).toFixed(2)} Ons</b> (${usedLot.toFixed(2)} Lot: <b>-$${estLossUsd}</b>)\n` +
-            `🛡️ <i>XM Global MT5 stop tetiklendi; 7/24 tarama devam ediyor.</i>`;
+            `🛡️ <i>XM Global MT5 stop tetiklendi; yeni kurulum taranıyor.</i>`;
 
           await sendTelegramAlert(slMsg);
 
@@ -436,20 +343,20 @@ export default async function handler(req, res) {
           status: "TRACKING_XM_MT5_POSITION",
           bid: goldData.bid,
           ask: goldData.ask,
-          mode: "24H_XM_DUAL_ENGINE_V9",
+          mode: "24H_XM_FAST_SCALP_93_V3_2",
           message: `XM Global MT5 açık pozisyonu +$${TP_DOLLAR.toFixed(2)} TP / -$${SL_DOLLAR.toFixed(2)} SL için canlı izleniyor.`
         });
       }
     }
 
     // =========================================================================
-    // MODÜL 2: ÇİFT MOTOR SCALPER V3 (CCI/MACD + 60M REGRESYON KANALI + EMA 200)
+    // MODÜL 2: 93 MATEMATİĞİ (13M LİKİDİTE SÜPÜRME + NET EMA 60 EĞİM + YAPIŞMA KALKANI)
     // =========================================================================
     if (isFridayCloseLock) {
       return res.status(200).json({
         status: "FRIDAY_CLOSE_LOCK",
         livePrice: goldData.currentPrice,
-        mode: "24H_XM_DUAL_ENGINE_V9",
+        mode: "24H_XM_FAST_SCALP_93_V3_2",
         message: "Cuma 22:30 sonrası hafta sonu gap koruması nedeniyle yeni işlem açılmıyor."
       });
     }
@@ -458,8 +365,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: "COOLDOWN",
         livePrice: goldData.currentPrice,
-        mode: "24H_XM_DUAL_ENGINE_V9",
-        message: "Son sinyal sonrası 15 dakikalık çift işlem soğuma süresi bekleniyor."
+        mode: "24H_XM_FAST_SCALP_93_V3_2",
+        message: "Son sinyal sonrası 5 dakikalık soğuma süresi bekleniyor."
       });
     }
 
@@ -468,144 +375,126 @@ export default async function handler(req, res) {
         status: "HIGH_SPREAD_FILTERED",
         spread: goldData.spread,
         maxAllowed: MAX_ALLOWED_SPREAD,
-        mode: "24H_XM_DUAL_ENGINE_V9"
+        mode: "24H_XM_FAST_SCALP_93_V3_2"
       });
     }
 
-    // Son kapanmış M1 barları üzerinden göstergeleri hesapla (son bar açık/oluşmakta olan bar)
     const candles = goldData.candles;
     const closedCandles = candles.slice(0, candles.length - 1);
-    const n = closedCandles.length;
-    if (n < 205) {
-      return res.status(200).json({ status: "INSUFFICIENT_CLOSED_CANDLES", count: n });
+    const ema60 = calculateEMA(closedCandles, 60);
+    const ema60Prev = calculateEMA(closedCandles.slice(0, closedCandles.length - 8), 60);
+    const emaSlope = parseFloat((ema60 - ema60Prev).toFixed(2));
+
+    const sweepCandle = candles[candles.length - 2];
+    const currentCandle = candles[candles.length - 1];
+    const pool13m = candles.slice(candles.length - 15, candles.length - 2);
+
+    const microHigh = Math.max(...pool13m.map(c => c.high));
+    const microLow = Math.min(...pool13m.map(c => c.low));
+    const boxRange = microHigh - microLow;
+
+    if (boxRange < MIN_BOX_RANGE) {
+      return res.status(200).json({
+        status: "SCANNING_RANGE",
+        bid: goldData.bid,
+        ask: goldData.ask,
+        ema60: parseFloat(ema60.toFixed(2)),
+        emaSlope,
+        boxRange: boxRange.toFixed(2),
+        mode: "24H_XM_FAST_SCALP_93_V3_2"
+      });
     }
 
-    const closes = closedCandles.map(c => c.close);
-    const e200Series = calculateEMASeries(closes, EMA_TREND_LEN);
-    const atr14Series = calculateATRSeries(closedCandles, 14);
-    const cci20Series = calculateCCISeries(closedCandles, 20);
-    const macdHistSeries = calculateMACDHistSeries(closes, 12, 26, 9);
-    const lr60 = calculateLinRegChannel(closes, LR_WINDOW, LR_MULT);
+    const candleSpan = sweepCandle.high - sweepCandle.low;
+    if (candleSpan <= 0) {
+      return res.status(200).json({ status: "FLAT_CANDLE", mode: "24H_XM_FAST_SCALP_93_V3_2" });
+    }
 
-    const lastBar = closedCandles[n - 1];
-    const e200Now = e200Series[n - 1];
-    const e200Prev30 = e200Series[n - 1 - 30];
-    const slope30 = parseFloat((e200Now - e200Prev30).toFixed(2));
-    const atr14Now = parseFloat(atr14Series[n - 1].toFixed(2));
-    const distFromEma200 = parseFloat((lastBar.close - e200Now).toFixed(2));
-    const absEmaDist = Math.abs(distFromEma200);
-
-    // 1. KESİN EMA 200 YÖN & MESAFE KİLİDİ ($2.00 <= |Fiyat - EMA 200| <= $8.50)
-    const emaDistOk = (absEmaDist >= MIN_EMA_DIST) && (absEmaDist <= MAX_EMA_DIST);
-    const allowLong = emaDistOk && (lastBar.close > e200Now) && (goldData.bid > e200Now);
-    const allowShort = emaDistOk && (lastBar.close < e200Now) && (goldData.bid < e200Now);
-
-    // 2. MOTOR A: CCI(20) + MACD ÇEKİLME >= $0.30 + ATR(14) >= $1.20 + EMA EĞİMİ
-    const recentLowCci = Math.min(...cci20Series.slice(n - 4, n));
-    const recentHighCci = Math.max(...cci20Series.slice(n - 4, n));
-    const recentMinHist = Math.min(...macdHistSeries.slice(n - 6, n - 1));
-    const recentMaxHist = Math.max(...macdHistSeries.slice(n - 6, n - 1));
-    const histPrev = macdHistSeries[n - 2];
-    const histCurr = macdHistSeries[n - 1];
-
-    const motABuy = allowLong &&
-      (slope30 >= MIN_SLOPE_MOT_A) &&
-      (atr14Now >= MIN_ATR_MOT_A) &&
-      (recentLowCci < -CCI_THRESH) &&
-      (histPrev <= 0) &&
-      (histCurr > 0) &&
-      (recentMinHist <= -MIN_MACD_HIST_DEPTH) &&
-      (lastBar.close > lastBar.open);
-
-    const motASell = allowShort &&
-      (slope30 <= -MIN_SLOPE_MOT_A) &&
-      (atr14Now >= MIN_ATR_MOT_A) &&
-      (recentHighCci > CCI_THRESH) &&
-      (histPrev >= 0) &&
-      (histCurr < 0) &&
-      (recentMaxHist >= MIN_MACD_HIST_DEPTH) &&
-      (lastBar.close < lastBar.open);
-
-    // 3. MOTOR B: 60M REGRESYON KANALI + >= %45 FİTİL + TİK HACMİ >= 1.2X
-    const candleSpan = lastBar.high - lastBar.low;
-    const lowerWick = Math.min(lastBar.open, lastBar.close) - lastBar.low;
-    const upperWick = lastBar.high - Math.max(lastBar.open, lastBar.close);
-    const lwRatio = candleSpan > 0 ? lowerWick / candleSpan : 0;
-    const uwRatio = candleSpan > 0 ? upperWick / candleSpan : 0;
-
-    const volSlice = closedCandles.slice(n - 21, n - 1).map(c => c.volume);
-    const avgVol = volSlice.reduce((a, b) => a + b, 0) / Math.max(1, volSlice.length);
-    const volOk = avgVol > 0 ? (lastBar.volume >= MIN_VOL_MULT * avgVol) : true;
-
-    const motBBuy = Boolean(lr60) && allowLong &&
-      (slope30 >= MIN_SLOPE_MOT_B) &&
-      volOk &&
-      (lastBar.low <= lr60.lower) &&
-      (lastBar.close > lr60.lower) &&
-      (lastBar.close > lastBar.open) &&
-      (lwRatio >= MIN_WICK_RATIO);
-
-    const motBSell = Boolean(lr60) && allowShort &&
-      (slope30 <= -MIN_SLOPE_MOT_B) &&
-      volOk &&
-      (lastBar.high >= lr60.upper) &&
-      (lastBar.close < lr60.upper) &&
-      (lastBar.close < lastBar.open) &&
-      (uwRatio >= MIN_WICK_RATIO);
+    const lowerWick = Math.min(sweepCandle.open, sweepCandle.close) - sweepCandle.low;
+    const upperWick = sweepCandle.high - Math.max(sweepCandle.open, sweepCandle.close);
 
     let newSignal = null;
 
-    if (motABuy || motBBuy) {
+    // BUY TETİĞİ — NET YUKARI EĞİM (>= +$0.35) + EMA 60 TEMİZ MESAFE (>= $1.20) + FİTİL SÜPÜRME
+    const isBuyTrend =
+      (goldData.bid >= ema60 + MIN_EMA_BUFFER) &&
+      (sweepCandle.close > ema60) &&
+      (emaSlope >= MIN_EMA_SLOPE);
+
+    const buyEntryDistance = goldData.ask - microLow;
+    const isBuySweep =
+      isBuyTrend &&
+      (sweepCandle.low <= microLow - 0.20) &&
+      (sweepCandle.close > microLow) &&
+      ((lowerWick / candleSpan) >= MIN_WICK_RATIO) &&
+      (currentCandle.close >= sweepCandle.close) &&
+      (buyEntryDistance > 0 && buyEntryDistance <= MAX_ENTRY_CHASE);
+
+    if (isBuySweep) {
       const entry = goldData.ask;
-      const engineName = (motABuy && motBBuy) ? "CCI+MACD & KANAL60" : (motABuy ? "CCI+MACD" : "KANAL60");
-      const wickPct = Math.round(lwRatio * 100);
+      const wickPct = Math.round((lowerWick / candleSpan) * 100);
+      const projectedMove = predictExpectedMove(boxRange, wickPct, isNySession);
 
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "BUY",
-        setupType: engineName,
         lotSize: LOT_SIZE,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry + TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry - SL_DOLLAR).toFixed(2)),
-        ema200: parseFloat(e200Now.toFixed(2)),
-        emaSlope30: slope30,
-        emaDistance: distFromEma200,
-        atr14: atr14Now,
-        cci20: parseFloat(cci20Series[n - 1].toFixed(1)),
-        macdHist: parseFloat(histCurr.toFixed(3)),
-        channelUpper: lr60 ? parseFloat(lr60.upper.toFixed(2)) : null,
-        channelLower: lr60 ? parseFloat(lr60.lower.toFixed(2)) : null,
+        projectedMove,
+        projectedTp: parseFloat((entry + projectedMove).toFixed(2)),
+        isTrendAligned: true,
+        ema60: parseFloat(ema60.toFixed(2)),
+        emaSlope,
+        level: parseFloat(microLow.toFixed(2)),
+        wick: parseFloat(sweepCandle.low.toFixed(2)),
         wickPct,
         status: "OPEN",
         vpsExecuted: false,
         createdAt: Date.now()
       };
-    } else if (motASell || motBSell) {
+    }
+
+    // SELL TETİĞİ — NET AŞAĞI EĞİM (<= -$0.35) + EMA 60 TEMİZ MESAFE (>= $1.20) + FİTİL SÜPÜRME
+    const isSellTrend =
+      (goldData.ask <= ema60 - MIN_EMA_BUFFER) &&
+      (sweepCandle.close < ema60) &&
+      (emaSlope <= -MIN_EMA_SLOPE);
+
+    const sellEntryDistance = microHigh - goldData.bid;
+    const isSellSweep =
+      !newSignal &&
+      isSellTrend &&
+      (sweepCandle.high >= microHigh + 0.20) &&
+      (sweepCandle.close < microHigh) &&
+      ((upperWick / candleSpan) >= MIN_WICK_RATIO) &&
+      (currentCandle.close <= sweepCandle.close) &&
+      (sellEntryDistance > 0 && sellEntryDistance <= MAX_ENTRY_CHASE);
+
+    if (isSellSweep) {
       const entry = goldData.bid;
-      const engineName = (motASell && motBSell) ? "CCI+MACD & KANAL60" : (motASell ? "CCI+MACD" : "KANAL60");
-      const wickPct = Math.round(uwRatio * 100);
+      const wickPct = Math.round((upperWick / candleSpan) * 100);
+      const projectedMove = predictExpectedMove(boxRange, wickPct, isNySession);
 
       newSignal = {
         id: `gold_${Date.now()}`,
         symbol: MT5_SYMBOL,
         source: goldData.source,
         direction: "SELL",
-        setupType: engineName,
         lotSize: LOT_SIZE,
         entry: parseFloat(entry.toFixed(2)),
         tp: parseFloat((entry - TP_DOLLAR).toFixed(2)),
         sl: parseFloat((entry + SL_DOLLAR).toFixed(2)),
-        ema200: parseFloat(e200Now.toFixed(2)),
-        emaSlope30: slope30,
-        emaDistance: distFromEma200,
-        atr14: atr14Now,
-        cci20: parseFloat(cci20Series[n - 1].toFixed(1)),
-        macdHist: parseFloat(histCurr.toFixed(3)),
-        channelUpper: lr60 ? parseFloat(lr60.upper.toFixed(2)) : null,
-        channelLower: lr60 ? parseFloat(lr60.lower.toFixed(2)) : null,
+        projectedMove,
+        projectedTp: parseFloat((entry - projectedMove).toFixed(2)),
+        isTrendAligned: true,
+        ema60: parseFloat(ema60.toFixed(2)),
+        emaSlope,
+        level: parseFloat(microHigh.toFixed(2)),
+        wick: parseFloat(sweepCandle.high.toFixed(2)),
         wickPct,
         status: "OPEN",
         vpsExecuted: false,
@@ -619,15 +508,12 @@ export default async function handler(req, res) {
         bid: goldData.bid,
         ask: goldData.ask,
         spread: goldData.spread,
-        ema200: parseFloat(e200Now.toFixed(2)),
-        emaSlope30: slope30,
-        emaDistance: distFromEma200,
-        atr14: atr14Now,
-        cci20: parseFloat(cci20Series[n - 1].toFixed(1)),
-        macdHist: parseFloat(histCurr.toFixed(3)),
-        channelUpper: lr60 ? parseFloat(lr60.upper.toFixed(2)) : null,
-        channelLower: lr60 ? parseFloat(lr60.lower.toFixed(2)) : null,
-        mode: "24H_XM_DUAL_ENGINE_V9"
+        ema60: parseFloat(ema60.toFixed(2)),
+        emaSlope,
+        activeTrend: emaSlope >= MIN_EMA_SLOPE ? "BUY_READY" : (emaSlope <= -MIN_EMA_SLOPE ? "SELL_READY" : "FLAT_LOCKED"),
+        microHigh,
+        microLow,
+        mode: "24H_XM_FAST_SCALP_93_V3_2"
       });
     }
 
@@ -650,24 +536,24 @@ export default async function handler(req, res) {
     const isBuy = newSignal.direction === "BUY";
 
     const entryMsg =
-      `🏆 <b>XAUUSD (GOLD) | ÇİFT MOTOR SCALPER (V9.0)</b>\n` +
+      `🏆 <b>XAUUSD (GOLD) | DOĞRUDAN XM HIZLI SCALP (V3.2)</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `🧭 <b>İşlem Yönü:</b> ${isBuy ? '🟢 BUY (LONG)' : '🔴 SELL (SHORT)'}\n` +
-      `⚙️ <b>Tetikleyen Motor:</b> ${newSignal.setupType}\n` +
-      `📊 <b>EMA 200 & Eğim:</b> <code>$${newSignal.ema200.toFixed(2)}</code> (Eğim: ${newSignal.emaSlope30 >= 0 ? '+' : ''}$${newSignal.emaSlope30.toFixed(2)} | Mesafe: $${Math.abs(newSignal.emaDistance).toFixed(2)})\n` +
-      `📈 <b>ATR(14) / CCI(20):</b> <code>$${newSignal.atr14.toFixed(2)}</code> / <code>${newSignal.cci20}</code>\n` +
+      `🧱 <b>Avlanan Seviye:</b> <code>$${newSignal.level.toFixed(2)}</code> (İğne: $${newSignal.wick.toFixed(2)} | %${newSignal.wickPct} Fitil)\n` +
+      `📊 <b>EMA 60 Durumu:</b> <code>$${newSignal.ema60.toFixed(2)}</code> (Eğim: ${newSignal.emaSlope >= 0 ? '+' : ''}$${newSignal.emaSlope.toFixed(2)})\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `💵 <b>XM Giriş Fiyatı:</b> <code>$${newSignal.entry.toFixed(2)}</code>\n` +
-      `🎯 <b>Take-Profit (+$${TP_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+      `🎯 <b>Hızlı TP (+$${TP_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.tp.toFixed(2)}</code>\n` +
+      `🚀 <b>Tahmini Menzil (+$${newSignal.projectedMove.toFixed(2)}):</b> <code>$${newSignal.projectedTp.toFixed(2)}</code>\n` +
       `🛑 <b>Stop-Loss (-$${SL_DOLLAR.toFixed(2)}):</b> <code>$${newSignal.sl.toFixed(2)}</code>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `🤖 <i>XM Global MT5 köprüsü ${LOT_SIZE.toFixed(2)} Lot işledi; 7/24 takip aktiftir.</i>`;
+      `🤖 <i>XM Global MT5 köprüsü ${LOT_SIZE.toFixed(2)} Lot hızlı scalp işledi; TP/SL bildirimleri aktiftir.</i>`;
 
     await sendTelegramAlert(entryMsg);
 
     return res.status(200).json({
       success: true,
-      mode: "24H_XM_DUAL_ENGINE_V9",
+      mode: "24H_XM_FAST_SCALP_93_V3_2",
       signal: newSignal
     });
 
